@@ -1,5 +1,7 @@
 <div align="center">
 
+<img src="assets/logo.png" alt="PKP logo" width="96" height="96">
+
 # PKP
 
 **Your cloud files, transfers, and playback. One desktop workspace.**
@@ -20,13 +22,39 @@ Browse your cloud drive, switch accounts, manage uploads and downloads, then pre
 
 ![PKP file workspace with a Chinese interface and synthetic sample data](assets/screenshots/workspace.png)
 
-*About the screenshots: all three images show the actual application running locally in an isolated environment with synthetic sample account and file data. The interface is in Simplified Chinese. They contain no real user accounts or content and are not evidence of verified production cloud operations.*
+*About the screenshots: the six interface images come from the actual application running locally in an isolated environment, using synthetic sample account and file data. The interface is in Simplified Chinese. They contain no real user accounts or content and are not evidence of verified production cloud operations. The player image includes a composited frame, as explained below; the assistant and sync images show the home screen and scan preview, not model inference or sync execution results.*
 
 ## Find your files faster
 
 Search your own cloud files through a local index, with sorting, type filters, and favorites to keep everyday content within reach. The initial index takes time to build; search and drive-wide statistics may need to wait until it is ready. Local indexed search does not require sending file names to an AI model.
 
 ![PKP local indexed search with synthetic sample data](assets/screenshots/search.png)
+
+## Playback, right in your workspace
+
+The integrated player supports quality switching, subtitle and audio-track selection, playback resume, and a separate player window. Availability depends on the file, codec, and service. **AI subtitle generation is not provided.**
+
+![PKP integrated player with Chinese controls and a local demo video frame](assets/screenshots/player.png)
+
+*Image provenance: actual player controls and backend state from the isolated environment. Because the browser cannot capture the native video surface, a real decoded frame from a locally generated demo video is composited beneath the controls. This is not verification of native video rendering.*
+
+## A helping hand for file organization
+
+Start with local rules, indexed search, and statistics, or optionally connect your own model service. Sending file names, paths, or other metadata or authorized content to a model requires data-level consent. Levels set to “Always allow” do not prompt every time and can be managed in settings. Before writes such as renaming or moving files, review and confirm the actual operation plan. **AI accuracy is not guaranteed:** consent does not make a result reliable, and service charges depend on your chosen provider.
+
+![PKP AI assistant home screen with a Chinese interface and synthetic sample data](assets/screenshots/assistant.png)
+
+*Image provenance: a local, isolated capture of the actual AI assistant home screen. No online model inference was performed; the image does not show or imply model response quality.*
+
+## Folder sync: preview before you run
+
+Choose two-way sync, local-to-cloud backup, or cloud-to-local download. Scan both folders, review the operation preview produced by the actual scan, then execute the changes. Conflicts can keep both copies, and deletion protections and confirmations help guard against unwanted removal; neither replaces checking the preview or backing up important files.
+
+![PKP folder sync scan preview with a Chinese interface and local synthetic test data](assets/screenshots/sync.png)
+
+*Image provenance: the actual sync interface showing a preview produced by scanning local synthetic test data, with the temporary local directory path anonymized. No sync was executed; this is not a production cloud-transfer result.*
+
+Sync only works while the PKP process is running. It is not a real-time service, a system-level background daemon, or a complete backup solution. Content verification may read cloud files and consume download traffic.
 
 ## What you can do
 
@@ -66,13 +94,15 @@ See the [privacy notice](PRIVACY.md) for the full data scope, storage details, a
 
 See the [installation guide](docs/INSTALL.md) for requirements and first-launch precautions. When a release is published, download packages only from this repository's official [Releases](https://github.com/tonyflux/pkp/releases) and follow the corresponding verification instructions.
 
-## Plan to open the full source code
+## Our commitment to a full open-source release
 
-**Once PKP reaches its usage target, we will open-source the complete PKP-owned application source code—not just selected modules.**
+**PKP is currently being developed as closed-source software, but it will be fully open-sourced—not just selected modules or a stripped-down edition.**
 
-The usage metric, target threshold, and measurement method have not yet been determined and will be announced in this repository. No specific source-release date is promised at this stage. This plan does not require users to enable usage statistics; disabling statistics does not affect normal use.
+For now, we want to improve the core experience through real usage feedback. Before opening the source, we will complete sensitive-information cleanup, review third-party licenses, and organize build instructions and developer documentation, so the result is a project people can build, understand, and maintain—not just a code dump.
 
-PKP remains closed-source for now, and the current [LICENSE](LICENSE) applies to existing versions. The source release will include an open-source license and build instructions. This plan does not grant advance access to the source code or open-source usage rights. Third-party components remain subject to their respective licenses.
+**Once the project reaches its usage target and these preparations are complete, we will publish the complete PKP-owned application source code, build scripts, and developer documentation under an open-source license.** The usage target, metric, measurement method, and release arrangements will be announced in this repository. We are not promising a specific date yet. This plan does not require users to enable usage statistics; disabling statistics does not affect normal use.
+
+The current [LICENSE](LICENSE) continues to apply to existing versions. This plan does not grant advance access to the source code or open-source usage rights. Third-party components remain subject to their respective licenses.
 
 ## Guides and feedback
 
