@@ -1,0 +1,35 @@
+name: 问题反馈
+description: 报告 PKP 的可复现问题
+body:
+  - type: markdown
+    attributes:
+      value: |
+        此处内容公开可见。不要提交密码、令牌、API Key、分享口令、完整账号、私人文件名或路径。日志与截图请先逐项脱敏；不要上传整个配置目录。
+  - type: input
+    id: version
+    attributes:
+      label: PKP 版本
+      description: 填写实际使用的版本；尚无公开发布时，请说明测试包来源，不要附私人下载链接。
+    validations:
+      required: true
+  - type: input
+    id: platform
+    attributes:
+      label: 系统版本与芯片架构
+      placeholder: 例如 macOS 版本、Apple 芯片或 Intel
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: 问题与复现步骤
+      description: 描述操作步骤、预期结果和实际结果；必要时附最小化、已脱敏的错误内容。
+    validations:
+      required: true
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: 公开内容检查
+      options:
+        - label: 我已移除凭据、私人文件与账号信息，并检查日志和截图中的敏感内容。
+          required: true
