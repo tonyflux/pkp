@@ -1,0 +1,25 @@
+# 本地系统与编辑器文件
+.DS_Store
+._*
+.idea/
+.vscode/
+*.swp
+*.tmp
+
+# 公开仓库不收安装产物、源码包或本机配置
+*.dmg
+*.exe
+*.app/
+*.zip
+*.tar.gz
+*.log
+.env
+.env.*
+*.pem
+*.key
+credentials*.json
+accounts.json
+settings.json
+telemetry.json
+*.sqlite
+*.sqlite-*
