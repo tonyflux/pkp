@@ -6,6 +6,20 @@
 
 未来 Release 计划同时提供第三方对应源码包 `libmpv-sources.tar.gz` 和使用条款；这不表示 PKP 自有源码开放。
 
+## 校验发布附件
+
+正式版应有七件附件：macOS DMG、Windows 安装程序、`update.json`、`update.json.sig`、`libmpv-sources.tar.gz`、`LICENSE` 与 `SHA256SUMS`。前两项是应用安装包；第三方源码包不包含 PKP 自有源码。
+
+`SHA256SUMS` 用于检查下载完整性，不能单独证明发布者身份。应用内更新会用内置公钥验证 Ed25519 签名清单，再检查安装包大小与 SHA-256；签名或哈希错误时不要继续安装。
+
+需要手动完整核验时，将同一 Release 的七件附件放在独立目录，并下载公开的 [verify_release.py](../.github/scripts/verify_release.py)。安装 Python 3.11+ 和 OpenSSL 3+ 后运行（版本号替换为实际标签）：
+
+```sh
+python3 verify_release.py /路径/发布附件 v0.1.0
+```
+
+工具只含公开公钥，不需要 GitHub token、账号登录或私钥；签名、标签、安装包或附件集合不一致时返回失败。公开仓库的「Verify public release」工作流会在正式发布后自动核验 GitHub 附件与匿名下载地址；工作流失败不是允许绕过校验的理由。
+
 ## macOS
 
 要求 macOS 12 或更新版本，Universal 包同时包含 Apple 芯片与 Intel 架构，内置播放库，无需另装 mpv 或 Homebrew。

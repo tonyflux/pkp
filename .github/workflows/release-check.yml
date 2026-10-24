@@ -1,0 +1,50 @@
+name: Verify public release
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Published stable tag to verify, e.g. v0.1.0'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: verify-release-${{ inputs.tag || github.event.release.tag_name }}
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: main
+          persist-credentials: false
+      - name: Download published release and verify updater trust chain
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.tag || github.event.release.tag_name }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          metadata=$(gh api "repos/tonyflux/pkp/releases/tags/$RELEASE_TAG")
+          test "$(jq -r .draft <<< "$metadata")" = false
+          test "$(jq -r .prerelease <<< "$metadata")" = false
+          dir="$RUNNER_TEMP/release"
+          mkdir "$dir"
+          gh release download "$RELEASE_TAG" --repo tonyflux/pkp --dir "$dir"
+          python3 .github/scripts/verify_release.py "$dir" "$RELEASE_TAG"
+          jq -r '.assets[] | [.name, .browser_download_url] | @tsv' <<< "$metadata" |
+          while IFS=$'\t' read -r name url; do
+            test "$name" = "$(basename "$name")"
+            test -f "$dir/$name"
+            test "$url" = "https://github.com/tonyflux/pkp/releases/download/$RELEASE_TAG/$name"
+            curl --fail --location --proto '=https' --proto-redir '=https' "$url" --output "$dir/$name"
+          done
+          python3 .github/scripts/verify_release.py "$dir" "$RELEASE_TAG"
