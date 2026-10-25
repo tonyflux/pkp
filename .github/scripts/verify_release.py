@@ -9,7 +9,7 @@ import subprocess
 import sys
 import tempfile
 
-PUBLIC_KEY = "ezAS3xraWt9X4kXVfU/HMRup4R15+uePZkIcd5HwwcY="
+PUBLIC_KEY = "OWVabjpKxRDdGMlH9Jpk7NYhth7AFCws7Nvaox6C/ac="
 
 
 def verify(directory, tag):
