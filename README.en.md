@@ -14,7 +14,7 @@
 
 PKP is a **closed-source, unofficial desktop client for PikPak**, built for managing your own cloud files, transfers across multiple accounts, and media playback. PKP is not affiliated with or endorsed by PikPak. Use remains subject to PikPak's terms of service and applicable laws.
 
-> **Not released yet** · The first release has not been published, and no official installation packages are available. This repository provides public documentation, issue reporting, and a future download destination—not PKP application source code or build tools. Packages and release notes will appear in [Releases](https://github.com/tonyflux/pkp/releases) once published.
+> **v0.1.0 is available** · [Download the latest release](https://github.com/tonyflux/pkp/releases/latest) for macOS Universal or Windows x64 / ARM64. Read the [installation guide](docs/INSTALL.md) and verify the assets before installing. This repository contains public documentation, feedback, and releases—not PKP application source code or build tools.
 
 ## A workspace for everyday file management
 
@@ -84,15 +84,15 @@ See the [privacy notice](PRIVACY.md) for the full data scope, storage details, a
 
 ## Platform and installation limits
 
-**There are no official installation packages to download yet.** These are current implementation and build boundaries, not a claim of release readiness or cross-platform validation.
+**Official installation packages are available in [Releases](https://github.com/tonyflux/pkp/releases/latest).** The maintainer reported successful acceptance of the initial draft; this does not establish comprehensive validation across all platforms, devices, or features below.
 
 | Platform | Current status |
 | --- | --- |
 | macOS | Universal application targeting macOS 12 or later, for Apple silicon and Intel. Current packages use ad hoc signing and are not notarized by Apple. |
-| Windows | Build paths exist for x64 and ARM64 installers, but sufficient testing on real Windows devices has not been completed. Playback, synchronization, notifications, and system authentication are not fully validated on real hardware. Some macOS integrations are unavailable on Windows. |
+| Windows | A combined x64 / ARM64 installer is available. Broader real-device coverage is still needed for playback, synchronization, notifications, and system authentication. Some macOS integrations are unavailable. No Authenticode publisher signature. |
 | Linux | Support and distribution packages are not currently promised. |
 
-See the [installation guide](docs/INSTALL.md) for requirements and first-launch precautions. When a release is published, download packages only from this repository's official [Releases](https://github.com/tonyflux/pkp/releases) and follow the corresponding verification instructions.
+See the [installation guide](docs/INSTALL.md) for requirements and first-launch precautions. Download packages only from this repository's official [Releases](https://github.com/tonyflux/pkp/releases/latest) and follow the corresponding verification instructions.
 
 ## Our commitment to a full open-source release
 

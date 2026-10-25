@@ -14,7 +14,7 @@
 
 PKP 是面向 PikPak 用户的**闭源、非官方桌面客户端**，用于管理自己的云盘文件、多账号传输与媒体播放。PKP 不隶属于 PikPak，也不代表其运营方；使用时仍须遵守 PikPak 的服务条款与适用法律。
 
-> **尚未公开发布** · 首次版本尚未发布，目前没有正式安装包。本仓库提供公开说明、问题反馈与后续下载入口，不包含 PKP 应用源码或构建工具。正式发布后，安装包与版本说明将在 [Releases](https://github.com/tonyflux/pkp/releases) 提供。
+> **v0.1.0 已发布** · [下载最新版本](https://github.com/tonyflux/pkp/releases/latest)。提供 macOS Universal 与 Windows x64 / ARM64 安装包；安装前请阅读[安装说明](docs/INSTALL.md)并校验附件。本仓库提供公开说明、反馈与发行包，不包含 PKP 自有应用源码或构建工具。
 
 ## 一个工作区，照顾日常文件操作
 
@@ -84,15 +84,15 @@ PKP 是面向 PikPak 用户的**闭源、非官方桌面客户端**，用于管�
 
 ## 平台与安装边界
 
-**目前没有可下载的正式安装包。** 以下是当前实现与构建边界，不是已发布或跨平台验收的承诺。
+**正式安装包已在 [Releases](https://github.com/tonyflux/pkp/releases/latest) 提供。** 用户已反馈首发草稿验收通过；这不等于下列全部平台、设备和功能均完成充分验证。
 
 | 平台 | 当前情况 |
 | --- | --- |
 | macOS | 面向 macOS 12 及以上的 Universal 应用，兼容 Apple 芯片与 Intel；当前打包方式为 ad hoc 签名，未经 Apple 公证。 |
-| Windows | 有 x64 / ARM64 安装构建路径，但未经 Windows 真机充分验证；播放、同步、通知和系统身份验证等不能视为已完成实机验收。部分 macOS 集成在 Windows 不可用。 |
+| Windows | 提供 x64 / ARM64 共用安装包；仍需扩大真机覆盖，播放、同步、通知和系统身份验证等不能视为已在全部设备充分验证。部分 macOS 集成不可用；没有 Authenticode 发布者签名。 |
 | Linux | 暂不承诺支持或提供发行包。 |
 
-安装要求与首次启动注意事项见 [安装说明](docs/INSTALL.md)。未来请仅从本仓库的正式 [Release](https://github.com/tonyflux/pkp/releases) 获取安装包，并按对应说明校验。
+安装要求与首次启动注意事项见 [安装说明](docs/INSTALL.md)。请仅从本仓库的正式 [Release](https://github.com/tonyflux/pkp/releases/latest) 获取安装包，并按对应说明校验。
 
 ## 关于后续全量开源
 
