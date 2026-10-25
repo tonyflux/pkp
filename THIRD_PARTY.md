@@ -6,11 +6,11 @@ PKP 自有部分采用[闭源软件使用条款](LICENSE)；第三方组件的�
 
 主要使用 Wails、Vue、Go 及其依赖、本地 SQLite 索引、阿里云 OSS SDK，以及 mpv / libmpv、FFmpeg、libplacebo、libass 等媒体组件。此处仅为简要说明，**不是完整依赖清单，也不代表许可证审计已经完成**。具体版本、版权与许可证应以实际发布包所附材料为准。
 
-当前媒体库构建配置采用 LGPL 路径：mpv 禁用 GPL 部分，FFmpeg 不启用 GPL 选项；libmpv 以单独动态库分发。未来每个正式 Release 必须同时附上与实际二进制对应的 `libmpv-sources.tar.gz`，包含相关第三方源码与构建脚本；该源码包不等于 PKP 自有应用源码。
+当前媒体库构建配置采用 LGPL 路径：mpv 禁用 GPL 部分，FFmpeg 不启用 GPL 选项；libmpv 以单独动态库分发。每个正式 Release 必须同时附上与实际二进制对应的 `libmpv-sources.tar.gz`，包含相关第三方源码与构建脚本；该源码包不等于 PKP 自有应用源码。
 
-未来安装包应附第三方许可证：macOS 位于应用包的 `Contents/Resources/licenses/`，Windows 位于安装目录的 `licenses`。LGPL 覆盖的库允许按适用许可证替换，相关调试修改与逆向工程权利不受 PKP 自有软件条款限制。替换库可能影响兼容性，具体权利及条件请阅读随包的原始许可证。
+安装包附第三方许可证：macOS 位于应用包的 `Contents/Resources/licenses/`，Windows 位于安装目录的 `licenses`。LGPL 覆盖的库允许按适用许可证替换，相关调试修改与逆向工程权利不受 PKP 自有软件条款限制。替换库可能影响兼容性，具体权利及条件请阅读随包的原始许可证。
 
-**目前尚未公开发布安装包或对应源码包。** 首次发布前仍需核实实际依赖、构建配置、原始版权声明、许可证材料与对应源码完整性，不能仅以此文代替合规审查。
+**v0.1.0 安装包及对应源码包已在 [Release](https://github.com/tonyflux/pkp/releases/tag/v0.1.0) 提供。** 已核验归档中 28 项固定源码的哈希及构建脚本一致性，但这不是完整依赖或法律审计，不能仅以此文代替合规审查。
 
 ## 外部服务与名称
 
