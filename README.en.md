@@ -8,13 +8,15 @@
 
 [简体中文](README.md) · English
 
-[User guide](docs/USAGE.md) · [Releases](https://github.com/tonyflux/pkp/releases) · [Report an issue](https://github.com/tonyflux/pkp/issues)
+[User guide](docs/USAGE.en.md) · [Releases](https://github.com/tonyflux/pkp/releases) · [Report an issue](https://github.com/tonyflux/pkp/issues)
 
 </div>
 
-PKP is a **closed-source, unofficial desktop client for PikPak**, built for managing your own cloud files, transfers across multiple accounts, and media playback. PKP is not affiliated with or endorsed by PikPak. Use remains subject to PikPak's terms of service and applicable laws.
+PKP is an **unofficial desktop client for PikPak**, built for managing your own cloud files, transfers across multiple accounts, and media playback. PKP is not affiliated with or endorsed by PikPak. Use remains subject to PikPak's terms of service and applicable laws.
 
-> **v0.1.0 is available** · [Download the latest release](https://github.com/tonyflux/pkp/releases/latest) for macOS Universal or Windows x64 / ARM64. Read the [installation guide](docs/INSTALL.md) and verify the assets before installing. This repository contains public documentation, feedback, and releases—not PKP application source code or build tools.
+> **v0.1.0 is available** · [Download the latest release](https://github.com/tonyflux/pkp/releases/latest) for macOS Universal or Windows x64 / ARM64. Read the [installation guide](docs/INSTALL.en.md) and verify the assets before installing. This repository contains the application source and build scripts. The published v0.1.0 installers were not built from this source and remain under the proprietary terms shipped with that release.
+>
+> **The first open-source release is planned as v0.3.0 and has not been published.** Complete current source is provided in this repository; that release must also include `PKP-0.3.0-source.tar.gz` corresponding to its installers and a separate third-party source archive, for eight assets in total. The seven v0.1.0 assets and their original terms remain unchanged.
 
 ## A workspace for everyday file management
 
@@ -61,7 +63,7 @@ Sync only works while the PKP process is running. It is not a real-time service,
 | Your task | What PKP provides |
 | --- | --- |
 | Manage multiple accounts | Sign in and switch accounts, with independent background uploads and downloads. Accounts are not merged into a single drive. |
-| Browse and share | Folder browsing, local indexed search, sorting, filters, favorites, sharing, and image, text, and PDF previews. |
+| Browse and share | Folder browsing, local indexed search, sorting, filters, favorites, sharing, and previews including images, text, PDF, DOCX, and XLSX; PPT/PPTX have no built-in preview, but downloads and other operations remain available. |
 | Manage transfers | Add links or torrents for cloud download, upload local files and folders, download to your computer, and manage transfer progress. |
 | Play media | An integrated player with quality switching, subtitles, playback history, and a separate player window. Availability depends on the file and service. |
 | Sync and organize | Two-way folder synchronization, local-to-cloud backup, and cloud-to-local downloads, with previews and conflict handling before execution; cleanup, rule-based renaming, and media organization. Optional connections to your own AI model service and TMDB credentials. |
@@ -75,7 +77,7 @@ Privacy-related options are available in settings. The following behavior is als
 
 ![PKP privacy and security settings in the isolated sample environment, with a Chinese interface](assets/screenshots/privacy.png)
 
-- **Usage statistics are on by default and can be disabled.** Production builds send usage statistics by default; turn them off under Settings → Privacy & Security without affecting normal use. Payloads do not contain accounts, file names, paths, search terms, question text, or file contents. A random installation identifier can link statistics from the same installation across days. Turning statistics off does not automatically delete data already received by the server.
+- **Usage statistics differ by version.** The released v0.1.0 production installers enable them by default; disable them under Settings → Privacy & Security. Current source (planned v0.3.0) defaults to off and requires opt-in there. Older versions cannot distinguish an explicit enable from the old default, so you must opt in again after upgrading. Payloads do not contain accounts, file names, paths, search terms, question text, or file contents. A random installation identifier can link statistics from the same installation across days. Turning statistics off does not automatically delete data already received; reports are unauthenticated and can be forged.
 - **Update checks have a separate switch.** Production builds enable update checks by default; disable them separately under About & Updates. Disabling usage statistics does not disable update checks. Packages are not downloaded or installed automatically.
 - **Sign-in includes a referral submission.** After each successful form-based sign-in, including adding an account or signing in again, PKP submits a preset developer referral code to PikPak in the background to attempt to establish a referral relationship. **There is no separate opt-out switch.** Failure does not affect sign-in; restoring a session or refreshing a token does not trigger submission. The registration link also includes promotional parameters that may create referral attribution.
 - **AI and TMDB connections are optional.** Use your own services and credentials, and review data authorization prompts before sending information. AI requests may include file names, paths, and other authorized context. The application lock does not encrypt local data.
@@ -92,28 +94,25 @@ See the [privacy notice](PRIVACY.md) for the full data scope, storage details, a
 | Windows | A combined x64 / ARM64 installer is available. Broader real-device coverage is still needed for playback, synchronization, notifications, and system authentication. Some macOS integrations are unavailable. No Authenticode publisher signature. |
 | Linux | Support and distribution packages are not currently promised. |
 
-See the [installation guide](docs/INSTALL.md) for requirements and first-launch precautions. Download packages only from this repository's official [Releases](https://github.com/tonyflux/pkp/releases/latest) and follow the corresponding verification instructions.
+See the [installation guide](docs/INSTALL.en.md) for requirements and first-launch precautions. Download packages only from this repository's official [Releases](https://github.com/tonyflux/pkp/releases/latest) and follow the corresponding verification instructions.
 
-## Our commitment to a full open-source release
+## Source and license
 
-**PKP is currently being developed as closed-source software, but it will be fully open-sourced—not just selected modules or a stripped-down edition.**
+Copyright (C) 2026 tonyflux. PKP-owned source, build scripts, and documentation in this repository are licensed under [GPL-3.0-only](LICENSE). Third-party components retain their own licenses. Published v0.1.0 installers remain under the [proprietary terms shipped with that release](docs/legal/v0.1.0-proprietary.txt); this source is not their corresponding source.
 
-For now, we want to improve the core experience through real usage feedback. Before opening the source, we will complete sensitive-information cleanup, review third-party licenses, and organize build instructions and developer documentation, so the result is a project people can build, understand, and maintain—not just a code dump.
-
-**Once the project reaches its usage target and these preparations are complete, we will publish the complete PKP-owned application source code, build scripts, and developer documentation under an open-source license.** The usage target, metric, measurement method, and release arrangements will be announced in this repository. We are not promising a specific date yet. This plan does not require users to enable usage statistics; disabling statistics does not affect normal use.
-
-The current [LICENSE](LICENSE) continues to apply to existing versions. This plan does not grant advance access to the source code or open-source usage rights. Third-party components remain subject to their respective licenses.
+See the [development guide](docs/DEVELOPMENT.en.md) to build locally. The current login implementation uses identity parameters and signing constants associated with PikPak's official Android client; publishing this source discloses those values. The maintainer has confirmed that the current identity parameters may be publicly reused; the parameters and referral behavior remain unchanged. Public comparisons do not imply endorsement by PikPak or independently obtained written authorization from PikPak. The referral behavior is disclosed in the [privacy notice](PRIVACY.en.md).
 
 ## Guides and feedback
 
-The detailed guides and reference documents below are currently in Simplified Chinese.
+The guides below are available in English and Simplified Chinese, with language links in each document.
 
 | Resource | What it covers |
 | --- | --- |
-| [Installation and first launch](docs/INSTALL.md) | Download status, platform requirements, first launch, and updates. |
-| [User guide](docs/USAGE.md) | Accounts, transfers, playback, synchronization, and data-operation precautions. |
-| [Privacy notice](PRIVACY.md) | Local data, external services, usage statistics, referrals, and deletion limitations. |
-| [Changelog](CHANGELOG.md) · [Releases](https://github.com/tonyflux/pkp/releases) | Documentation and development status; published release attachments and notes will be authoritative once available. |
-| [Third-party components](THIRD_PARTY.md) · [Software use terms](LICENSE) | Third-party distribution obligations, copyright, and software use terms. |
+| [Installation and first launch](docs/INSTALL.en.md) | Download status, platform requirements, first launch, and updates. |
+| [User guide](docs/USAGE.en.md) | Accounts, transfers, playback, synchronization, and data-operation precautions. |
+| [Privacy notice](PRIVACY.en.md) | Local data, external services, usage statistics, referrals, and deletion limitations. |
+| [Changelog](CHANGELOG.en.md) · [Releases](https://github.com/tonyflux/pkp/releases) | Documentation and development status; published release attachments and notes are authoritative for their releases. |
+| [Third-party components](THIRD_PARTY.en.md) · [Software license](LICENSE) | Third-party distribution obligations, copyright, and software license. |
+| [Contributing](CONTRIBUTING.en.md) · [Security policy](SECURITY.en.md) | Contribution guidance and vulnerability reporting. |
 
 Report problems or suggest improvements through [Issues](https://github.com/tonyflux/pkp/issues). **Do not post passwords, tokens, API keys, share passcodes, complete account details, or unredacted logs and screenshots. Do not upload the entire configuration directory.**

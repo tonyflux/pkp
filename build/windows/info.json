@@ -1,0 +1,15 @@
+{
+	"fixed": {
+		"file_version": "0.3.0"
+	},
+	"info": {
+		"0000": {
+			"ProductVersion": "0.3.0",
+			"CompanyName": "PKP",
+			"FileDescription": "High-performance PikPak desktop client",
+			"LegalCopyright": "Copyright (C) 2026 tonyflux",
+			"ProductName": "PKP",
+			"Comments": "PKP for PikPak"
+		}
+	}
+}

@@ -1,0 +1,35 @@
+package i18n
+
+func init() {
+	add(map[string]Msg{
+		"同步": {Hant: "同步", En: "Sync", Ja: "同期", Ko: "동기화"},
+		"请选择同步所属账号并重新扫描":                        {Hant: "請選擇同步所屬帳號並重新掃描", En: "Choose the account that owns this sync and scan again", Ja: "同期するアカウントを選択して再スキャンしてください", Ko: "동기화 소유 계정을 선택하고 다시 스캔하세요"},
+		"这次同步扫描已经在进行":                           {Hant: "這次同步掃描已經在進行", En: "This sync scan is already running", Ja: "この同期スキャンはすでに実行中です", Ko: "이 동기화 스캔이 이미 진행 중입니다"},
+		"云端目录关系异常，请重新选择同步位置":                    {Hant: "雲端目錄關係異常，請重新選擇同步位置", En: "The cloud folder hierarchy is invalid; choose the sync folder again", Ja: "クラウドのフォルダ構造に問題があります。同期先を選び直してください", Ko: "클라우드 폴더 구조에 문제가 있습니다. 동기화 위치를 다시 선택하세요"},
+		"同步位置必须是文件夹":                            {Hant: "同步位置必須是資料夾", En: "A sync location must be a folder", Ja: "同期先にはフォルダを指定してください", Ko: "동기화 위치는 폴더여야 합니다"},
+		"同步所属账号已改变，请重新配对":                       {Hant: "同步所屬帳號已改變，請重新配對", En: "The sync account identity has changed; pair the folders again", Ja: "同期するアカウントの識別情報が変わりました。再度ペアリングしてください", Ko: "동기화 소유 계정이 변경되었습니다. 폴더를 다시 연결하세요"},
+		"云端同步位置已不可用":                            {Hant: "雲端同步位置已無法使用", En: "The cloud sync location is unavailable", Ja: "クラウドの同期先を利用できません", Ko: "클라우드 동기화 위치를 사용할 수 없습니다"},
+		"云端目录在扫描期间发生变化，请重新核对":                   {Hant: "雲端目錄在掃描期間發生變化，請重新核對", En: "The cloud folder changed during the scan; check it again", Ja: "スキャン中にクラウドのフォルダが変更されました。再確認してください", Ko: "스캔 중 클라우드 폴더가 변경되었습니다. 다시 확인하세요"},
+		"云端目录分页未完整结束，未执行同步":                     {Hant: "雲端目錄分頁未完整結束，未執行同步", En: "The cloud folder listing is incomplete; no sync was performed", Ja: "クラウドのフォルダ一覧を最後まで取得できなかったため、同期していません", Ko: "클라우드 폴더 목록을 완전히 읽지 못해 동기화하지 않았습니다"},
+		"文件在核对后发生变化，已保留原件，请重新扫描":                {Hant: "檔案在核對後發生變化，已保留原件，請重新掃描", En: "The file changed after verification; originals are preserved. Scan again", Ja: "確認後にファイルが変更されました。元のファイルを保持しました。再スキャンしてください", Ko: "확인 후 파일이 변경되었습니다. 원본을 보존했습니다. 다시 스캔하세요"},
+		"上传授权记录不完整，已停止自动重试":                     {Hant: "上傳授權記錄不完整，已停止自動重試", En: "The upload authorization record is incomplete; automatic retries have stopped", Ja: "アップロードの認証記録が不完全なため、自動再試行を停止しました", Ko: "업로드 승인 기록이 불완전해 자동 재시도를 중단했습니다"},
+		"云端未完成同步上传，旧版本已保留":                      {Hant: "雲端未完成同步上傳，舊版本已保留", En: "The cloud upload did not complete; the old version is preserved", Ja: "クラウドへのアップロードが完了しませんでした。旧バージョンは保持されています", Ko: "클라우드 업로드가 완료되지 않았습니다. 이전 버전을 보존했습니다"},
+		"云端尚未确认上传完成，旧版本已保留":                     {Hant: "雲端尚未確認上傳完成，舊版本已保留", En: "Cloud upload completion is unconfirmed; the old version is preserved", Ja: "クラウドでアップロードの完了を確認できません。旧バージョンは保持されています", Ko: "클라우드 업로드 완료를 확인하지 못했습니다. 이전 버전을 보존했습니다"},
+		"云端保存位置与计划不同，已保留所有版本":                   {Hant: "雲端儲存位置與計畫不同，已保留所有版本", En: "The cloud destination differs from the plan; all versions are preserved", Ja: "クラウドの保存先が計画と異なります。すべてのバージョンを保持しています", Ko: "클라우드 저장 위치가 계획과 다릅니다. 모든 버전을 보존했습니다"},
+		"同步文件内容核对不一致，旧版本已保留":                    {Hant: "同步檔案內容核對不一致，舊版本已保留", En: "Sync content verification failed; the old version is preserved", Ja: "同期ファイルの内容が一致しません。旧バージョンは保持されています", Ko: "동기화 파일 내용이 일치하지 않습니다. 이전 버전을 보존했습니다"},
+		"同步文件名无效，请先处理名称冲突":                      {Hant: "同步檔名無效，請先處理名稱衝突", En: "The sync filename is invalid; resolve the naming conflict first", Ja: "同期するファイル名が無効です。名前の競合を先に解決してください", Ko: "동기화 파일 이름이 잘못되었습니다. 이름 충돌을 먼저 해결하세요"},
+		"同步目标名称已被占用，未覆盖现有文件":                    {Hant: "同步目標名稱已被佔用，未覆寫現有檔案", En: "The destination name is taken; existing files were not overwritten", Ja: "同期先の名前は使用中です。既存のファイルは上書きしていません", Ko: "대상 이름이 이미 사용 중입니다. 기존 파일을 덮어쓰지 않았습니다"},
+		"云端尚未确认名称变更，已保留原件":                      {Hant: "雲端尚未確認名稱變更，已保留原件", En: "The cloud rename is unconfirmed; originals are preserved", Ja: "クラウドで名前の変更を確認できません。元のファイルを保持しています", Ko: "클라우드 이름 변경을 확인하지 못했습니다. 원본을 보존했습니다"},
+		"云端尚未确认移动结果，已保留所有版本":                    {Hant: "雲端尚未確認移動結果，已保留所有版本", En: "The cloud move is unconfirmed; all versions are preserved", Ja: "クラウドで移動結果を確認できません。すべてのバージョンを保持しています", Ko: "클라우드 이동 결과를 확인하지 못했습니다. 모든 버전을 보존했습니다"},
+		"云端未确认同步操作完成，请重新核对":                     {Hant: "雲端未確認同步操作完成，請重新核對", En: "Cloud sync completion is unconfirmed; verify it again", Ja: "クラウドで同期操作の完了を確認できません。再確認してください", Ko: "클라우드 동기화 완료를 확인하지 못했습니다. 다시 확인하세요"},
+		"同步文件夹仍有内容，已保留且未删除":                     {Hant: "同步資料夾仍有內容，已保留且未刪除", En: "The sync folder still contains items; it was preserved, not deleted", Ja: "同期フォルダにはまだ内容があるため、削除せず保持しました", Ko: "동기화 폴더에 내용이 남아 있어 삭제하지 않고 보존했습니다"},
+		"云端回收站尚未确认这项文件，未标记为已删除":                 {Hant: "雲端垃圾桶尚未確認這項檔案，未標記為已刪除", En: "The file has not been confirmed in cloud trash; it is not marked deleted", Ja: "クラウドのゴミ箱でファイルを確認できないため、削除済みにはしていません", Ko: "클라우드 휴지통에서 파일을 확인하지 못해 삭제 완료로 표시하지 않았습니다"},
+		"上传创建结果待确认，请先核实云端状态":                    {Hant: "上傳建立結果待確認，請先核實雲端狀態", En: "Upload creation is unconfirmed; verify the cloud state first", Ja: "アップロードの作成結果が不明です。先にクラウドの状態を確認してください", Ko: "업로드 생성 결과가 확인되지 않았습니다. 클라우드 상태를 먼저 확인하세요"},
+		"上传授权已失效，请先核实云端状态":                      {Hant: "上傳授權已失效，請先核實雲端狀態", En: "The upload grant expired; verify the cloud state first", Ja: "アップロードの認証が期限切れです。先にクラウドの状態を確認してください", Ko: "업로드 승인이 만료되었습니다. 클라우드 상태를 먼저 확인하세요"},
+		"传输检查点与当前操作不一致":                         {Hant: "傳輸檢查點與目前操作不一致", En: "The transfer checkpoint does not match this operation", Ja: "転送のチェックポイントが現在の操作と一致しません", Ko: "전송 체크포인트가 현재 작업과 일치하지 않습니다"},
+		"传输操作正在进行":                              {Hant: "傳輸操作正在進行", En: "The transfer operation is already running", Ja: "転送操作は実行中です", Ko: "전송 작업이 이미 진행 중입니다"},
+		"目前有 %d 个同步对正在执行。退出将停止本机同步；下次启动会先重新核对。": {Hant: "目前有 %d 個同步對正在執行。退出將停止本機同步；下次啟動會先重新核對。", En: "%d folder pairs are syncing. Quitting stops local synchronization; the next launch verifies both sides before continuing.", Ja: "%d 組のフォルダを同期中です。終了するとこのコンピュータの同期は停止し、次回起動時に再確認します。", Ko: "폴더 쌍 %d개를 동기화 중입니다. 종료하면 이 컴퓨터의 동기화가 중단되며 다음 시작 시 다시 확인합니다."},
+		"PKP，%d 个同步对需要处理":                       {Hant: "PKP，%d 個同步對需要處理", En: "PKP, %d folder pairs need attention", EnOne: "PKP, %d folder pair needs attention", Ja: "PKP、%d 組の同期に対応が必要です", Ko: "PKP, 폴더 쌍 %d개에 확인이 필요합니다"},
+		"PKP，%d 个同步对正在执行":                       {Hant: "PKP，%d 個同步對正在執行", En: "PKP, %d folder pairs are syncing", EnOne: "PKP, %d folder pair is syncing", Ja: "PKP、%d 組のフォルダを同期中です", Ko: "PKP, 폴더 쌍 %d개를 동기화 중입니다"},
+	})
+}

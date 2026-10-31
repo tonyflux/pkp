@@ -1,0 +1,795 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="robots" content="noindex" />
+    <title>PKP Usage Statistics</title>
+    <style nonce="{{nonce}}">
+      :root {
+        color-scheme: light dark;
+        --bg: #f4f7fb;
+        --card: rgba(255, 255, 255, 0.85);
+        --text: #18202b;
+        --dim: #667085;
+        --line: #dce3ed;
+        --accent: #1476e8;
+        --accent-soft: rgba(20, 118, 232, 0.12);
+        --new: #43a875;
+        font-family:
+          Inter,
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #0d121a;
+          --card: rgba(24, 31, 43, 0.9);
+          --text: #ecf2fa;
+          --dim: #99a6b8;
+          --line: #303b4c;
+          --accent: #66adff;
+          --accent-soft: rgba(74, 151, 239, 0.15);
+          --new: #66c894;
+        }
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+      }
+      main {
+        width: min(1320px, calc(100% - 32px));
+        margin: 28px auto 48px;
+      }
+      header {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        margin-bottom: 18px;
+      }
+      h1 {
+        font-size: 24px;
+        margin: 0;
+        letter-spacing: -0.02em;
+      }
+      h2 {
+        font-size: 15px;
+        margin: 0 0 14px;
+      }
+      h2 small {
+        color: var(--dim);
+        font-size: 11px;
+        font-weight: 500;
+        margin-left: 8px;
+      }
+      .meta {
+        color: var(--dim);
+        font-size: 12px;
+      }
+      .spacer {
+        flex: 1;
+      }
+      .seg {
+        display: flex;
+        padding: 3px;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: var(--card);
+      }
+      button {
+        color: inherit;
+        font: inherit;
+        cursor: pointer;
+      }
+      .seg button,
+      .refresh {
+        border: 0;
+        background: transparent;
+        padding: 7px 11px;
+        border-radius: 7px;
+      }
+      .seg button[aria-pressed="true"] {
+        color: var(--accent);
+        background: var(--accent-soft);
+        font-weight: 700;
+      }
+      .refresh {
+        border: 1px solid var(--line);
+        background: var(--card);
+      }
+      .refresh:disabled {
+        opacity: 0.5;
+        cursor: wait;
+      }
+      .card {
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        background: var(--card);
+        box-shadow: 0 10px 28px rgba(20, 35, 60, 0.05);
+      }
+      .kpis {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 12px;
+        margin-bottom: 12px;
+      }
+      .kpi {
+        padding: 16px;
+      }
+      .kpi .label {
+        color: var(--dim);
+        font-size: 12px;
+      }
+      .kpi .value {
+        font-size: 29px;
+        font-weight: 750;
+        margin-top: 7px;
+        letter-spacing: -0.03em;
+        font-variant-numeric: tabular-nums;
+      }
+      .kpi .note {
+        min-height: 16px;
+        margin-top: 5px;
+        color: var(--dim);
+        font-size: 11px;
+      }
+      .note.up {
+        color: var(--new);
+      }
+      .note.down {
+        color: #d45b53;
+      }
+      .chart {
+        padding: 18px;
+        margin-bottom: 12px;
+        position: relative;
+      }
+      .legend {
+        float: right;
+        color: var(--dim);
+        font-size: 11px;
+        font-weight: 500;
+      }
+      .legend span {
+        margin-left: 12px;
+      }
+      .legend i {
+        display: inline-block;
+        width: 8px;
+        height: 8px;
+        border-radius: 2px;
+        margin-right: 5px;
+      }
+      .key-active {
+        background: var(--accent);
+      }
+      .key-new {
+        background: var(--new);
+      }
+      #chart {
+        width: 100%;
+        height: 260px;
+        display: block;
+        overflow: visible;
+      }
+      .grid line {
+        stroke: var(--line);
+        stroke-width: 1;
+      }
+      .axis text {
+        fill: var(--dim);
+        font-size: 10px;
+      }
+      .area {
+        fill: var(--accent-soft);
+      }
+      .line {
+        fill: none;
+        stroke: var(--accent);
+        stroke-width: 2.25;
+        stroke-linejoin: round;
+        stroke-linecap: round;
+      }
+      .dots circle {
+        fill: var(--accent);
+      }
+      .bars rect {
+        fill: var(--new);
+        opacity: 0.78;
+      }
+      .cursor {
+        stroke: var(--dim);
+        stroke-width: 1;
+        stroke-dasharray: 3 3;
+        display: none;
+      }
+      .cursor.on {
+        display: block;
+      }
+      .hit {
+        fill: transparent;
+        pointer-events: all;
+      }
+      .tip {
+        position: absolute;
+        display: none;
+        z-index: 2;
+        transform: translate(-50%, -100%);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 7px 9px;
+        background: var(--card);
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+        font-size: 11px;
+        pointer-events: none;
+        white-space: nowrap;
+      }
+      .tip b {
+        display: block;
+        margin-bottom: 2px;
+      }
+      .two {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+        margin-bottom: 12px;
+      }
+      .three {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 12px;
+      }
+      .two .card,
+      .three .card {
+        padding: 17px;
+        min-width: 0;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 12px;
+      }
+      th {
+        color: var(--dim);
+        text-align: left;
+        font-weight: 600;
+        padding: 0 8px 8px;
+      }
+      td {
+        border-top: 1px solid var(--line);
+        padding: 9px 8px;
+        vertical-align: middle;
+      }
+      th:first-child,
+      td:first-child {
+        padding-left: 0;
+      }
+      th:last-child,
+      td:last-child {
+        padding-right: 0;
+      }
+      .num {
+        text-align: right;
+        font-variant-numeric: tabular-nums;
+      }
+      .name {
+        overflow-wrap: anywhere;
+      }
+      .name code {
+        color: var(--dim);
+        margin-left: 5px;
+        font-size: 10px;
+      }
+      .bar-cell {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+      }
+      .bar-cell .bar {
+        width: 76px;
+        height: 6px;
+        border-radius: 6px;
+        background: var(--accent-soft);
+        overflow: hidden;
+      }
+      .bar-cell .bar span {
+        display: block;
+        height: 100%;
+        border-radius: inherit;
+        background: var(--accent);
+      }
+      .bar-cell em {
+        color: var(--dim);
+        font-style: normal;
+        font-variant-numeric: tabular-nums;
+      }
+      .empty-row {
+        color: var(--dim);
+        text-align: center;
+      }
+      .banner {
+        padding: 14px 18px;
+        border-radius: 12px;
+        background: var(--accent-soft);
+        margin-bottom: 12px;
+      }
+      .banner.error {
+        background: rgba(209, 69, 59, 0.12);
+      }
+      footer {
+        color: var(--dim);
+        font-size: 12px;
+        line-height: 1.7;
+        margin-top: 18px;
+      }
+      @media (max-width: 920px) {
+        .kpis {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+        .two,
+        .three {
+          grid-template-columns: minmax(0, 1fr);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1>PKP Usage Statistics</h1>
+        <span class="meta" id="meta"></span>
+        <span class="spacer"></span>
+        <div class="seg" role="group" aria-label="Date range" id="ranges">
+          <button type="button" data-days="7">Last 7 days</button>
+          <button type="button" data-days="30">Last 30 days</button>
+          <button type="button" data-days="90">Last 90 days</button>
+        </div>
+        <button type="button" class="refresh" id="refresh">Refresh</button>
+      </header>
+      <div id="banner" hidden></div>
+      <section class="kpis">
+        <div class="card kpi">
+          <div class="label">Active today</div>
+          <div class="value" id="k-today">–</div>
+          <div class="note" id="k-today-note"></div>
+        </div>
+        <div class="card kpi">
+          <div class="label">Weekly active (7 days)</div>
+          <div class="value" id="k-wau">–</div>
+          <div class="note"></div>
+        </div>
+        <div class="card kpi">
+          <div class="label">Monthly active (30 days)</div>
+          <div class="value" id="k-mau">–</div>
+          <div class="note"></div>
+        </div>
+        <div class="card kpi">
+          <div class="label" id="k-new-label">New installs</div>
+          <div class="value" id="k-new">–</div>
+          <div class="note" id="k-new-note"></div>
+        </div>
+        <div class="card kpi">
+          <div class="label">Total installs</div>
+          <div class="value" id="k-total">–</div>
+          <div class="note"></div>
+        </div>
+      </section>
+      <section class="card chart">
+        <h2>
+          Daily active and new installs
+          <span class="legend"
+            ><span><i class="key-active"></i>Active</span
+            ><span><i class="key-new"></i>New</span></span
+          >
+        </h2>
+        <svg
+          id="chart"
+          role="img"
+          aria-label="Daily active and new installs"
+        ></svg>
+        <div class="tip" id="tip"></div>
+      </section>
+      <section class="two">
+        <div class="card">
+          <h2>
+            Feature usage
+            <small
+              >Sorted by installs; share = installs using feature ÷ active
+              installs</small
+            >
+          </h2>
+          <table>
+            <thead>
+              <tr>
+                <th>Feature</th>
+                <th>Installs using it</th>
+                <th class="num">Installs</th>
+                <th class="num">Uses</th>
+              </tr>
+            </thead>
+            <tbody id="features"></tbody>
+          </table>
+        </div>
+        <div class="card">
+          <h2>Page visits <small>Installs that opened the page</small></h2>
+          <table>
+            <thead>
+              <tr>
+                <th>Page</th>
+                <th>Installs visiting</th>
+                <th class="num">Installs</th>
+                <th class="num">Visits</th>
+              </tr>
+            </thead>
+            <tbody id="pages"></tbody>
+          </table>
+        </div>
+      </section>
+      <section class="three">
+        <div class="card">
+          <h2>Versions</h2>
+          <table>
+            <tbody id="versions"></tbody>
+          </table>
+        </div>
+        <div class="card">
+          <h2>Platforms</h2>
+          <table>
+            <tbody id="platforms"></tbody>
+          </table>
+        </div>
+        <div class="card">
+          <h2>Interface languages</h2>
+          <table>
+            <tbody id="locales"></tbody>
+          </table>
+        </div>
+      </section>
+      <footer>
+        Active means an install sent statistics that day. Users who do not opt in
+        and builds without an endpoint are excluded. Dates are the user's local
+        dates; today uses the viewer's local date. An install is one random
+        installation ID. Reinstalling or disabling and re-enabling statistics
+        creates a new install. Reports are unauthenticated and can be forged;
+        rate limiting does not verify installs. Today's totals continue to grow.
+      </footer>
+    </main>
+    <script nonce="{{nonce}}">
+      "use strict";
+      const LABELS = {
+        "app.open": "Launch PKP",
+        "app_lock.on": "Launch with App Lock enabled",
+        "route.files": "All Files",
+        "route.transfers": "Transfers",
+        "route.player": "Player",
+        "route.shares": "Shares",
+        "route.settings": "Settings",
+        "route.viewer": "File Viewer",
+        "route.assistant": "AI Assistant",
+        "route.cleanup": "Cleanup",
+        "play.video": "Play video",
+        "play.audio": "Play audio",
+        upload: "Upload",
+        download: "Download to computer",
+        cloud_add: "Cloud add",
+        "viewer.open": "Open File Viewer",
+        "scope.drive": "Browse entire drive",
+        search: "Search",
+        "share.create": "Create share",
+        "assistant.ask": "Ask AI Assistant",
+        "organize.run": "Run organization plan",
+        "organize.undo": "Undo organization plan",
+        "cleanup.scan": "Run cleanup scan",
+        "cleanup.remove": "Remove during cleanup",
+        "menubar.open": "Open from menu bar",
+      };
+      const LOCALES = {
+        "zh-Hans": "Simplified Chinese",
+        "zh-Hant": "Traditional Chinese",
+        en: "English",
+        ja: "Japanese",
+        ko: "Korean",
+      };
+      const PLATFORMS = {
+        "darwin/arm64": "macOS · Apple silicon",
+        "darwin/amd64": "macOS · Intel",
+        "windows/amd64": "Windows · x64",
+        "windows/arm64": "Windows · ARM",
+      };
+      const fmt = new Intl.NumberFormat("en-US");
+      const $ = (id) => document.getElementById(id);
+      const SVG = "http://www.w3.org/2000/svg";
+      function el(tag, attrs = {}, ...children) {
+        const node = document.createElement(tag);
+        for (const [k, v] of Object.entries(attrs)) node.setAttribute(k, v);
+        for (const c of children) node.append(c);
+        return node;
+      }
+      function svg(tag, attrs = {}) {
+        const node = document.createElementNS(SVG, tag);
+        for (const [k, v] of Object.entries(attrs))
+          node.setAttribute(k, String(v));
+        return node;
+      }
+      let days = [7, 30, 90].includes(
+        Number(localStorage.getItem("pkp.admin.days")),
+      )
+        ? Number(localStorage.getItem("pkp.admin.days"))
+        : 30;
+      let data = null;
+      function localToday() {
+        const d = new Date();
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+      }
+      function banner(text, kind = "") {
+        const b = $("banner");
+        b.hidden = !text;
+        b.className = `banner ${kind}`;
+        b.textContent = text;
+      }
+      async function load() {
+        $("refresh").disabled = true;
+        for (const b of $("ranges").querySelectorAll("button"))
+          b.setAttribute(
+            "aria-pressed",
+            String(Number(b.dataset.days) === days),
+          );
+        try {
+          const res = await fetch(
+            `/api/stats?days=${days}&today=${localToday()}`,
+            { credentials: "same-origin", cache: "no-store" },
+          );
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          data = await res.json();
+          banner(
+            data.summary.total === 0
+              ? "No data yet. A computer running the current PKP build sends its first report about 30 seconds after launch, then hourly."
+              : "",
+          );
+          render();
+        } catch (err) {
+          banner(
+            `Could not load statistics (${err.message}). If your Access session expired, refresh the page and sign in again.`,
+            "error",
+          );
+        } finally {
+          $("refresh").disabled = false;
+        }
+      }
+      function render() {
+        const s = data.summary;
+        $("meta").textContent =
+          `${data.viewer ? data.viewer + " · " : ""}Updated ${new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })} · through ${data.today}`;
+        $("k-today").textContent = fmt.format(s.today);
+        const delta = s.today - s.yesterday,
+          note = $("k-today-note");
+        note.textContent = `Yesterday ${fmt.format(s.yesterday)}${delta ? ` (${delta > 0 ? "+" : ""}${fmt.format(delta)})` : ""}`;
+        note.className = `note ${delta > 0 ? "up" : delta < 0 ? "down" : ""}`;
+        $("k-wau").textContent = fmt.format(s.wau);
+        $("k-mau").textContent = fmt.format(s.mau);
+        $("k-new-label").textContent = `New in last ${data.days} days`;
+        $("k-new").textContent = fmt.format(s.new);
+        $("k-new-note").textContent = `Active in range ${fmt.format(s.active)}`;
+        $("k-total").textContent = fmt.format(s.total);
+        drawChart();
+        const routes = data.features.filter((f) => f.name.startsWith("route."));
+        const used = data.features.filter(
+          (f) => !f.name.startsWith("route.") && f.name !== "app.open",
+        );
+        featureRows($("features"), used, s.active);
+        featureRows($("pages"), routes, s.active);
+        countRows($("versions"), data.versions, (v) => v);
+        countRows($("platforms"), data.platforms, (v) => PLATFORMS[v] ?? v);
+        countRows($("locales"), data.locales, (v) => LOCALES[v] ?? v);
+      }
+      function shareCell(n, of) {
+        const pct = of ? Math.round((n / of) * 100) : 0,
+          bar = el("span");
+        bar.style.width = `${Math.min(100, pct)}%`;
+        return el(
+          "td",
+          {},
+          el(
+            "div",
+            { class: "bar-cell" },
+            el("div", { class: "bar" }, bar),
+            el("em", {}, `${pct}%`),
+          ),
+        );
+      }
+      function featureRows(body, list, active) {
+        body.replaceChildren();
+        if (!list.length) {
+          body.append(
+            el(
+              "tr",
+              { class: "empty-row" },
+              el("td", { colspan: "4" }, "No records in this period"),
+            ),
+          );
+          return;
+        }
+        for (const f of list) {
+          const name = el(
+            "td",
+            { class: "name", title: f.name },
+            LABELS[f.name] ?? f.name,
+          );
+          if (!LABELS[f.name]) name.append(el("code", {}, "unnamed"));
+          body.append(
+            el(
+              "tr",
+              {},
+              name,
+              shareCell(f.installs, active),
+              el("td", { class: "num" }, fmt.format(f.installs)),
+              el("td", { class: "num" }, fmt.format(f.uses)),
+            ),
+          );
+        }
+      }
+      function countRows(body, list, label) {
+        body.replaceChildren();
+        if (!list.length) {
+          body.append(
+            el(
+              "tr",
+              { class: "empty-row" },
+              el("td", { colspan: "3" }, "None"),
+            ),
+          );
+          return;
+        }
+        const sum = list.reduce((n, c) => n + c.installs, 0);
+        for (const c of list)
+          body.append(
+            el(
+              "tr",
+              {},
+              el("td", { class: "name", title: c.value }, label(c.value)),
+              shareCell(c.installs, sum),
+              el("td", { class: "num" }, fmt.format(c.installs)),
+            ),
+          );
+      }
+      function niceMax(n) {
+        if (n <= 4) return 4;
+        const step = Math.pow(10, Math.floor(Math.log10(n / 4)));
+        for (const m of [1, 2, 2.5, 5, 10])
+          if (step * m * 4 >= n) return step * m * 4;
+        return n;
+      }
+      function drawChart() {
+        const chart = $("chart"),
+          W = chart.clientWidth || 800,
+          H = 260,
+          pad = { l: 40, r: 8, t: 10, b: 26 },
+          pts = data.daily,
+          max = niceMax(Math.max(1, ...pts.map((p) => p.active))),
+          iw = W - pad.l - pad.r,
+          ih = H - pad.t - pad.b,
+          slot = iw / pts.length,
+          x = (i) => pad.l + slot * (i + 0.5),
+          y = (v) => pad.t + ih - (v / max) * ih;
+        chart.setAttribute("viewBox", `0 0 ${W} ${H}`);
+        chart.replaceChildren();
+        const grid = svg("g", { class: "grid" }),
+          axis = svg("g", { class: "axis" });
+        for (let i = 0; i <= 4; i++) {
+          const v = (max / 4) * i;
+          grid.append(
+            svg("line", { x1: pad.l, x2: W - pad.r, y1: y(v), y2: y(v) }),
+          );
+          const t = svg("text", {
+            x: pad.l - 8,
+            y: y(v) + 4,
+            "text-anchor": "end",
+          });
+          t.textContent = fmt.format(v);
+          axis.append(t);
+        }
+        const every = Math.ceil(pts.length / Math.max(2, Math.floor(iw / 64)));
+        pts.forEach((p, i) => {
+          if ((pts.length - 1 - i) % every) return;
+          const t = svg("text", { x: x(i), y: H - 6, "text-anchor": "middle" });
+          t.textContent = p.day.slice(5);
+          axis.append(t);
+        });
+        chart.append(grid, axis);
+        const bw = Math.max(2, Math.min(18, slot * 0.5)),
+          bars = svg("g", { class: "bars" });
+        pts.forEach((p, i) => {
+          if (p.new)
+            bars.append(
+              svg("rect", {
+                x: x(i) - bw / 2,
+                y: y(p.new),
+                width: bw,
+                height: Math.max(1, y(0) - y(p.new)),
+                rx: 2,
+              }),
+            );
+        });
+        const line = pts
+            .map(
+              (p, i) =>
+                `${i ? "L" : "M"}${x(i).toFixed(1)},${y(p.active).toFixed(1)}`,
+            )
+            .join(""),
+          area = `${line}L${x(pts.length - 1).toFixed(1)},${y(0)}L${x(0).toFixed(1)},${y(0)}Z`;
+        chart.append(
+          svg("path", { d: area, class: "area" }),
+          bars,
+          svg("path", { d: line, class: "line" }),
+        );
+        if (pts.length <= 31) {
+          const dots = svg("g", { class: "dots" });
+          pts.forEach((p, i) =>
+            dots.append(svg("circle", { cx: x(i), cy: y(p.active), r: 2.5 })),
+          );
+          chart.append(dots);
+        }
+        const tip = $("tip"),
+          cursor = svg("line", { y1: pad.t, y2: pad.t + ih, class: "cursor" });
+        chart.append(cursor);
+        const hit = svg("rect", {
+          x: pad.l,
+          y: pad.t,
+          width: iw,
+          height: ih,
+          class: "hit",
+        });
+        hit.addEventListener("mousemove", (e) => {
+          const box = chart.getBoundingClientRect(),
+            i = Math.min(
+              pts.length - 1,
+              Math.max(
+                0,
+                Math.floor(
+                  ((e.clientX - box.left) * (W / box.width) - pad.l) / slot,
+                ),
+              ),
+            ),
+            p = pts[i];
+          cursor.setAttribute("x1", x(i));
+          cursor.setAttribute("x2", x(i));
+          cursor.classList.add("on");
+          tip.replaceChildren(
+            el("b", {}, p.day),
+            `Active ${fmt.format(p.active)} · New ${fmt.format(p.new)}`,
+          );
+          tip.style.display = "block";
+          tip.style.left = `${chart.offsetLeft + (x(i) / W) * box.width}px`;
+          tip.style.top = `${chart.offsetTop + (y(p.active) / H) * box.height - 10}px`;
+        });
+        hit.addEventListener("mouseleave", () => {
+          tip.style.display = "none";
+          cursor.classList.remove("on");
+        });
+        chart.append(hit);
+      }
+      $("ranges").addEventListener("click", (e) => {
+        const b = e.target.closest("button[data-days]");
+        if (!b || Number(b.dataset.days) === days) return;
+        days = Number(b.dataset.days);
+        localStorage.setItem("pkp.admin.days", String(days));
+        load();
+      });
+      $("refresh").addEventListener("click", load);
+      let resizeTimer = 0;
+      window.addEventListener("resize", () => {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(() => data && drawChart(), 120);
+      });
+      load();
+    </script>
+  </body>
+</html>

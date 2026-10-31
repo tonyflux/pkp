@@ -6,10 +6,54 @@ import json
 import pathlib
 import re
 import subprocess
+import posixpath
 import sys
 import tempfile
+import tarfile
 
 PUBLIC_KEY = "OWVabjpKxRDdGMlH9Jpk7NYhth7AFCws7Nvaox6C/ac="
+
+
+def verify_source(directory, version, manifest, digests):
+    source = manifest.get("source")
+    if tuple(map(int, version.split("."))) < (0, 3, 0):
+        if source is not None:
+            raise ValueError("historical release cannot claim new source metadata")
+        return
+    name = f"PKP-{version}-source.tar.gz"
+    if not isinstance(source, dict) or any(not re.fullmatch(r"[0-9a-f]{40}", source.get(key, "")) for key in ("commit", "tree")):
+        raise ValueError("missing signed release source identity")
+    if source.get("url") != f"https://github.com/tonyflux/pkp/releases/download/v{version}/{name}" or source.get("size") != (directory / name).stat().st_size or source.get("sha256") != digests[name]:
+        raise ValueError("source archive differs from signed manifest")
+    prefix = f"PKP-{version}/"
+    seen = set()
+    identity = dependencies = False
+    with tarfile.open(directory / name, "r:gz") as archive:
+        for entry in archive:
+            if entry.isdir() and entry.name == prefix.rstrip("/"):
+                continue
+            relative = entry.name.removeprefix(prefix)
+            clean = posixpath.normpath(relative)
+            if not entry.name.startswith(prefix) or "\\" in relative or clean.startswith("/") or clean == ".." or clean.startswith("../") or (relative.rstrip("/") != clean and relative != "") or "/.git/" in f"/{clean}/" or clean in seen:
+                raise ValueError("unsafe or duplicate source entry")
+            seen.add(clean)
+            if not (entry.isfile() or entry.isdir() or entry.issym()):
+                raise ValueError("unsupported source archive entry")
+            if entry.issym():
+                target = posixpath.normpath(posixpath.join(posixpath.dirname(relative), entry.linkname))
+                if entry.linkname.startswith("/") or "\\" in entry.linkname or target == ".." or target.startswith("../"):
+                    raise ValueError("escaping source symlink")
+            if relative == "release-source.json":
+                if not entry.isfile() or entry.size > 4096:
+                    raise ValueError("invalid source identity metadata")
+                metadata = json.load(archive.extractfile(entry))
+                if any(metadata.get(key) != source[key] for key in ("commit", "tree")):
+                    raise ValueError("archive source identity differs from manifest")
+                identity = True
+            if relative.startswith("third_party/") and entry.isfile():
+                dependencies = True
+    if not identity or not dependencies:
+        raise ValueError("source identity or dependency sources missing")
 
 
 def verify(directory, tag):
@@ -23,8 +67,10 @@ def verify(directory, tag):
         "windows-x64-arm64": f"PKP-{version}-windows-x64-arm64-setup.exe",
     }
     names = {*packages.values(), "update.json", "update.json.sig", "libmpv-sources.tar.gz", "LICENSE", "SHA256SUMS"}
+    if tuple(map(int, version.split("."))) >= (0, 3, 0):
+        names.add(f"PKP-{version}-source.tar.gz")
     if {p.name for p in directory.iterdir()} != names:
-        raise ValueError("expected exactly seven release assets")
+        raise ValueError(f"expected exactly {len(names)} release assets")
     for name in names:
         path = directory / name
         if path.is_symlink() or not path.is_file() or path.stat().st_size == 0:
@@ -58,13 +104,14 @@ def verify(directory, tag):
         seen.add(name)
     if seen != set(digests):
         raise ValueError("incomplete checksum file")
+    verify_source(directory, version, manifest, digests)
     for platform, name in packages.items():
         package = manifest["packages"][platform]
         if package["url"] != f"https://github.com/tonyflux/pkp/releases/download/{tag}/{name}":
             raise ValueError("untrusted installer URL")
         if package["size"] != (directory / name).stat().st_size or package["sha256"] != digests[name]:
             raise ValueError("installer differs from signed manifest")
-    print(f"Verified {tag}: signature, both installers, all seven assets and SHA256SUMS")
+    print(f"Verified {tag}: signature, both installers, all {len(names)} assets and SHA256SUMS")
 
 
 if __name__ == "__main__":

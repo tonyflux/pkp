@@ -1,0 +1,20 @@
+{
+  "name": "@tonyflux/pkp-telemetry",
+  "private": true,
+  "license": "GPL-3.0-only",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler d1 migrations apply DB --local && wrangler dev --port 8788",
+    "dev:admin": "wrangler d1 migrations apply DB --local && wrangler dev -c wrangler.admin.jsonc --port 8789",
+    "deploy": "wrangler d1 migrations apply DB --remote && wrangler deploy && wrangler deploy -c wrangler.admin.jsonc",
+    "types": "wrangler types --strict-vars=false",
+    "typecheck": "npm run types && tsc --noEmit",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@types/node": "^24.19.2",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.4",
+    "wrangler": "^4.151.0"
+  }
+}

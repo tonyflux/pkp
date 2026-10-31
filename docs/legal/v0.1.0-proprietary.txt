@@ -1,0 +1,30 @@
+PKP — Proprietary Software Notice and Binary Use License
+Copyright (c) 2026 tonyflux. All rights reserved.
+
+PKP is currently distributed as closed-source software. Publication of its
+installation packages, documentation or issue tracker does not grant access
+to, or an open-source license for, PKP's own source code.
+
+Permission is granted to download, install and run unmodified official PKP
+binaries, free of charge, for lawful personal or commercial use, and to make
+backup copies for that use. No other rights to redistribute, sublicense,
+sell or modify PKP-owned software, documentation or artwork are granted by
+this notice. Rights not expressly granted remain reserved, except where
+applicable law provides otherwise.
+
+Third-party components remain governed by their own licenses. Nothing in
+this notice limits rights granted by those licenses, including replacement
+of LGPL-covered libraries and reverse engineering necessary to debug
+modifications to those libraries. Retain their copyright and license notices;
+see the licenses directory shipped with the application and the corresponding
+third-party source archive supplied with the same release.
+
+This notice applies only to material for which tonyflux holds the necessary
+rights. It does not relicense third-party material or revoke rights already
+granted for any version previously received under another license.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO WARRANTIES OF MERCHANTABILITY, FITNESS
+FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. TO THE MAXIMUM EXTENT PERMITTED
+BY APPLICABLE LAW, THE COPYRIGHT HOLDER SHALL NOT BE LIABLE FOR ANY CLAIM,
+DAMAGES OR OTHER LIABILITY ARISING FROM THE SOFTWARE OR ITS USE.

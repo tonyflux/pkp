@@ -1,0 +1,55 @@
+import type { Messages } from "./types";
+
+// Interface language itself, and words every area shares. Reuse these keys rather
+// than adding a second translation of the same word elsewhere.
+export default {
+  界面语言: { tw: "介面語言", en: "Language", ja: "表示言語", ko: "언어" },
+  跟随系统: { tw: "跟隨系統", en: "System", ja: "システムに合わせる", ko: "시스템 설정" },
+  "跟随这台电脑的语言设置，当前为{name}。": {
+    tw: "跟隨這台電腦的語言設定，目前為{name}。",
+    en: "Follows this computer's language settings; currently {name}.",
+    ja: "このコンピュータの言語設定に従います。現在は{name}です。",
+    ko: "이 컴퓨터의 언어 설정을 따릅니다. 현재 {name}입니다.",
+  },
+  "PKP 的文字立即切换；系统的打开面板和验证窗口在下次启动 PKP 后跟上。": {
+    tw: "PKP 的文字立即切換；系統的開啟面板和驗證視窗在下次啟動 PKP 後跟上。",
+    en: "PKP's text switches now; system open panels and authentication windows follow the next time PKP starts.",
+    ja: "PKP の表示はすぐに切り替わります。システムのファイル選択パネルや認証ウインドウは、次回 PKP を起動したときに切り替わります。",
+    ko: "PKP의 텍스트는 바로 바뀝니다. 시스템의 열기 패널과 인증 창은 다음에 PKP를 실행할 때 바뀝니다.",
+  },
+  保存界面语言: { tw: "儲存介面語言", en: "Save language", ja: "表示言語の保存", ko: "언어 저장" },
+
+  // Shared words.
+  取消: { tw: "取消", en: "Cancel", ja: "キャンセル", ko: "취소" },
+  确定: { tw: "確定", en: "OK", ja: "OK", ko: "확인" },
+  关闭: { tw: "關閉", en: "Close", ja: "閉じる", ko: "닫기" },
+  保存: { tw: "儲存", en: "Save", ja: "保存", ko: "저장" },
+  重试: { tw: "重試", en: "Retry", ja: "再試行", ko: "다시 시도" },
+  继续: { tw: "繼續", en: "Resume", ja: "再開", ko: "계속" },
+  暂停: { tw: "暫停", en: "Pause", ja: "一時停止", ko: "일시정지" },
+  删除: { tw: "刪除", en: "Delete", ja: "削除", ko: "삭제" },
+  打开: { tw: "開啟", en: "Open", ja: "開く", ko: "열기" },
+  复制: { tw: "複製", en: "Copy", ja: "コピー", ko: "복사" },
+  返回: { tw: "返回", en: "Back", ja: "戻る", ko: "뒤로" },
+  更多: { tw: "更多", en: "More", ja: "その他", ko: "더 보기" },
+  详情: { tw: "詳細資料", en: "Details", ja: "詳細", ko: "세부 정보" },
+  预览: { tw: "預覽", en: "Preview", ja: "プレビュー", ko: "미리보기" },
+  下载: { tw: "下載", en: "Download", ja: "ダウンロード", ko: "다운로드" },
+  上传: { tw: "上傳", en: "Upload", ja: "アップロード", ko: "업로드" },
+  分享: { tw: "分享", en: "Share", ja: "共有", ko: "공유" },
+  重命名: { tw: "重新命名", en: "Rename", ja: "名前を変更", ko: "이름 바꾸기" },
+  移动: { tw: "移動", en: "Move", ja: "移動", ko: "이동" },
+  新建文件夹: { tw: "新增資料夾", en: "New Folder", ja: "新規フォルダ", ko: "새 폴더" },
+  全部文件: { tw: "全部檔案", en: "All Files", ja: "すべてのファイル", ko: "모든 파일" },
+  星标: { tw: "星號", en: "Starred", ja: "スター", ko: "별표" },
+  回收站: { tw: "垃圾桶", en: "Trash", ja: "ゴミ箱", ko: "휴지통" },
+  设置: { tw: "設定", en: "Settings", ja: "設定", ko: "설정" },
+  文件: { tw: "檔案", en: "File", ja: "ファイル", ko: "파일" },
+  文件夹: { tw: "資料夾", en: "Folder", ja: "フォルダ", ko: "폴더" },
+  视频: { tw: "影片", en: "Video", ja: "動画", ko: "동영상" },
+  图片: { tw: "圖片", en: "Image", ja: "画像", ko: "이미지" },
+  音频: { tw: "音訊", en: "Audio", ja: "オーディオ", ko: "오디오" },
+  文档: { tw: "文件", en: "Document", ja: "ドキュメント", ko: "문서" },
+  其他: { tw: "其他", en: "Other", ja: "その他", ko: "기타" },
+  未知: { tw: "未知", en: "Unknown", ja: "不明", ko: "알 수 없음" },
+} satisfies Messages;

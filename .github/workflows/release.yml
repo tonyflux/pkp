@@ -1,0 +1,139 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Existing source tag, e.g. v0.3.0'
+        required: true
+        type: string
+      publish:
+        description: 'Publish the verified draft as Latest (requires release approval)'
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  checks:
+    if: github.event_name == 'push' || github.ref == 'refs/heads/main'
+    uses: ./.github/workflows/ci.yml
+    with:
+      source-ref: ${{ inputs.tag || github.ref_name }}
+
+  release:
+    if: github.event_name != 'workflow_dispatch' || !inputs.publish
+    needs: checks
+    runs-on: macos-15
+    timeout-minutes: 180
+    environment: release
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ inputs.tag || github.ref_name }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version-file: go.mod
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Validate stable source tag and notes
+        env:
+          RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          version=$(go run ./cmd/pkp-release version)
+          test "$RELEASE_TAG" = "v$version"
+          test "$(git rev-parse "refs/tags/$RELEASE_TAG^{commit}")" = "$(git rev-parse HEAD)"
+          git merge-base --is-ancestor HEAD origin/main
+          IFS= read -r heading < build/release-notes.md
+          test "$heading" = "# PKP $version"
+          go run ./cmd/pkp-release check -version "$version" -metadata-only -notes build/release-notes.md
+      - name: Check release credentials
+        env:
+          SIGNING_KEY: ${{ secrets.UPDATE_SIGNING_KEY }}
+          PUBLIC_TOKEN: ${{ secrets.PUBLIC_RELEASE_TOKEN }}
+        run: |
+          test -n "$SIGNING_KEY" || { echo 'Missing release environment secret UPDATE_SIGNING_KEY'; exit 1; }
+          test -n "$PUBLIC_TOKEN" || { echo 'Missing release environment secret PUBLIC_RELEASE_TOKEN'; exit 1; }
+      - name: Install build tools
+        run: |
+          brew install cmake nsis
+          go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0-beta.28
+      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: |
+            ~/Library/Caches/pkp/libmpv
+            build/darwin/libmpv
+            build/windows/libmpv
+          key: release-media-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('build/libmpv-common.sh', 'build/darwin/libmpv.sh', 'build/windows/libmpv.sh') }}
+      - run: npm ci
+        working-directory: frontend
+      - name: Build, sign and verify allowlisted assets
+        env:
+          SIGNING_KEY: ${{ secrets.UPDATE_SIGNING_KEY }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          key="$RUNNER_TEMP/update-ed25519.key"
+          trap 'rm -f "$key"' EXIT
+          umask 077
+          printf '%s\n' "$SIGNING_KEY" > "$key"
+          make release-local RELEASE_NOTES=build/release-notes.md RELEASE_KEY="$key"
+          make release-verify
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: signed-release-${{ inputs.tag || github.ref_name }}
+          path: bin/releases/v*
+          if-no-files-found: error
+          retention-days: 14
+      - name: Upload verified draft
+        env:
+          GH_TOKEN: ${{ secrets.PUBLIC_RELEASE_TOKEN }}
+        run: |
+          version=$(go run ./cmd/pkp-release version)
+          go run ./cmd/pkp-release publish -dir "bin/releases/v$version"
+
+  promote:
+    if: github.event_name == 'workflow_dispatch' && inputs.publish
+    needs: checks
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    environment: release
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ inputs.tag }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version-file: go.mod
+      - name: Verify source and promote existing signed draft without rebuilding
+        env:
+          GH_TOKEN: ${{ secrets.PUBLIC_RELEASE_TOKEN }}
+          RELEASE_TAG: ${{ inputs.tag }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          version=$(go run ./cmd/pkp-release version)
+          test "$RELEASE_TAG" = "v$version"
+          test "$(git rev-parse "refs/tags/$RELEASE_TAG^{commit}")" = "$(git rev-parse HEAD)"
+          git merge-base --is-ancestor HEAD origin/main
+          dir="$RUNNER_TEMP/release"
+          mkdir "$dir"
+          gh release download "$RELEASE_TAG" --repo tonyflux/pkp --dir "$dir"
+          test "$(jq -r .version "$dir/update.json")" = "$version"
+          go run ./cmd/pkp-release publish -dir "$dir" -publish

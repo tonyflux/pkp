@@ -1,0 +1,114 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+  workflow_call:
+    inputs:
+      source-ref:
+        type: string
+        required: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  frontend:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+          ref: ${{ inputs.source-ref || github.sha }}
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+        working-directory: frontend
+      - run: npm run i18n && npm test -- --maxWorkers=2 && npm run build
+        working-directory: frontend
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version-file: go.mod
+      - name: Check packaging version metadata
+        run: go run ./cmd/pkp-release check -version "$(go run ./cmd/pkp-release version)" -metadata-only
+      - name: Test independent release verifier
+        run: python3 .github/scripts/test_verify_release.py
+
+  telemetry:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+          ref: ${{ inputs.source-ref || github.sha }}
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: cloudflare/telemetry/package-lock.json
+      - run: npm ci
+        working-directory: cloudflare/telemetry
+      - run: npm run typecheck && npm test
+        working-directory: cloudflare/telemetry
+
+  native:
+    runs-on: macos-15
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+          ref: ${{ inputs.source-ref || github.sha }}
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version-file: go.mod
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install native test and build tools
+        run: |
+          brew install cmake ffmpeg nsis
+          go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0-beta.28
+      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: |
+            ~/Library/Caches/pkp/libmpv
+            build/darwin/libmpv
+            build/windows/libmpv
+          key: media-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('build/libmpv-common.sh', 'build/darwin/libmpv.sh', 'build/windows/libmpv.sh') }}
+      - run: npm ci
+        working-directory: frontend
+      - name: Build bundled playback libraries
+        run: make libmpv
+      - name: Build macOS DMG and Windows NSIS installer
+        run: |
+          make dist windows-installer
+          codesign --verify --deep --strict bin/pkp.app
+          lipo bin/pkp.app/Contents/MacOS/pkp -verify_arch arm64 x86_64
+      - name: Test and vet native code
+        run: |
+          go test ./...
+          go test -race ./internal/update ./internal/services -run 'Test(Update|Install|LockGate|Telemetry)'
+          go vet ./...
+      - name: Smoke load without starting the app
+        shell: bash
+        run: |
+          set -euo pipefail
+          for binary in bin/pkp bin/pkp.app/Contents/MacOS/pkp; do
+            output=$(GOMEMLIMIT=bogus DYLD_PRINT_LIBRARIES=1 "$binary" 2>&1) && exit 1
+            [[ "$output" == *libmpv.2.dylib* ]]
+            [[ "$output" == *'malformed GOMEMLIMIT'* ]]
+          done

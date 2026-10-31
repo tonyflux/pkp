@@ -1,0 +1,39 @@
+# Third-Party Components and Services
+
+[简体中文](THIRD_PARTY.md) · English
+
+PKP's own source code is licensed under [GPL-3.0-only](LICENSE). The published v0.1.0 installation packages remain subject to [the proprietary terms in effect at that time](docs/legal/v0.1.0-proprietary.txt). Rights and obligations for third-party components are determined by their respective licenses.
+
+## Application Components
+
+The application primarily uses Wails, Vue, Go and their dependencies, a local SQLite index, the Alibaba Cloud OSS SDK, and media components such as mpv / libmpv, FFmpeg, libplacebo, and libass. This is only a brief overview; **it is not a complete dependency list, nor does it indicate that a license audit has been completed**. For specific versions, copyright notices, and licenses, refer to the materials included with the actual release package.
+
+The current media library build configuration follows the LGPL route: GPL portions of mpv are disabled, and GPL options are not enabled in FFmpeg; libmpv is distributed as a separate dynamic library. Every official Release must also include a `libmpv-sources.tar.gz` corresponding to the actual binaries, containing the relevant third-party source code and build scripts. This source archive does not replace PKP's own source code; the v0.1.0 installation packages were not built from the current source code in this repository either.
+
+Starting with v0.3.0, `PKP-<version>-source.tar.gz` separately includes the complete PKP-owned source, assets, locks and build scripts corresponding to the Git commit and tree recorded in the signed update manifest, plus pinned Go module sources, npm distributions and verifiable preferred upstream sources under `third_party/`. Its inventory records checksums and includes isolated dependency-cache restoration instructions; `.git`, account data and private keys are excluded. Install system SDKs, compilers and packaging tools as described in the development guide. Optional native npm build-tool binaries are not described as their complete source, and bit-for-bit reproducibility is not promised.
+
+For packages built from the current source, third-party notices are in `Contents/Resources/licenses/` inside the macOS app (Finder: Show Package Contents), or `licenses` in the Windows installation directory. `GO_LICENSES.txt` collects Go standard-library and production dependency license, copyright, patent and notice files from the Go toolchain and modules selected by `go list` for both release architectures. It includes upstream inherited notices, including modernc's SQLite and libc materials. `THIRD_PARTY_LICENSES.txt` is generated from installed frontend production dependencies and pdfjs-dist asset licenses; the remaining license tree is for media components. PKP's own license is `LICENSE.txt` in Resources or the installation directory.
+
+The current `isarray` 1.0.0 npm package contains its MIT text in README, which the generator includes; Wails' Go module supplies its MIT text separately for `@wailsio/runtime`. The optional native `@napi-rs/canvas` platform package lacks a license file; the generator includes the [v0.1.100 upstream MIT text](https://github.com/Brooooooklyn/canvas/blob/v0.1.100/LICENSE) when that version is installed. Confirm whether these packages' contents reach the distributed frontend before release.
+
+The current source has removed built-in PPT/PPTX previews and the `pptx-preview` dependency, so its license conflict no longer blocks release of the current source. The previously used `pptx-preview` 1.0.7 metadata declared ISC, but its README and the [upstream repository license](https://github.com/501351981/pptx-preview/blob/main/LICENSE) restrict source publication and open-sourcing. Removing the dependency does not establish GPL compatibility or retroactively resolve license obligations for historical copies or existing distributions. The actual contents and rights for v0.1.0 still require a separate review of that version's materials.
+
+The Go dependency graph and notice files are selected at build time; they are not a substitute for reviewing source-level notices, asset provenance, license compatibility and the actual release binaries. AI concept-generation prompts and subsequent crop/color-treatment records were found for the default wallpapers. The application mark is based on a user-provided PikPak pattern, not an independently invented AI mark. Evidence, hashes and unproven export-chain boundaries are recorded in [artwork provenance](docs/legal/artwork-provenance.md). These records do not replace checks of trademarks, underlying art or generation-service terms. No complete legal audit is claimed. LGPL-covered libraries may be replaced under their applicable licenses; replacement may affect compatibility.
+
+**The v0.1.0 installation packages and corresponding source archive are available in the [Release](https://github.com/tonyflux/pkp/releases/tag/v0.1.0).** The hashes of 28 pinned source items in the archive and the consistency of the build scripts have been verified, but this is not a complete dependency or legal audit, and this document alone cannot substitute for a compliance review.
+
+## Public Comparison of Authentication Materials
+
+The current Android ClientID, ClientSecret, package name, client version and User-Agent match the public project `52funny/pikpakapi` at fixed commit [`d105d48371a0df747673e44c00cec170984c9f6b`, `pikpak.go`](https://github.com/52funny/pikpakapi/blob/d105d48371a0df747673e44c00cec170984c9f6b/pikpak.go) and [`pikpak_captcha_token.go`](https://github.com/52funny/pikpakapi/blob/d105d48371a0df747673e44c00cec170984c9f6b/pikpak_captcha_token.go). The latter also contains all 9 salts in the same order, including one empty string, and the same seed concatenation order, iterative MD5, lowercase hexadecimal encoding and `1.` signature prefix. This comparison does not establish a public source for `ClientVersionCode`.
+
+The public project `Quan666/PikPakAPI` at fixed commit [`c233bd3db99ecd49fe2e42ec8a2d83072e3a9432`, `utils.py`](https://github.com/Quan666/PikPakAPI/blob/c233bd3db99ecd49fe2e42ec8a2d83072e3a9432/pikpakapi/utils.py) also contains the same ClientID, ClientSecret and package name, but uses a different version of the salts; it does not establish that the current salts match.
+
+These links record reproducible public comparisons only. They do not identify this project's actual original sources, establish permission to copy third-party source code, imply PikPak endorsement, or prove that production services currently accept these parameters. Commit metadata dates do not establish when the code first became public. The maintainer has confirmed that the current identity parameters may be published and reused; this release retains those parameters and the signing algorithm and no longer treats them as an unresolved release blocker. This confirmation is not an independent legal audit, and public copies do not replace provenance records.
+
+## External Services and Names
+
+- PikPak is an external cloud storage service. Accounts, quotas, and content handling are subject to its terms. PKP is an unofficial client and does not have or imply PikPak's endorsement.
+- AI model services are configured by users themselves. Their billing, data processing, and terms of use depend on the selected service.
+- TMDB is used only for title matching in user-enabled movie and TV organization, using the user's own credentials. This product uses the TMDB API but is not endorsed or certified by TMDB.
+
+The relevant trademarks, service names, and third-party works belong to their respective rights holders; references in this document do not indicate partnership, authorization, or endorsement.

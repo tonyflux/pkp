@@ -1,0 +1,53 @@
+// Messages of the macOS menu bar's menus (main, appmenu.go); see i18n.go.
+// Words follow each language's macOS menus; the nav's names match the page's.
+
+package i18n
+
+func init() {
+	add(map[string]Msg{
+		"关于 PKP":  {Hant: "關於 PKP", En: "About PKP", Ja: "PKP について", Ko: "PKP에 관하여"},
+		"设置…":     {Hant: "設定…", En: "Settings…", Ja: "設定…", Ko: "설정…"},
+		"服务":      {Hant: "服務", En: "Services", Ja: "サービス", Ko: "서비스"},
+		"隐藏 PKP":  {Hant: "隱藏 PKP", En: "Hide PKP", Ja: "PKP を隠す", Ko: "PKP 가리기"},
+		"隐藏其他":    {Hant: "隱藏其他", En: "Hide Others", Ja: "ほかを隠す", Ko: "기타 가리기"},
+		"全部显示":    {Hant: "顯示全部", En: "Show All", Ja: "すべてを表示", Ko: "모두 보기"},
+		"menu|文件": {Hant: "檔案", En: "File", Ja: "ファイル", Ko: "파일"},
+		"云添加…":    {Hant: "雲端新增…", En: "Cloud Add…", Ja: "クラウド追加…", Ko: "클라우드 추가…"},
+		"新建文件夹…":  {Hant: "新增資料夾…", En: "New Folder…", Ja: "新規フォルダ…", Ko: "새 폴더…"},
+		"上传文件…":   {Hant: "上傳檔案…", En: "Upload Files…", Ja: "ファイルをアップロード…", Ko: "파일 업로드…"},
+		"上传文件夹…":  {Hant: "上傳資料夾…", En: "Upload Folder…", Ja: "フォルダをアップロード…", Ko: "폴더 업로드…"},
+		"关闭窗口":    {Hant: "關閉視窗", En: "Close Window", Ja: "ウインドウを閉じる", Ko: "윈도우 닫기"},
+		"编辑":      {Hant: "編輯", En: "Edit", Ja: "編集", Ko: "편집"},
+		"撤销":      {Hant: "還原", En: "Undo", Ja: "取り消す", Ko: "실행 취소"},
+		"重做":      {Hant: "重做", En: "Redo", Ja: "やり直す", Ko: "실행 복귀"},
+		"剪切":      {Hant: "剪下", En: "Cut", Ja: "カット", Ko: "오려두기"},
+		"拷贝":      {Hant: "拷貝", En: "Copy", Ja: "コピー", Ko: "복사하기"},
+		"粘贴":      {Hant: "貼上", En: "Paste", Ja: "ペースト", Ko: "붙여넣기"},
+		"全选":      {Hant: "全選", En: "Select All", Ja: "すべてを選択", Ko: "전체 선택"},
+		"搜索":      {Hant: "搜尋", En: "Search", Ja: "検索", Ko: "검색"},
+		"显示":      {Hant: "顯示方式", En: "View", Ja: "表示", Ko: "보기"},
+		"刷新":      {Hant: "重新整理", En: "Refresh", Ja: "更新", Ko: "새로 고침"},
+		"切换侧栏":    {Hant: "切換側欄", En: "Toggle Sidebar", Ja: "サイドバーを切り替え", Ko: "사이드바 전환"},
+		"查看信息":    {Hant: "檢視資訊", En: "Get Info", Ja: "情報を見る", Ko: "정보 보기"},
+		"实际大小":    {Hant: "實際大小", En: "Actual Size", Ja: "実際のサイズ", Ko: "실제 크기"},
+		"放大":      {Hant: "放大", En: "Zoom In", Ja: "拡大", Ko: "확대"},
+		"缩小":      {Hant: "縮小", En: "Zoom Out", Ja: "縮小", Ko: "축소"},
+		"切换全屏幕":   {Hant: "切換全螢幕", En: "Toggle Full Screen", Ja: "フルスクリーンを切り替え", Ko: "전체 화면 전환"},
+		"前往":      {Hant: "前往", En: "Go", Ja: "移動", Ko: "이동"},
+		"返回上一级":   {Hant: "返回上一層", En: "Up One Level", Ja: "1 つ上の階層へ", Ko: "상위 폴더로"},
+		"全部文件":    {Hant: "全部檔案", En: "All Files", Ja: "全ファイル", Ko: "모든 파일"},
+		"星标":      {Hant: "星號", En: "Starred", Ja: "スター", Ko: "별표"},
+		"清理":      {Hant: "清理", En: "Cleanup", Ja: "容量の整理", Ko: "클린업"},
+		"AI 助手":   {Hant: "AI 助理", En: "AI Assistant", Ja: "アシスタント", Ko: "AI 어시스턴트"},
+		"播放历史":    {Hant: "播放歷史", En: "Play History", Ja: "再生履歴", Ko: "재생 기록"},
+		"传输中心":    {Hant: "傳輸中心", En: "Transfers", Ja: "転送", Ko: "전송"},
+		"我的分享":    {Hant: "我的分享", En: "My Shares", Ja: "共有リンク", Ko: "내 공유"},
+		"回收站":     {Hant: "垃圾桶", En: "Trash", Ja: "ゴミ箱", Ko: "휴지통"},
+		"窗口":      {Hant: "視窗", En: "Window", Ja: "ウインドウ", Ko: "윈도우"},
+		"最小化":     {Hant: "縮到最小", En: "Minimize", Ja: "しまう", Ko: "최소화"},
+		"缩放":      {Hant: "縮放", En: "Zoom", Ja: "拡大／縮小", Ko: "확대/축소"},
+		"前置全部窗口":  {Hant: "將全部視窗移至最前", En: "Bring All to Front", Ja: "すべてを手前に移動", Ko: "모두 앞으로 가져오기"},
+		"帮助":      {Hant: "輔助說明", En: "Help", Ja: "ヘルプ", Ko: "도움말"},
+		"键盘快捷键":   {Hant: "鍵盤快速鍵", En: "Keyboard Shortcuts", Ja: "キーボードショートカット", Ko: "키보드 단축키"},
+	})
+}

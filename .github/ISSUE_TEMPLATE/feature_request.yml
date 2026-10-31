@@ -1,0 +1,22 @@
+name: Feature request / 功能建议
+description: Suggest an improvement to PKP / 提出 PKP 功能改进建议
+body:
+  - type: markdown
+    attributes:
+      value: |
+        This issue is public. Do not include credentials, account information, private files, or sensitive logs. Report security vulnerabilities privately using the repository security policy.
+        此 issue 公开，请勿包含凭据、账号信息、私人文件或敏感日志。安全漏洞请按仓库安全政策私下报告。
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or need / 问题或需求
+      description: Describe the situation and who it affects. / 描述使用场景及受影响的用户。
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed solution / 建议方案
+      description: Describe the improvement and any alternatives considered. / 描述期望的改进及考虑过的其他方案。
+    validations:
+      required: true

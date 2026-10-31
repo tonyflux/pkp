@@ -1,0 +1,934 @@
+/*
+ * Liquid glass design system.
+ *
+ * Four z-layers: atmosphere scene → reading canvas
+ * → floating glass islands → modal glass. Glass is reserved for surfaces that
+ * carry actions; anything holding file names or long text sits on a nearly
+ * opaque canvas so it stays readable over a photographic background.
+ */
+
+:root {
+  color-scheme: light dark;
+
+  /* Light theme is the default; the dark block below overrides it. Reading
+     surfaces stay nearly opaque over the scene so dense lists and metadata
+     keep enough contrast, while edges, tabs and buttons remain glass. */
+  --canvas: rgba(250, 253, 255, 0.97);
+  --canvas-flat: #f7fbff;
+  --glass-nav: rgba(245, 250, 255, 0.6);
+  --glass-toolbar: rgba(250, 253, 255, 0.66);
+  --glass-sheet: rgba(250, 253, 255, 0.82);
+  --glass-panel: rgba(250, 253, 255, 0.93);
+  --glass-control: rgba(255, 255, 255, 0.58);
+  --glass-inset: rgba(210, 228, 244, 0.42);
+  --glass-rim: rgba(255, 255, 255, 0.9);
+  --glass-edge: rgba(156, 203, 231, 0.55);
+  --glass-glow: rgba(255, 255, 255, 0.45);
+  --glass-tint: 150%;
+
+  --fg: #162739;
+  --fg-dim: #52647a;
+  --accent: #275fad;
+  --accent-soft: color-mix(in srgb, var(--accent) 12%, transparent);
+  --on-accent: #ffffff;
+  /* Primary actions are a lens in the skin's colour (mock: New / Cloud Add /
+     Play), built from the skin's three stops (see Skins below). */
+  --primary: linear-gradient(180deg, var(--primary-hi) 0%, var(--primary-mid) 55%, var(--primary-deep) 100%);
+  --primary-rim: rgba(255, 255, 255, 0.55);
+  --primary-shadow: 0 10px 24px var(--primary-glow);
+  --on-primary: #ffffff;
+  /* Playback progress (scrub bars, volume), in the skin's colour too. */
+  --progress: linear-gradient(90deg, var(--progress-from), var(--progress-to));
+  --success: #286d55;
+  --warning: #875d14;
+  --danger: #b33d53;
+  /* Action colors are separate from error/status colors; never a solid alert fill. */
+  --danger-action: #963e4b;
+  --danger-action-bg: #f8edef;
+  --danger-action-hover: #f2dfe3;
+  --danger-action-active: #ebd2d8;
+  --danger-action-border: #d9b4bc;
+  --danger-action-border-hover: #bc8995;
+  --danger-action-wash: rgba(150, 62, 75, 0.09);
+  /* Starred: the mark on starred entries; ≥ 3:1 on the light canvas. */
+  --star: #b47b00;
+  /* Second tile tint (archives, documents) beside the accent. */
+  --tint-violet: #5b4bc4;
+  /* Account marks: a tint per account, only ever behind
+     its avatar letter; the name beside it always says which account. */
+  --account-1: #275fad;
+  --account-2: #8256b8;
+  --account-3: #27725e;
+  --account-4: #875d14;
+  --account-5: #b33d53;
+  --on-account: #ffffff;
+  --line: rgba(22, 39, 57, 0.1);
+  --line-strong: rgba(22, 39, 57, 0.18);
+  --scrim: rgba(22, 35, 55, 0.24);
+  --shadow-island: 0 18px 44px rgba(16, 40, 72, 0.18), 0 2px 6px rgba(16, 40, 72, 0.08);
+  --shadow-sheet: 0 28px 70px rgba(16, 40, 72, 0.3), 0 2px 8px rgba(16, 40, 72, 0.1);
+
+  /* The scene is a photograph (assets/wall-*.webp); these only veil it. */
+  --scene-glow: rgba(255, 246, 228, 0.9);
+  --scene-veil-top: rgba(255, 255, 255, 0.12);
+  --scene-veil-bottom: rgba(120, 150, 180, 0.18);
+  --scene-vignette: rgba(70, 100, 140, 0.22);
+  --scene-sky-b: #9cc0e2;
+  /* A wallpaper of the user's own was not tuned for the glass: a wash
+     towards the theme keeps the islands' text readable on it. */
+  --scene-dim: rgba(244, 249, 255, 0.2);
+
+  --radius-island: 28px;
+  --radius-sheet: 26px;
+  --radius-card: 12px;
+  --radius-pill: 999px;
+
+  /* Critically damped, ~0.4s. */
+  --ease: cubic-bezier(0.32, 0.72, 0.24, 1);
+  --dur: 0.32s;
+
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI Variable",
+    "Segoe UI", "PingFang SC", "Microsoft YaHei UI", sans-serif;
+  font-size: 15px;
+  line-height: 1.45;
+  color: var(--fg);
+}
+
+/* Native controls follow PKP's displayed theme rather than the operating
+   system theme, avoiding dark controls on a light canvas. */
+:root[data-theme="light"] {
+  color-scheme: light;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+}
+
+:root[data-theme="dark"] {
+  --canvas: rgba(15, 24, 38, 0.97);
+  --canvas-flat: #101a2a;
+  --glass-nav: rgba(41, 63, 88, 0.45);
+  --glass-toolbar: rgba(47, 70, 98, 0.49);
+  --glass-sheet: rgba(32, 48, 70, 0.8);
+  --glass-panel: rgba(32, 48, 70, 0.93);
+  --glass-control: rgba(99, 139, 186, 0.3);
+  --glass-inset: rgba(10, 22, 40, 0.38);
+  --glass-rim: rgba(210, 240, 255, 0.58);
+  --glass-edge: rgba(120, 190, 235, 0.44);
+  --glass-glow: rgba(170, 215, 255, 0.22);
+  --glass-tint: 160%;
+
+  --fg: #f2f8ff;
+  --fg-dim: #b6c9d9;
+  --accent: #83c7ff;
+  --accent-soft: color-mix(in srgb, var(--accent) 16%, transparent);
+  --on-accent: #102638;
+  --primary-hi: #4d9dff;
+  --primary-mid: #2b78ec;
+  --primary-deep: #1f66d8;
+  --primary-glow: rgba(40, 120, 240, 0.42);
+  --primary-rim: rgba(255, 255, 255, 0.45);
+  --primary-shadow: 0 10px 26px var(--primary-glow);
+  --on-primary: #ffffff;
+  --success: #95ddc0;
+  --warning: #f3c878;
+  --danger: #ff9bac;
+  --danger-action: #efb7bf;
+  --danger-action-bg: #382e3a;
+  --danger-action-hover: #483542;
+  --danger-action-active: #553c49;
+  --danger-action-border: #735361;
+  --danger-action-border-hover: #a37888;
+  --danger-action-wash: rgba(239, 183, 191, 0.12);
+  --star: #ffcf5a;
+  --tint-violet: #b3a6ff;
+  --account-1: #83c7ff;
+  --account-2: #bca5f3;
+  --account-3: #8cdcc4;
+  --account-4: #f3c878;
+  --account-5: #ff9bac;
+  --on-account: #102638;
+  --line: rgba(190, 221, 245, 0.14);
+  --line-strong: rgba(190, 221, 245, 0.26);
+  --scrim: rgba(3, 10, 24, 0.45);
+  --shadow-island: 0 20px 50px rgba(2, 10, 24, 0.5), 0 2px 6px rgba(2, 10, 24, 0.3);
+  --shadow-sheet: 0 30px 80px rgba(2, 10, 24, 0.62), 0 2px 8px rgba(2, 10, 24, 0.35);
+
+  --scene-glow: rgba(255, 176, 112, 0.5);
+  --scene-veil-top: rgba(5, 14, 30, 0);
+  --scene-veil-bottom: rgba(5, 14, 30, 0.28);
+  --scene-vignette: rgba(3, 10, 24, 0.26);
+  --scene-sky-b: #16395c;
+  --scene-dim: rgba(6, 12, 24, 0.36);
+}
+
+/* ---------- Skins (Settings · General · Accent Color) ----------
+
+   A skin recolours the accent family: text accents, the primary lens and its
+   glow, playback progress and the glass contour. Surfaces, text and the
+   status colours stay put, so contrast does not move with it: every accent
+   keeps 4.5:1 on its canvas, and white keeps 4.5:1 on the lens's middle
+   stop. Cobalt is the default and needs no attribute.
+
+   Each block also answers to [data-skin-swatch], so a swatch in the picker
+   paints its own skin whatever skin is current. A swatch must draw from the
+   stops, not from --primary, which the root has already resolved. Only the
+   accent, the glow and the contour differ between light and dark; the dark
+   blocks carry just those. */
+
+:root,
+[data-skin-swatch="cobalt"] {
+  --primary-hi: #4a98ff;
+  --primary-mid: #2a6fe6;
+  --primary-deep: #1f5fd0;
+  --primary-glow: rgba(31, 95, 208, 0.35);
+  --progress-from: #4d9dff;
+  --progress-to: #8cc8ff;
+}
+
+:root[data-skin="teal"],
+[data-skin-swatch="teal"] {
+  --accent: #0f766e;
+  --primary-hi: #2fbfae;
+  --primary-mid: #0b7f73;
+  --primary-deep: #08665d;
+  --primary-glow: rgba(11, 127, 115, 0.34);
+  --progress-from: #22c3b0;
+  --progress-to: #8be8da;
+  --glass-edge: rgba(140, 212, 200, 0.55);
+}
+
+:root[data-theme="dark"][data-skin="teal"] {
+  --accent: #5eead4;
+  --primary-glow: rgba(20, 184, 166, 0.4);
+  --glass-edge: rgba(100, 200, 185, 0.42);
+}
+
+:root[data-skin="violet"],
+[data-skin-swatch="violet"] {
+  --accent: #6d28d9;
+  --primary-hi: #a184ff;
+  --primary-mid: #6b46e0;
+  --primary-deep: #5530c4;
+  --primary-glow: rgba(107, 70, 224, 0.34);
+  --progress-from: #9b7bff;
+  --progress-to: #cdbdff;
+  --glass-edge: rgba(190, 176, 240, 0.55);
+}
+
+:root[data-theme="dark"][data-skin="violet"] {
+  --accent: #c4b5fd;
+  --primary-glow: rgba(139, 92, 246, 0.42);
+  --glass-edge: rgba(160, 140, 240, 0.42);
+}
+
+:root[data-skin="amber"],
+[data-skin-swatch="amber"] {
+  --accent: #a85008;
+  --primary-hi: #f5a524;
+  --primary-mid: #b25a08;
+  --primary-deep: #944806;
+  --primary-glow: rgba(178, 90, 8, 0.32);
+  --progress-from: #f5a524;
+  --progress-to: #ffd27a;
+  --glass-edge: rgba(232, 200, 150, 0.58);
+}
+
+:root[data-theme="dark"][data-skin="amber"] {
+  --accent: #fcd34d;
+  --primary-glow: rgba(245, 158, 11, 0.36);
+  --glass-edge: rgba(230, 180, 110, 0.4);
+}
+
+:root[data-skin="rose"],
+[data-skin-swatch="rose"] {
+  --accent: #be185d;
+  --primary-hi: #ff6fa3;
+  --primary-mid: #cc2f6b;
+  --primary-deep: #a91f55;
+  --primary-glow: rgba(204, 47, 107, 0.32);
+  --progress-from: #ff6f9f;
+  --progress-to: #ffb3cb;
+  --glass-edge: rgba(236, 176, 200, 0.55);
+}
+
+:root[data-theme="dark"][data-skin="rose"] {
+  --accent: #f9a8d4;
+  --primary-glow: rgba(236, 72, 153, 0.4);
+  --glass-edge: rgba(236, 150, 185, 0.4);
+}
+
+:root[data-skin="graphite"],
+[data-skin-swatch="graphite"] {
+  --accent: #475569;
+  --primary-hi: #8a98ab;
+  --primary-mid: #56657a;
+  --primary-deep: #3f4b5c;
+  --primary-glow: rgba(63, 75, 92, 0.3);
+  --progress-from: #9aa9bb;
+  --progress-to: #d5dee8;
+  --glass-edge: rgba(176, 188, 204, 0.55);
+}
+
+:root[data-theme="dark"][data-skin="graphite"] {
+  --accent: #cbd5e1;
+  --primary-glow: rgba(100, 116, 139, 0.4);
+  --glass-edge: rgba(160, 174, 194, 0.4);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  overflow: hidden;
+  background: var(--scene-sky-b);
+  -webkit-font-smoothing: antialiased;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* Korean wraps between words (eojeol), not inside them: "확보되|지 않습니다"
+   split mid-word. A word longer than its line still breaks rather than spill. */
+:root:lang(ko) body {
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+
+/* Japanese wraps at phrase boundaries where the engine can (Chromium /
+   WebView2); WebKit ignores the value and keeps its per-character breaks. */
+:root:lang(ja) body {
+  word-break: auto-phrase;
+}
+
+/* While the player page is up, the window must be see-through: the video is
+   drawn by a native view *behind* the webview, so any painted background —
+   including the body colour — would hide it. */
+:root[data-stage="on"] body {
+  background: transparent;
+}
+
+/* App Lock: under the lock screen nothing of the page is drawn, focusable or
+   read out — the page, and what it teleported to the body (menus, sheets).
+   Kept laid out (not display: none), so scroll positions and measured rows
+   are as they were when the owner comes back. */
+:root[data-locked] body > :not(#app),
+:root[data-locked] #app > :not([data-lock-screen]) {
+  visibility: hidden;
+}
+
+/* ---------- Layer 1: the scene ---------- */
+
+.scene {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  background: var(--scene-sky-b);
+}
+
+/* ---------- Layer 3: glass ---------- */
+
+/* One recipe, three thicknesses, built from what WebKit can do: a blurred,
+   saturated backdrop; a 1px specular rim along the top; a cold-blue contour;
+   and — the part that makes it read as a lens rather than a tinted panel —
+   light gathering along the inside of the contour (`::before`) plus a soft
+   sheen across the top (`::after`). SVG displacement refraction
+   (`backdrop-filter: url()`) is Chromium-only, so the edge is painted, not
+   computed. Neither pseudo-element may carry text; both sit under the
+   children. */
+.glass {
+  position: relative;
+  isolation: isolate;
+  background: var(--glass-toolbar);
+  backdrop-filter: blur(28px) saturate(var(--glass-tint));
+  -webkit-backdrop-filter: blur(28px) saturate(var(--glass-tint));
+  border: 1px solid var(--glass-edge);
+  border-radius: var(--radius-island);
+  box-shadow:
+    var(--shadow-island),
+    inset 0 1px 0 var(--glass-rim),
+    inset 1px 0 0 color-mix(in srgb, var(--glass-rim) 45%, transparent),
+    inset 0 -1px 0 color-mix(in srgb, var(--glass-rim) 18%, transparent);
+}
+
+.glass::before,
+.glass::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+/* The lens edge: light gathers along the contour and fades inward with no
+   edge of its own, brightest where the rim catches the sky (top-left) and
+   again at the far corner. It is an inset shadow, which falls off
+   continuously, shaped by a gradient mask. A band cut out with a mask would
+   keep a hard inner edge whatever blur it carries — CSS applies `filter`
+   before `mask` — and that edge reads as a dark plate set inside the glass. */
+.glass::before {
+  box-shadow:
+    inset 0 0 6px 0 var(--glass-glow),
+    inset 0 0 22px 4px color-mix(in srgb, var(--glass-glow) 80%, transparent);
+  -webkit-mask: linear-gradient(160deg, #000 0%, rgb(0 0 0 / 0.25) 30%, transparent 50%, rgb(0 0 0 / 0.3) 78%, #000 100%);
+  mask: linear-gradient(160deg, #000 0%, rgb(0 0 0 / 0.25) 30%, transparent 50%, rgb(0 0 0 / 0.3) 78%, #000 100%);
+}
+
+.glass::after {
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--glass-rim) 22%, transparent) 0%, transparent 34%),
+    radial-gradient(120% 60% at 50% 100%, color-mix(in srgb, var(--glass-edge) 18%, transparent) 0%, transparent 60%);
+}
+
+.glass-nav {
+  background: var(--glass-nav);
+  backdrop-filter: blur(32px) saturate(var(--glass-tint));
+  -webkit-backdrop-filter: blur(32px) saturate(var(--glass-tint));
+}
+
+.glass-sheet {
+  background: var(--glass-sheet);
+  backdrop-filter: blur(36px) saturate(var(--glass-tint));
+  -webkit-backdrop-filter: blur(36px) saturate(var(--glass-tint));
+  box-shadow:
+    var(--shadow-sheet),
+    inset 0 1px 0 var(--glass-rim),
+    inset 1px 0 0 color-mix(in srgb, var(--glass-rim) 45%, transparent),
+    inset 0 -1px 0 color-mix(in srgb, var(--glass-rim) 18%, transparent);
+}
+
+/* A single control cut *into* a glass island (search field, nav-button
+   group, picker): a darker inset well, not a second pane on top. */
+.glass-well {
+  background: var(--glass-inset);
+  border: 1px solid color-mix(in srgb, var(--glass-edge) 55%, transparent);
+  box-shadow:
+    inset 0 1px 2px rgba(0, 0, 0, 0.12),
+    0 1px 0 color-mix(in srgb, var(--glass-rim) 35%, transparent);
+}
+
+/* ---------- Layer 2: the reading canvas ---------- */
+
+.canvas {
+  background: var(--canvas);
+  border-radius: var(--radius-island);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow-island), inset 0 1px 0 color-mix(in srgb, var(--glass-rim) 30%, transparent);
+}
+
+/* ---------- Controls ---------- */
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 8px 14px;
+  min-height: 34px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--line-strong);
+  background: var(--glass-control);
+  color: var(--fg);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background var(--dur) var(--ease), border-color var(--dur) var(--ease),
+    box-shadow var(--dur) var(--ease), transform 0.12s var(--ease);
+}
+
+button:hover:not(:disabled) {
+  border-color: var(--glass-edge);
+  background: color-mix(in srgb, var(--glass-control) 70%, white 30%);
+}
+
+button:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Disabled because it is doing the thing, not because it can't: stays
+   legible so the orbit and label inside read as progress. */
+button.working:disabled {
+  opacity: 0.85;
+  cursor: progress;
+}
+
+/* The gradient is laid from the border box (`border-box`): from the padding
+   box it tiles into the 1px transparent border, and the bottom edge shows
+   the next tile's brightest stop as a light line under the button.
+   Hover keeps the lens: the plain button:hover above outranks
+   `button.primary`, so hovering swapped the gradient for flat glass — the
+   blink. It brightens with an inset wash instead, which eases in with the
+   shadow (a gradient itself cannot be transitioned). */
+button.primary {
+  background: var(--primary) border-box;
+  border-color: transparent;
+  color: var(--on-primary);
+  font-weight: 600;
+  box-shadow: inset 0 0 0 100vmax rgba(255, 255, 255, 0), inset 0 1px 0 var(--primary-rim),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.12), var(--primary-shadow);
+}
+
+button.primary:hover:not(:disabled) {
+  background: var(--primary) border-box;
+  border-color: transparent;
+  box-shadow: inset 0 0 0 100vmax rgba(255, 255, 255, 0.09), inset 0 1px 0 var(--primary-rim),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.12), var(--primary-shadow);
+}
+
+button.quiet {
+  background: transparent;
+  border-color: transparent;
+  color: var(--fg-dim);
+}
+
+button.quiet:hover:not(:disabled) {
+  background: var(--accent-soft);
+  color: var(--fg);
+}
+
+button.icon {
+  padding: 0;
+  width: 36px;
+  height: 36px;
+  min-height: 36px;
+  border-radius: 50%;
+}
+
+/* Sliding selection (v-slide, slide.ts): a segmented control's lens is the
+   track's `::before`, kept by the directive on the selected option's box, so
+   choosing another option slides it there. Each control paints the lens with
+   its own fill and leaves its selected button transparent. Under the
+   options (isolated, z-index -1) so labels and hover fills stay on top. */
+[data-slide] {
+  isolation: isolate;
+}
+
+:where([data-slide]) {
+  position: relative;
+}
+
+[data-slide]::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: -1;
+  box-sizing: border-box;
+  width: var(--slide-w, 0);
+  height: var(--slide-h, 0);
+  border-radius: var(--slide-r, 0);
+  opacity: var(--slide-o, 0);
+  transform: translate(var(--slide-x, 0), var(--slide-y, 0));
+  pointer-events: none;
+  transition:
+    transform var(--dur) var(--ease),
+    width var(--dur) var(--ease),
+    height var(--dur) var(--ease);
+}
+
+[data-slide="still"]::before {
+  transition: none;
+}
+
+/* The labels cross-fade with the lens instead of flipping colour before it
+   arrives (white text on a light track for a third of a second). */
+[data-slide] > * {
+  transition:
+    color var(--dur) var(--ease),
+    background var(--dur) var(--ease),
+    border-color var(--dur) var(--ease),
+    transform 0.12s var(--ease);
+}
+
+/* ---------- Overlays ---------- */
+
+/* A glass popover of stacked rows. Each site only anchors and sizes it. */
+.menu {
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px;
+  border-radius: 14px;
+}
+
+.menu > button {
+  justify-content: flex-start;
+  min-height: 36px;
+  border-radius: 9px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--fg);
+}
+
+/* All destructive actions share states. Theme + state specificity also beats
+   scoped neutral hover rules without !important or changing button geometry. */
+:root[data-theme] body button:is(.danger, .destructive, .confirm-danger, .danger-action, .purge):is(:enabled, :disabled) {
+  color: var(--danger-action);
+  background: var(--danger-action-bg);
+  border-color: var(--danger-action-border);
+  box-shadow: none;
+  filter: none;
+}
+
+:root[data-theme] body button:is(.danger, .destructive, .confirm-danger, .danger-action, .purge):hover:not(:disabled),
+:root[data-theme] body button:is(.danger, .destructive, .confirm-danger, .danger-action, .purge):focus-visible:not(:disabled) {
+  color: var(--danger-action);
+  background: var(--danger-action-hover);
+  border-color: var(--danger-action-border-hover);
+  box-shadow: none;
+  filter: none;
+}
+
+:root[data-theme] body button:is(.danger, .destructive, .confirm-danger, .danger-action, .purge):focus-visible {
+  outline: 2px solid var(--danger-action);
+  outline-offset: 3px;
+}
+
+:root[data-theme] body button:is(.danger, .destructive, .confirm-danger, .danger-action, .purge):active:not(:disabled) {
+  background: var(--danger-action-active);
+  border-color: var(--danger-action-border-hover);
+}
+
+:root[data-theme] body button:is(.danger, .danger-action):is(.quiet, .link, [role="menuitem"]):is(:enabled, :disabled) {
+  color: var(--danger-action);
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+}
+
+:root[data-theme] body button:is(.danger, .danger-action):is(.quiet, .link, [role="menuitem"]):hover:not(:disabled),
+:root[data-theme] body button:is(.danger, .danger-action):is(.quiet, .link, [role="menuitem"]):focus-visible:not(:disabled) {
+  color: var(--danger-action);
+  background: var(--danger-action-wash);
+  border-color: transparent;
+}
+
+:root[data-theme] body button:is(.danger, .danger-action):is(.quiet, .link, [role="menuitem"]):active:not(:disabled) {
+  background: var(--danger-action-hover);
+}
+
+:root[data-theme] body button.warn-hover:hover:not(:disabled),
+:root[data-theme] body button.warn-hover:focus-visible:not(:disabled) {
+  color: var(--danger-action);
+  background: var(--danger-action-wash);
+  border-color: transparent;
+}
+
+:root[data-theme] body button.warn-hover:focus-visible {
+  outline: 2px solid var(--danger-action);
+  outline-offset: 3px;
+}
+
+:root[data-theme] body button.warn-hover:active:not(:disabled) {
+  color: var(--danger-action);
+  background: var(--danger-action-hover);
+}
+
+/* The lock screen stays dark even when the application's theme is light. */
+.lock-screen {
+  --danger-action: #efb7bf;
+  --danger-action-bg: #382e3a;
+  --danger-action-hover: #483542;
+  --danger-action-active: #553c49;
+  --danger-action-border: #735361;
+  --danger-action-border-hover: #a37888;
+  --danger-action-wash: rgba(239, 183, 191, 0.12);
+}
+
+/* A modal sheet centred over a dimmed, faintly blurred page. The blur sits
+   on a layer of its own, never on .scrim: an element with backdrop-filter is
+   a backdrop root in Chromium (WebView2 on Windows), so a glass sheet inside
+   it blurred nothing and the page read through at the fill's 20 %
+   with Network & Proxy over the login card. WebKit ignored it. */
+.scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-items: center;
+  background: var(--scrim);
+  /* Its colour fades in, not its opacity: opacity below 1 would make it a
+     backdrop root too, and the sheet's blur would pop in when the fade ends. */
+  animation: scrim-in var(--dur) var(--ease);
+}
+
+/* Fixed, so a scrim that scrolls its sheet keeps it over the whole window;
+   below the sheet inside the scrim's own stacking context. */
+.scrim::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  pointer-events: none;
+  animation: fade var(--dur) var(--ease);
+}
+
+.sheet {
+  display: flex;
+  flex-direction: column;
+  padding: 32px;
+  border-radius: var(--radius-sheet);
+  box-shadow: var(--shadow-sheet);
+  animation: rise var(--dur) var(--ease);
+}
+
+@keyframes fade {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes scrim-in {
+  from {
+    background-color: transparent;
+  }
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.985);
+  }
+}
+
+input,
+textarea {
+  padding: 9px 13px;
+  border-radius: 10px;
+  border: 1px solid var(--line-strong);
+  background: color-mix(in srgb, var(--canvas) 86%, transparent);
+  outline: none;
+  -webkit-user-select: text;
+  user-select: text;
+  transition: border-color var(--dur) var(--ease), background var(--dur) var(--ease);
+}
+
+input:focus,
+textarea:focus {
+  border-color: var(--accent);
+  background: var(--canvas);
+}
+
+textarea {
+  resize: vertical;
+  font-family: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, monospace;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+/* Focus rings only for keyboard navigation. Text fields, selects and sliders
+   match :focus-visible on a plain click too, which drew a second ring inside
+   the search pill and around every picker; those controls already show focus
+   through their own border or container, so they get none. Buttons only
+   match :focus-visible when reached with Tab, where a ring is needed. */
+:focus {
+  outline: none;
+}
+
+button:focus-visible,
+a:focus-visible,
+[role="switch"]:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--accent) 70%, transparent);
+  outline-offset: 2px;
+}
+
+code,
+.mono {
+  font-family: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, monospace;
+  font-size: 12px;
+}
+
+/* Tabular figures line up and do not jitter as the numbers change. */
+.tnum {
+  font-variant-numeric: tabular-nums;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--line-strong);
+  border-radius: 999px;
+  border: 3px solid transparent;
+  background-clip: content-box;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* ---------- Waiting ----------
+
+   Three primitives, one vocabulary. Everything that waits on the network
+   uses one of these rather than inventing its own spinner:
+
+   .late      — delayed reveal. Mounted the moment a request starts, but
+                invisible for the first 350ms, so a fast answer never flashes
+                an indicator. No timers: unmounting before the delay elapses
+                is the cancel.
+   .skel      — a skeleton block. Same tint as the thumbnail boxes, with a
+                cool highlight sweeping across like light through glass.
+                `--i` staggers neighbours (30–80ms).
+   .hairline  — indeterminate progress line for "refreshing what you already
+                see": content stays put and dims, the line says work is on.
+
+   The Orbit loader itself is a component (components/Orbit.vue); its spin
+   lives here so the keyframes are declared once. */
+
+.late {
+  animation: late-in 0.2s var(--ease) 0.35s both;
+}
+
+@keyframes late-in {
+  from {
+    opacity: 0;
+  }
+}
+
+.skel {
+  position: relative;
+  overflow: hidden;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--fg) 7%, transparent);
+}
+
+.skel::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    100deg,
+    transparent 20%,
+    color-mix(in srgb, var(--glass-rim) 55%, transparent) 50%,
+    transparent 80%
+  );
+  animation: skel-sweep 1.5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  animation-delay: calc(var(--i, 0) * 70ms);
+}
+
+@keyframes skel-sweep {
+  to {
+    transform: translateX(100%);
+  }
+}
+
+.hairline {
+  position: relative;
+  height: 2px;
+  overflow: hidden;
+  border-radius: 1px;
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+}
+
+.hairline::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  width: 40%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, transparent, var(--accent), transparent);
+  animation: hairline-run 1.1s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+}
+
+@keyframes hairline-run {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(250%);
+  }
+}
+
+@keyframes orbit-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* The comet tail breathes: longest when it has just set off, shortest as
+   it comes round, so the ring never reads as a static circle. The circle
+   carries pathLength="100", so the dash is the last L units of the path
+   (offset L−100) and ends exactly where the moon sits; dashing does not
+   wrap around a closed path, so a positive offset would draw nothing. */
+@keyframes orbit-tail {
+  0%,
+  100% {
+    stroke-dasharray: 14 100;
+    stroke-dashoffset: -86;
+  }
+  50% {
+    stroke-dasharray: 34 100;
+    stroke-dashoffset: -66;
+  }
+}
+
+/* Reduced transparency and reduced motion turn glass into a solid, still
+   surface rather than degrading readability. */
+@media (prefers-reduced-transparency: reduce) {
+  .glass,
+  .glass-nav,
+  .glass-sheet {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    background: var(--canvas);
+  }
+
+  .glass::before,
+  .glass::after {
+    display: none;
+  }
+}
+
+/* The same surfaces, chosen in Settings · General instead of the system settings —
+   also the cheap mode on a GPU that struggles with large blurs. */
+:root[data-transparency="reduced"] .glass,
+:root[data-transparency="reduced"] .glass-nav,
+:root[data-transparency="reduced"] .glass-sheet {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  background: var(--canvas);
+}
+
+:root[data-transparency="reduced"] .glass::before,
+:root[data-transparency="reduced"] .glass::after {
+  display: none;
+}
+
+/* Looping indicators run once and settle: the orbit stops as a ring with a
+   dot, the skeleton sweep leaves the frame, the hairline parks. Without
+   `iteration-count` the 0.01ms duration would make an infinite loop flicker
+   at frame rate — the opposite of what the setting asks for. */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

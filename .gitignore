@@ -1,22 +1,32 @@
-# 本地系统与编辑器文件
 .DS_Store
-._*
+.task
+bin
+frontend/dist
+frontend/node_modules
+build/linux/appimage/build
+build/windows/nsis/MicrosoftEdgeWebview2Setup.exe
+# Mobile generated (per-machine; overlays hold absolute paths)
+build/ios/xcode/overlay.json
+build/ios/xcode/gen/
+build/android/overlay.json
+build/android/gen/.DS_Store
+
+# Built by build/darwin/libmpv.sh (make libmpv)
+build/darwin/libmpv/
+
+# Windows resources, generated per build by `make windows`
+*.syso
+
+# Built by build/windows/libmpv.sh (make libmpv-windows)
+build/windows/libmpv/
+
+# Local secrets, accounts and editor state
 .idea/
 .vscode/
-*.swp
-*.tmp
-
-# 公开仓库不收安装产物、源码包或本机配置
-*.dmg
-*.exe
-*.app/
-*.zip
-*.tar.gz
-*.log
-.env
-.env.*
 *.pem
 *.key
+.env
+.env.*
 credentials*.json
 accounts.json
 settings.json

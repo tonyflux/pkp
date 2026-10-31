@@ -40,6 +40,16 @@ jobs:
           mkdir "$dir"
           gh release download "$RELEASE_TAG" --repo tonyflux/pkp --dir "$dir"
           python3 .github/scripts/verify_release.py "$dir" "$RELEASE_TAG"
+          if jq -e '.source != null' "$dir/update.json" >/dev/null; then
+            source_commit=$(jq -r '.source.commit' "$dir/update.json")
+            source_tree=$(jq -r '.source.tree' "$dir/update.json")
+            ref=$(gh api "repos/tonyflux/pkp/git/ref/tags/$RELEASE_TAG")
+            test "$(jq -r '.object.type' <<< "$ref")" = commit
+            test "$(jq -r '.object.sha' <<< "$ref")" = "$source_commit"
+            test "$(gh api "repos/tonyflux/pkp/commits/$source_commit" --jq '.commit.tree.sha')" = "$source_tree"
+            status=$(gh api "repos/tonyflux/pkp/compare/main...$source_commit" --jq .status)
+            test "$status" = identical || test "$status" = behind
+          fi
           jq -r '.assets[] | [.name, .browser_download_url] | @tsv' <<< "$metadata" |
           while IFS=$'\t' read -r name url; do
             test "$name" = "$(basename "$name")"

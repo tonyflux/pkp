@@ -1,0 +1,32 @@
+{
+	"$schema": "./node_modules/wrangler/config-schema.json",
+	// Usage statistics dashboard. Keep it behind Cloudflare Access (Workers & Pages >
+	// pkp-telemetry-admin > Access): without Access it refuses every request.
+	"name": "pkp-telemetry-admin",
+	"main": "src/admin/index.ts",
+	"compatibility_date": "2026-10-18",
+	"upload_source_maps": true,
+	// Worker-level Access covers every domain of the Worker, this one too.
+	"routes": [{ "pattern": "pkp-telemetry-admin.pkpapp.cc", "custom_domain": true }],
+	"workers_dev": false,
+	"preview_urls": false,
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "pkp-telemetry",
+			"database_id": "c724b546-ccc0-4df8-a13b-181829f371af",
+			"migrations_dir": "migrations"
+		}
+	],
+	// `wrangler dev` only: a signed-in viewer without the Access round trip.
+	"access": {
+		"dev": {
+			"aud": "local-dev",
+			"identity": { "email": "dev@localhost" }
+		}
+	},
+	"observability": {
+		"enabled": true,
+		"traces": { "enabled": true }
+	}
+}
