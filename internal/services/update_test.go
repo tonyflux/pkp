@@ -12,6 +12,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -201,5 +202,31 @@ func TestInstallerLaunchFailureKeepsApplicationRunning(t *testing.T) {
 	}
 	if m.updateQuit != nil {
 		t.Fatal("failed handoff retained")
+	}
+}
+
+func TestUpdateResultIsShownOnceForTheInstalledVersion(t *testing.T) {
+	cache := t.TempDir()
+	path := filepath.Join(cache, updateReceiptName)
+	if err := os.WriteFile(path, []byte(`{"version":"0.2.0","error":""}`), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if phase, code := consumeUpdateResult(cache, "0.2.0"); phase != "updated" || code != "" {
+		t.Fatalf("installed update = %q, %q", phase, code)
+	}
+	if phase, code := consumeUpdateResult(cache, "0.2.0"); phase != "" || code != "" {
+		t.Fatalf("update completion repeated = %q, %q", phase, code)
+	}
+	if err := os.WriteFile(path, []byte(`{"version":"0.2.0","error":""}`), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if phase, code := consumeUpdateResult(cache, "0.1.0"); phase != "" || code != "" {
+		t.Fatalf("old version claimed successful update = %q, %q", phase, code)
+	}
+	if err := os.WriteFile(path, []byte(`{"version":"0.2.0","error":"installRollback"}`), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if phase, code := consumeUpdateResult(cache, "0.1.0"); phase != "error" || code != "installRollback" {
+		t.Fatalf("recovery failure hidden on old version = %q, %q", phase, code)
 	}
 }

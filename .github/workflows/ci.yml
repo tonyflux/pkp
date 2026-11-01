@@ -98,6 +98,8 @@ jobs:
           make dist windows-installer
           codesign --verify --deep --strict bin/pkp.app
           lipo bin/pkp.app/Contents/MacOS/pkp -verify_arch arm64 x86_64
+          lipo bin/pkp.app/Contents/Helpers/pkp-updater -verify_arch arm64 x86_64
+          python3 build/darwin/updater-protocol-test.py bin/pkp.app/Contents/Helpers/pkp-updater
       - name: Test and vet native code
         run: |
           go test ./...

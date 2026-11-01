@@ -26,11 +26,15 @@ const MaxManifest = 128 << 10
 const MaxPackage = 2 << 30
 
 var (
-	ErrSignature = errors.New("update: invalid signature")
-	ErrManifest  = errors.New("update: invalid manifest")
-	ErrIntegrity = errors.New("update: package checksum or size mismatch")
-	ErrNoRelease = errors.New("update: no published release")
-	ErrRateLimit = errors.New("update: GitHub rate limit")
+	ErrSignature         = errors.New("update: invalid signature")
+	ErrManifest          = errors.New("update: invalid manifest")
+	ErrIntegrity         = errors.New("update: package checksum or size mismatch")
+	ErrNoRelease         = errors.New("update: no published release")
+	ErrRateLimit         = errors.New("update: GitHub rate limit")
+	ErrInstallLocation   = errors.New("update: app must run from an installed writable volume")
+	ErrInstallPermission = errors.New("update: replacement authorization denied")
+	ErrInstallBusy       = errors.New("update: another app instance is using this installation")
+	ErrInstallRollback   = errors.New("update: could not restore the previous application")
 )
 
 type Package struct {

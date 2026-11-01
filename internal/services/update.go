@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"runtime"
 	"sync"
 	"time"
 
@@ -73,12 +72,18 @@ func NewUpdateService(drive *DriveService, menu *MenuBarService, lock *AppLockSe
 		profile := sha256.Sum256([]byte(drive.configDir))
 		cache = filepath.Join(cache, "pkp", "updates", hex.EncodeToString(profile[:8]))
 	}
+	phase, failure := "idle", ""
+	if release && versionErr == nil && platform != "" {
+		if result, code := consumeUpdateResult(cache, version); result != "" {
+			phase, failure = result, code
+		}
+	}
 	return &UpdateService{
 		drive: drive, menu: menu, lock: lock, ctx: ctx, stop: stop,
 		platform: platform, osVersion: osVersion,
 		cacheDir: cache,
 		client:   &update.Client{HTTP: &http.Client{Transport: netproxy.Client().Transport, CheckRedirect: update.Redirect}, PublicKey: update.PublicKey()},
-		state:    UpdateState{Current: version, Supported: release && versionErr == nil && platform != "", Automatic: !s.UpdateChecksOff, Phase: "idle", LastChecked: s.UpdateLastCheck},
+		state:    UpdateState{Current: version, Supported: release && versionErr == nil && platform != "", Automatic: !s.UpdateChecksOff, Phase: phase, Error: failure, LastChecked: s.UpdateLastCheck},
 	}
 }
 
@@ -318,6 +323,14 @@ func updateError(err error, fallback string) string {
 		return "noRelease"
 	case errors.Is(err, update.ErrRateLimit):
 		return "rateLimit"
+	case errors.Is(err, update.ErrInstallLocation):
+		return "installLocation"
+	case errors.Is(err, update.ErrInstallPermission):
+		return "installPermission"
+	case errors.Is(err, update.ErrInstallBusy):
+		return "installBusy"
+	case errors.Is(err, update.ErrInstallRollback):
+		return "installRollback"
 	}
 	var fileErr *os.PathError
 	if errors.As(err, &fileErr) {
@@ -361,9 +374,9 @@ func (u *UpdateService) RemindLater() error {
 	return nil
 }
 
-// Install rechecks the cached package before handing it to the OS. On Windows
-// the installer is launched only after quit confirmation, before setting quitting;
-// rejecting UAC therefore leaves PKP running. NSIS waits for this PID to exit.
+// Install prepares the replacement before asking to quit. Cancellation or a
+// failed handoff leaves this process running; only the helper/installer replaces
+// files after the approved process has exited.
 func (u *UpdateService) Install() error {
 	u.mu.Lock()
 	if err := u.canStartLocked(); err != nil {
@@ -374,33 +387,67 @@ func (u *UpdateService) Install() error {
 		u.mu.Unlock()
 		return i18n.New("请先下载并校验更新")
 	}
-	path, p := u.path, u.manifest.Packages[u.platform]
+	path, p, version := u.path, u.manifest.Packages[u.platform], u.manifest.Version
 	u.state.Phase, u.state.Error = "installing", ""
 	u.publishLocked()
 	u.mu.Unlock()
-	start := func() error {
-		if u.lock != nil && u.lock.Locked() {
-			u.installResult(errAppLocked)
-			return errAppLocked
-		}
-		if err := update.CheckFile(path, p); err != nil {
-			u.installResult(err)
-			return err
-		}
-		err := openUpdatePackage(path)
-		if err != nil || runtime.GOOS != "windows" {
-			u.installResult(err)
-		}
+	if err := update.CheckFile(path, p); err != nil {
+		u.installResult(err)
 		return err
 	}
-	if runtime.GOOS == "windows" && u.menu != nil {
-		if err := u.menu.requestUpdateInstall(start, func() { u.installResult(nil) }); err != nil {
-			u.installResult(err)
-			return err
-		}
+	if u.menu == nil || u.menu.app == nil {
+		u.installResult(update.ErrInstallLocation)
 		return nil
 	}
-	return start()
+	u.mu.Lock()
+	if u.closing {
+		u.mu.Unlock()
+		return nil
+	}
+	u.wg.Add(1)
+	u.mu.Unlock()
+	go func() {
+		defer u.wg.Done()
+		ctx, cancel := context.WithTimeout(u.ctx, 10*time.Minute)
+		defer cancel()
+		prepared, err := prepareUpdatePackage(ctx, path, p, version, u.cacheDir)
+		if err != nil {
+			u.installResult(err)
+			return
+		}
+		start := func() error {
+			var err error
+			switch {
+			case u.ctx.Err() != nil:
+				err = u.ctx.Err()
+			case u.lock != nil && u.lock.Locked():
+				err = errAppLocked
+			default:
+				err = update.CheckFile(path, p)
+			}
+			if err == nil {
+				err = prepared.start()
+			}
+			if err != nil {
+				prepared.cancel()
+				u.installResult(err)
+			}
+			return err
+		}
+		abort := func() {
+			prepared.cancel()
+			u.installResult(nil)
+		}
+		if u.ctx.Err() != nil {
+			abort()
+			return
+		}
+		if err := u.menu.requestUpdateInstall(start, abort); err != nil {
+			prepared.cancel()
+			u.installResult(err)
+		}
+	}()
+	return nil
 }
 
 func (u *UpdateService) installResult(err error) {

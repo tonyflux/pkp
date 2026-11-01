@@ -32,9 +32,9 @@ export function Ignore(): $CancellablePromise<void> {
 }
 
 /**
- * Install rechecks the cached package before handing it to the OS. On Windows
- * the installer is launched only after quit confirmation, before setting quitting;
- * rejecting UAC therefore leaves PKP running. NSIS waits for this PID to exit.
+ * Install prepares the replacement before asking to quit. Cancellation or a
+ * failed handoff leaves this process running; only the helper/installer replaces
+ * files after the approved process has exited.
  */
 export function Install(): $CancellablePromise<void> {
     return $Call.ByID(3562509175);

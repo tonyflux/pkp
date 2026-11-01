@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { computed, ref } from "vue";
 import Icon from "./Icon.vue";
 import { updates, remindUpdateLater, ignoreUpdate } from "../updatestore";
 import { openSettings } from "../store";
 import { t } from "../i18n";
 const introduced = ref(localStorage.getItem("pkp.updateNotice") === "1");
+const busy = computed(() => updates.pending || ["checking", "downloading", "preparing", "confirming", "installing"].includes(updates.state?.phase ?? ""));
 function dismissIntro() { introduced.value = true; localStorage.setItem("pkp.updateNotice", "1"); }
 function open() { dismissIntro(); openSettings("updates"); }
 </script>
@@ -15,8 +16,8 @@ function open() { dismissIntro(); openSettings("updates"); }
     <div class="actions">
       <button class="quiet" @click="open">{{ t("查看更新") }}</button>
       <template v-if="updates.state.notice">
-        <button class="quiet" :disabled="updates.pending" @click="remindUpdateLater">{{ t("稍后提醒") }}</button>
-        <button class="quiet" :disabled="updates.pending" @click="ignoreUpdate">{{ t("忽略此版本") }}</button>
+        <button class="quiet" :disabled="busy" @click="remindUpdateLater">{{ t("稍后提醒") }}</button>
+        <button class="quiet" :disabled="busy" @click="ignoreUpdate">{{ t("忽略此版本") }}</button>
       </template>
       <button v-else class="quiet icon" :aria-label="t('关闭')" @click="dismissIntro"><Icon name="close" :size="14" /></button>
     </div>

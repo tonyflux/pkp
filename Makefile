@@ -1,4 +1,4 @@
-.PHONY: all help clean frontend libmpv libmpv-windows libmpv-sources build-go app-go dist dmg windows windows-installer release-check release-local release-verify release-draft release-publish wails-build wails-package wails-dmg dev test
+.PHONY: all help clean frontend libmpv libmpv-windows libmpv-sources build-go updater-helper app-go dist dmg windows windows-installer release-check release-local release-verify release-draft release-publish wails-build wails-package wails-dmg dev test
 
 # Default target
 all: build-go
@@ -96,11 +96,23 @@ build-go: frontend $(LIBMPV)
 	mkdir -p bin/Frameworks
 	cp build/darwin/libmpv/lib/*.*.dylib bin/Frameworks/
 
+
+# The updater must keep running after replacing the main app, without libmpv.
+updater-helper: bin/pkp-updater
+
+bin/pkp-updater: build/darwin/updater.swift
+	mkdir -p bin
+	xcrun swiftc -O -target arm64-apple-macos$(MACOS_MIN) -o bin/pkp-updater-arm64 $<
+	xcrun swiftc -O -target x86_64-apple-macos$(MACOS_MIN) -o bin/pkp-updater-amd64 $<
+	lipo -create -output $@ bin/pkp-updater-arm64 bin/pkp-updater-amd64
+	rm bin/pkp-updater-arm64 bin/pkp-updater-amd64
+	codesign --force --sign - $@
 # Option A: build and assemble the macOS app bundle.
-app-go: build-go
+app-go: build-go updater-helper
 	rm -rf bin/pkp.app
-	mkdir -p bin/pkp.app/Contents/MacOS bin/pkp.app/Contents/Resources
+	mkdir -p bin/pkp.app/Contents/MacOS bin/pkp.app/Contents/Resources bin/pkp.app/Contents/Helpers
 	cp bin/pkp bin/pkp.app/Contents/MacOS/
+	cp bin/pkp-updater bin/pkp.app/Contents/Helpers/
 	cp -R bin/Frameworks bin/pkp.app/Contents/
 	cp build/darwin/Info.plist bin/pkp.app/Contents/
 	cp build/darwin/icons.icns bin/pkp.app/Contents/Resources/

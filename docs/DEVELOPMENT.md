@@ -21,11 +21,20 @@ cd frontend && npm ci && cd ..
 make app-go
 ```
 
-`make app-go` 会生成绑定、构建前端，并产出 `bin/pkp` 与 `bin/pkp.app`。直接运行 `./bin/pkp` 前，先退出已经打开的旧 PKP。
+`make app-go` 会生成绑定、构建前端，并产出 `bin/pkp` 与 `bin/pkp.app`，其中 `Contents/Helpers/pkp-updater` 是独立的 macOS 12+ Universal 更新助手，由 Xcode 自带的 `swiftc` 构建。直接运行 `./bin/pkp` 前，先退出已经打开的旧 PKP；自动替换更新仅适用于已安装的 `.app`。
 
 Go module 是 `github.com/tonyflux/pkp`。前端绑定在 `frontend/bindings/github.com/tonyflux/pkp/`，由 Wails 生成，不要手改。
 
 运行 `make test` 执行 Go 和前端单元测试；`make dev` 使用 Wails 启动热重载开发模式。
+
+macOS 更新助手验证：
+
+```sh
+python3 build/darwin/updater-protocol-test.py bin/pkp-updater
+python3 build/darwin/updater-smoke-test.py bin/pkp-updater
+```
+
+第一项不启动应用；第二项需要已登录的 macOS 桌面，使用隔离、签名、无窗口的测试应用实际挂载 DMG、替换、重开和回滚，不启动真实 PKP 或读取真实账号配置。系统替换授权的允许/取消、真实应用退出确认及 Gatekeeper 仍需人工验收。助手日志与安装结果位于当前配置对应的用户缓存 `pkp/updates/<配置摘要>/`，回滚不确定时保留旧版备份并在 `install.log` 中记录位置。
 
 ## Windows 交叉编译
 

@@ -1,15 +1,22 @@
 package services
 
 import (
+	"context"
 	"fmt"
 	"os"
 
 	"golang.org/x/sys/windows"
+
+	"github.com/tonyflux/pkp/internal/update"
 )
 
 func updatePlatform() (string, string) {
 	v := windows.RtlGetVersion()
 	return "windows-x64-arm64", fmt.Sprintf("%d.%d.%d", v.MajorVersion, v.MinorVersion, v.BuildNumber)
+}
+
+func prepareUpdatePackage(_ context.Context, path string, _ update.Package, _, _ string) (*updateQuit, error) {
+	return &updateQuit{start: func() error { return openUpdatePackage(path) }, cancel: func() {}}, nil
 }
 
 // ShellExecute's runas verb asks UAC before the caller quits. The installer must
