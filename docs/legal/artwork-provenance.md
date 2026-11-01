@@ -25,6 +25,10 @@ The design handoff explicitly records a user-provided PikPak mark, an AI materia
 
 设计交接明确记录用户提供的 PikPak 图案、AI 材质探索和作为定稿的重绘 SVG；探索 PNG 不是实施素材。当前 `Logo.vue` 也将图案标为 PikPak box。不能把发行标志描述成独立原创的 AI 商标，也不能暗示 PikPak 背书。
 
+The maintainer has confirmed permission to publish and distribute the current application mark with the open-source project and its installation packages. It is no longer treated as an unresolved publication blocker. This records the maintainer's confirmation, not independently obtained legal clearance or PikPak endorsement; the factual export-chain limits below remain unchanged.
+
+维护者已确认当前应用标志可随开源项目和安装包公开及分发，不再将其列为待确认的发布阻断。此处记录维护者的确认，不声称取得独立法律审计或 PikPak 背书；下述导出链的事实边界保持不变。
+
 Current `build/appicon.png` and `build/appicon.icon/Assets/appicon.png` are byte-identical (SHA-256 `10345bdf11903fea2756dd618eda130de2e5456eddd60ff363167f59877c31d6`). They do not have the same bytes or decoded RGBA pixels as the design handoff's 1024 PNG; a complete export chain to the platform icon containers has not been proven. Trademark/underlying-art permission remains separate from the maintainer's confirmation about authentication identity parameters.
 
 当前两个打包输入一致，但与设计交接的 1024 PNG 的字节及解码像素均不完全一致；尚未证明从设计源到全部平台图标容器的完整导出链。商标和原图权限与维护者对认证参数的确认是不同事项。
@@ -35,4 +39,4 @@ Current `build/appicon.png` and `build/appicon.icon/Assets/appicon.png` are byte
 - TMDB mark: `frontend/src/assets/tmdb.svg` is an external service mark, not claimed as PKP-owned artwork. TMDB attribution remains in THIRD_PARTY.
 - Public screenshots: use isolated UI and synthetic data as described in README. This does not independently clear every embedded image or establish the rights of old binary releases.
 
-The remaining mark permissions and incomplete export chains must not be presented as resolved merely because AI was used elsewhere. 不能因为其他素材使用了 AI，就宣称标志授权及不完整导出链已解决。
+The maintainer's mark-permission confirmation and the incomplete export-chain evidence are distinct. AI use elsewhere does not establish rights or reproduce an export chain. 维护者对标志权限的确认与不完整的导出链证据是不同事项，其他素材使用 AI 不能替代权利确认或复现导出过程。
