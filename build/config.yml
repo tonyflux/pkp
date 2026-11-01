@@ -11,7 +11,7 @@ info:
   description: "High-performance PikPak desktop client" # The application description
   copyright: "Copyright (C) 2026 tonyflux" # Copyright text
   comments: "PKP for PikPak" # Comments
-  version: "0.3.0" # The application version
+  version: "0.2.0" # The application version
   # cfBundleIconName: "appicon" # The macOS icon name in Assets.car icon bundles (optional)
   #                               # Should match the name of your .icon file without the extension
   #                               # If not set and Assets.car exists, defaults to "appicon"

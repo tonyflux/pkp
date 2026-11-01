@@ -1,6 +1,6 @@
 # Artwork provenance / 美术素材来源
 
-This records evidence available for the v0.3.0 source preparation. It is not an independent copyright or trademark clearance. 本记录对应 v0.3.0 源码准备，不等于独立版权或商标授权审计。
+This records evidence available for the v0.2.0 source preparation. It is not an independent copyright or trademark clearance. 本记录对应 v0.2.0 源码准备，不等于独立版权或商标授权审计。
 
 ## Default wallpapers / 默认壁纸
 

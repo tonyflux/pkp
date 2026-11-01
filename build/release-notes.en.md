@@ -1,8 +1,8 @@
-# PKP 0.3.0
+# PKP 0.2.0
 
 [简体中文](release-notes.md) · English
 
-Planned first open-source release; these notes do not imply that 0.3.0 or its installation packages have been published. PKP's own source is available under GPL-3.0-only; the terms of the previously released v0.1.0 packages remain unchanged. This release must provide eight assets, including the complete PKP-owned source corresponding to the installers as `PKP-0.3.0-source.tar.gz`; `libmpv-sources.tar.gz` separately provides third-party corresponding source.
+Planned first open-source release; these notes do not imply that 0.2.0 or its installation packages have been published. PKP's own source is available under GPL-3.0-only; the terms of the previously released v0.1.0 packages remain unchanged. This release must provide eight assets, including the complete PKP-owned source corresponding to the installers as `PKP-0.2.0-source.tar.gz`; `libmpv-sources.tar.gz` separately provides third-party corresponding source.
 
 - File workspace, local index search, previews, playback, transfers, and multiple accounts.
 - Signed update manifests and package integrity verification; updates are not downloaded or installed automatically.

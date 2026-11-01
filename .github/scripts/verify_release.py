@@ -16,7 +16,7 @@ PUBLIC_KEY = "OWVabjpKxRDdGMlH9Jpk7NYhth7AFCws7Nvaox6C/ac="
 
 def verify_source(directory, version, manifest, digests):
     source = manifest.get("source")
-    if tuple(map(int, version.split("."))) < (0, 3, 0):
+    if tuple(map(int, version.split("."))) < (0, 2, 0):
         if source is not None:
             raise ValueError("historical release cannot claim new source metadata")
         return
@@ -67,7 +67,7 @@ def verify(directory, tag):
         "windows-x64-arm64": f"PKP-{version}-windows-x64-arm64-setup.exe",
     }
     names = {*packages.values(), "update.json", "update.json.sig", "libmpv-sources.tar.gz", "LICENSE", "SHA256SUMS"}
-    if tuple(map(int, version.split("."))) >= (0, 3, 0):
+    if tuple(map(int, version.split("."))) >= (0, 2, 0):
         names.add(f"PKP-{version}-source.tar.gz")
     if {p.name for p in directory.iterdir()} != names:
         raise ValueError(f"expected exactly {len(names)} release assets")

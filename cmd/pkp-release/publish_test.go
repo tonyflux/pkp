@@ -72,6 +72,51 @@ func releaseFixture(t *testing.T, version string) (string, ed25519.PublicKey) {
 	return dir, pub
 }
 
+func TestReleaseSourceContractByVersion(t *testing.T) {
+	for _, test := range []struct {
+		version string
+		assets  int
+	}{
+		{"0.1.0", 7},
+		{"0.2.0", 8},
+		{"0.3.0", 8},
+		{"1.0.0", 8},
+	} {
+		t.Run(test.version, func(t *testing.T) {
+			if got := len(releaseAssets(test.version)); got != test.assets {
+				t.Fatalf("release assets=%d, want %d", got, test.assets)
+			}
+			dir, _ := releaseFixture(t, test.version)
+			data, err := os.ReadFile(filepath.Join(dir, "update.json"))
+			if err != nil {
+				t.Fatal(err)
+			}
+			var signed releaseManifest
+			if err := json.Unmarshal(data, &signed); err != nil {
+				t.Fatal(err)
+			}
+			if (signed.Source != nil) != (test.assets == 8) {
+				t.Fatalf("signed source present=%v, assets=%d", signed.Source != nil, test.assets)
+			}
+			if _, err := verifySource(dir, signed.Manifest, data); err != nil {
+				t.Fatal(err)
+			}
+			if test.assets == 8 {
+				signed.Source = nil
+			} else {
+				signed.Source = &releaseSource{Commit: strings.Repeat("a", 40), Tree: strings.Repeat("b", 40)}
+			}
+			data, err = json.Marshal(signed)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if _, err := verifySource(dir, signed.Manifest, data); err == nil {
+				t.Fatal("incorrect source identity presence accepted")
+			}
+		})
+	}
+}
+
 func TestVerifyReleaseRejectsUnsafeOrIncompletePublication(t *testing.T) {
 	for _, version := range []string{"0.1.0", "0.2.0", "0.3.0", "1.0.0"} {
 		for _, scenario := range []string{"valid", "extra-source", "missing-source", "symlink", "corrupt-installer", "corrupt-license", "corrupt-own-source", "missing-own-source", "duplicate-sum", "traversal-sum", "incomplete-sums", "tampered-manifest", "wrong-key"} {

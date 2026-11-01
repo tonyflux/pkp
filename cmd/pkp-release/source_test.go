@@ -81,14 +81,14 @@ func TestSourceArchiveMatchesEveryTrackedByte(t *testing.T) {
 		t.Fatal(err)
 	}
 	var archive bytes.Buffer
-	if err := writeSourceArchive(&archive, "0.3.0", source, dependencies); err != nil {
+	if err := writeSourceArchive(&archive, "0.2.0", source, dependencies); err != nil {
 		t.Fatal(err)
 	}
-	file := filepath.Join(t.TempDir(), sourceName("0.3.0"))
+	file := filepath.Join(t.TempDir(), sourceName("0.2.0"))
 	if err := os.WriteFile(file, archive.Bytes(), 0644); err != nil {
 		t.Fatal(err)
 	}
-	if err := verifySnapshotArchive(file, "0.3.0", source); err != nil {
+	if err := verifySnapshotArchive(file, "0.2.0", source); err != nil {
 		t.Fatal(err)
 	}
 	for _, scenario := range []string{"changed", "omitted", "extra", "traversal"} {
@@ -104,8 +104,8 @@ func TestSourceArchiveMatchesEveryTrackedByte(t *testing.T) {
 			case "traversal":
 				files["../escape"] = "unsafe"
 			}
-			writeTestSource(t, file, "0.3.0", source, files)
-			if err := verifySnapshotArchive(file, "0.3.0", source); err == nil {
+			writeTestSource(t, file, "0.2.0", source, files)
+			if err := verifySnapshotArchive(file, "0.2.0", source); err == nil {
 				t.Fatal("noncorresponding source accepted")
 			}
 		})

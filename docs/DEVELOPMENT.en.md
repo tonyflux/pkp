@@ -49,7 +49,7 @@ make release-local RELEASE_NOTES=build/release-notes.md
 make release-verify
 ```
 
-This only generates eight assets locally; it does not upload them: two installers, `update.json`, `update.json.sig`, `PKP-<version>-source.tar.gz`, `libmpv-sources.tar.gz`, `LICENSE`, and `SHA256SUMS`. The PKP-owned source archive must contain the complete corresponding source and build scripts used for that version's installers; third-party corresponding source is provided separately. The first open-source release is planned as 0.3.0 and has not been published. Installation and upgrade acceptance testing is still required before an official release. Signing keys must not be committed or written to logs.
+This only generates eight assets locally; it does not upload them: two installers, `update.json`, `update.json.sig`, `PKP-<version>-source.tar.gz`, `libmpv-sources.tar.gz`, `LICENSE`, and `SHA256SUMS`. The PKP-owned source archive must contain the complete corresponding source and build scripts used for that version's installers; third-party corresponding source is provided separately. The first open-source release is planned as 0.2.0 and has not been published. Installation and upgrade acceptance testing is still required before an official release. Signing keys must not be committed or written to logs.
 
 ## Content Excluded from This Repository
 

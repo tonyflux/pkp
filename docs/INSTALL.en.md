@@ -12,11 +12,11 @@ The same Release provides the corresponding third-party source archive, `libmpv-
 
 v0.1.0 has seven assets: the macOS DMG, the Windows installer, `update.json`, `update.json.sig`, `libmpv-sources.tar.gz`, `LICENSE`, and `SHA256SUMS`. The first two are application installers; the third-party source archive does not contain PKP's own source code.
 
-The first open-source release is planned as v0.3.0 and has not been published. It must provide eight assets: the seven listed above plus `PKP-0.3.0-source.tar.gz` (generically, `PKP-<version>-source.tar.gz`). The additional archive provides the complete PKP-owned source and build scripts corresponding to that version's installers; this repository also provides current source. It does not replace the separate third-party corresponding source archive and is not corresponding source for the v0.1.0 installers.
+The first open-source release is planned as v0.2.0 and has not been published. It must provide eight assets: the seven listed above plus `PKP-0.2.0-source.tar.gz` (generically, `PKP-<version>-source.tar.gz`). The additional archive provides the complete PKP-owned source and build scripts corresponding to that version's installers; this repository also provides current source. It does not replace the separate third-party corresponding source archive and is not corresponding source for the v0.1.0 installers.
 
 `SHA256SUMS` is used to check download integrity and cannot, on its own, prove the publisher's identity. In-app updates use a built-in public key to verify the Ed25519-signed manifest, then check the installer size and SHA-256 hash; do not continue installation if the signature or hash is invalid.
 
-For a complete manual verification, place all assets from the same Release in a separate directory (seven for v0.1.0; eight for the planned v0.3.0) and download the public [verify_release.py](../.github/scripts/verify_release.py). After installing Python 3.11+ and OpenSSL 3+, run the following (this example verifies the published historical version; replace it with the actual tag being verified):
+For a complete manual verification, place all assets from the same Release in a separate directory (seven for v0.1.0; eight for the planned v0.2.0) and download the public [verify_release.py](../.github/scripts/verify_release.py). After installing Python 3.11+ and OpenSSL 3+, run the following (this example verifies the published historical version; replace it with the actual tag being verified):
 
 ```sh
 python3 verify_release.py /path/to/release-assets v0.1.0
@@ -60,7 +60,7 @@ Versions that support updates can check via “Settings → About & Updates”; 
 ## First Launch
 
 - Log in with your own PikPak account. “Remember Account and Password” and “Automatic Login” are currently checked by default; uncheck them if you do not want your password saved.
-- Read the [Privacy Notice](../PRIVACY.en.md) first. The released v0.1.0 production installers enable usage statistics by default; disable them under “Settings → Privacy & Security.” Current source (planned v0.3.0) defaults to off, and users upgrading must opt in again there. The current version also submits referral relationship information after a successful login.
+- Read the [Privacy Notice](../PRIVACY.en.md) first. The released v0.1.0 production installers enable usage statistics by default; disable them under “Settings → Privacy & Security.” Current source (planned v0.2.0) defaults to off, and users upgrading must opt in again there. The current version also submits referral relationship information after a successful login.
 - The first login creates a local file index, during which you can still browse; search and drive-wide statistics may need to wait until the index is ready.
 - macOS may request permission for system notifications; whether to allow them is up to you. Actual notification behavior in the current ad hoc build still awaits confirmation on real devices.
 - Before using synchronization or bulk organization, back up important data and carefully review the previews and confirmation details.

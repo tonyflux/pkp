@@ -10,7 +10,7 @@ PKP 自有源码采用 [GPL-3.0-only](LICENSE)。已发布的 v0.1.0 安装包�
 
 当前媒体库构建配置采用 LGPL 路径：mpv 禁用 GPL 部分，FFmpeg 不启用 GPL 选项；libmpv 以单独动态库分发。每个正式 Release 必须同时附上与实际二进制对应的 `libmpv-sources.tar.gz`，包含相关第三方源码与构建脚本。该源码包不代替 PKP 自有源码；v0.1.0 的安装包也不是由本仓库当前源码构建。
 
-v0.3.0 起另附 `PKP-<版本>-source.tar.gz`：包含与签名更新清单记录的 Git 提交及 tree 对应的 PKP 完整自有源码、资源、锁文件和构建脚本，以及 `third_party/` 中固定 Go 模块源码、npm 发布包和可核实的上游首选源码。清单记录校验值，并提供隔离依赖缓存的恢复说明；不包含 `.git`、账号数据或私钥。系统 SDK、编译器与打包工具仍须按开发指南安装。不能把 npm 中的可选原生构建工具二进制称为其完整源码，也不承诺逐字节可复现构建。
+v0.2.0 起另附 `PKP-<版本>-source.tar.gz`：包含与签名更新清单记录的 Git 提交及 tree 对应的 PKP 完整自有源码、资源、锁文件和构建脚本，以及 `third_party/` 中固定 Go 模块源码、npm 发布包和可核实的上游首选源码。清单记录校验值，并提供隔离依赖缓存的恢复说明；不包含 `.git`、账号数据或私钥。系统 SDK、编译器与打包工具仍须按开发指南安装。不能把 npm 中的可选原生构建工具二进制称为其完整源码，也不承诺逐字节可复现构建。
 
 由当前源码构建的安装包中，第三方声明位于 macOS 应用包的 `Contents/Resources/licenses/`（Finder 中选择“显示包内容”），或 Windows 安装目录的 `licenses`。`GO_LICENSES.txt` 收录 Go 工具链及 `go list` 为两个发布架构选出的生产依赖中的许可证、版权、专利与声明文件，包括 modernc 的 SQLite 和 libc 等上游继承声明。`THIRD_PARTY_LICENSES.txt` 由已安装的前端生产依赖和 pdfjs-dist 资源许可证生成；其余许可证目录用于媒体组件。PKP 自身许可证位于 Resources 或安装目录的 `LICENSE.txt`。
 

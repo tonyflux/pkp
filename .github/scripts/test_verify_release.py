@@ -43,7 +43,7 @@ class ReleaseVerifierTests(unittest.TestCase):
             manifest["packages"][platform] = {"url": f"https://github.com/tonyflux/pkp/releases/download/v{version}/{name}", "size": len(body), "sha256": hashlib.sha256(body).hexdigest(), "minOS": "12.0"}
         (directory / "LICENSE").write_text("License")
         (directory / "libmpv-sources.tar.gz").write_bytes(b"library sources")
-        if tuple(map(int, version.split("."))) >= (0, 3, 0):
+        if tuple(map(int, version.split("."))) >= (0, 2, 0):
             source = {"commit": "a" * 40, "tree": "b" * 40}
             name = f"PKP-{version}-source.tar.gz"
             with tarfile.open(directory / name, "w:gz") as archive:
@@ -68,31 +68,42 @@ class ReleaseVerifierTests(unittest.TestCase):
             verifier.verify(directory, f"v{version}")
 
     def test_historical_seven_and_current_eight_assets(self):
-        for version in ("0.1.0", "0.2.0", "0.3.0", "1.0.0"):
+        for version, assets in (("0.1.0", 7), ("0.2.0", 8), ("0.3.0", 8), ("1.0.0", 8)):
             with self.subTest(version=version), tempfile.TemporaryDirectory() as temporary:
                 directory = pathlib.Path(temporary)
                 self.fixture(directory, version)
+                self.assertEqual(len(list(directory.iterdir())), assets)
+                self.assertEqual("source" in json.loads((directory / "update.json").read_text()), assets == 8)
                 self.verify(directory, version)
 
     def test_source_is_authenticated_not_only_checksummed(self):
         with tempfile.TemporaryDirectory() as temporary:
             directory = pathlib.Path(temporary)
-            self.fixture(directory, "0.3.0")
-            (directory / "PKP-0.3.0-source.tar.gz").write_bytes(b"replacement archive")
+            self.fixture(directory, "0.2.0")
+            (directory / "PKP-0.2.0-source.tar.gz").write_bytes(b"replacement archive")
             self.checksums(directory)
             with self.assertRaises(ValueError):
-                self.verify(directory, "0.3.0")
+                self.verify(directory, "0.2.0")
+
+    def test_first_source_release_rejects_missing_archive(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            directory = pathlib.Path(temporary)
+            self.fixture(directory, "0.2.0")
+            (directory / "PKP-0.2.0-source.tar.gz").unlink()
+            self.checksums(directory)
+            with self.assertRaisesRegex(ValueError, "expected exactly 8 release assets"):
+                self.verify(directory, "0.2.0")
 
     def test_source_identity_required_and_matches_archive(self):
         for change in (lambda manifest: manifest.pop("source"), lambda manifest: manifest["source"].update(commit="c" * 40)):
             with tempfile.TemporaryDirectory() as temporary:
                 directory = pathlib.Path(temporary)
-                self.fixture(directory, "0.3.0", change)
+                self.fixture(directory, "0.2.0", change)
                 with self.assertRaises(ValueError):
-                    self.verify(directory, "0.3.0")
+                    self.verify(directory, "0.2.0")
 
     def test_strict_allowlist_in_both_generations(self):
-        for version in ("0.2.0", "0.3.0"):
+        for version in ("0.1.0", "0.2.0"):
             with tempfile.TemporaryDirectory() as temporary:
                 directory = pathlib.Path(temporary)
                 self.fixture(directory, version)

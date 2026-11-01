@@ -34,7 +34,7 @@ type releaseManifest struct {
 }
 
 func requiresSource(version string) bool {
-	return version == "0.3.0" || update.Newer(version, "0.3.0")
+	return version == "0.2.0" || update.Newer(version, "0.2.0")
 }
 
 func sourceName(version string) string { return "PKP-" + version + "-source.tar.gz" }
@@ -236,7 +236,7 @@ func writeSourceArchive(w io.Writer, version string, source releaseSource, depen
 
 func packageSource(dir, version, commit string) error {
 	if !requiresSource(version) {
-		return errors.New("PKP source packaging requires v0.3.0 or newer")
+		return errors.New("PKP source packaging requires v0.2.0 or newer")
 	}
 	source, err := sourceSnapshot()
 	if err != nil {

@@ -2,13 +2,13 @@
 
 [简体中文](CHANGELOG.md) · English
 
-## First Open-Source Version v0.3.0 · Before Official Release
+## First Open-Source Version v0.2.0 · Before Official Release
 
 - The local public repository now includes the application source code, frontend, build scripts, and statistics service code, and has switched to GPL-3.0-only. The proprietary terms for the v0.1.0 installation packages remain in `docs/legal/v0.1.0-proprietary.txt`; the license change is not retroactive.
 - Following review, editor state, build caches, private Git history, and internal release execution records were excluded. Invitation-code behavior is retained.
 - The maintainer has confirmed that the current Android client identity parameters may be published and reused; authentication values, the signing algorithm, and referral behavior are unchanged. Public comparisons do not imply PikPak endorsement. Before the first open-source release, local history is reconstructed from the online documentation changes using GitHub noreply commit identities, without importing private source history.
 - Internationalization cleanup: code comments, test names and developer diagnostics, build output, Issue templates, macOS installation assets, internal model instructions, and the statistics dashboard use English. Public guides now have linked English and Chinese versions. The upload drop hint uses the existing translation system; model replies still follow the interface language. Chinese parser grammar, naming presets, persisted labels, Unicode/localization fixtures, and historical legal terms remain intact; no new scan suppressions were added.
-- Aligned packaging metadata for the first open-source release, 0.3.0, and documented build prerequisites, contributions, security reporting and release signing. CI builds installers and checks the statistics service. Installation packages are offered as a draft for manual acceptance, not an official release.
+- Aligned packaging metadata for the first open-source release, 0.2.0, and documented build prerequisites, contributions, security reporting and release signing. CI builds installers and checks the statistics service. Installation packages are offered as a draft for manual acceptance, not an official release.
 - The first open-source release uses eight assets, adding `PKP-<version>-source.tar.gz` with the complete PKP-owned source and build scripts corresponding to the installers; `libmpv-sources.tar.gz` continues to provide third-party corresponding source separately. The historical seven v0.1.0 assets and terms are unchanged.
 - Usage statistics require opt-in; upgrades from older versions require a new choice and attempt to remove unsent local counts. The server restricts feature names, but anonymous reports can still be forged. Invitation behavior is unchanged.
 - Installers now include Go and frontend dependency notices. The current source has removed `pptx-preview`, whose license conflict no longer blocks the current release; this does not resolve obligations for historical copies or existing distributions. Artwork provenance still needs verification.
