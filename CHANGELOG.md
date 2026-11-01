@@ -2,6 +2,10 @@
 
 简体中文 · [English](CHANGELOG.en.md)
 
+## 未发布
+
+- 将英文项目说明设为默认 `README.md`，中文保留为 `README.zh-CN.md`，并更新语言切换和文档链接。
+
 ## 首个开源版本 v0.2.0 · 正式发布前
 
 - 本地公开仓库已纳入应用源码、前端、构建脚本和统计服务代码，并改用 GPL-3.0-only。v0.1.0 安装包的闭源条款保留在 `docs/legal/v0.1.0-proprietary.txt`，不追溯改许可。

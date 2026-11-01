@@ -1,116 +1,118 @@
 <div align="center">
 
-<img src="assets/logo.png" alt="PKP 标志" width="96" height="96">
+<img src="assets/logo.png" alt="PKP logo" width="96" height="96">
 
 # PKP
 
-**把云盘文件、传输与播放，放进一个桌面工作区。**
+**Your cloud files, transfers, and playback. One desktop workspace.**
 
-简体中文 · [English](README.en.md)
+[简体中文](README.zh-CN.md) · English
 
-[使用指南](docs/USAGE.md) · [发布动态](https://github.com/tonyflux/pkp/releases) · [问题反馈](https://github.com/tonyflux/pkp/issues)
+[User guide](docs/USAGE.en.md) · [Releases](https://github.com/tonyflux/pkp/releases) · [Report an issue](https://github.com/tonyflux/pkp/issues)
 
 </div>
 
-PKP 是面向 PikPak 用户的**非官方桌面客户端**，用于管理自己的云盘文件、多账号传输与媒体播放。PKP 不隶属于 PikPak，也不代表其运营方；使用时仍须遵守 PikPak 的服务条款与适用法律。
+PKP is an **unofficial desktop client for PikPak**, built for managing your own cloud files, transfers across multiple accounts, and media playback. PKP is not affiliated with or endorsed by PikPak. Use remains subject to PikPak's terms of service and applicable laws.
 
-> **v0.1.0 已发布** · [下载最新版本](https://github.com/tonyflux/pkp/releases/latest)。提供 macOS Universal 与 Windows x64 / ARM64 安装包；安装前请阅读[安装说明](docs/INSTALL.md)并校验附件。本仓库包含应用源码与构建脚本；已发布的 v0.1.0 安装包不是由这份源码构建，仍适用当时的闭源条款。
+> **v0.1.0 is available** · [Download the latest release](https://github.com/tonyflux/pkp/releases/latest) for macOS Universal or Windows x64 / ARM64. Read the [installation guide](docs/INSTALL.en.md) and verify the assets before installing. This repository contains the application source and build scripts. The published v0.1.0 installers were not built from this source and remain under the proprietary terms shipped with that release.
 >
-> **首个开源版本计划为 v0.2.0，尚未发布。** 当前完整源码已在本仓库中提供；该版本发布时还须附上与安装包对应的 `PKP-0.2.0-source.tar.gz` 及独立的第三方源码包，共八件附件。v0.1.0 的七件附件与原有条款不变。
+> **The first open-source release is planned as v0.2.0 and has not been published.** Complete current source is provided in this repository; that release must also include `PKP-0.2.0-source.tar.gz` corresponding to its installers and a separate third-party source archive, for eight assets in total. The seven v0.1.0 assets and their original terms remain unchanged.
 
-## 一个工作区，照顾日常文件操作
+## A workspace for everyday file management
 
-浏览云盘、切换账号、管理上传下载，再打开文件预览或播放，减少在不同工具之间来回切换。
+Browse your cloud drive, switch accounts, manage uploads and downloads, then preview or play a file without moving between separate tools.
 
-![PKP 文件工作区，中文界面与合成示例数据](assets/screenshots/workspace.png)
+![PKP file workspace with a Chinese interface and synthetic sample data](assets/screenshots/workspace.png)
 
-*截图说明：本文六张界面图片来自实际应用在本地隔离环境中的运行，使用合成示例账号与文件数据，界面语言为简体中文，不包含真实用户账号或内容，也不代表已通过生产云端操作验证。播放器画面另有下述合成说明；AI 助手与同步图片分别展示首页和扫描预览，不代表模型推理或同步执行结果。*
+*About the screenshots: the six interface images come from the actual application running locally in an isolated environment, using synthetic sample account and file data. The interface is in Simplified Chinese. They contain no real user accounts or content and are not evidence of verified production cloud operations. The player image includes a composited frame, as explained below; the assistant and sync images show the home screen and scan preview, not model inference or sync execution results.*
 
-## 更快找到文件
+## Find your files faster
 
-通过本地索引搜索自己的云盘文件，结合排序、类型筛选与星标整理日常内容。首次建立索引需要时间，搜索与全盘统计可能要等待索引就绪；本地索引搜索不需要把文件名发给 AI 模型。
+Search your own cloud files through a local index, with sorting, type filters, and favorites to keep everyday content within reach. The initial index takes time to build; search and drive-wide statistics may need to wait until it is ready. Local indexed search does not require sending file names to an AI model.
 
-![PKP 本地索引搜索界面，使用合成示例数据](assets/screenshots/search.png)
+![PKP local indexed search with synthetic sample data](assets/screenshots/search.png)
 
-## 播放，就在工作区
+## Playback, right in your workspace
 
-内置播放器支持清晰度切换、字幕与音轨选择，记住播放进度，也能移到独立窗口继续观看。具体可用性取决于文件、编码与服务；**不提供 AI 字幕生成**。
+The integrated player supports quality switching, subtitle and audio-track selection, playback resume, and a separate player window. Availability depends on the file, codec, and service. **AI subtitle generation is not provided.**
 
-![PKP 内置播放器，中文控件与本地演示视频画面](assets/screenshots/player.png)
+![PKP integrated player with Chinese controls and a local demo video frame](assets/screenshots/player.png)
 
-*图片说明：实际播放器控件与后端状态来自隔离环境；浏览器无法捕获原生视频表面，因此在控件下合成本地生成演示视频的真实解码帧。此图不是原生视频渲染效果的验证。*
+*Image provenance: actual player controls and backend state from the isolated environment. Because the browser cannot capture the native video surface, a real decoded frame from a locally generated demo video is composited beneath the controls. This is not verification of native video rendering.*
 
-## 整理文件，多一个助手
+## A helping hand for file organization
 
-先用本地规则、索引搜索与统计，也可按需接入自己的模型服务。向模型发送文件名、路径等元数据或已授权内容前，需按数据级别授权；已设「始终允许」的级别不会每次询问，可在设置中管理。涉及改名、移动等写操作时，先审阅并确认实际操作计划。**AI 不保证判断准确**，授权不等于结果可靠，服务费用由所选服务决定。
+Start with local rules, indexed search, and statistics, or optionally connect your own model service. Sending file names, paths, or other metadata or authorized content to a model requires data-level consent. Levels set to “Always allow” do not prompt every time and can be managed in settings. Before writes such as renaming or moving files, review and confirm the actual operation plan. **AI accuracy is not guaranteed:** consent does not make a result reliable, and service charges depend on your chosen provider.
 
-![PKP AI 助手首页，中文界面与合成示例数据](assets/screenshots/assistant.png)
+![PKP AI assistant home screen with a Chinese interface and synthetic sample data](assets/screenshots/assistant.png)
 
-*图片说明：实际 AI 助手首页的本地隔离截图，未进行在线模型推理，不展示或暗示模型回答效果。*
+*Image provenance: a local, isolated capture of the actual AI assistant home screen. No online model inference was performed; the image does not show or imply model response quality.*
 
-## 文件夹同步，先看再执行
+## Folder sync: preview before you run
 
-按需要选择双向同步、本地备份到云端或云端下载到本地；先扫描两端目录，审阅真实扫描生成的操作预览，再执行变更。冲突可选择保留双方副本，删除操作有保护与确认机制，但不能代替检查预览或备份重要文件。
+Choose two-way sync, local-to-cloud backup, or cloud-to-local download. Scan both folders, review the operation preview produced by the actual scan, then execute the changes. Conflicts can keep both copies, and deletion protections and confirmations help guard against unwanted removal; neither replaces checking the preview or backing up important files.
 
-![PKP 文件夹同步扫描预览，中文界面与本地合成测试数据](assets/screenshots/sync.png)
+![PKP folder sync scan preview with a Chinese interface and local synthetic test data](assets/screenshots/sync.png)
 
-*图片说明：实际同步界面使用本地合成测试数据完成扫描后生成的预览，本地临时目录路径已脱敏。未执行同步，不代表生产云端传输结果。*
+*Image provenance: the actual sync interface showing a preview produced by scanning local synthetic test data, with the temporary local directory path anonymized. No sync was executed; this is not a production cloud-transfer result.*
 
-同步仅在 PKP 进程运行时工作，不是实时服务或系统级后台守护，也不是完整备份方案；内容核对可能读取云端文件并消耗下载流量。
+Sync only works while the PKP process is running. It is not a real-time service, a system-level background daemon, or a complete backup solution. Content verification may read cloud files and consume download traffic.
 
-## 日常能力一览
+## What you can do
 
-| 你想做什么 | PKP 提供什么 |
+| Your task | What PKP provides |
 | --- | --- |
-| 管理多个账号 | 多账号登录与切换，各账号后台上传、下载相互独立；不会合并成一个云盘。 |
-| 浏览与分享 | 文件夹浏览、本地索引搜索、排序筛选、星标、分享，以及图片、文本、PDF、DOCX 和 XLSX 等预览；PPT/PPTX 无内置预览，仍可下载等。 |
-| 管理传输 | 云添加、本地文件与文件夹上传、下载到电脑，以及传输进度管理。 |
-| 播放媒体 | 内置播放器，支持清晰度切换、字幕、播放记录和独立播放窗口，具体可用性取决于文件与服务。 |
-| 同步与整理 | 文件夹双向同步、备份到云端或下载到本地，执行前预览与冲突处理；文件清理、规则改名和影视整理。可选接入自己的 AI 模型服务与 TMDB 凭据。 |
-| 调整使用体验 | 简体中文、繁体中文、英语、日语、韩语界面，以及主题与壁纸设置。 |
+| Manage multiple accounts | Sign in and switch accounts, with independent background uploads and downloads. Accounts are not merged into a single drive. |
+| Browse and share | Folder browsing, local indexed search, sorting, filters, favorites, sharing, and previews including images, text, PDF, DOCX, and XLSX; PPT/PPTX have no built-in preview, but downloads and other operations remain available. |
+| Manage transfers | Add links or torrents for cloud download, upload local files and folders, download to your computer, and manage transfer progress. |
+| Play media | An integrated player with quality switching, subtitles, playback history, and a separate player window. Availability depends on the file and service. |
+| Sync and organize | Two-way folder synchronization, local-to-cloud backup, and cloud-to-local downloads, with previews and conflict handling before execution; cleanup, rule-based renaming, and media organization. Optional connections to your own AI model service and TMDB credentials. |
+| Make it yours | Simplified Chinese, Traditional Chinese, English, Japanese, and Korean interfaces, plus themes and wallpaper settings. |
 
-云盘能力、网络访问和配额受 PikPak 服务及账号状态限制。PKP 不提供内容资源，不绕过服务端权限或会员限制。同步仅在 PKP 进程运行时工作，不是实时服务或系统级后台守护；同步、清理与批量整理前请备份重要文件并检查操作预览。
+Cloud capabilities, network access, and quotas depend on PikPak's service and your account. PKP does not provide content resources or bypass server-side permissions or Premium restrictions. Synchronization only runs while the PKP process is running; it is not a real-time service or a system-level background daemon. Back up important files and review operation previews before synchronization, cleanup, or bulk organization.
 
-## 先了解隐私，再决定如何使用
+## Understand privacy before signing in
 
-隐私相关选项可在应用设置中查看；以下行为同样值得在登录前了解。
+Privacy-related options are available in settings. The following behavior is also important to understand before using PKP.
 
-![PKP 隐私与安全设置，中文界面与隔离示例环境](assets/screenshots/privacy.png)
+![PKP privacy and security settings in the isolated sample environment, with a Chinese interface](assets/screenshots/privacy.png)
 
-- **使用统计因版本而异。** 已发布的 v0.1.0 生产安装包默认开启，可在「设置 → 隐私与安全」关闭；当前源码（计划中的 v0.2.0）默认关闭，需在该设置中主动开启。旧版本的开启状态无法与默认状态区分，升级后需重新开启。统计载荷不包含账号、文件名、路径、搜索词、提问正文或文件内容；随机安装编号可关联同一安装的多日统计。关闭不会自动删除已到达服务端的数据，服务端统计未经安装身份认证，可能被伪造。
-- **更新检查是独立开关。** 生产构建默认开启更新检查，可在「关于与更新」单独关闭；关闭使用统计不会关闭更新检查，不会自动下载安装包。
-- **登录包含邀请关系提交。** 当前每次通过登录表单成功登录后（包括添加账号与重新登录），会在后台向 PikPak 提交开发者预设的邀请码，尝试建立邀请关系，**没有单独的选择开关**。失败不影响登录；恢复会话或刷新令牌不触发提交。注册入口也包含推广参数，可能形成推广归因。
-- **AI 与 TMDB 为可选连接。** 使用自己的服务和凭据，发送前阅读数据授权提示；AI 请求可能包含文件名、路径和其他已授权上下文。应用锁不等于本地数据加密。
+- **Usage statistics differ by version.** The released v0.1.0 production installers enable them by default; disable them under Settings → Privacy & Security. Current source (planned v0.2.0) defaults to off and requires opt-in there. Older versions cannot distinguish an explicit enable from the old default, so you must opt in again after upgrading. Payloads do not contain accounts, file names, paths, search terms, question text, or file contents. A random installation identifier can link statistics from the same installation across days. Turning statistics off does not automatically delete data already received; reports are unauthenticated and can be forged.
+- **Update checks have a separate switch.** Production builds enable update checks by default; disable them separately under About & Updates. Disabling usage statistics does not disable update checks. Packages are not downloaded or installed automatically.
+- **Sign-in includes a referral submission.** After each successful form-based sign-in, including adding an account or signing in again, PKP submits a preset developer referral code to PikPak in the background to attempt to establish a referral relationship. **There is no separate opt-out switch.** Failure does not affect sign-in; restoring a session or refreshing a token does not trigger submission. The registration link also includes promotional parameters that may create referral attribution.
+- **AI and TMDB connections are optional.** Use your own services and credentials, and review data authorization prompts before sending information. AI requests may include file names, paths, and other authorized context. The application lock does not encrypt local data.
 
-完整的数据范围、存储与删除边界见 [隐私说明](PRIVACY.md)。
+See the [privacy notice](PRIVACY.en.md) for the full data scope, storage details, and deletion limitations.
 
-## 平台与安装边界
+## Platform and installation limits
 
-**正式安装包已在 [Releases](https://github.com/tonyflux/pkp/releases/latest) 提供。** 用户已反馈首发草稿验收通过；这不等于下列全部平台、设备和功能均完成充分验证。
+**Official installation packages are available in [Releases](https://github.com/tonyflux/pkp/releases/latest).** The maintainer reported successful acceptance of the initial draft; this does not establish comprehensive validation across all platforms, devices, or features below.
 
-| 平台 | 当前情况 |
+| Platform | Current status |
 | --- | --- |
-| macOS | 面向 macOS 12 及以上的 Universal 应用，兼容 Apple 芯片与 Intel；当前打包方式为 ad hoc 签名，未经 Apple 公证。 |
-| Windows | 提供 x64 / ARM64 共用安装包；仍需扩大真机覆盖，播放、同步、通知和系统身份验证等不能视为已在全部设备充分验证。部分 macOS 集成不可用；没有 Authenticode 发布者签名。 |
-| Linux | 暂不承诺支持或提供发行包。 |
+| macOS | Universal application targeting macOS 12 or later, for Apple silicon and Intel. Current packages use ad hoc signing and are not notarized by Apple. |
+| Windows | A combined x64 / ARM64 installer is available. Broader real-device coverage is still needed for playback, synchronization, notifications, and system authentication. Some macOS integrations are unavailable. No Authenticode publisher signature. |
+| Linux | Support and distribution packages are not currently promised. |
 
-安装要求与首次启动注意事项见 [安装说明](docs/INSTALL.md)。请仅从本仓库的正式 [Release](https://github.com/tonyflux/pkp/releases/latest) 获取安装包，并按对应说明校验。
+See the [installation guide](docs/INSTALL.en.md) for requirements and first-launch precautions. Download packages only from this repository's official [Releases](https://github.com/tonyflux/pkp/releases/latest) and follow the corresponding verification instructions.
 
-## 源码与许可证
+## Source and license
 
-Copyright (C) 2026 tonyflux。本仓库中的 PKP 自有源码、构建脚本和文档以 [GPL-3.0-only](LICENSE) 授权。第三方组件仍适用各自许可证。已发布的 v0.1.0 安装包继续适用随该版本分发的[闭源条款](docs/legal/v0.1.0-proprietary.txt)，不能把当前源码当作该安装包的对应源码。
+Copyright (C) 2026 tonyflux. PKP-owned source, build scripts, and documentation in this repository are licensed under [GPL-3.0-only](LICENSE). Third-party components retain their own licenses. Published v0.1.0 installers remain under the [proprietary terms shipped with that release](docs/legal/v0.1.0-proprietary.txt); this source is not their corresponding source.
 
-本地构建见 [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)。当前登录实现使用与 PikPak 官方 Android 客户端相关的身份参数与签名常量；公开这份源码会公开这些值。维护者已确认当前身份参数可公开复用，参数与邀请行为保持不变；公开比对不代表 PikPak 官方背书，也不表示已独立取得 PikPak 的书面授权。邀请码行为已在[隐私说明](PRIVACY.md)披露。
+See the [development guide](docs/DEVELOPMENT.en.md) to build locally. The current login implementation uses identity parameters and signing constants associated with PikPak's official Android client; publishing this source discloses those values. The maintainer has confirmed that the current identity parameters may be publicly reused; the parameters and referral behavior remain unchanged. Public comparisons do not imply endorsement by PikPak or independently obtained written authorization from PikPak. The referral behavior is disclosed in the [privacy notice](PRIVACY.en.md).
 
-## 指南与反馈
+## Guides and feedback
 
-| 入口 | 内容 |
+The guides below are available in English and Simplified Chinese, with language links in each document.
+
+| Resource | What it covers |
 | --- | --- |
-| [安装与首次启动](docs/INSTALL.md) | 下载状态、平台要求、首次启动与更新方式。 |
-| [使用说明](docs/USAGE.md) | 账号、传输、播放、同步与数据操作提醒。 |
-| [隐私说明](PRIVACY.md) | 本地数据、外部服务、使用统计、邀请关系与删除边界。 |
-| [更新记录](CHANGELOG.md) · [Releases](https://github.com/tonyflux/pkp/releases) | 文档与开发状态；正式发布后以实际 Release 的附件及说明为准。 |
-| [第三方组件](THIRD_PARTY.md) · [使用条款](LICENSE) | 第三方分发义务、版权与软件使用条款。 |
-| [参与贡献](CONTRIBUTING.md) · [安全政策](SECURITY.md) | 贡献方式与安全问题报告方式。 |
+| [Installation and first launch](docs/INSTALL.en.md) | Download status, platform requirements, first launch, and updates. |
+| [User guide](docs/USAGE.en.md) | Accounts, transfers, playback, synchronization, and data-operation precautions. |
+| [Privacy notice](PRIVACY.en.md) | Local data, external services, usage statistics, referrals, and deletion limitations. |
+| [Changelog](CHANGELOG.en.md) · [Releases](https://github.com/tonyflux/pkp/releases) | Documentation and development status; published release attachments and notes are authoritative for their releases. |
+| [Third-party components](THIRD_PARTY.en.md) · [Software license](LICENSE) | Third-party distribution obligations, copyright, and software license. |
+| [Contributing](CONTRIBUTING.en.md) · [Security policy](SECURITY.en.md) | Contribution guidance and vulnerability reporting. |
 
-欢迎通过 [Issues](https://github.com/tonyflux/pkp/issues) 报告问题或提出建议。**不要公开密码、令牌、API Key、分享口令、完整账号信息或未经脱敏的日志与截图，也不要上传整个配置目录。**
+Report problems or suggest improvements through [Issues](https://github.com/tonyflux/pkp/issues). **Do not post passwords, tokens, API keys, share passcodes, complete account details, or unredacted logs and screenshots. Do not upload the entire configuration directory.**

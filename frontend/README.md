@@ -8,4 +8,4 @@ Vue 3 + TypeScript，由 Vite 构建，`vue-tsc` 在 `npm run build` 里做类�
 - `npm run dev`：浏览器里开发，`/wails` 代理到 `go build -tags server` 的 8080 端口。
 - `npm test`：vitest，只测纯函数（`format.ts`、`scrub.ts`、store 里的排序/筛选）。
 
-构建、架构与设计稿见仓库根目录 `README.md`。
+构建、架构与设计稿见仓库根目录 [中文 README](../README.zh-CN.md)。

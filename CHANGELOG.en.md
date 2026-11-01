@@ -2,6 +2,10 @@
 
 [简体中文](CHANGELOG.md) · English
 
+## Unreleased
+
+- Make the English project overview the default `README.md`, retain Simplified Chinese as `README.zh-CN.md`, and update language-switching and documentation links.
+
 ## First Open-Source Version v0.2.0 · Before Official Release
 
 - The local public repository now includes the application source code, frontend, build scripts, and statistics service code, and has switched to GPL-3.0-only. The proprietary terms for the v0.1.0 installation packages remain in `docs/legal/v0.1.0-proprietary.txt`; the license change is not retroactive.
