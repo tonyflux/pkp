@@ -74,9 +74,8 @@ type MenuBarState struct {
 	// Synchronization is deliberately not counted as ordinary transfer history.
 	SyncRunning   int `json:"syncRunning"`
 	SyncAttention int `json:"syncAttention"`
-	// Inbox counts every account's arrivals still to organize (state "new"). They
-	// light the item's dot too, but rank below Attention: a transfer that
-	// stopped loses work, an arrival only waits.
+	// Inbox counts new arrivals with actionable suggestions, across accounts.
+	// They rank below Attention: a stopped transfer loses work, an arrival waits.
 	Inbox int `json:"inbox"`
 	// InboxItem is the newest of them, the on-screen account's first; nil
 	// when there is none.
@@ -227,7 +226,7 @@ func (m *MenuBarService) Attach(app *application.App, main *application.WebviewW
 		app.Event.On(name, func(*application.CustomEvent) { m.mark() })
 	}
 	// An account going away takes its arrivals with it.
-	for _, name := range []string{EventInboxChanged, EventAccounts} {
+	for _, name := range []string{EventInboxChanged, EventArrivalSuggestionsChanged, EventAccounts} {
 		app.Event.On(name, func(*application.CustomEvent) { go m.readInbox() })
 	}
 
@@ -445,7 +444,7 @@ func (m *MenuBarService) readInbox() {
 			continue
 		}
 		for _, x := range list {
-			if x.State == ArrivalNew {
+			if x.State == ArrivalNew && x.HasSuggestions {
 				waiting = append(waiting, x)
 			}
 		}
@@ -847,7 +846,7 @@ func summarize(uploads []UploadTask, downloads []DownloadTask, accounts []Accoun
 	// account's newest first, then the newest of any other.
 	for i := range arrivals {
 		a := &arrivals[i]
-		if _, known := order[a.Account]; !known || a.State != ArrivalNew {
+		if _, known := order[a.Account]; !known || a.State != ArrivalNew || !a.HasSuggestions {
 			continue
 		}
 		state.Inbox++

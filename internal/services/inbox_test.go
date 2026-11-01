@@ -165,6 +165,49 @@ func TestInboxTurnsNewlyCompletedTasksIntoArrivals(t *testing.T) {
 	}
 }
 
+func TestArrivalSuggestionsDoNotResolveOrDiscardUnidentifiedFiles(t *testing.T) {
+	svc, s, api := newInboxService(t)
+	api.set()
+	poll(t, svc, s)
+	now := time.Now().Add(time.Minute)
+	api.set(doneTask("known", now, ""), doneTask("unknown", now, ""))
+	poll(t, svc, s)
+	if err := svc.SetArrivalSuggestions(s.key, []string{"known"}); err != nil {
+		t.Fatal(err)
+	}
+	for _, a := range arrivals(t, svc) {
+		if a.HasSuggestions != (a.ID == "known") || a.State != ArrivalNew || a.RecordID != "" {
+			t.Fatalf("suggestion publication changed a decision: %+v", a)
+		}
+	}
+	if err := svc.SetArrivalSuggestions(s.key, nil); err != nil {
+		t.Fatal(err)
+	}
+	for _, a := range arrivals(t, svc) {
+		if a.HasSuggestions || a.State != ArrivalNew || a.RecordID != "" {
+			t.Fatalf("no suggestions must stay unprocessed: %+v", a)
+		}
+	}
+	if err := svc.SetArrival(s.key, "known", ArrivalDismissed, ""); err != nil {
+		t.Fatal(err)
+	}
+	if err := svc.SetArrivalSuggestions(s.key, []string{"known", "unknown"}); err != nil {
+		t.Fatal(err)
+	}
+	for _, a := range arrivals(t, svc) {
+		if a.ID == "known" && (a.HasSuggestions || a.State != ArrivalDismissed) {
+			t.Fatalf("a stale analysis revived a dismissed arrival: %+v", a)
+		}
+		if a.ID == "unknown" && (!a.HasSuggestions || a.State != ArrivalNew) {
+			t.Fatalf("a previously unidentified arrival lost its new suggestions: %+v", a)
+		}
+	}
+	poll(t, svc, s)
+	if got := arrivals(t, svc); len(got) != 2 {
+		t.Fatalf("suggestion updates changed the watcher watermark: %+v", got)
+	}
+}
+
 func TestInboxKeepsTheNewestHundred(t *testing.T) {
 	svc, s, api := newInboxService(t)
 	api.set()

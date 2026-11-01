@@ -632,6 +632,11 @@ export interface Arrival {
     "completedAt": string;
     "state": string;
     "recordId": string;
+
+    /**
+     * HasSuggestions is derived by the webview, separate from the user's decision.
+     */
+    "hasSuggestions": boolean;
 }
 
 /**
@@ -1785,9 +1790,8 @@ export interface MenuBarState {
     "syncAttention": number;
 
     /**
-     * Inbox counts every account's arrivals still to organize (state "new"). They
-     * light the item's dot too, but rank below Attention: a transfer that
-     * stopped loses work, an arrival only waits.
+     * Inbox counts new arrivals with actionable suggestions, across accounts.
+     * They rank below Attention: a stopped transfer loses work, an arrival waits.
      */
     "inbox": number;
 

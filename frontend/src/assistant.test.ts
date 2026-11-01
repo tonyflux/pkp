@@ -292,6 +292,9 @@ beforeEach(async () => {
   chatScript = [];
   arrivals = [];
   reviews = {};
+  inbox.account = "";
+  inbox.arrivals = [];
+  inbox.summaries = {};
   assistant.scope = {};
   drive.trail = [];
   drive.entries = [];
@@ -601,6 +604,7 @@ describe("AI assistant · L0 plans", () => {
         completedAt: "2026-10-16T06:00:00Z",
         state: "new",
         recordId: "",
+        hasSuggestions: false,
       },
     ];
     await loadInbox("a");
@@ -735,8 +739,60 @@ describe("AI assistant · Content moderation refusal", () => {
 });
 
 
+describe("AI assistant · Actionable arrival reminders", () => {
+  it.each([false, true])("does not remind for unidentified files (model configured: %s), without resolving the arrival", async (configured) => {
+    aiSettings.value = { ...settings, configured };
+    arrivals = [{ id: "unknown-arrival", fileId: "c1", account: "a", name: "VID_0001.mp4", parentId: "dl", savedTo: "", source: "cloud", completedAt: "2026-10-17T11:00:00Z", state: "new", recordId: "", hasSuggestions: false }];
+    await loadInbox("a");
+    await ensureArrivalSummary(inbox.arrivals[0]);
+    expect(inbox.summaries["unknown-arrival"]).toMatchObject({ state: "ready", organizable: 0 });
+    expect(pendingArrivals.value).toEqual([]);
+    expect(inbox.arrivals[0]).toMatchObject({ state: "new", recordId: "" });
+    expect(callsOf("SetArrival")).toEqual([]);
+    expect(callsOf("Organize")).toEqual([]);
+    expect(modelCalls()).toBe(0);
+  });
+
+  it("reminds for local suggestions without a model and rechecks silent arrivals after an index pass", async () => {
+    aiSettings.value = { ...settings, configured: false };
+    arrivals = [{ id: "rechecked", fileId: "c1", account: "a", name: "VID_0001.mp4", parentId: "dl", savedTo: "", source: "cloud", completedAt: "2026-10-17T11:00:00Z", state: "new", recordId: "", hasSuggestions: false }];
+    await loadInbox("a");
+    expect(pendingArrivals.value).toEqual([]);
+    const updated = below.map((e) => e.id === "c1" ? { ...e, name: "[SubGroup] Shanhai Jixing - 04 [1080p].mkv" } : e);
+    answer("PlanTree", (_account: string, scope: string) => scope === "dl" ? updated : [inbox0, ...updated]);
+    drive.indexProgress = { ...drive.indexProgress!, account: "a", ready: true, syncedAt: "2026-11-01T09:00:00Z" };
+    await settle();
+    expect(pendingArrivals.value.map((a) => a.id)).toEqual(["rechecked"]);
+    expect(inbox.arrivals[0].state).toBe("new");
+    expect(inbox.summaries.rechecked.organizable).toBe(1);
+    expect(modelCalls()).toBe(0);
+    expect(callsOf("Organize")).toEqual([]);
+  });
+
+  it("treats an empty arrival as having no suggestions, not a failed analysis to retry", async () => {
+    answer("PlanTree", () => [inbox0]);
+    arrivals = [{ id: "empty-arrival", fileId: "dl", account: "a", name: inbox0.name, parentId: "", savedTo: "", source: "cloud", completedAt: "2026-10-17T11:00:00Z", state: "new", recordId: "", hasSuggestions: false }];
+    await loadInbox("a");
+    expect(inbox.summaries["empty-arrival"]).toMatchObject({ state: "ready", files: 0, organizable: 0 });
+    expect(pendingArrivals.value).toEqual([]);
+    expect(inbox.arrivals[0].state).toBe("new");
+    expect(modelCalls()).toBe(0);
+  });
+
+  it("checks another account without using the visible account's folders or replacing its summaries", async () => {
+    arrivals = [{ id: "other-arrival", fileId: "s1", account: "b", name: "Shanhai Jixing", parentId: "dl", savedTo: "", source: "cloud", completedAt: "2026-10-17T11:00:00Z", state: "new", recordId: "", hasSuggestions: false }];
+    answer("PlanTree", (account: string, scope: string) => account === "b" ? (scope === "dl" ? below : [inbox0, ...below]) : [clips[0]]);
+    const visible = inbox.summaries;
+    await loadInbox("b");
+    expect(inbox.summaries).toBe(visible);
+    expect(pendingArrivals.value).toEqual([]);
+    expect(arrivals[0]).toMatchObject({ state: "new", hasSuggestions: true });
+    expect(modelCalls()).toBe(0);
+  });
+});
+
 describe("AI assistant · Batch library import", () => {
-  const arrival = (id: string, fileId: string): Arrival => ({ id, fileId, account: "a", name: fileId, parentId: "dl", savedTo: "", source: "cloud", completedAt: "2026-10-17T11:00:00Z", state: "new", recordId: "" });
+  const arrival = (id: string, fileId: string): Arrival => ({ id, fileId, account: "a", name: fileId, parentId: "dl", savedTo: "", source: "cloud", completedAt: "2026-10-17T11:00:00Z", state: "new", recordId: "", hasSuggestions: false });
 
   it("keeps unselected arrivals and files outside the merged plan, and requires confirmation", async () => {
     arrivals = [arrival("one", "s1"), arrival("two", "s2"), arrival("other", "s3")];
@@ -781,7 +837,7 @@ describe("AI assistant · Batch library import", () => {
     } finally { backend.answers.delete("SetArrival"); }
   });
 
-  it("keeps seven unidentified arrivals pending after completing the identified series, and reopening them has no writes", async () => {
+  it("keeps unidentified arrivals unprocessed but silent after completing the identified series", async () => {
     const unknown = Array.from({ length: 7 }, (_, i) => entry(`unknown-${i}`, `VID_${1000 + i}.mp4`, "dl"));
     const originalTree = backend.answers.get("PlanTree")!;
     backend.answers.set("PlanTree", (_account, scope) => scope === "dl" ? [...series, ...unknown] : [inbox0, ...series, ...unknown]);
@@ -794,15 +850,18 @@ describe("AI assistant · Batch library import", () => {
       openPlanConfirm();
       await runPlan(false);
       await settle();
-      expect(pendingArrivals.value.map((a) => a.fileId)).toEqual(unknown.map((e) => e.id));
-      await openArrivals([...pendingArrivals.value]);
+      const unprocessed = inbox.arrivals.filter((a) => a.state === "new");
+      expect(unprocessed.map((a) => a.fileId)).toEqual(unknown.map((e) => e.id));
+      expect(pendingArrivals.value).toEqual([]);
+      await openArrivals(unprocessed);
       expect(planSummary.value?.selected).toBe(0);
       expect(assistant.plan?.base.kept.map((c) => c.item.id).sort()).toEqual(unknown.map((e) => e.id).sort());
       openPlanConfirm();
       expect(assistant.confirming).toBe(true);
       await runPlan();
       expect(callsOf("Organize")).toHaveLength(1);
-      expect(pendingArrivals.value).toHaveLength(7);
+      expect(inbox.arrivals.filter((a) => a.state === "new")).toHaveLength(7);
+      expect(pendingArrivals.value).toEqual([]);
     } finally {
       backend.answers.set("PlanTree", originalTree);
       backend.answers.delete("SetArrival");
@@ -811,7 +870,7 @@ describe("AI assistant · Batch library import", () => {
 });
 
 describe("AI assistant · Retention decisions", () => {
-  const arrival: Arrival = { id: "folder-arrival", fileId: "dl", account: "a", name: "待分类", parentId: "", savedTo: "", source: "cloud", completedAt: "2026-10-17T11:00:00Z", state: "new", recordId: "" };
+  const arrival: Arrival = { id: "folder-arrival", fileId: "dl", account: "a", name: "待分类", parentId: "", savedTo: "", source: "cloud", completedAt: "2026-10-17T11:00:00Z", state: "new", recordId: "", hasSuggestions: false };
 
   async function openFolderArrival() {
     arrivals = [{ ...arrival }];
@@ -819,7 +878,7 @@ describe("AI assistant · Retention decisions", () => {
     await openArrival(inbox.arrivals[0]);
   }
 
-  it("records all-kept without a drive mutation, restores after reopen, and undo restores pending", async () => {
+  it("restores kept decisions after reopen and leaves an unidentified undone keep unprocessed but silent", async () => {
     await openFolderArrival();
     await keepAllPlanItems();
     expect(planSummary.value?.selected).toBe(0);
@@ -832,7 +891,8 @@ describe("AI assistant · Retention decisions", () => {
     expect(planReviewed.value.map((c) => c.item.id).sort()).toEqual(below.map((e) => e.id).sort());
     await keepPlanItems(["c1"], false);
     expect(planUndecided.value.map((c) => c.item.id)).toContain("c1");
-    expect(pendingArrivals.value.map((a) => a.id)).toEqual([arrival.id]);
+    expect(inbox.arrivals[0].state).toBe("new");
+    expect(pendingArrivals.value).toEqual([]);
   });
 
   it("does not treat unchecked as a decision and requires an explicit unresolved choice", async () => {
@@ -880,7 +940,8 @@ describe("AI assistant · Retention decisions", () => {
     try {
       await loadInbox("a");
       await settle();
-      expect(pendingArrivals.value.map((a) => a.id)).toEqual([arrival.id]);
+      expect(inbox.arrivals[0].state).toBe("new");
+      expect(pendingArrivals.value).toEqual([]);
       await openArrival(inbox.arrivals[0]);
       expect(planReviewed.value.map((c) => c.item.id).sort()).toEqual(below.filter((e) => e.id !== "c1").map((e) => e.id).sort());
       expect(planUndecided.value.map((c) => c.item.id)).toEqual(["c1"]);

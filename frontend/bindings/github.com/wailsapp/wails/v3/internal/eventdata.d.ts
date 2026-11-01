@@ -22,6 +22,7 @@ declare module "@wailsio/runtime" {
             "drive:index": services$0.IndexProgress;
             "drive:remove": services$0.RemoveProgress;
             "inbox:changed": services$0.InboxChanged;
+            "inbox:suggestions": services$0.InboxChanged;
             "language:state": services$0.LanguageState;
             "menu:command": string;
             "menubar:open": services$0.MenuBarOpen;

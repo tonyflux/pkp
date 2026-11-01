@@ -1011,6 +1011,14 @@ export function SetArrival(account: string, id: string, state: string, recordID:
 }
 
 /**
+ * SetArrivalSuggestions publishes the arrivals with actionable plans. It never
+ * changes their processing state or the watcher's watermark.
+ */
+export function SetArrivalSuggestions(account: string, ids: string[] | null): $CancellablePromise<void> {
+    return $Call.ByID(1227228029, account, ids);
+}
+
+/**
  * SetDownloadDir sets the folder Download to Computer saves into and saves it. It must
  * be an existing folder this user can write in; downloads already in the
  * list keep the folder they were queued for.

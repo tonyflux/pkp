@@ -1241,6 +1241,9 @@ export async function loadAccounts() {
   accounts.list = list;
   // An account removed and added again in this run is back.
   for (const a of list) removedAccounts.delete(a.id);
+  if (!inPlayerWindow && !inMenuBarWindow) {
+    for (const a of list) if (a.id !== status.accountId) void loadInbox(a.id);
+  }
   if (player.owner && player.presentation !== "off") {
     const owner = list.find((a) => a.id === player.owner);
     if (!owner || owner.needsPassword) void ownerLost(before.find((a) => a.id === player.owner) ?? null, !owner);
@@ -2260,6 +2263,10 @@ let lastPhase = "";
 function applyIndexProgress(progress: IndexProgress) {
   // Every signed-in account keeps its index current; the page follows the
   // one on screen.
+  if (progress.account !== currentId.value && progress.ready && progress.syncedAt && arrivalIndexSyncs.get(progress.account) !== progress.syncedAt) {
+    arrivalIndexSyncs.set(progress.account, progress.syncedAt);
+    void loadInbox(progress.account);
+  }
   if (progress.account !== currentId.value || !drive.status?.configured) return;
   drive.indexProgress = progress;
   const becameReady = progress.ready && !wasReady;
@@ -5361,7 +5368,7 @@ async function localMediaPlan(src: MediaSource): Promise<AssistantPlan> {
   const entries = (src.ids ? await DriveService.PlanTree(src.account, scopeId, src.ids, []) : await DriveService.FolderTree(src.account, scopeId)) ?? [];
   const tree = markRaw(treeOf(entries, scopeId));
   const groups = groupMedia(tree, src.ids ? new Set(src.ids) : undefined);
-  if (!groups.length) throw new Error(t("「{name}」里没有找到视频、字幕或音频文件", { name: shownScope }));
+  if (!groups.length && !src.arrivals?.length) throw new Error(t("「{name}」里没有找到视频、字幕或音频文件", { name: shownScope }));
   const parsed = parseGroups(groups, scopeName);
   const model = new Map((src.identities ?? []).map((i) => [i.id, i]));
   const known: Identity[] = [];
@@ -5884,6 +5891,7 @@ export async function keepPlanItems(ids: readonly string[], keep = true): Promis
     next.changes = withEdits(next);
     setPlan(markRaw(next));
     await updatePlanArrivals(account, next);
+    await loadInbox(account);
   } catch (err) {
     say(errorText(err), "error");
     throw err;
@@ -5898,8 +5906,7 @@ export async function keepAllPlanItems(): Promise<void> {
 }
 
 /** Only complete file coverage resolves an arrival; failure/skips never do. */
-async function updatePlanArrivals(account: string, p: AssistantPlan, completed = new Set<string>(), recordId = ""): Promise<number> {
-  let finished = 0;
+async function updatePlanArrivals(account: string, p: AssistantPlan, completed = new Set<string>(), recordId = ""): Promise<void> {
   const reviewed = new Set(planItems(p).filter((c) => p.reviews.includes(planReviewKey(c, p))).map((c) => c.item.id));
   for (const a of p.arrivals) {
     const files = p.groups.flatMap((g) => g.files).filter((f) => f.id === a.fileId || p.tree.ancestorsOf(f.id).includes(a.fileId));
@@ -5909,17 +5916,15 @@ async function updatePlanArrivals(account: string, p: AssistantPlan, completed =
     // A partial review must not reset a previously completed execution.
     if (!covered && row?.state === "organized") continue;
     if (row?.state !== state || (state === "organized" && row.recordId !== recordId)) {
-      inboxLoadSerial++;
+      invalidateInboxLoad(account);
       await DriveService.SetArrival(account, a.id, state, state === "organized" ? recordId : "");
-      inboxLoadSerial++;
+      invalidateInboxLoad(account);
       const current = inbox.account === account ? inbox.arrivals.find((r) => r.id === a.id) : undefined;
       if (current) { current.state = state; current.recordId = state === "organized" ? recordId : ""; }
     }
-    if (covered) finished++;
-    arrivalPlans.delete(a.id);
+    arrivalPlans.delete(`${account}/${a.id}`);
     delete inbox.summaries[a.id];
   }
-  return finished;
 }
 
 function editPlan(picks: Record<string, boolean>, names: Record<string, string>) {
@@ -6048,6 +6053,7 @@ export async function runPlan(keepUndecided?: boolean) {
     assistant.busy = t("保存处理决定");
     try {
       await updatePlanArrivals(account, p);
+      await loadInbox(account);
       if (p.conversation && !planUndecided.value.length) {
         drafts.delete(p.id);
         await markRecordCard((c) => c.planId === p!.id, { state: "done", note: t("已确认保留") });
@@ -6079,8 +6085,8 @@ export async function runPlan(keepUndecided?: boolean) {
   const done = record;
   if (account === currentId.value) void reload(false);
   const completed = new Set((done.items ?? []).filter((item) => item.done && !item.error).map((item) => item.fileId));
-  const arrivalsFinished = await run(t("更新入库提醒"), () => updatePlanArrivals(account, p!, completed, done.id)) ?? 0;
-  if (p.arrivals.length && account === currentId.value) void loadInbox(account);
+  await run(t("更新入库提醒"), () => updatePlanArrivals(account, p!, completed, done.id));
+  if (p.arrivals.length) await loadInbox(account);
   if (account !== currentId.value || assistant.account !== account) {
     const n = recordCounts(done);
     const name = accountName(account);
@@ -6102,7 +6108,7 @@ export async function runPlan(keepUndecided?: boolean) {
   assistant.receipt = done;
   assistant.receiptKept = kept;
   assistant.screen = "receipt";
-  const pending = p.arrivals.length - arrivalsFinished;
+  const pending = pendingArrivals.value.filter((a) => p!.arrivals.some((r) => r.id === a.id)).length;
   if (pending) say(t("本次仍有 {n} 条入库提醒待处理：未决定或执行失败的文件不会自动标为已处理。", { n: pending }), "warning");
   void loadAssistantHistory();
 }
@@ -6218,32 +6224,56 @@ export const inbox = reactive({
   summaries: {} as Record<string, ArrivalSummary>,
 });
 
-/** The arrivals of the account on screen that wait for a decision: the nav badge, the home card. */
-export const pendingArrivals = computed(() => (inbox.account && inbox.account === currentId.value ? inbox.arrivals.filter((a) => a.state === "new") : []));
+/** Only arrivals with actionable suggestions light the nav badge and the home card. */
+export const pendingArrivals = computed(() => (inbox.account && inbox.account === currentId.value ? inbox.arrivals.filter((a) => a.state === "new" && inbox.summaries[a.id]?.state === "ready" && inbox.summaries[a.id].organizable > 0) : []));
 
 /** Plans already built for summaries, reused when the arrival is opened. */
 const arrivalPlans = new Map<string, AssistantPlan>();
-let inboxLoadSerial = 0;
+const inboxLoadSerial = new Map<string, number>();
+const arrivalSummaryLoads = new Map<string, { summaries: Record<string, ArrivalSummary>; promise: Promise<ArrivalSummary> }>();
+const arrivalIndexSyncs = new Map<string, string>();
 
-/** loadInbox reads the account's arrivals (local). */
+function invalidateInboxLoad(account: string): number {
+  const serial = (inboxLoadSerial.get(account) ?? 0) + 1;
+  inboxLoadSerial.set(account, serial);
+  return serial;
+}
+
+/** Reads arrivals and checks their suggestions without asking a model or resolving them. */
 export async function loadInbox(account = currentId.value) {
-  if (!account) return;
-  const serial = ++inboxLoadSerial;
+  if (!account || removedAccounts.has(account)) return;
+  const serial = invalidateInboxLoad(account);
   let list: Arrival[];
   try {
     list = (await DriveService.Arrivals(account)) ?? [];
   } catch {
     return;
   }
-  if (account !== currentId.value || serial !== inboxLoadSerial) return;
-  if (inbox.account !== account) {
-    inbox.summaries = {};
-    arrivalPlans.clear();
+  if (serial !== inboxLoadSerial.get(account) || removedAccounts.has(account)) return;
+  if (account === currentId.value) {
+    if (inbox.account !== account) {
+      inbox.summaries = {};
+      arrivalPlans.clear();
+    }
+    inbox.account = account;
+    inbox.arrivals = list;
+    inbox.loaded = true;
+    await recheckReviewedArrivals(account);
   }
-  inbox.account = account;
-  inbox.arrivals = list;
-  inbox.loaded = true;
-  void recheckReviewedArrivals(account);
+  const suggested: string[] = [];
+  for (const a of list) {
+    if (serial !== inboxLoadSerial.get(account) || removedAccounts.has(account)) return;
+    if (a.state !== "new") continue;
+    const summary = await ensureArrivalSummary(a);
+    if (serial !== inboxLoadSerial.get(account) || removedAccounts.has(account)) return;
+    a.hasSuggestions = summary.state === "ready" && summary.organizable > 0;
+    if (a.hasSuggestions) suggested.push(a.id);
+  }
+  try {
+    await DriveService.SetArrivalSuggestions(account, suggested);
+  } catch (err) {
+    if (!removedAccounts.has(account)) notify(t("{label}：{error}", { label: t("更新入库提醒"), error: errorText(err) }), "error");
+  }
 }
 
 let reviewCheckSerial = 0;
@@ -6273,7 +6303,7 @@ async function recheckReviewedArrivals(account: string) {
       await DriveService.SetArrival(account, a.id, "new", "");
       const row = inbox.arrivals.find((r) => r.id === a.id);
       if (row) row.state = "new";
-      arrivalPlans.delete(a.id);
+      arrivalPlans.delete(`${account}/${a.id}`);
       delete inbox.summaries[a.id];
     }
   } catch {
@@ -6284,8 +6314,7 @@ async function recheckReviewedArrivals(account: string) {
 /** arrivalPlan is the L0 plan for what an arrival saved, in the folder it was saved into. */
 async function arrivalPlan(a: Arrival): Promise<AssistantPlan> {
   if (!a.fileId) throw new Error(t("这个任务没有产出文件"));
-  const scope = await trailOf(a.parentId);
-  return localMediaPlan({ account: a.account, scope, ids: [a.fileId], arrivals: [a] });
+  return selectionPlan(a.account, [a.fileId], { arrivals: [a] });
 }
 
 function waiting(err: unknown): boolean {
@@ -6293,35 +6322,57 @@ function waiting(err: unknown): boolean {
   return text.includes(NOT_INDEXED) || text.includes(t(NOT_INDEXED));
 }
 
-/** ensureArrivalSummary works out an arrival's Pending Organization Suggestion once (again after waiting or an error). */
-export async function ensureArrivalSummary(a: Arrival) {
-  const now = inbox.summaries[a.id];
-  if (now && (now.state === "loading" || now.state === "ready")) return;
+async function analyzeArrival(a: Arrival): Promise<{ summary: ArrivalSummary; plan?: AssistantPlan }> {
   const empty: ArrivalSummary = { state: "loading", files: 0, organizable: 0, keep: 0, target: "", basis: "", line: "", error: "" };
-  inbox.summaries[a.id] = empty;
   try {
     const plan = await arrivalPlan(a);
-    arrivalPlans.set(a.id, plan);
     const keep = plan.base.kept.length;
-    inbox.summaries[a.id] = {
-      ...empty,
-      state: "ready",
-      files: plan.groups.reduce((n, g) => n + g.files.length, 0),
-      organizable: active(plan.changes).filter((c) => c.op === "move").length,
-      keep,
-      target: planTarget(plan.changes) || plan.scopeName,
-      basis: arrivalBasis(plan.origin),
-      line: arrivalLine(keep, plan.base.resolutionIds.length > 0),
+    return {
+      plan,
+      summary: {
+        ...empty,
+        state: "ready",
+        files: plan.groups.reduce((n, g) => n + g.files.length, 0),
+        organizable: active(plan.changes).filter((c) => c.op === "move").length,
+        keep,
+        target: planTarget(plan.changes) || plan.scopeName,
+        basis: arrivalBasis(plan.origin),
+        line: arrivalLine(keep, plan.base.resolutionIds.length > 0),
+      },
     };
   } catch (err) {
-    inbox.summaries[a.id] = { ...empty, state: waiting(err) ? "waiting" : "error", error: errorText(err) };
+    return { summary: { ...empty, state: waiting(err) ? "waiting" : "error", error: errorText(err) } };
   }
+}
+
+/** Shares an in-flight analysis; a result for another account never replaces the visible summary. */
+export async function ensureArrivalSummary(a: Arrival): Promise<ArrivalSummary> {
+  if (a.account !== inbox.account) return (await analyzeArrival(a)).summary;
+  const summaries = inbox.summaries;
+  const now = summaries[a.id];
+  if (now?.state === "ready") return now;
+  const key = `${a.account}/${a.id}`;
+  const pending = arrivalSummaryLoads.get(key);
+  if (pending?.summaries === summaries) return pending.promise;
+  summaries[a.id] = { state: "loading", files: 0, organizable: 0, keep: 0, target: "", basis: "", line: "", error: "" };
+  const promise = analyzeArrival(a).then(({ summary, plan }) => {
+    if (inbox.account === a.account && inbox.summaries === summaries) {
+      if (plan) arrivalPlans.set(key, plan);
+      summaries[a.id] = summary;
+    }
+    return summary;
+  }).finally(() => {
+    if (arrivalSummaryLoads.get(key)?.promise === promise) arrivalSummaryLoads.delete(key);
+  });
+  arrivalSummaryLoads.set(key, { summaries, promise });
+  return promise;
 }
 
 /** openArrival is View Organization Suggestion: the arrival's plan on the plan screen; Back goes back where it was opened. */
 export async function openArrival(a: Arrival) {
-  const ready = arrivalPlans.get(a.id);
-  arrivalPlans.delete(a.id);
+  const key = `${a.account}/${a.id}`;
+  const ready = arrivalPlans.get(key);
+  arrivalPlans.delete(key);
   await openPlan(t("正在读取新入库的文件…"), () => (ready ? Promise.resolve(ready) : arrivalPlan(a)));
 }
 
@@ -6361,7 +6412,7 @@ export async function dismissArrival(a: Arrival): Promise<boolean> {
   if (!ok) return false;
   const row = inbox.account === a.account ? inbox.arrivals.find((x) => x.id === a.id) : undefined;
   if (row) row.state = "dismissed";
-  arrivalPlans.delete(a.id);
+  arrivalPlans.delete(`${a.account}/${a.id}`);
   return true;
 }
 
@@ -6386,17 +6437,17 @@ watch(
   },
 );
 
-// An index pass may bring the files an arrival saved: summaries waiting for it try again.
+// An index pass can turn a previously silent arrival into an actionable suggestion.
 watch(
   () => drive.indexProgress?.syncedAt,
   () => {
     if (inPlayerWindow || inMenuBarWindow || inbox.account !== currentId.value) return;
     arrivalPlans.clear();
-    for (const a of inbox.arrivals) if (inbox.summaries[a.id]?.state === "ready") delete inbox.summaries[a.id];
-    void recheckReviewedArrivals(currentId.value);
-    for (const a of inbox.arrivals) if (inbox.summaries[a.id]?.state === "waiting") void ensureArrivalSummary(a);
+    inbox.summaries = {};
+    void loadInbox(currentId.value);
   },
 );
+
 
 export async function copyDownloadLink(entry: Entry) {
   const link = await run(t("获取直链"), () => DriveService.DownloadLink(entry.id));
@@ -8742,6 +8793,16 @@ export const tmdb = reactive({
   test: null as TMDBTestResult | null,
 });
 
+watch(
+  [() => aiSettings.value?.naming, () => aiSettings.value?.seriesTemplate, () => aiSettings.value?.movieTemplate, () => tmdb.settings?.tmdbKeyHint],
+  () => {
+    if (inPlayerWindow || inMenuBarWindow) return;
+    arrivalPlans.clear();
+    inbox.summaries = {};
+    for (const a of accounts.list) void loadInbox(a.id);
+  },
+);
+
 export async function loadTMDBSettings(): Promise<void> {
   try {
     tmdb.settings = await DriveService.TMDBSettings();
@@ -8836,7 +8897,7 @@ export async function bootstrap() {
     Events.On(AIDeltaEvent, (event: { data: AIDelta }) => applyAIDelta(event.data));
     // The inbox watcher found new arrivals (or one changed state) for an account.
     Events.On(InboxChangedEvent, (event: { data: InboxChanged }) => {
-      if (event.data.account === currentId.value) void loadInbox(event.data.account);
+      void loadInbox(event.data.account);
     });
     // Quitting asks before what is typed and not submitted is lost; Go asks, so it is told.
     watch(unsubmitted, (what) => void MenuBarService.SetUnsaved(what).catch(() => undefined), { immediate: true });

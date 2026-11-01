@@ -5,6 +5,7 @@
 ## Unreleased
 
 - Make the English project overview the default `README.md`, retain Simplified Chinese as `README.zh-CN.md`, and update language-switching and documentation links.
+- Show AI assistant home reminders, navigation badges, and menu bar prompts only for newly added files with actionable organization suggestions. Arrivals without suggestions stay silent and unprocessed, and are checked again after index or naming-setting changes. Background checks never call a model automatically.
 
 ## First Open-Source Version v0.2.0 · Before Official Release
 

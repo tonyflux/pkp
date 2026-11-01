@@ -125,7 +125,7 @@ func TestMenuBarSummaryPicksWhatNeedsTheUser(t *testing.T) {
 func TestMenuBarSummaryCountsArrivalsBelowLocalAttention(t *testing.T) {
 	accounts := []Account{{ID: "a"}, {ID: "b", Current: true}}
 	arrival := func(account, id, state, at string) Arrival {
-		return Arrival{ID: id, Account: account, State: state, CompletedAt: at, Source: "cloud"}
+		return Arrival{ID: id, Account: account, State: state, CompletedAt: at, Source: "cloud", HasSuggestions: true}
 	}
 	arrivals := []Arrival{
 		arrival("a", "a-newest", ArrivalNew, "2026-10-16T12:00:00+08:00"),
@@ -135,6 +135,7 @@ func TestMenuBarSummaryCountsArrivalsBelowLocalAttention(t *testing.T) {
 		arrival("b", "b-done", ArrivalOrganized, "2026-10-16T13:00:00+08:00"),
 		arrival("b", "b-dismissed", ArrivalDismissed, "2026-10-16T13:00:00+08:00"),
 		arrival("gone", "gone", ArrivalNew, "2026-10-16T13:00:00+08:00"),
+		{ID: "no-suggestions", Account: "b", State: ArrivalNew, CompletedAt: "2026-10-16T14:00:00+08:00"},
 	}
 
 	s := summarize(nil, nil, accounts, cloudRead{}, arrivals)
@@ -173,6 +174,13 @@ func TestMenuBarSummaryCountsArrivalsBelowLocalAttention(t *testing.T) {
 	}
 	if s = summarize(moving, nil, accounts, cloudRead{}, arrivals); !attentionOn(s) || badgeLabel(s) != "PKP，3 项新入库待整理" {
 		t.Errorf("dot, label = %v, %q", attentionOn(s), badgeLabel(s))
+	}
+}
+
+func TestMenuBarIgnoresArrivalsWithoutSuggestions(t *testing.T) {
+	s := summarize(nil, nil, []Account{{ID: "a", Current: true}}, cloudRead{}, []Arrival{{ID: "unknown", Account: "a", State: ArrivalNew}})
+	if s.Inbox != 0 || s.InboxItem != nil || attentionOn(s) {
+		t.Fatalf("an arrival without suggestions prompted the user: %+v", s)
 	}
 }
 

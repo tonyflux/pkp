@@ -20,6 +20,7 @@ import {
   dismissArrival,
   ensureArrivalSummary,
   inbox,
+  loadInbox,
   openArrival,
   openDownload,
   openSignIn,
@@ -169,22 +170,16 @@ const arrivalSource = computed(() => {
         </div>
       </dl>
 
-      <section v-if="arrival?.state === 'new'" class="arrival" aria-labelledby="arrival-title">
+      <section v-if="arrival?.state === 'new' && (summary?.state === 'error' || (summary?.state === 'ready' && summary.organizable > 0))" class="arrival" aria-labelledby="arrival-title">
         <span class="owner-label" id="arrival-title">{{ t("待整理建议") }}</span>
         <p class="arrival-source">{{ arrivalSource }}</p>
-        <template v-if="!summary || summary.state === 'loading'">
-          <p class="arrival-line">{{ t("正在按本地规则生成建议…") }}</p>
-        </template>
-        <template v-else-if="summary.state === 'waiting'">
-          <p class="arrival-line">{{ t("新文件还没进入本地索引，同步后再生成建议。") }}</p>
-        </template>
-        <template v-else-if="summary.state === 'error'">
+        <template v-if="summary.state === 'error'">
           <p class="arrival-line error">{{ summary.error || t("建议没有生成") }}</p>
-          <button class="quiet link" @click="ensureArrivalSummary(arrival)">{{ t("重试") }}</button>
+          <button class="quiet link" @click="loadInbox(arrival.account)">{{ t("重试") }}</button>
         </template>
         <template v-else>
           <strong class="arrival-head">
-            {{ summary.organizable ? t("{n} 项能规范命名并放到「{target}」", { n: summary.organizable, target: summary.target }) : t("没有需要整理的项") }}
+            {{ t("{n} 项能规范命名并放到「{target}」", { n: summary.organizable, target: summary.target }) }}
           </strong>
           <p class="arrival-line">{{ summary.line }}</p>
           <span v-if="summary.basis" class="arrival-basis"><Icon name="check" :size="13" />{{ summary.basis }}</span>

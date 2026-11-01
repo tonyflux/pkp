@@ -33,6 +33,8 @@ Paused sync does not automatically resume when network connectivity is restored.
 
 The AI assistant’s local rules and statistics can be used without configuring a model. Connecting a model or TMDB is optional; use your own service addresses and credentials. Read the data authorization notice before sending data, and inspect the actual file operation plan before execution. AI may make incorrect judgments, and model costs are determined by the selected service. See the [Privacy Notice](../PRIVACY.en.md) for details.
 
+Newly added files trigger reminders only when actionable organization suggestions are available, consistently across the assistant home, navigation badge, and menu bar. Files without suggestions remain unprocessed; they are not automatically dismissed or marked as organized, and are checked again after index or naming-setting changes. Background checks do not automatically call a model.
+
 ## Settings and Quitting
 
 “Settings” lets you adjust the language, appearance, transfers, the application’s own network proxy, privacy and security, and other options. Proxy settings do not modify the system VPN or system proxy. On macOS 12/13, WebView image loading does not support the same proxy configuration as the application and may still connect directly.

@@ -87,13 +87,6 @@ export default {
     ko: "업로드된 부분은 클라우드에 남아 있으며, 계속하면 중단된 지점부터 이어올립니다.",
   },
   待整理建议: { tw: "待整理建議", en: "Organize suggestion", ja: "整理の提案", ko: "정리 제안" },
-  "正在按本地规则生成建议…": { tw: "正在依本機規則產生建議…", en: "Building a suggestion with local rules…", ja: "ローカルルールで提案を作成中…", ko: "로컬 규칙으로 제안을 만드는 중…" },
-  "新文件还没进入本地索引，同步后再生成建议。": {
-    tw: "新檔案還沒進入本機索引，同步後再產生建議。",
-    en: "The new files aren't in the local index yet; the suggestion comes after the next sync.",
-    ja: "新しいファイルはまだローカルインデックスにありません。同期後に提案を作成します。",
-    ko: "새 파일이 아직 로컬 인덱스에 없습니다. 동기화 후 제안을 만듭니다.",
-  },
   建议没有生成: { tw: "建議沒有產生", en: "Couldn't build a suggestion", ja: "提案を作成できませんでした", ko: "제안을 만들지 못했습니다" },
   "{n} 项能规范命名并放到「{target}」": {
     tw: "{n} 項能規範命名並放到「{target}」",
@@ -101,7 +94,6 @@ export default {
     ja: "{n} 件を命名規則に沿って「{target}」に整理できます",
     ko: "{n}개 항목의 이름을 정리해 ‘{target}’(으)로 옮길 수 있습니다",
   },
-  没有需要整理的项: { tw: "沒有需要整理的項目", en: "Nothing to organize", ja: "整理が必要な項目はありません", ko: "정리할 항목이 없습니다" },
   查看计划: { tw: "查看計畫", en: "View plan", ja: "プランを見る", ko: "계획 보기" },
   "已按计划整理。": { tw: "已依計畫整理。", en: "Organized as planned.", ja: "プランどおりに整理しました。", ko: "계획대로 정리했습니다." },
   "重新登录「{name}」": { tw: "重新登入「{name}」", en: "Sign in to \"{name}\" again", ja: "「{name}」に再ログイン", ko: "“{name}”에 다시 로그인" },

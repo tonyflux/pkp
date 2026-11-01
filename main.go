@@ -44,6 +44,7 @@ func init() {
 	application.RegisterEvent[services.RemoveProgress](services.EventRemoveProgress)
 	// Organize on Import: an account's arrivals changed.
 	application.RegisterEvent[services.InboxChanged](services.EventInboxChanged)
+	application.RegisterEvent[services.InboxChanged](services.EventArrivalSuggestionsChanged)
 	// AI Assistant: a streamed piece of the model's answer.
 	application.RegisterEvent[services.AIDelta](services.EventAIDelta)
 	// The separate player window: the main window's session mirrored there,

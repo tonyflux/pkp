@@ -20,14 +20,17 @@ import (
 
 // Organize on Import: every signed-in account's cloud-add
 // tasks are watched here, in Go, so a task that finishes while the window
-// is closed is still noticed. A finished task becomes an arrival: the
-// transfer detail, the menu bar, the AI home and the nav badge offer to
-// organize it. Nothing is organized from here; the webview plans and the
-// user confirms.
+// is closed is still noticed. A finished task becomes an arrival; the
+// webview checks it for suggestions before any surface offers to organize
+// it. Nothing is organized from here; the user confirms the plan.
 
 // EventInboxChanged tells the webview and the menu bar that an account's
 // arrivals changed: new ones came in, or one was dismissed or handled.
 const EventInboxChanged = "inbox:changed"
+
+// EventArrivalSuggestionsChanged refreshes the menu bar without re-running
+// the webview's analysis of unchanged arrivals.
+const EventArrivalSuggestionsChanged = "inbox:suggestions"
 
 // InboxChanged is the payload of EventInboxChanged.
 type InboxChanged struct {
@@ -83,6 +86,8 @@ type Arrival struct {
 	CompletedAt string `json:"completedAt"`
 	State       string `json:"state"`
 	RecordID    string `json:"recordId"`
+	// HasSuggestions is derived by the webview, separate from the user's decision.
+	HasSuggestions bool `json:"hasSuggestions"`
 }
 
 // SuggestionReview records an explicit keep-as-is decision for one file proposal.
@@ -183,6 +188,50 @@ func (d *DriveService) SetSuggestionReviews(account string, reviews []Suggestion
 	return nil
 }
 
+// SetArrivalSuggestions publishes the arrivals with actionable plans. It never
+// changes their processing state or the watcher's watermark.
+func (d *DriveService) SetArrivalSuggestions(account string, ids []string) error {
+	if len(ids) > inboxKeep {
+		return errPlanTooLarge
+	}
+	s, err := d.sessionFor(account)
+	if err != nil {
+		return err
+	}
+	suggested := make(map[string]bool, len(ids))
+	for _, id := range ids {
+		suggested[id] = true
+	}
+	d.inboxMu.Lock()
+	f, err := d.readInbox(s.key)
+	if err != nil {
+		d.inboxMu.Unlock()
+		return err
+	}
+	changed := false
+	for i := range f.Arrivals {
+		a := &f.Arrivals[i]
+		want := a.State == ArrivalNew && suggested[a.ID]
+		if a.HasSuggestions != want {
+			a.HasSuggestions = want
+			changed = true
+		}
+	}
+	if changed {
+		err = d.writeInbox(s.key, f)
+	}
+	d.inboxMu.Unlock()
+	if err != nil {
+		return err
+	}
+	if changed {
+		if app := application.Get(); app != nil {
+			app.Event.Emit(EventArrivalSuggestionsChanged, InboxChanged{Account: s.key})
+		}
+	}
+	return nil
+}
+
 // SetArrival records what became of an arrival: dismissed (Do Not Organize),
 // organized (by recordID), explicitly reviewed, or new again.
 func (d *DriveService) SetArrival(account, id, state, recordID string) error {
@@ -208,6 +257,7 @@ func (d *DriveService) SetArrival(account, id, state, recordID string) error {
 	}
 	f.Arrivals[i].State = state
 	f.Arrivals[i].RecordID = strings.TrimSpace(recordID)
+	f.Arrivals[i].HasSuggestions = false
 	if state == ArrivalNew {
 		f.Arrivals[i].RecordID = ""
 	}
