@@ -37,6 +37,15 @@ Current `build/appicon.png` and `build/appicon.icon/Assets/appicon.png` are byte
 
 - DMG background: drawn by tracked `build/darwin/dmg-background.swift` using AppKit gradients, text and arrows; its editable generating source is included.
 - TMDB mark: `frontend/src/assets/tmdb.svg` is an external service mark, not claimed as PKP-owned artwork. TMDB attribution remains in THIRD_PARTY.
-- Public screenshots: use isolated UI and synthetic data as described in README. This does not independently clear every embedded image or establish the rights of old binary releases.
+- Public screenshots: `assets/screenshots/*.png` are isolated running-app captures with synthetic data, Simplified Chinese UI, as described in the Chinese README. `assets/screenshots/en/*.webp` are English interface illustrations copied from https://pkpapp.cc/en on 2026-11-02 (the site labels them as redrawn from the current UI, with fictional demo data). They are website art, distinct from captures of a running build. This record does not independently clear every embedded image or establish the rights of old binary releases.
+
+| File | Source on pkpapp.cc | SHA-256 |
+| --- | --- | --- |
+| `assets/screenshots/en/workspace.webp` | `/assets/workspace.BRuflHCi_2jHTsv.webp` | `9579f3aab7d6156f2cd1757435af68ac945dbe5e9dec2ec7db02f09b6329e285` |
+| `assets/screenshots/en/assistant.webp` | `/assets/assistant-plan.L1WVrPrf_Z1gkOUP.webp` | `ea8b315b4e7940baecb9edd32dbfd6491bbb93d44280e56ab1fdc14a7f603b0d` |
+| `assets/screenshots/en/sync.webp` | `/assets/sync.DuIuEOtF_1asHHf.webp` | `7add6be5a9c369b39d765404d8dc63d6f6b32bd901039bfaeca05cd34422cfc7` |
+| `assets/screenshots/en/player.webp` | `/assets/player.DjJ17PWn_ZvyifG.webp` | `8fd06ac99b43a7f3f3eeae371b10c04ddd9ffa5ac6c0eea72d8be9cbd4c5140d` |
+| `assets/screenshots/en/accounts.webp` | `/assets/accounts-switch.DBxcG0vA_Z18HVO5.webp` | `4f5c9e087b9933c22bcc35e1bcceada74d2aedf7109f4be8c67cb4782f0878b0` |
+| `assets/screenshots/en/app-lock.webp` | `/assets/app-lock.CQg9aKdJ_1xQwuB.webp` | `f6e6861d0558b7dccceb029847374ded32e1d3787c9ca1103af5838c0fbc7239` |
 
 The maintainer's mark-permission confirmation and the incomplete export-chain evidence are distinct. AI use elsewhere does not establish rights or reproduce an export chain. 维护者对标志权限的确认与不完整的导出链证据是不同事项，其他素材使用 AI 不能替代权利确认或复现导出过程。

@@ -4,10 +4,13 @@
 
 ## Unreleased
 
+- Rewrite the English README for a public launch: English interface illustrations, release badges, install and build sections, and v0.2.0 as the published latest release. Move the previous v0.1.0 / v0.2.0 licensing notes to `docs/legal/version-licensing.en.md` with their wording kept. Align the install, privacy, and release docs with that published release.
 - Make the English project overview the default `README.md`, retain Simplified Chinese as `README.zh-CN.md`, and update language-switching and documentation links.
 - Show AI assistant home reminders, navigation badges, and menu bar prompts only for newly added files with actionable organization suggestions. Arrivals without suggestions stay silent and unprocessed, and are checked again after index or naming-setting changes. Background checks never call a model automatically.
 
 ## First Open-Source Version v0.2.0 · Before Official Release
+
+The bullets below are the record written before publication. v0.2.0 was published on GitHub Releases on 2026-11-01 and is the Latest release.
 
 - The local public repository now includes the application source code, frontend, build scripts, and statistics service code, and has switched to GPL-3.0-only. The proprietary terms for the v0.1.0 installation packages remain in `docs/legal/v0.1.0-proprietary.txt`; the license change is not retroactive.
 - Following review, editor state, build caches, private Git history, and internal release execution records were excluded. Invitation-code behavior is retained.

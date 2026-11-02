@@ -4,22 +4,24 @@
 
 ## Download Status
 
-**v0.1.0 has been officially released.** Download the installer for your platform from the [latest Release](https://github.com/tonyflux/pkp/releases/latest): [macOS Universal](https://github.com/tonyflux/pkp/releases/download/v0.1.0/PKP-0.1.0-macos-universal.dmg) / [Windows x64 and ARM64](https://github.com/tonyflux/pkp/releases/download/v0.1.0/PKP-0.1.0-windows-x64-arm64-setup.exe). Check against `SHA256SUMS` from the same Release and verify the signature; do not obtain installers from unknown sources.
+**v0.2.0 is the latest published release** (2026-11-01). GitHub lists it as the stable Latest release. Download from the [latest Release](https://github.com/tonyflux/pkp/releases/latest): [macOS Universal](https://github.com/tonyflux/pkp/releases/download/v0.2.0/PKP-0.2.0-macos-universal.dmg) / [Windows x64 and ARM64](https://github.com/tonyflux/pkp/releases/download/v0.2.0/PKP-0.2.0-windows-x64-arm64-setup.exe). Check against `SHA256SUMS` from the same Release and verify the signature. Obtain installers from this repository's Releases.
 
-The same Release provides the corresponding third-party source archive, `libmpv-sources.tar.gz`, and the terms of use in effect at that time. The v0.1.0 installers were not built from the current source code in this repository.
+v0.2.0 is the first open-source release. It includes `PKP-0.2.0-source.tar.gz` (PKP-owned source corresponding to those installers) and `libmpv-sources.tar.gz` (third-party corresponding source, which does not contain PKP's own source).
+
+**v0.1.0 remains available** as a historical release: [macOS Universal](https://github.com/tonyflux/pkp/releases/download/v0.1.0/PKP-0.1.0-macos-universal.dmg) / [Windows x64 and ARM64](https://github.com/tonyflux/pkp/releases/download/v0.1.0/PKP-0.1.0-windows-x64-arm64-setup.exe). That Release also provides `libmpv-sources.tar.gz` and the terms in effect at the time. The v0.1.0 installers were not built from the current source code in this repository and remain under [those proprietary terms](legal/v0.1.0-proprietary.txt). Prefer v0.2.0 for a new install. Usage statistics default to off in v0.2.0 and on in v0.1.0.
 
 ## Verifying Release Assets
 
 v0.1.0 has seven assets: the macOS DMG, the Windows installer, `update.json`, `update.json.sig`, `libmpv-sources.tar.gz`, `LICENSE`, and `SHA256SUMS`. The first two are application installers; the third-party source archive does not contain PKP's own source code.
 
-The first open-source release is planned as v0.2.0 and has not been published. It must provide eight assets: the seven listed above plus `PKP-0.2.0-source.tar.gz` (generically, `PKP-<version>-source.tar.gz`). The additional archive provides the complete PKP-owned source and build scripts corresponding to that version's installers; this repository also provides current source. It does not replace the separate third-party corresponding source archive and is not corresponding source for the v0.1.0 installers.
+v0.2.0 is published and provides eight assets: the seven kinds listed above, plus `PKP-0.2.0-source.tar.gz` (generically, `PKP-<version>-source.tar.gz`). The additional archive provides the complete PKP-owned source and build scripts corresponding to that version's installers; this repository also provides current source. It does not replace the separate third-party corresponding source archive, and it is not corresponding source for the v0.1.0 installers.
 
 `SHA256SUMS` is used to check download integrity and cannot, on its own, prove the publisher's identity. In-app updates use a built-in public key to verify the Ed25519-signed manifest, then check the installer size and SHA-256 hash; do not continue installation if the signature or hash is invalid.
 
-For a complete manual verification, place all assets from the same Release in a separate directory (seven for v0.1.0; eight for the planned v0.2.0) and download the public [verify_release.py](../.github/scripts/verify_release.py). After installing Python 3.11+ and OpenSSL 3+, run the following (this example verifies the published historical version; replace it with the actual tag being verified):
+For a complete manual verification, place all assets from the same Release in a separate directory (seven for v0.1.0; eight for v0.2.0 and later) and download the public [verify_release.py](../.github/scripts/verify_release.py). After installing Python 3.11+ and OpenSSL 3+, run the following (replace the tag with the release you downloaded):
 
 ```sh
-python3 verify_release.py /path/to/release-assets v0.1.0
+python3 verify_release.py /path/to/release-assets v0.2.0
 ```
 
 The tool contains only the public verification key and does not require a GitHub token, account login, or private key; it reports failure if the signature, tag, installer, or asset set does not match. The public repository's “Verify public release” workflow automatically verifies GitHub assets and anonymous download URLs after an official release; a workflow failure is not a reason to bypass verification.
@@ -58,12 +60,12 @@ Versions that support updates can check via “Settings → About & Updates”; 
 - The released macOS v0.1.0 does not include this replacement helper. To gain “Restart & Update,” upgrading to v0.2.0 or later still requires one manual replacement: download and open the new DMG, quit PKP, then drag it over the installed app. Do not run the app directly from the image. Accounts and local settings are preserved.
 - Local test versions that lack update functionality or trust the old development public key require manually downloading and installing the official version first; no upgrade prompt will appear if both versions are 0.1.0.
 
-Current source provides this macOS update flow, but this does not mean v0.2.0 has been officially released or that native authorization, Gatekeeper, rollback, and upgrades across devices have all passed acceptance testing. Manual platform verification is still required before release.
+v0.2.0 is published with this macOS update flow. Publishing the release does not mean native authorization, Gatekeeper, rollback, and upgrades across devices have all passed acceptance testing. Those checks are still outstanding.
 
 ## First Launch
 
 - Log in with your own PikPak account. “Remember Account and Password” and “Automatic Login” are currently checked by default; uncheck them if you do not want your password saved.
-- Read the [Privacy Notice](../PRIVACY.en.md) first. The released v0.1.0 production installers enable usage statistics by default; disable them under “Settings → Privacy & Security.” Current source (planned v0.2.0) defaults to off, and users upgrading must opt in again there. The current version also submits referral relationship information after a successful login.
+- Read the [Privacy Notice](../PRIVACY.en.md) first. The released v0.1.0 production installers enable usage statistics by default; disable them under “Settings → Privacy & Security.” Published v0.2.0 and current source default to off, and users upgrading must opt in again there. The current version also submits referral relationship information after a successful login.
 - The first login creates a local file index, during which you can still browse; search and drive-wide statistics may need to wait until the index is ready.
 - macOS may request permission for system notifications; whether to allow them is up to you. Actual notification behavior in the current ad hoc build still awaits confirmation on real devices.
 - Before using synchronization or bulk organization, back up important data and carefully review the previews and confirmation details.

@@ -58,7 +58,7 @@ make release-local RELEASE_NOTES=build/release-notes.md
 make release-verify
 ```
 
-这只在本地生成八件附件，不上传：两个安装包、`update.json`、`update.json.sig`、`PKP-<version>-source.tar.gz`、`libmpv-sources.tar.gz`、`LICENSE` 和 `SHA256SUMS`。PKP 自有源码包须包含构建该版本安装包所用的完整对应源码和构建脚本；第三方对应源码单独提供。首个开源版本计划为 0.2.0，尚未发布。正式发布前仍需安装和升级验收。签名密钥不得提交，也不得写入日志。
+这只在本地生成八件附件，不上传：两个安装包、`update.json`、`update.json.sig`、`PKP-<version>-source.tar.gz`、`libmpv-sources.tar.gz`、`LICENSE` 和 `SHA256SUMS`。PKP 自有源码包须包含构建该版本安装包所用的完整对应源码和构建脚本；第三方对应源码单独提供。v0.2.0 已于 2026-11-01 在 GitHub Releases 发布，并带有上述八件附件。macOS 构建仍是 ad hoc 签名、尚未公证，设备验收也不完整。签名密钥不得提交，也不得写入日志。
 
 ## 不纳入本仓库的内容
 

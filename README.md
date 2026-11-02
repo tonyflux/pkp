@@ -4,115 +4,141 @@
 
 # PKP
 
-**Your cloud files, transfers, and playback. One desktop workspace.**
+**Independent open-source desktop client for your PikPak files.**
 
-[简体中文](README.zh-CN.md) · English
+Organize, sync, search, and play in one workspace. macOS 12 or later, and a Windows preview.
 
-[User guide](docs/USAGE.en.md) · [Releases](https://github.com/tonyflux/pkp/releases) · [Report an issue](https://github.com/tonyflux/pkp/issues)
+[简体中文](README.zh-CN.md) · English · [pkpapp.cc](https://pkpapp.cc/en)
+
+[![License: GPL-3.0](https://img.shields.io/badge/license-GPL--3.0-blue.svg)](LICENSE)
+[![Platform](https://img.shields.io/badge/platform-macOS%2012%2B%20%7C%20Windows%20preview-111111.svg)](https://github.com/tonyflux/pkp/releases/latest)
+[![Latest release](https://img.shields.io/github/v/release/tonyflux/pkp)](https://github.com/tonyflux/pkp/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/tonyflux/pkp/latest/total)](https://github.com/tonyflux/pkp/releases/latest)
+
+[Install](#install) · [User guide](docs/USAGE.en.md) · [Releases](https://github.com/tonyflux/pkp/releases) · [Issues](https://github.com/tonyflux/pkp/issues)
 
 </div>
 
-PKP is an **unofficial desktop client for PikPak**, built for managing your own cloud files, transfers across multiple accounts, and media playback. PKP is not affiliated with or endorsed by PikPak. Use remains subject to PikPak's terms of service and applicable laws.
+PKP is an independent desktop client for a PikPak account you already have. It is unaffiliated with PikPak. Use remains subject to PikPak's terms and applicable law. The source in this repository is [GPL-3.0-only](LICENSE).
 
-> **v0.1.0 is available** · [Download the latest release](https://github.com/tonyflux/pkp/releases/latest) for macOS Universal or Windows x64 / ARM64. Read the [installation guide](docs/INSTALL.en.md) and verify the assets before installing. This repository contains the application source and build scripts. The published v0.1.0 installers were not built from this source and remain under the proprietary terms shipped with that release.
->
-> **The first open-source release is planned as v0.2.0 and has not been published.** Complete current source is provided in this repository; that release must also include `PKP-0.2.0-source.tar.gz` corresponding to its installers and a separate third-party source archive, for eight assets in total. The seven v0.1.0 assets and their original terms remain unchanged.
+<p align="center">
+  <img src="assets/screenshots/en/workspace.webp" alt="PKP files workspace in English, showing fictional demo folders" width="880">
+</p>
 
-## A workspace for everyday file management
-
-Browse your cloud drive, switch accounts, manage uploads and downloads, then preview or play a file without moving between separate tools.
-
-![PKP file workspace with a Chinese interface and synthetic sample data](assets/screenshots/workspace.png)
-
-*About the screenshots: the six interface images come from the actual application running locally in an isolated environment, using synthetic sample account and file data. The interface is in Simplified Chinese. They contain no real user accounts or content and are not evidence of verified production cloud operations. The player image includes a composited frame, as explained below; the assistant and sync images show the home screen and scan preview, not model inference or sync execution results.*
-
-## Find your files faster
-
-Search your own cloud files through a local index, with sorting, type filters, and favorites to keep everyday content within reach. The initial index takes time to build; search and drive-wide statistics may need to wait until it is ready. Local indexed search does not require sending file names to an AI model.
-
-![PKP local indexed search with synthetic sample data](assets/screenshots/search.png)
-
-## Playback, right in your workspace
-
-The integrated player supports quality switching, subtitle and audio-track selection, playback resume, and a separate player window. Availability depends on the file, codec, and service. **AI subtitle generation is not provided.**
-
-![PKP integrated player with Chinese controls and a local demo video frame](assets/screenshots/player.png)
-
-*Image provenance: actual player controls and backend state from the isolated environment. Because the browser cannot capture the native video surface, a real decoded frame from a locally generated demo video is composited beneath the controls. This is not verification of native video rendering.*
-
-## A helping hand for file organization
-
-Start with local rules, indexed search, and statistics, or optionally connect your own model service. Sending file names, paths, or other metadata or authorized content to a model requires data-level consent. Levels set to “Always allow” do not prompt every time and can be managed in settings. Before writes such as renaming or moving files, review and confirm the actual operation plan. **AI accuracy is not guaranteed:** consent does not make a result reliable, and service charges depend on your chosen provider.
-
-![PKP AI assistant home screen with a Chinese interface and synthetic sample data](assets/screenshots/assistant.png)
-
-*Image provenance: a local, isolated capture of the actual AI assistant home screen. No online model inference was performed; the image does not show or imply model response quality.*
-
-## Folder sync: preview before you run
-
-Choose two-way sync, local-to-cloud backup, or cloud-to-local download. Scan both folders, review the operation preview produced by the actual scan, then execute the changes. Conflicts can keep both copies, and deletion protections and confirmations help guard against unwanted removal; neither replaces checking the preview or backing up important files.
-
-![PKP folder sync scan preview with a Chinese interface and local synthetic test data](assets/screenshots/sync.png)
-
-*Image provenance: the actual sync interface showing a preview produced by scanning local synthetic test data, with the temporary local directory path anonymized. No sync was executed; this is not a production cloud-transfer result.*
-
-Sync only works while the PKP process is running. It is not a real-time service, a system-level background daemon, or a complete backup solution. Content verification may read cloud files and consume download traffic.
+<p align="center"><i>English files workspace. Illustration from the <a href="https://pkpapp.cc/en">English site</a>, redrawn from the current UI with fictional demo data.</i></p>
 
 ## What you can do
 
-| Your task | What PKP provides |
+- **AI organizing assistant, with review before apply.** Local filename rules can draft a plan with no model. You can also connect your own model (or local Ollama) and TMDB credentials. Renames, moves, and cleanup wait until you confirm the plan.
+- **Folder sync.** Pair a local folder with a cloud folder. Two-way sync, local-to-cloud backup, or cloud-to-local download. PKP scans both sides and shows the plan before it runs. Sync works while PKP is open.
+- **Native playback.** A bundled libmpv player: quality switching, subtitles, audio tracks, resume, and a separate window. Availability depends on the file, codec, and service.
+- **Local index search.** Each account keeps an index on this computer, with type, size, and other filters. Search does not send file names to a model. The first index takes time.
+- **Multiple accounts.** Each account has its own session, transfer queue, and index. Switching accounts leaves the others' transfers running.
+- **Privacy on this computer.** Remembered passwords and optional API keys use the macOS Keychain or Windows Credential Manager. See [Privacy](#privacy).
+
+The interface is available in English, Simplified Chinese, Traditional Chinese, Japanese, and Korean.
+
+## Install
+
+**[PKP 0.2.0](https://github.com/tonyflux/pkp/releases/tag/v0.2.0) is the latest release** (published 2026-11-01). It is a stable release, and it is the first open-source release. Download only from this repository's [Releases](https://github.com/tonyflux/pkp/releases/latest), then check `SHA256SUMS` from the same release. Details and first-launch steps are in the [installation guide](docs/INSTALL.en.md).
+
+| Platform | Download |
 | --- | --- |
-| Manage multiple accounts | Sign in and switch accounts, with independent background uploads and downloads. Accounts are not merged into a single drive. |
-| Browse and share | Folder browsing, local indexed search, sorting, filters, favorites, sharing, and previews including images, text, PDF, DOCX, and XLSX; PPT/PPTX have no built-in preview, but downloads and other operations remain available. |
-| Manage transfers | Add links or torrents for cloud download, upload local files and folders, download to your computer, and manage transfer progress. |
-| Play media | An integrated player with quality switching, subtitles, playback history, and a separate player window. Availability depends on the file and service. |
-| Sync and organize | Two-way folder synchronization, local-to-cloud backup, and cloud-to-local downloads, with previews and conflict handling before execution; cleanup, rule-based renaming, and media organization. Optional connections to your own AI model service and TMDB credentials. |
-| Make it yours | Simplified Chinese, Traditional Chinese, English, Japanese, and Korean interfaces, plus themes and wallpaper settings. |
+| macOS 12 or later, Apple silicon and Intel | [PKP-0.2.0-macos-universal.dmg](https://github.com/tonyflux/pkp/releases/download/v0.2.0/PKP-0.2.0-macos-universal.dmg) |
+| Windows x64 / ARM64 preview | [PKP-0.2.0-windows-x64-arm64-setup.exe](https://github.com/tonyflux/pkp/releases/download/v0.2.0/PKP-0.2.0-windows-x64-arm64-setup.exe) |
 
-Cloud capabilities, network access, and quotas depend on PikPak's service and your account. PKP does not provide content resources or bypass server-side permissions or Premium restrictions. Synchronization only runs while the PKP process is running; it is not a real-time service or a system-level background daemon. Back up important files and review operation previews before synchronization, cleanup, or bulk organization.
+The macOS build is ad hoc signed and is not notarized, so the system may ask you to approve the first launch. The Windows build has no Authenticode publisher signature, and playback, sync, notifications, and system authentication still need broader testing on real devices. Linux packages are not available.
 
-## Understand privacy before signing in
+**Homebrew.** PKP has no cask. `brew install --cask pikpak` installs PikPak's own app, which is a different program.
 
-Privacy-related options are available in settings. The following behavior is also important to understand before using PKP.
+v0.2.0 ships eight release assets: the two installers, `update.json`, `update.json.sig`, [`PKP-0.2.0-source.tar.gz`](https://github.com/tonyflux/pkp/releases/download/v0.2.0/PKP-0.2.0-source.tar.gz), `libmpv-sources.tar.gz`, `LICENSE`, and `SHA256SUMS`. The historical [v0.1.0](https://github.com/tonyflux/pkp/releases/tag/v0.1.0) installers stay under the proprietary terms shipped with that release. Prefer 0.2.0 for a new install. Usage statistics default to off in 0.2.0 and on in 0.1.0.
 
-![PKP privacy and security settings in the isolated sample environment, with a Chinese interface](assets/screenshots/privacy.png)
+## In the app
 
-- **Usage statistics differ by version.** The released v0.1.0 production installers enable them by default; disable them under Settings → Privacy & Security. Current source (planned v0.2.0) defaults to off and requires opt-in there. Older versions cannot distinguish an explicit enable from the old default, so you must opt in again after upgrading. Payloads do not contain accounts, file names, paths, search terms, question text, or file contents. A random installation identifier can link statistics from the same installation across days. Turning statistics off does not automatically delete data already received; reports are unauthenticated and can be forged.
-- **Update checks have a separate switch.** Production builds enable update checks by default; disable them separately under About & Updates. Disabling usage statistics does not disable update checks. There are no automatic downloads or silent installations. In current source, macOS updates require “Download Update → Restart & Update,” preserve accounts and settings, and do not bypass Gatekeeper. Released v0.1.0 still requires one manual replacement to gain this feature; see [installation and updates](docs/INSTALL.en.md).
-- **Sign-in includes a referral submission.** After each successful form-based sign-in, including adding an account or signing in again, PKP submits a preset developer referral code to PikPak in the background to attempt to establish a referral relationship. **There is no separate opt-out switch.** Failure does not affect sign-in; restoring a session or refreshing a token does not trigger submission. The registration link also includes promotional parameters that may create referral attribution.
-- **AI and TMDB connections are optional.** Use your own services and credentials, and review data authorization prompts before sending information. AI requests may include file names, paths, and other authorized context. The application lock does not encrypt local data.
+<table>
+  <tr>
+    <td width="50%" valign="top">
+      <img src="assets/screenshots/en/assistant.webp" alt="English organization plan asking you to review renames and moves before they run">
+      <br><b>Review the plan</b> before a rename or move runs.
+    </td>
+    <td width="50%" valign="top">
+      <img src="assets/screenshots/en/sync.webp" alt="English new-sync sheet with two-way, backup, and download modes">
+      <br><b>Scan, then sync.</b> Confirm the preview first.
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top">
+      <img src="assets/screenshots/en/player.webp" alt="English libmpv player with a playlist and playback controls">
+      <br><b>Play with libmpv</b> inside the workspace.
+    </td>
+    <td width="50%" valign="top">
+      <img src="assets/screenshots/en/accounts.webp" alt="English account switcher with three demo accounts">
+      <br><b>Switch accounts</b> without merging drives.
+    </td>
+  </tr>
+</table>
 
-See the [privacy notice](PRIVACY.en.md) for the full data scope, storage details, and deletion limitations.
+These English images are illustrations from [pkpapp.cc/en](https://pkpapp.cc/en), redrawn from the current UI with fictional demo data. Running-app captures in Simplified Chinese stay in [`assets/screenshots/`](assets/screenshots) and in the [Chinese README](README.zh-CN.md). An English capture of local search is not in the repository yet.
 
-## Platform and installation limits
+## Build from source
 
-**Official installation packages are available in [Releases](https://github.com/tonyflux/pkp/releases/latest).** The maintainer reported successful acceptance of the initial draft; this does not establish comprehensive validation across all platforms, devices, or features below.
+Builds are documented for macOS 12 or later and produce a universal app. You need Go 1.26, Node.js 24, Xcode Command Line Tools, CMake, Python 3.10 or later, and the pinned Wails CLI. Full prerequisites, tests, and Windows cross-compilation are in the [development guide](docs/DEVELOPMENT.en.md).
 
-| Platform | Current status |
+```sh
+xcode-select --install
+go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0-beta.28
+export PATH="$(go env GOPATH)/bin:$PATH"
+cd frontend && npm ci && cd ..
+make app-go
+```
+
+`make app-go` writes `bin/pkp` and `bin/pkp.app`. From the same Mac, `make windows-installer` builds the Windows preview installer and needs NSIS.
+
+## Privacy
+
+Read the privacy notice before you sign in: [English](PRIVACY.en.md) · [简体中文](PRIVACY.md).
+
+<p align="center">
+  <img src="assets/screenshots/en/app-lock.webp" alt="English App Lock settings, with system login or a separate PKP password" width="720">
+</p>
+
+- Remembered passwords, AI API keys, and TMDB credentials go into the macOS Keychain (service `com.pkp.desktop`) or Windows Credential Manager. Session tokens still live in a local credentials file. “Remember account and password” and “Automatic login” start checked; clear them on the sign-in form if you want the password kept only in memory. App Lock limits access inside the app. It does not encrypt downloaded files or the whole configuration directory.
+- In v0.2.0, usage statistics stay off until you opt in under Settings → Privacy & Security. v0.1.0 installers had them on by default, and an upgrade starts off again until you opt in. Payloads are a random installation id, version, OS, language, and daily counts of fixed feature names. They leave out accounts, file names, paths, search text, questions, and file contents. Turning statistics off does not delete data already received.
+- Each successful sign-in from the login form, including adding an account or signing in again, submits a preset developer referral code to PikPak. There is no separate switch. A failed submission still leaves you signed in. Restoring a session or refreshing a token does not submit it. The registration link also carries referral parameters.
+- Update checks have their own switch. Production builds check GitHub for a new release and wait for you to download and install. Disabling statistics leaves update checks as they are.
+- AI and TMDB are optional and use services and credentials you provide. After you allow a request, or choose “Always allow” for that account, the model can receive the question, conversation, and task metadata such as file names and paths. Review the prompt in the app before you send anything.
+
+Local data, deletion limits, and the statistics endpoint are spelled out in [PRIVACY.en.md](PRIVACY.en.md).
+
+## Platforms
+
+| Platform | Status |
 | --- | --- |
-| macOS | Universal application targeting macOS 12 or later, for Apple silicon and Intel. Current packages use ad hoc signing and are not notarized by Apple. |
-| Windows | A combined x64 / ARM64 installer is available. Broader real-device coverage is still needed for playback, synchronization, notifications, and system authentication. Some macOS integrations are unavailable. No Authenticode publisher signature. |
-| Linux | Support and distribution packages are not currently promised. |
+| macOS | Universal app for macOS 12 or later. Ad hoc signature, not notarized. |
+| Windows | One x64 / ARM64 preview installer. No Authenticode publisher signature. Some macOS-only integrations are absent, and real-device coverage is still thin. |
+| Linux | No packages and no support commitment. |
 
-See the [installation guide](docs/INSTALL.en.md) for requirements and first-launch precautions. Download packages only from this repository's official [Releases](https://github.com/tonyflux/pkp/releases/latest) and follow the corresponding verification instructions.
+PKP works with files in your own PikPak account. Quotas, network access, and Premium-only features follow that account. Back up important files before sync, cleanup, or a bulk organize.
 
 ## Source and license
 
-Copyright (C) 2026 tonyflux. PKP-owned source, build scripts, and documentation in this repository are licensed under [GPL-3.0-only](LICENSE). Third-party components retain their own licenses. Published v0.1.0 installers remain under the [proprietary terms shipped with that release](docs/legal/v0.1.0-proprietary.txt); this source is not their corresponding source.
+Copyright (C) 2026 tonyflux. PKP-owned source, build scripts, and documentation in this repository are [GPL-3.0-only](LICENSE). Third-party components keep their own licenses. See [THIRD_PARTY.en.md](THIRD_PARTY.en.md).
 
-See the [development guide](docs/DEVELOPMENT.en.md) to build locally. The current login implementation uses identity parameters and signing constants associated with PikPak's official Android client; publishing this source discloses those values. The maintainer has confirmed that the current identity parameters may be publicly reused; the parameters and referral behavior remain unchanged. Public comparisons do not imply endorsement by PikPak or independently obtained written authorization from PikPak. The referral behavior is disclosed in the [privacy notice](PRIVACY.en.md).
+v0.2.0 is the first open-source release. Its `PKP-0.2.0-source.tar.gz` is the PKP-owned source that corresponds to that release's installers, and `libmpv-sources.tar.gz` is the separate third-party source archive. v0.1.0's seven assets and [proprietary terms](docs/legal/v0.1.0-proprietary.txt) are unchanged. Those installers were built from a different source than this tree.
 
-## Guides and feedback
+The notes that used to lead this README are kept in [docs/legal/version-licensing.en.md](docs/legal/version-licensing.en.md). The wording is unchanged except the installation-guide link, which now points at that file’s location. The record’s opening section is the publication status above. It supersedes the older “v0.2.0 has not been published” sentence inside the retained notes.
 
-The guides below are available in English and Simplified Chinese, with language links in each document.
+The sign-in code uses identity parameters and signing constants associated with PikPak's official Android client, so this public source discloses those values. The maintainer has confirmed that the current parameters may be published and reused. That confirmation is not an endorsement by PikPak. Referral behavior is described in the [privacy notice](PRIVACY.en.md).
 
-| Resource | What it covers |
+## Guides
+
+| | |
 | --- | --- |
-| [Installation and first launch](docs/INSTALL.en.md) | Download status, platform requirements, first launch, and updates. |
-| [User guide](docs/USAGE.en.md) | Accounts, transfers, playback, synchronization, and data-operation precautions. |
-| [Privacy notice](PRIVACY.en.md) | Local data, external services, usage statistics, referrals, and deletion limitations. |
-| [Changelog](CHANGELOG.en.md) · [Releases](https://github.com/tonyflux/pkp/releases) | Documentation and development status; published release attachments and notes are authoritative for their releases. |
-| [Third-party components](THIRD_PARTY.en.md) · [Software license](LICENSE) | Third-party distribution obligations, copyright, and software license. |
-| [Contributing](CONTRIBUTING.en.md) · [Security policy](SECURITY.en.md) | Contribution guidance and vulnerability reporting. |
+| [Installation and first launch](docs/INSTALL.en.md) | Downloads, checks, first launch, updates. |
+| [User guide](docs/USAGE.en.md) | Accounts, transfers, playback, sync, bulk actions. |
+| [Privacy notice](PRIVACY.en.md) | Local data, statistics, referrals, deletion limits. |
+| [Changelog](CHANGELOG.en.md) | Documentation and development record. Release assets and notes on GitHub are authoritative for each release. |
+| [Development](docs/DEVELOPMENT.en.md) | Local build, tests, release packaging. |
+| [Contributing](CONTRIBUTING.en.md) · [Security](SECURITY.en.md) | How to propose a change, and how to report a vulnerability. |
 
-Report problems or suggest improvements through [Issues](https://github.com/tonyflux/pkp/issues). **Do not post passwords, tokens, API keys, share passcodes, complete account details, or unredacted logs and screenshots. Do not upload the entire configuration directory.**
+When you [open an issue](https://github.com/tonyflux/pkp/issues), remove passwords, tokens, API keys, share codes, and full account details from logs and screenshots. Do not upload the configuration directory.
