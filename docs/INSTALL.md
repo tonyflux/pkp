@@ -4,22 +4,24 @@
 
 ## 下载状态
 
-**v0.1.0 已正式发布。** 从 [最新 Release](https://github.com/tonyflux/pkp/releases/latest) 下载对应平台安装包：[macOS Universal](https://github.com/tonyflux/pkp/releases/download/v0.1.0/PKP-0.1.0-macos-universal.dmg) / [Windows x64 与 ARM64](https://github.com/tonyflux/pkp/releases/download/v0.1.0/PKP-0.1.0-windows-x64-arm64-setup.exe)。对照同一 Release 的 `SHA256SUMS` 并验证签名；不要从不明来源获取安装包。
+**v0.2.0 是已发布的最新版本**（2026-11-01）。GitHub 将其标为稳定的 Latest。从 [最新 Release](https://github.com/tonyflux/pkp/releases/latest) 下载：[macOS Universal](https://github.com/tonyflux/pkp/releases/download/v0.2.0/PKP-0.2.0-macos-universal.dmg) / [Windows x64 与 ARM64](https://github.com/tonyflux/pkp/releases/download/v0.2.0/PKP-0.2.0-windows-x64-arm64-setup.exe)。对照同一 Release 的 `SHA256SUMS` 并验证签名。请从本仓库的 Releases 获取安装包。
 
-同一 Release 提供第三方对应源码包 `libmpv-sources.tar.gz` 和当时的使用条款。v0.1.0 安装包不是由本仓库当前源码构建。
+v0.2.0 是首个开源版本，包含 `PKP-0.2.0-source.tar.gz`（与该安装包对应的 PKP 自有源码）和 `libmpv-sources.tar.gz`（第三方对应源码，不含 PKP 自有源码）。
+
+**v0.1.0 仍可下载**，作为历史版本：[macOS Universal](https://github.com/tonyflux/pkp/releases/download/v0.1.0/PKP-0.1.0-macos-universal.dmg) / [Windows x64 与 ARM64](https://github.com/tonyflux/pkp/releases/download/v0.1.0/PKP-0.1.0-windows-x64-arm64-setup.exe)。该 Release 同时提供 `libmpv-sources.tar.gz` 和当时的使用条款。v0.1.0 安装包不是由本仓库当前源码构建，仍适用[当时的闭源条款](legal/v0.1.0-proprietary.txt)。新安装请优先使用 v0.2.0。使用统计在 v0.2.0 默认关闭，在 v0.1.0 默认开启。
 
 ## 校验发布附件
 
 v0.1.0 有七件附件：macOS DMG、Windows 安装程序、`update.json`、`update.json.sig`、`libmpv-sources.tar.gz`、`LICENSE` 与 `SHA256SUMS`。前两项是应用安装包；该第三方源码包不包含 PKP 自有源码。
 
-首个开源版本计划为 v0.2.0，尚未发布。该版本须提供八件附件：上述七件加上 `PKP-0.2.0-source.tar.gz`（通用命名为 `PKP-<version>-source.tar.gz`）。新增源码包提供与该版本安装包对应的完整 PKP 自有源码及构建脚本；本仓库也提供当前源码。它不替代独立的第三方对应源码包，也不是 v0.1.0 安装包的对应源码。
+v0.2.0 已发布，提供八件附件：上述七类再加上 `PKP-0.2.0-source.tar.gz`（通用命名为 `PKP-<version>-source.tar.gz`）。新增源码包提供与该版本安装包对应的完整 PKP 自有源码及构建脚本；本仓库也提供当前源码。它不替代独立的第三方对应源码包，也不是 v0.1.0 安装包的对应源码。
 
 `SHA256SUMS` 用于检查下载完整性，不能单独证明发布者身份。应用内更新会用内置公钥验证 Ed25519 签名清单，再检查安装包大小与 SHA-256；签名或哈希错误时不要继续安装。
 
-需要手动完整核验时，将同一 Release 的全部附件放在独立目录（v0.1.0 为七件；计划中的 v0.2.0 为八件），并下载公开的 [verify_release.py](../.github/scripts/verify_release.py)。安装 Python 3.11+ 和 OpenSSL 3+ 后运行（下例用于已发布的历史版本；版本号替换为待核验的实际标签）：
+需要手动完整核验时，将同一 Release 的全部附件放在独立目录（v0.1.0 为七件；v0.2.0 及之后为八件），并下载公开的 [verify_release.py](../.github/scripts/verify_release.py)。安装 Python 3.11+ 和 OpenSSL 3+ 后运行（将标签换成你下载的版本）：
 
 ```sh
-python3 verify_release.py /路径/发布附件 v0.1.0
+python3 verify_release.py /路径/发布附件 v0.2.0
 ```
 
 工具只含公开公钥，不需要 GitHub token、账号登录或私钥；签名、标签、安装包或附件集合不一致时返回失败。公开仓库的「Verify public release」工作流会在正式发布后自动核验 GitHub 附件与匿名下载地址；工作流失败不是允许绕过校验的理由。
@@ -58,12 +60,12 @@ Linux 暂不承诺支持或发布安装包。
 - 已发布的 macOS v0.1.0 没有上述替换助手：升级到 v0.2.0 或之后版本时，仍须下载并打开新版本 DMG，退出 PKP，再手动拖拽覆盖原应用一次，才能获得「重启并更新」功能；不要直接运行镜像内应用。此步骤保留账号与本地设置。
 - 没有更新功能或信任旧开发公钥的本地测试版本，需要先手动下载并安装正式版本；同为 0.1.0 时不会提示升级。
 
-当前源码提供上述 macOS 更新流程，但不表示 v0.2.0 已正式发布，也不表示系统授权、Gatekeeper、回滚及各设备上的原生升级已全部验收；正式发布前仍须完成平台人工验证。
+v0.2.0 已随上述 macOS 更新流程发布。发布本身不表示系统授权、Gatekeeper、回滚及各设备上的原生升级已全部验收；这些检查仍待完成。
 
 ## 首次启动
 
 - 使用自己的 PikPak 账号登录。当前「记住账号密码」与「自动登录」默认勾选，不希望保存密码时请取消勾选。
-- 先阅读[隐私说明](../PRIVACY.md)。已发布的 v0.1.0 生产安装包默认开启使用统计，可到「设置 → 隐私与安全」关闭；当前源码（计划中的 v0.2.0）默认关闭，升级后需在该设置中重新主动开启。当前登录成功后还会提交邀请关系。
+- 先阅读[隐私说明](../PRIVACY.md)。已发布的 v0.1.0 生产安装包默认开启使用统计，可到「设置 → 隐私与安全」关闭；已发布的 v0.2.0 与当前源码默认关闭，升级后需在该设置中重新主动开启。当前登录成功后还会提交邀请关系。
 - 首次登录会建立本地文件索引，期间仍可浏览；搜索与全盘统计可能要等待索引就绪。
 - macOS 可能请求系统通知权限；是否允许由你决定。当前 ad hoc 构建的实际通知表现尚待真机确认。
 - 使用同步或批量整理前，先备份重要数据，并仔细检查预览和确认内容。
