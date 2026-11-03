@@ -136,8 +136,10 @@ type LocalSettings struct {
 	// front with its window open, where the page already shows the same.
 	NotificationsOff   bool `json:"notificationsOff,omitempty"`
 	NotifyInForeground bool `json:"notifyInForeground,omitempty"`
-	// UsageStatsEnabled records explicit consent to anonymous usage statistics.
-	UsageStatsEnabled bool `json:"usageStatsEnabled,omitempty"`
+	// UsageStatsEnabled controls daily active installation statistics; it defaults on.
+	UsageStatsEnabled bool `json:"usageStatsEnabled"`
+	// Keep false on disk so unrelated saves do not look like an older explicit answer.
+	UsageStatsNoticeSeen bool `json:"usageStatsNoticeSeen"`
 	// Language is Interface Language: one of i18n.Langs, or "" to follow this
 	// computer's language list (language.go).
 	Language string `json:"language,omitempty"`
@@ -163,6 +165,7 @@ var defaultLocalSettings = LocalSettings{
 	ProxyMode:         proxyModeSystem,
 	AppLockDelay:      defaultAppLockDelay,
 	AppLockMethod:     lockMethodSystem,
+	UsageStatsEnabled: true,
 }
 
 // defaultDownloadDir is ~/Downloads, or nothing without a home folder.
@@ -304,9 +307,27 @@ func (d *DriveService) readSettings() LocalSettings {
 		}
 		return settled(s)
 	}
-	if err := json.Unmarshal(data, &s); err != nil {
+	stored := struct {
+		*LocalSettings
+		UsageStatsEnabled    *bool `json:"usageStatsEnabled"`
+		UsageStatsNoticeSeen *bool `json:"usageStatsNoticeSeen"`
+		UsageStatsChoiceMade bool  `json:"usageStatsChoiceMade"`
+		UsageStatsOff        bool  `json:"usageStatsOff"`
+	}{LocalSettings: &s}
+	if err := json.Unmarshal(data, &stored); err != nil {
 		d.log.Warn("drive: settings unreadable, using defaults", "error", err)
 		return settled(defaultLocalSettings)
+	}
+	if stored.UsageStatsEnabled != nil {
+		s.UsageStatsEnabled = *stored.UsageStatsEnabled
+	} else if stored.UsageStatsChoiceMade || stored.UsageStatsOff {
+		// Older omitempty saves represented a refusal by choiceMade alone.
+		s.UsageStatsEnabled = false
+	}
+	if stored.UsageStatsNoticeSeen != nil {
+		s.UsageStatsNoticeSeen = *stored.UsageStatsNoticeSeen
+	} else {
+		s.UsageStatsNoticeSeen = stored.UsageStatsChoiceMade || stored.UsageStatsEnabled != nil
 	}
 	return settled(s)
 }

@@ -260,24 +260,50 @@ export default {
   },
   使用统计: { tw: "使用統計", en: "Usage statistics", ja: "利用統計", ko: "사용 통계" },
   发送匿名使用统计: { tw: "傳送匿名使用統計", en: "Send anonymous usage statistics", ja: "匿名の利用統計を送信", ko: "익명 사용 통계 보내기" },
-  "每天用了哪些功能、各用了几次，帮助决定先改进什么": {
-    tw: "每天用了哪些功能、各用了幾次，幫助決定先改進什麼",
-    en: "Which features were used each day and how often — it helps decide what to improve first",
-    ja: "毎日どの機能を何回使ったか。何から改善するかを決める手がかりになります",
-    ko: "매일 어떤 기능을 몇 번 썼는지 보내 무엇을 먼저 개선할지 정하는 데 도움이 됩니다",
+  "只统计每天有多少个安装在使用 PKP，不记录具体功能或使用次数": {
+    tw: "只統計每天有多少個安裝在使用 PKP，不記錄具體功能或使用次數",
+    en: "Count installations using PKP each day, not individual features or how often you use them.",
+    ja: "毎日 PKP を利用するインストール数だけを集計し、個々の機能や利用回数は記録しません。",
+    ko: "매일 PKP를 사용하는 설치 수만 집계하며, 개별 기능이나 사용 횟수는 기록하지 않습니다.",
   },
-  "功能使用次数、PKP 版本、系统和界面语言，以及一个随机生成、与账号无关的编号": {
-    tw: "功能使用次數、PKP 版本、系統和介面語言，以及一個隨機產生、與帳號無關的編號",
-    en: "Feature use counts, the PKP version, your system and interface language, and a random ID unrelated to your account",
-    ja: "機能の使用回数、PKP のバージョン、システムと表示言語、アカウントとは無関係なランダム ID",
-    ko: "기능 사용 횟수, PKP 버전, 시스템과 인터페이스 언어, 그리고 계정과 무관한 무작위 ID",
+  "使用日期、PKP 版本、系统及架构、界面语言，以及一个与账号无关的随机安装编号": {
+    tw: "使用日期、PKP 版本、系統及架構、介面語言，以及一個與帳號無關的隨機安裝編號",
+    en: "Usage dates, PKP version, operating system and architecture, interface language, and a random installation ID unrelated to your account.",
+    ja: "利用日、PKP バージョン、OS とアーキテクチャ、表示言語、アカウントとは無関係なランダムのインストール ID。",
+    ko: "사용 날짜, PKP 버전, 운영체제 및 아키텍처, 인터페이스 언어와 계정과 무관한 무작위 설치 ID.",
   },
-  "文件名、路径、搜索内容、播放内容、账号和 PikPak 用户编号。关闭后，这台电脑的编号和未发送的统计会一并删除": {
-    tw: "檔名、路徑、搜尋內容、播放內容、帳號和 PikPak 使用者編號。關閉後，這台電腦的編號和未傳送的統計會一併刪除",
-    en: "File names, paths, searches, what you play, accounts and PikPak user IDs. Turning this off deletes this computer's ID and any statistics not yet sent.",
-    ja: "ファイル名、パス、検索内容、再生内容、アカウント、PikPak ユーザー ID。オフにすると、このコンピュータの ID と未送信の統計も削除されます",
-    ko: "파일 이름, 경로, 검색 내용, 재생 내용, 계정, PikPak 사용자 ID. 끄면 이 컴퓨터의 ID와 아직 보내지 않은 통계도 함께 삭제됩니다",
+  "功能操作、使用次数、运行日志、账号、文件名、路径、搜索词或文件内容": {
+    tw: "功能操作、使用次數、執行日誌、帳號、檔名、路徑、搜尋詞或檔案內容",
+    en: "Feature actions, usage frequencies, application logs, accounts, file names, paths, search terms, or file contents.",
+    ja: "機能の操作、利用回数、実行ログ、アカウント、ファイル名、パス、検索語、ファイル内容。",
+    ko: "기능 동작, 사용 횟수, 실행 로그, 계정, 파일 이름, 경로, 검색어 또는 파일 내용.",
   },
+  "可随时关闭；会删除本机编号和待发送记录，不会删除服务端已收到的数据。再次开启会生成新编号。": {
+    tw: "可隨時關閉；會刪除本機編號和待傳送記錄，不會刪除伺服器已收到的資料。再次開啟會產生新編號。",
+    en: "Turn this off anytime to delete the local ID and pending records, but not data already received by the server. Turning it on again creates a new ID.",
+    ja: "いつでもオフにでき、端末の ID と未送信記録を削除します。サーバー受信済みデータは削除されません。再度オンにすると新しい ID を生成します。",
+    ko: "언제든 끌 수 있으며 로컬 ID와 미전송 기록이 삭제됩니다. 서버가 이미 받은 데이터는 삭제되지 않습니다. 다시 켜면 새 ID가 생성됩니다.",
+  },
+  "匿名使用统计已默认开启": {
+    tw: "匿名使用統計已預設開啟",
+    en: "Anonymous usage statistics are on by default",
+    ja: "匿名の利用統計は初期設定でオンです",
+    ko: "익명 사용 통계가 기본적으로 켜져 있습니다",
+  },
+  "默认开启，可在「设置 → 隐私与安全」随时关闭；关闭提醒不会关闭统计。": {
+    tw: "預設開啟，可在「設定 → 隱私與安全」隨時關閉；關閉提醒不會關閉統計。",
+    en: "On by default. Turn this off anytime in Settings → Privacy & Security. Dismissing this notice keeps statistics on.",
+    ja: "初期設定ではオンです。「設定 → プライバシーとセキュリティ」でいつでもオフにできます。この案内を閉じても統計はオンのままです。",
+    ko: "기본적으로 켜져 있습니다. ‘설정 → 개인정보 보호 및 보안’에서 언제든 끌 수 있습니다. 이 안내를 닫아도 통계는 계속 켜져 있습니다.",
+  },
+  "默认开启；关闭统计不影响正常使用。": {
+    tw: "預設開啟；關閉統計不影響正常使用。",
+    en: "On by default. Turning statistics off does not affect normal use.",
+    ja: "初期設定ではオンです。統計をオフにしても通常の利用に影響しません。",
+    ko: "기본적으로 켜져 있습니다. 통계를 꺼도 정상적인 앱 사용에는 영향이 없습니다.",
+  },
+  关闭统计: { tw: "關閉統計", en: "Turn off statistics", ja: "統計をオフにする", ko: "통계 끄기" },
+  知道了: { tw: "知道了", en: "Got it", ja: "了解", ko: "알겠습니다" },
 
   /* ---------- SettingsView: rail & basic ---------- */
   基本: { tw: "基本", en: "General", ja: "一般", ko: "일반" },

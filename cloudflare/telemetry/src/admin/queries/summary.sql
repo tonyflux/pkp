@@ -2,7 +2,7 @@
 SELECT
 	(SELECT count(*) FROM daily WHERE day = ?2) AS today,
 	(SELECT count(*) FROM daily WHERE day = ?3) AS yesterday,
-	(SELECT count(DISTINCT install_id) FROM daily WHERE day BETWEEN ?4 AND ?2) AS wau,
-	(SELECT count(DISTINCT install_id) FROM daily WHERE day BETWEEN ?5 AND ?2) AS mau,
+	(SELECT count(DISTINCT install_id) FROM daily WHERE day BETWEEN ?4 AND ?2) AS active7,
+	(SELECT count(DISTINCT install_id) FROM daily WHERE day BETWEEN ?5 AND ?2) AS active30,
 	(SELECT count(DISTINCT install_id) FROM daily WHERE day BETWEEN ?1 AND ?2) AS active,
-	(SELECT count(DISTINCT install_id) FROM daily WHERE day <= ?2) AS total;
+	(SELECT count(DISTINCT install_id) FROM daily WHERE day <= ?2) AS observed;

@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <meta name="robots" content="noindex" />
-    <title>PKP Usage Statistics</title>
+    <title>PKP Active Installations</title>
     <style nonce="{{nonce}}">
       :root {
         color-scheme: light dark;
@@ -15,7 +15,7 @@
         --line: #dce3ed;
         --accent: #1476e8;
         --accent-soft: rgba(20, 118, 232, 0.12);
-        --new: #43a875;
+        --first-seen: #43a875;
         font-family:
           Inter,
           ui-sans-serif,
@@ -34,7 +34,7 @@
           --line: #303b4c;
           --accent: #66adff;
           --accent-soft: rgba(74, 151, 239, 0.15);
-          --new: #66c894;
+          --first-seen: #66c894;
         }
       }
       * {
@@ -117,7 +117,7 @@
       }
       .kpis {
         display: grid;
-        grid-template-columns: repeat(5, minmax(0, 1fr));
+        grid-template-columns: repeat(6, minmax(0, 1fr));
         gap: 12px;
         margin-bottom: 12px;
       }
@@ -142,7 +142,7 @@
         font-size: 11px;
       }
       .note.up {
-        color: var(--new);
+        color: var(--first-seen);
       }
       .note.down {
         color: #d45b53;
@@ -171,8 +171,8 @@
       .key-active {
         background: var(--accent);
       }
-      .key-new {
-        background: var(--new);
+      .key-first-seen {
+        background: var(--first-seen);
       }
       #chart {
         width: 100%;
@@ -202,7 +202,7 @@
         fill: var(--accent);
       }
       .bars rect {
-        fill: var(--new);
+        fill: var(--first-seen);
         opacity: 0.78;
       }
       .cursor {
@@ -236,18 +236,11 @@
         display: block;
         margin-bottom: 2px;
       }
-      .two {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 12px;
-        margin-bottom: 12px;
-      }
       .three {
         display: grid;
         grid-template-columns: repeat(3, 1fr);
         gap: 12px;
       }
-      .two .card,
       .three .card {
         padding: 17px;
         min-width: 0;
@@ -282,11 +275,6 @@
       }
       .name {
         overflow-wrap: anywhere;
-      }
-      .name code {
-        color: var(--dim);
-        margin-left: 5px;
-        font-size: 10px;
       }
       .bar-cell {
         display: flex;
@@ -334,7 +322,6 @@
         .kpis {
           grid-template-columns: repeat(2, minmax(0, 1fr));
         }
-        .two,
         .three {
           grid-template-columns: minmax(0, 1fr);
         }
@@ -344,7 +331,7 @@
   <body>
     <main>
       <header>
-        <h1>PKP Usage Statistics</h1>
+        <h1>PKP Active Installations</h1>
         <span class="meta" id="meta"></span>
         <span class="spacer"></span>
         <div class="seg" role="group" aria-label="Date range" id="ranges">
@@ -354,85 +341,56 @@
         </div>
         <button type="button" class="refresh" id="refresh">Refresh</button>
       </header>
+      <p class="meta">Observed reporting installations · current unreleased source defaults on with opt-out · not people, downloads, or total actual installs.</p>
       <div id="banner" hidden></div>
-      <section class="kpis">
+      <section class="kpis" aria-label="Observed reporting installation statistics">
         <div class="card kpi">
-          <div class="label">Active today</div>
+          <div class="label">Today's observed active installations (DAI)</div>
           <div class="value" id="k-today">–</div>
           <div class="note" id="k-today-note"></div>
         </div>
         <div class="card kpi">
-          <div class="label">Weekly active (7 days)</div>
-          <div class="value" id="k-wau">–</div>
+          <div class="label">Yesterday's observed active installations</div>
+          <div class="value" id="k-yesterday">–</div>
+          <div class="note">Received reports only</div>
+        </div>
+        <div class="card kpi">
+          <div class="label">7-day observed active installations</div>
+          <div class="value" id="k-active7">–</div>
           <div class="note"></div>
         </div>
         <div class="card kpi">
-          <div class="label">Monthly active (30 days)</div>
-          <div class="value" id="k-mau">–</div>
+          <div class="label">30-day observed active installations</div>
+          <div class="value" id="k-active30">–</div>
           <div class="note"></div>
         </div>
         <div class="card kpi">
-          <div class="label" id="k-new-label">New installs</div>
-          <div class="value" id="k-new">–</div>
-          <div class="note" id="k-new-note"></div>
+          <div class="label" id="k-first-seen-label">First-seen installation IDs</div>
+          <div class="value" id="k-first-seen">–</div>
+          <div class="note" id="k-first-seen-note"></div>
         </div>
         <div class="card kpi">
-          <div class="label">Total installs</div>
-          <div class="value" id="k-total">–</div>
-          <div class="note"></div>
+          <div class="label">Cumulative observed installations</div>
+          <div class="value" id="k-observed">–</div>
+          <div class="note">Distinct reported IDs through today</div>
         </div>
       </section>
       <section class="card chart">
         <h2>
-          Daily active and new installs
+          Observed daily active and first-seen installations
           <span class="legend"
             ><span><i class="key-active"></i>Active</span
-            ><span><i class="key-new"></i>New</span></span
+            ><span><i class="key-first-seen"></i>First seen</span></span
           >
         </h2>
         <svg
           id="chart"
           role="img"
-          aria-label="Daily active and new installs"
+          aria-label="Observed daily active and first-seen installations"
         ></svg>
         <div class="tip" id="tip"></div>
       </section>
-      <section class="two">
-        <div class="card">
-          <h2>
-            Feature usage
-            <small
-              >Sorted by installs; share = installs using feature ÷ active
-              installs</small
-            >
-          </h2>
-          <table>
-            <thead>
-              <tr>
-                <th>Feature</th>
-                <th>Installs using it</th>
-                <th class="num">Installs</th>
-                <th class="num">Uses</th>
-              </tr>
-            </thead>
-            <tbody id="features"></tbody>
-          </table>
-        </div>
-        <div class="card">
-          <h2>Page visits <small>Installs that opened the page</small></h2>
-          <table>
-            <thead>
-              <tr>
-                <th>Page</th>
-                <th>Installs visiting</th>
-                <th class="num">Installs</th>
-                <th class="num">Visits</th>
-              </tr>
-            </thead>
-            <tbody id="pages"></tbody>
-          </table>
-        </div>
-      </section>
+      <p class="meta">Breakdowns count each active installation once in the selected range, using its latest reported version, platform, and language.</p>
       <section class="three">
         <div class="card">
           <h2>Versions</h2>
@@ -454,43 +412,32 @@
         </div>
       </section>
       <footer>
-        Active means an install sent statistics that day. Users who do not opt in
-        and builds without an endpoint are excluded. Dates are the user's local
-        dates; today uses the viewer's local date. An install is one random
-        installation ID. Reinstalling or disabling and re-enabling statistics
-        creates a new install. Reports are unauthenticated and can be forged;
-        rate limiting does not verify installs. Today's totals continue to grow.
+        Current unreleased source defaults statistics on, preserves explicit off
+        choices, and offers a one-time notice with a direct turn-off action plus
+        a switch in Settings → Privacy &amp; Security. Acknowledgment or dismissal
+        is not consent and leaves statistics enabled; recording starts at startup
+        and sending can begin about 30 seconds later, before acknowledgment.
+        Without an endpoint, no recording, sending, or notice occurs.
+        An installation is active on a local date once its report has arrived.
+        Launch frequency and feature use are not counted. Released v0.1.0
+        defaulted on and released v0.2.0 defaulted off; history is not all opt-in.
+        Dates are each installation's local dates,
+        not a single global 24-hour window; today is the viewer's local date.
+        Reports can arrive late or after offline use, so past dates can change
+        and today's counts are incomplete. Unreported installations are absent;
+        this is not a census of all installs. First seen is an ID's earliest
+        reported activity date, not its actual install date. Cumulative observed
+        installations count distinct reported random IDs. Multiple devices,
+        reinstalling with a new ID, or disabling and re-enabling statistics can
+        add IDs, so these numbers are not real people, downloads, or total actual
+        installs. Turning statistics off deletes local IDs and pending dates,
+        not server history or requests already sent. History is retained.
+        Reports are unauthenticated and can be forged; rate limiting does not
+        verify installations.
       </footer>
     </main>
     <script nonce="{{nonce}}">
       "use strict";
-      const LABELS = {
-        "app.open": "Launch PKP",
-        "app_lock.on": "Launch with App Lock enabled",
-        "route.files": "All Files",
-        "route.transfers": "Transfers",
-        "route.player": "Player",
-        "route.shares": "Shares",
-        "route.settings": "Settings",
-        "route.viewer": "File Viewer",
-        "route.assistant": "AI Assistant",
-        "route.cleanup": "Cleanup",
-        "play.video": "Play video",
-        "play.audio": "Play audio",
-        upload: "Upload",
-        download: "Download to computer",
-        cloud_add: "Cloud add",
-        "viewer.open": "Open File Viewer",
-        "scope.drive": "Browse entire drive",
-        search: "Search",
-        "share.create": "Create share",
-        "assistant.ask": "Ask AI Assistant",
-        "organize.run": "Run organization plan",
-        "organize.undo": "Undo organization plan",
-        "cleanup.scan": "Run cleanup scan",
-        "cleanup.remove": "Remove during cleanup",
-        "menubar.open": "Open from menu bar",
-      };
       const LOCALES = {
         "zh-Hans": "Simplified Chinese",
         "zh-Hant": "Traditional Chinese",
@@ -550,8 +497,8 @@
           if (!res.ok) throw new Error(`HTTP ${res.status}`);
           data = await res.json();
           banner(
-            data.summary.total === 0
-              ? "No data yet. A computer running the current PKP build sends its first report about 30 seconds after launch, then hourly."
+            data.summary.observed === 0
+              ? "No reports yet. Only installations with an enabled reporting endpoint that have not opted out and successfully report can appear; offline or pending reports arrive later. These are not all installations or real people."
               : "",
           );
           render();
@@ -571,21 +518,16 @@
         $("k-today").textContent = fmt.format(s.today);
         const delta = s.today - s.yesterday,
           note = $("k-today-note");
-        note.textContent = `Yesterday ${fmt.format(s.yesterday)}${delta ? ` (${delta > 0 ? "+" : ""}${fmt.format(delta)})` : ""}`;
+        note.textContent = delta ? `${delta > 0 ? "+" : ""}${fmt.format(delta)} vs yesterday · partial day` : "Partial day";
         note.className = `note ${delta > 0 ? "up" : delta < 0 ? "down" : ""}`;
-        $("k-wau").textContent = fmt.format(s.wau);
-        $("k-mau").textContent = fmt.format(s.mau);
-        $("k-new-label").textContent = `New in last ${data.days} days`;
-        $("k-new").textContent = fmt.format(s.new);
-        $("k-new-note").textContent = `Active in range ${fmt.format(s.active)}`;
-        $("k-total").textContent = fmt.format(s.total);
+        $("k-yesterday").textContent = fmt.format(s.yesterday);
+        $("k-active7").textContent = fmt.format(s.active7);
+        $("k-active30").textContent = fmt.format(s.active30);
+        $("k-first-seen-label").textContent = `First-seen IDs in last ${data.days} days`;
+        $("k-first-seen").textContent = fmt.format(s.firstSeen);
+        $("k-first-seen-note").textContent = `Active installations in range: ${fmt.format(s.active)}`;
+        $("k-observed").textContent = fmt.format(s.observed);
         drawChart();
-        const routes = data.features.filter((f) => f.name.startsWith("route."));
-        const used = data.features.filter(
-          (f) => !f.name.startsWith("route.") && f.name !== "app.open",
-        );
-        featureRows($("features"), used, s.active);
-        featureRows($("pages"), routes, s.active);
         countRows($("versions"), data.versions, (v) => v);
         countRows($("platforms"), data.platforms, (v) => PLATFORMS[v] ?? v);
         countRows($("locales"), data.locales, (v) => LOCALES[v] ?? v);
@@ -604,37 +546,6 @@
             el("em", {}, `${pct}%`),
           ),
         );
-      }
-      function featureRows(body, list, active) {
-        body.replaceChildren();
-        if (!list.length) {
-          body.append(
-            el(
-              "tr",
-              { class: "empty-row" },
-              el("td", { colspan: "4" }, "No records in this period"),
-            ),
-          );
-          return;
-        }
-        for (const f of list) {
-          const name = el(
-            "td",
-            { class: "name", title: f.name },
-            LABELS[f.name] ?? f.name,
-          );
-          if (!LABELS[f.name]) name.append(el("code", {}, "unnamed"));
-          body.append(
-            el(
-              "tr",
-              {},
-              name,
-              shareCell(f.installs, active),
-              el("td", { class: "num" }, fmt.format(f.installs)),
-              el("td", { class: "num" }, fmt.format(f.uses)),
-            ),
-          );
-        }
       }
       function countRows(body, list, label) {
         body.replaceChildren();
@@ -707,13 +618,13 @@
         const bw = Math.max(2, Math.min(18, slot * 0.5)),
           bars = svg("g", { class: "bars" });
         pts.forEach((p, i) => {
-          if (p.new)
+          if (p.firstSeen)
             bars.append(
               svg("rect", {
                 x: x(i) - bw / 2,
-                y: y(p.new),
+                y: y(p.firstSeen),
                 width: bw,
-                height: Math.max(1, y(0) - y(p.new)),
+                height: Math.max(1, y(0) - y(p.firstSeen)),
                 rx: 2,
               }),
             );
@@ -764,7 +675,7 @@
           cursor.classList.add("on");
           tip.replaceChildren(
             el("b", {}, p.day),
-            `Active ${fmt.format(p.active)} · New ${fmt.format(p.new)}`,
+            `Active installations ${fmt.format(p.active)} · First seen ${fmt.format(p.firstSeen)}`,
           );
           tip.style.display = "block";
           tip.style.left = `${chart.offsetLeft + (x(i) / W) * box.width}px`;

@@ -4,7 +4,7 @@
  * provide. The main window's copy is the whole application; the separate
  * player window's copy only mirrors the playback session (see inPlayerWindow).
  */
-import { computed, markRaw, nextTick, reactive, watch } from "vue";
+import { computed, markRaw, nextTick, onBeforeUnmount, onMounted, reactive, watch } from "vue";
 import { Browser, Clipboard, Dialogs, Events, Window } from "@wailsio/runtime";
 import { applyLanguage, i18n, isLocale, N_, t, type LanguagePref } from "./i18n";
 import { playFinished } from "./plays";
@@ -1105,52 +1105,71 @@ export function openNotifySettings(): void {
 
 /* ---------------- Anonymous Usage Statistics (Settings · Privacy and Security) ---------------- */
 
-// Go keeps per-day counts of these names and reports them once an hour
-// (TelemetryService; its telemetryNames is the list that counts). Never a
-// file, path, search or account: only that a feature was used.
-export type TelemetryName =
-  | `route.${Route}`
-  | "play.video"
-  | "play.audio"
-  | "upload"
-  | "download"
-  | "cloud_add"
-  | "viewer.open"
-  | "scope.drive"
-  | "search"
-  | "share.create"
-  | "assistant.ask"
-  | "organize.run"
-  | "organize.undo"
-  | "cleanup.scan"
-  | "cleanup.remove"
-  | "menubar.open";
-
-/** countUse tells Go a feature was used; it never fails the caller. */
-export function countUse(name: TelemetryName): void {
-  void TelemetryService.Count(name).catch(() => undefined);
+/** Record foreground presence once per local day, including in separate playback/viewer windows. */
+export function useTelemetryActivity(): void {
+  let day = "";
+  let pending = false;
+  let timer: number;
+  async function record() {
+    if (pending || appLocked.value || document.visibilityState !== "visible" || !document.hasFocus()) return;
+    const today = new Date().toDateString();
+    if (day === today) return;
+    pending = true;
+    try {
+      await TelemetryService.RecordActivity();
+      day = today;
+    } catch {
+      // Statistics must never interrupt app use; the next foreground check can retry.
+    } finally {
+      pending = false;
+    }
+  }
+  onMounted(() => {
+    window.addEventListener("focus", record);
+    document.addEventListener("visibilitychange", record);
+    timer = window.setInterval(record, 60_000);
+    void record();
+  });
+  onBeforeUnmount(() => {
+    window.removeEventListener("focus", record);
+    document.removeEventListener("visibilitychange", record);
+    window.clearInterval(timer);
+  });
 }
 
 export const telemetry = reactive({
   state: null as TelemetryState | null,
   saving: false,
+  error: "",
 });
 
 export async function loadTelemetry(): Promise<void> {
   try {
     telemetry.state = await TelemetryService.State();
   } catch {
-    telemetry.state = null;
+    // Keep a known choice visible if refreshing the state fails.
   }
 }
 
-/** Send Anonymous Usage Statistics on or off; off also forgets this computer's id and unsent counts. */
-export async function setTelemetryEnabled(on: boolean): Promise<void> {
+/** Persist the switch; turning off also forgets this installation's ID and pending days. */
+export function setTelemetryEnabled(on: boolean): Promise<void> {
+  return saveTelemetryState(() => TelemetryService.SetEnabled(on));
+}
+
+/** Dismiss the notice without enabling statistics or changing an existing opt-out. */
+export function acknowledgeTelemetryNotice(): Promise<void> {
+  return saveTelemetryState(() => TelemetryService.AcknowledgeNotice());
+}
+
+async function saveTelemetryState(change: () => Promise<TelemetryState>): Promise<void> {
+  if (telemetry.saving) return;
   telemetry.saving = true;
+  telemetry.error = "";
   try {
-    telemetry.state = await TelemetryService.SetEnabled(on);
+    telemetry.state = await change();
   } catch (err) {
-    notify(t("{what}：{error}", { what: t("无法保存使用统计设置"), error: errorText(err) }), "error");
+    telemetry.error = t("{what}：{error}", { what: t("无法保存使用统计设置"), error: errorText(err) });
+    notify(telemetry.error, "error");
     await loadTelemetry();
   } finally {
     telemetry.saving = false;
@@ -2127,7 +2146,6 @@ export async function setScope(scope: FilesScope) {
   if (ui.scope === scope) return;
   scopeAnchors[ui.scope] = filesPlace.save();
   ui.scope = scope;
-  if (scope === "drive") countUse("scope.drive");
   clearSelection();
   await reload(true);
   filesPlace.restore(scopeAnchors[scope]);
@@ -2366,7 +2384,6 @@ watch(listQuery, () => {
   if (!drive.status?.configured || !indexReady.value || restoring) return;
   clearTimeout(queryTimer);
   queryTimer = setTimeout(() => {
-    if (listQuery.value) countUse("search");
     void reload(false);
   }, 250);
 });
@@ -4578,7 +4595,6 @@ async function startTurn(text: string, range: AskScope = assistant.scope) {
   const scope = snapshotScope(range);
   const account = currentId.value;
   if (!account || !idle()) return;
-  countUse("assistant.ask");
   if (!aiReady.value) {
     await localFallback(text, scope);
     return;
@@ -6081,7 +6097,6 @@ export async function runPlan(keepUndecided?: boolean) {
     assistant.stopping = false;
   }
   if (!record) return;
-  countUse("organize.run");
   const done = record;
   if (account === currentId.value) void reload(false);
   const completed = new Set((done.items ?? []).filter((item) => item.done && !item.error).map((item) => item.fileId));
@@ -6139,7 +6154,6 @@ export async function undoAssistantRecord() {
     assistant.stopping = false;
   }
   if (!out) return;
-  countUse("organize.undo");
   if (account === currentId.value) void reload(false);
   // Every arrival organized by this run waits for a decision again.
   const arrivals = inbox.account === account ? inbox.arrivals.filter((a) => a.recordId === r.id) : [];
@@ -6676,7 +6690,6 @@ export async function scanDuplicates(offset = 0) {
   const account = cleanup.account;
   const serial = ++dupSerial;
   if (!d.page) d.stage = "scanning";
-  if (!offset) countUse("cleanup.scan");
   d.loading = true;
   d.error = "";
   try {
@@ -6715,7 +6728,6 @@ export async function scanEmptyFolders() {
   const account = cleanup.account;
   const serial = ++emptySerial;
   if (!e.page) e.stage = "scanning";
-  countUse("cleanup.scan");
   e.loading = true;
   e.error = "";
   try {
@@ -6853,7 +6865,6 @@ export async function removeDuplicates() {
     permanent ? "delete" : "trash",
   );
   if (!report) return;
-  countUse("cleanup.remove");
   const removed = report.removed ?? [];
   notifyRemoval(permanent ? (n) => t("已彻底删除 {n} 项", { n }) : (n) => t("已移到回收站 {n} 项", { n }), report);
   if (account === currentId.value) {
@@ -6902,7 +6913,6 @@ export async function removeEmptyFolders() {
   const account = cleanup.account;
   const { report, here } = await runRemoval("empty", ids, () => DriveService.RemoveEmptyFolders(account, ids), "check");
   if (!report) return;
-  countUse("cleanup.remove");
   const removed = report.removed ?? [];
   notifyRemoval((n) => t("已移到回收站 {n} 个空文件夹", { n }), report);
   if (account === currentId.value) removeEntries(removed);
@@ -7022,7 +7032,6 @@ export async function openViewer(entry: Entry, siblings?: Entry[]) {
   if (ui.route !== "viewer") {
     viewer.returnRoute = ui.route;
     viewer.openedId = entry.id;
-    countUse("viewer.open");
   }
   if (newFolder) {
     viewer.folderId = entry.parentId;
@@ -7403,7 +7412,6 @@ export async function createShare(req: ShareRequest) {
   try {
     const created = await run(t("创建分享"), () => DriveService.CreateShare(req));
     if (!created) return;
-    countUse("share.create");
     shares.created = created;
     // The list is stale now; the next visit fetches it afresh.
     shares.list = [];
@@ -7717,8 +7725,6 @@ export function openTransfers(
  * here, the Dock's too ("app").
  */
 async function openFromMenuBar(open: MenuBarOpen) {
-  // "app" is also every Dock click and second launch; the rest were picked in the panel.
-  if (open.target !== "app") countUse("menubar.open");
   // A window closed in full screen left it on the way out; the layout follows.
   if (ui.fullscreen) {
     try {
@@ -7910,7 +7916,6 @@ export async function addOffline(urls: string[], parentId: string) {
   const account = currentId.value;
   const results = await run(t("云添加"), () => DriveService.AddOfflineTasks(account, urls, parentId));
   if (!results) return [];
-  countUse("cloud_add");
   drive.lastBatch = results ?? [];
   const ok = drive.lastBatch.filter((r) => r.ok).length;
   const failed = drive.lastBatch.length - ok;
@@ -8072,7 +8077,6 @@ export async function pickAndUpload(what: keyof typeof uploadPickers) {
   if (!paths?.length) return;
   const added = await run(t("上传"), () => DriveService.UploadFiles(account, paths, parentId));
   for (const task of added ?? []) applyUpload(task);
-  if (added?.length) countUse("upload");
   if (added?.length && account === currentId.value) ui.route = "transfers";
 }
 
@@ -8164,7 +8168,6 @@ export async function downloadEntries(entries: Entry[]) {
   }
   const added = await run(t("下载"), () => DriveService.DownloadFiles(account, entries.map(downloadItem)));
   for (const task of added ?? []) applyDownload(task);
-  if (added?.length) countUse("download");
 }
 
 const downloadItem = (e: Entry) => ({ id: e.id, name: e.name, size: e.size, folder: e.folder, parentId: e.parentId });
@@ -8180,7 +8183,6 @@ export async function downloadPlaying(): Promise<string> {
   if (!entry) return "";
   const added = await DriveService.DownloadFiles(playingOwner.value?.id ?? "", [downloadItem(entry)]);
   for (const task of added ?? []) applyDownload(task);
-  countUse("download");
   return entry.name;
 }
 
@@ -8456,7 +8458,6 @@ export async function play(entry: Entry, queue?: Entry[], startAt = 0) {
   // A queue is of one kind: music plays on into music
   // in the same folder, a video into the videos beside it.
   const audio = entry.category === "audio";
-  countUse(audio ? "play.audio" : "play.video");
   const list = (queue ?? visibleFiles.value).filter((e) => e.playable && (e.category === "audio") === audio);
   player.owner = account;
   player.playlist = list.length ? list : [entry];
@@ -8854,6 +8855,7 @@ export async function bootstrap() {
   document.documentElement.dataset.theme = ui.theme;
   document.documentElement.dataset.skin = ui.skin;
   applyTransparency();
+  void loadTelemetry();
 
   // bootstrap is re-entered from the splash's retry button; the event
   // subscription must not be.
@@ -8901,13 +8903,6 @@ export async function bootstrap() {
     });
     // Quitting asks before what is typed and not submitted is lost; Go asks, so it is told.
     watch(unsubmitted, (what) => void MenuBarService.SetUnsaved(what).catch(() => undefined), { immediate: true });
-    // Anonymous Usage Statistics: which page is on screen, each time it changes (the sign-in page is none).
-    watch(
-      () => ui.route,
-      (route) => {
-        if (drive.status?.configured) countUse(`route.${route}`);
-      },
-    );
   }
 
   ui.bootError = "";
@@ -8933,7 +8928,6 @@ export async function bootstrap() {
   }
   if (status.configured) {
     await Promise.all([reload(), loadQuota(), loadTasks(), loadIndexProgress(), loadPlays()]);
-    countUse(`route.${ui.route}`);
   }
 }
 

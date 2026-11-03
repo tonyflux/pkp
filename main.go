@@ -120,7 +120,7 @@ func main() {
 	// System Notifications: transfers, cloud adds and runs that end while the user is
 	// elsewhere are told by the system.
 	notify := services.NewNotifyService(library, menu, lock)
-	// Anonymous Usage Statistics (Settings · Privacy & Security): daily counts of what is used, no content.
+	// Anonymous Usage Statistics: default-on daily active installations with opt-out, never feature activity.
 	telemetry := services.NewTelemetryService(library, telemetryAPI(), cmp.Or(version, "unknown"))
 	updates := services.NewUpdateService(library, menu, lock, cmp.Or(version, "unknown"), releaseBuild)
 
@@ -221,7 +221,6 @@ func main() {
 			log.Printf("upload: %v", err)
 			return
 		}
-		telemetry.Count("upload")
 	})
 
 	// The video surface lives inside this window's content view, below the

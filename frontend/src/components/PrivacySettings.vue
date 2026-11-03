@@ -6,7 +6,7 @@
 // folded away once the canvas is too narrow for both. Every change to the
 // lock is proven with the way in now: Go asks the system, or the Standalone Password is
 // asked in AppLockPasswordSheet (the store's flows open it). Below the lock,
-// Usage Statistics: the Anonymous Usage Statistics switch and what it does and does not send.
+// Usage Statistics: the default-on daily active installation switch and its disclosure.
 import { computed, nextTick, onMounted, ref } from "vue";
 import Icon from "./Icon.vue";
 import SelectMenu, { type SelectOption } from "./SelectMenu.vue";
@@ -236,7 +236,7 @@ const note = computed(() => {
             <span class="tile" aria-hidden="true"><Icon name="gauge" :size="23" /></span>
             <div class="head-text">
               <h3>{{ t("发送匿名使用统计") }}</h3>
-              <p>{{ t("每天用了哪些功能、各用了几次，帮助决定先改进什么") }}</p>
+              <p>{{ t("只统计每天有多少个安装在使用 PKP，不记录具体功能或使用次数") }}</p>
             </div>
             <Toggle
               :model-value="!!telemetry.state?.enabled"
@@ -245,21 +245,24 @@ const note = computed(() => {
               @update:model-value="setTelemetryEnabled"
             />
           </div>
+          <p class="note">{{ t("默认开启；关闭统计不影响正常使用。") }}</p>
           <div class="divider"></div>
           <div class="row">
             <span class="small-icon" aria-hidden="true"><Icon name="check" :size="17" /></span>
             <div class="row-text">
               <strong>{{ t("会发送") }}</strong>
-              <small>{{ t("功能使用次数、PKP 版本、系统和界面语言，以及一个随机生成、与账号无关的编号") }}</small>
+              <small>{{ t("使用日期、PKP 版本、系统及架构、界面语言，以及一个与账号无关的随机安装编号") }}</small>
             </div>
           </div>
           <div class="row last">
             <span class="small-icon" aria-hidden="true"><Icon name="eyeOff" :size="17" /></span>
             <div class="row-text">
               <strong>{{ t("不会发送") }}</strong>
-              <small>{{ t("文件名、路径、搜索内容、播放内容、账号和 PikPak 用户编号。关闭后，这台电脑的编号和未发送的统计会一并删除") }}</small>
+              <small>{{ t("功能操作、使用次数、运行日志、账号、文件名、路径、搜索词或文件内容") }}</small>
             </div>
           </div>
+          <p class="note">{{ t("可随时关闭；会删除本机编号和待发送记录，不会删除服务端已收到的数据。再次开启会生成新编号。") }}</p>
+          <p v-if="telemetry.error" class="note" role="alert">{{ telemetry.error }}</p>
         </div>
       </section>
 

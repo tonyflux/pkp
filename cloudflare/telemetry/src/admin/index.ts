@@ -1,5 +1,5 @@
 /**
- * PKP usage statistics dashboard over reports stored by cloudflare/telemetry.
+ * PKP opt-in active installation dashboard over stored daily reports.
  * A Worker of its own so that the reports' endpoint can stay public while
  * this one sits wholly behind Cloudflare Access (Workers & Pages >
  * pkp-telemetry-admin > Access). It answers nothing a request Access did
@@ -25,7 +25,7 @@ export function todayFor(asked: string | null, now: number): string {
 	return Math.abs(Date.parse(`${asked}T00:00:00Z`) - Date.parse(`${utc}T00:00:00Z`)) <= DAY_MS ? asked : utc;
 }
 
-const REFUSED = `<!doctype html><meta charset="utf-8"><title>PKP Usage Statistics</title>
+const REFUSED = `<!doctype html><meta charset="utf-8"><title>PKP Active Installations</title>
 <p style="font:15px system-ui;margin:48px">This dashboard is available only behind Cloudflare Access. Enable Access for
 Workers &amp; Pages › pkp-telemetry-admin › Access in the Cloudflare dashboard.</p>`;
 

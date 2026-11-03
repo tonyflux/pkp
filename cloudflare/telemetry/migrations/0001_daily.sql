@@ -1,5 +1,5 @@
--- One row per install and local day: that install was active that day, and
--- counts (a JSON object, feature name → times used) is its running total.
+-- One row per install and local day: that installation was active that day.
+-- New reports keep only {"app.open":1}; historical count maps remain untouched.
 CREATE TABLE daily (
 	install_id TEXT NOT NULL,
 	day TEXT NOT NULL,

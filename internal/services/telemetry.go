@@ -15,6 +15,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"sort"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -26,38 +27,11 @@ import (
 	"github.com/tonyflux/pkp/internal/netproxy"
 )
 
-// Anonymous Usage Statistics (Settings · Privacy & Security): how many computers use PKP each day and
-// which features they reach for. Only counts leave the computer — per local
-// day, how often each name in telemetryNames happened — with a random install
-// id, the app version, the system and the interface language. Never a file
-// name, path, search, account or PikPak id. It starts off; switching it off
-// deletes the id and the counts not yet sent.
-//
-// The report is a running total: today's day is sent again every hour and
-// the server keeps the last copy of each (install, day), so a repeat or a
-// retry never counts twice. Days before today leave once the server has them.
-
-// The names the app may count. Anything else is dropped, so a typo or a page
-// newer than this Go never grows the report. The page's TelemetryName and the
-// dashboard's LABELS (cloudflare/telemetry/src/admin/page.html) list them too.
-var telemetryNames = func() map[string]bool {
-	names := map[string]bool{}
-	for _, n := range []string{
-		// Go: a start, and App Lock being on at that start.
-		"app.open", "app_lock.on",
-		// The page on screen (store.ts Route).
-		"route.files", "route.transfers", "route.player", "route.shares", "route.settings",
-		"route.viewer", "route.assistant", "route.cleanup",
-		// What the user did.
-		"play.video", "play.audio", "upload", "download", "cloud_add", "viewer.open",
-		"scope.drive", "search", "share.create", "assistant.ask", "organize.run",
-		"organize.undo", "cleanup.scan", "cleanup.remove",
-		"menubar.open",
-	} {
-		names[n] = true
-	}
-	return names
-}()
+// Anonymous Usage Statistics reports daily active installations, not people or
+// startup frequency. Enabled by default, each active local day contributes
+// only app.open=1, with a random installation id, version, OS and interface language.
+// Switching off deletes the id and pending days; switching on creates a new id.
+// Reports are idempotent per (install, day), so retries never add another activity.
 
 const (
 	telemetryFileName = "telemetry.json"
@@ -67,16 +41,16 @@ const (
 	telemetryTimeout   = 15 * time.Second
 	// Days kept while the server cannot be reached; older ones are dropped.
 	telemetryKeepDays  = 30
-	telemetryMaxCount  = 1_000_000
 	telemetryDayLayout = "2006-01-02"
 )
 
 // TelemetryState is Anonymous Usage Statistics as the settings page shows it.
 type TelemetryState struct {
-	Enabled bool `json:"enabled"`
+	Enabled     bool `json:"enabled"`
+	NeedsNotice bool `json:"needsNotice"`
 }
 
-// telemetryDay is one local day's counts.
+// telemetryDay is one active local date, represented as app.open=1.
 type telemetryDay struct {
 	Day    string         `json:"day"`
 	Counts map[string]int `json:"counts"`
@@ -99,7 +73,7 @@ type telemetryReport struct {
 	Days    []telemetryDay `json:"days"`
 }
 
-// TelemetryService counts and reports Anonymous Usage Statistics.
+// TelemetryService records and reports daily active installations while enabled.
 type TelemetryService struct {
 	drive    *DriveService
 	endpoint string
@@ -111,17 +85,20 @@ type TelemetryService struct {
 
 	off  atomic.Bool
 	stop chan struct{}
+	wake chan struct{}
 	once sync.Once
 
-	mu sync.Mutex
-	// rec is telemetry.json once read; nil until the first count, and again
-	// after switching off.
-	rec   *telemetryRecord
-	dirty bool
+	sendMu sync.Mutex
+	mu     sync.Mutex
+	// All setting, record, disk and cancellation changes are serialized by mu.
+	noticeSeen bool
+	rec        *telemetryRecord
+	dirty      bool
+	cancelSend context.CancelFunc
 }
 
 // NewTelemetryService prepares Anonymous Usage Statistics. An empty endpoint (a development
-// build without PKP_TELEMETRY_API) counts and sends nothing.
+// build without PKP_TELEMETRY_API) records and sends nothing.
 func NewTelemetryService(drive *DriveService, endpoint, version string) *TelemetryService {
 	u := &TelemetryService{
 		drive:    drive,
@@ -131,36 +108,38 @@ func NewTelemetryService(drive *DriveService, endpoint, version string) *Telemet
 		now:      time.Now,
 		client:   netproxy.Client,
 		stop:     make(chan struct{}),
+		wake:     make(chan struct{}, 1),
 	}
-	u.off.Store(!drive.LocalSettings().UsageStatsEnabled)
-	if u.off.Load() {
-		if path, ok := u.path(); ok {
-			if err := os.Remove(path); err != nil && !errors.Is(err, os.ErrNotExist) {
-				u.log.Warn("telemetry: old counts not removed", "error", err)
-			}
+	settings := drive.LocalSettings()
+	u.off.Store(!settings.UsageStatsEnabled)
+	u.noticeSeen = settings.UsageStatsNoticeSeen
+	if u.endpoint != "" && u.off.Load() {
+		if err := u.removeLocked(); err != nil {
+			u.log.Warn("telemetry: old activity not removed", "error", err)
 		}
 	}
 	return u
 }
 
-// ServiceStartup counts the start and begins the hourly report.
+// ServiceStartup marks this local day active and begins the hourly report.
 func (u *TelemetryService) ServiceStartup(context.Context, application.ServiceOptions) error {
 	if u.endpoint == "" {
 		return nil
 	}
-	u.Count("app.open")
-	if u.drive.LocalSettings().AppLock {
-		u.Count("app_lock.on")
-	}
+	u.recordActivity(false)
 	go u.loop()
 	return nil
 }
 
-// ServiceShutdown keeps what was counted since the last report for the next run.
+// ServiceShutdown keeps pending active days for the next run.
 func (u *TelemetryService) ServiceShutdown() error {
 	u.once.Do(func() { close(u.stop) })
 	u.mu.Lock()
 	defer u.mu.Unlock()
+	if u.cancelSend != nil {
+		u.cancelSend()
+	}
+	u.pruneLocked()
 	return u.saveLocked()
 }
 
@@ -172,6 +151,12 @@ func (u *TelemetryService) loop() {
 		case <-u.stop:
 			return
 		case <-wait.C:
+		case <-u.wake:
+		}
+		select {
+		case <-u.stop:
+			return
+		default:
 		}
 		ctx, cancel := context.WithTimeout(context.Background(), telemetryTimeout)
 		if err := u.send(ctx); err != nil {
@@ -184,42 +169,90 @@ func (u *TelemetryService) loop() {
 
 // State is Anonymous Usage Statistics as it stands.
 func (u *TelemetryService) State() TelemetryState {
-	return TelemetryState{Enabled: !u.off.Load()}
+	u.mu.Lock()
+	defer u.mu.Unlock()
+	return u.stateLocked()
 }
 
-// SetEnabled switches Anonymous Usage Statistics and saves the choice. Off forgets the
-// install id and every count not yet sent; on again starts a new id.
+func (u *TelemetryService) stateLocked() TelemetryState {
+	return TelemetryState{
+		Enabled:     !u.off.Load(),
+		NeedsNotice: u.endpoint != "" && !u.off.Load() && !u.noticeSeen,
+	}
+}
+
+// AcknowledgeNotice remembers the disclosure without changing collection or activity.
+func (u *TelemetryService) AcknowledgeNotice() (TelemetryState, error) {
+	u.mu.Lock()
+	defer u.mu.Unlock()
+	if u.endpoint == "" || u.noticeSeen {
+		return u.stateLocked(), nil
+	}
+	if err := u.drive.updateSettings(func(s *LocalSettings) {
+		s.UsageStatsNoticeSeen = true
+	}); err != nil {
+		return u.stateLocked(), err
+	}
+	u.noticeSeen = true
+	return u.stateLocked(), nil
+}
+
+// SetEnabled saves the setting and dismisses the notice. Off forgets the id and
+// pending days; enabling marks today active even when the app started while off.
 func (u *TelemetryService) SetEnabled(on bool) (TelemetryState, error) {
-	// A failed migration cleanup must not cause old counts to be sent after opt-in.
+	u.mu.Lock()
+	defer u.mu.Unlock()
+	// Never reuse a leftover id after a failed migration cleanup.
 	if on && u.off.Load() {
-		if path, ok := u.path(); ok {
-			if err := os.Remove(path); err != nil && !errors.Is(err, os.ErrNotExist) {
-				return u.State(), err
-			}
+		if err := u.removeLocked(); err != nil {
+			return u.stateLocked(), err
 		}
 	}
-	if err := u.drive.updateSettings(func(s *LocalSettings) { s.UsageStatsEnabled = on }); err != nil {
-		return u.State(), err
+	if err := u.drive.updateSettings(func(s *LocalSettings) {
+		s.UsageStatsEnabled = on
+		s.UsageStatsNoticeSeen = true
+	}); err != nil {
+		return u.stateLocked(), err
 	}
 	u.off.Store(!on)
+	u.noticeSeen = true
 	if !on {
-		u.mu.Lock()
+		if u.cancelSend != nil {
+			u.cancelSend()
+		}
 		u.rec, u.dirty = nil, false
-		path, ok := u.path()
-		u.mu.Unlock()
-		if ok {
-			if err := os.Remove(path); err != nil && !errors.Is(err, os.ErrNotExist) {
-				return u.State(), err
+		return u.stateLocked(), u.removeLocked()
+	}
+	if u.endpoint == "" {
+		return u.stateLocked(), nil
+	}
+	_, err := u.recordActivityLocked()
+	u.wakeLocked()
+	return u.stateLocked(), err
+}
+
+func (u *TelemetryService) removeLocked() error {
+	if u.endpoint == "" {
+		return nil
+	}
+	if path, ok := u.path(); ok {
+		for _, name := range []string{path, path + ".tmp"} {
+			if err := os.Remove(name); err != nil && !errors.Is(err, os.ErrNotExist) {
+				return err
 			}
 		}
 	}
-	return u.State(), nil
+	return nil
 }
 
-// Count adds one to a name in telemetryNames for today. Off, in a build without
-// an endpoint, or for any other name it does nothing.
-func (u *TelemetryService) Count(name string) {
-	if u.endpoint == "" || u.off.Load() || !telemetryNames[name] {
+// RecordActivity marks the current local date active once. Call only for startup
+// or foreground activity, never from a background resend timer.
+func (u *TelemetryService) RecordActivity() {
+	u.recordActivity(true)
+}
+
+func (u *TelemetryService) recordActivity(wake bool) {
+	if u.endpoint == "" || u.off.Load() {
 		return
 	}
 	u.mu.Lock()
@@ -227,35 +260,52 @@ func (u *TelemetryService) Count(name string) {
 	if u.off.Load() {
 		return
 	}
-	rec := u.loadLocked()
-	today := u.now().Format(telemetryDayLayout)
-	if n := len(rec.Days); n == 0 || rec.Days[n-1].Day != today {
-		rec.Days = append(rec.Days, telemetryDay{Day: today, Counts: map[string]int{}})
-		if len(rec.Days) > telemetryKeepDays {
-			rec.Days = rec.Days[len(rec.Days)-telemetryKeepDays:]
-		}
-		// A new day is a good moment to keep the last one.
-		u.dirty = true
-		if err := u.saveLocked(); err != nil {
-			u.log.Debug("telemetry: counts not saved", "error", err)
-		}
+	added, err := u.recordActivityLocked()
+	if err != nil {
+		u.log.Debug("telemetry: activity not saved", "error", err)
 	}
-	counts := rec.Days[len(rec.Days)-1].Counts
-	counts[name] = min(counts[name]+1, telemetryMaxCount)
-	u.dirty = true
+	if wake && added {
+		u.wakeLocked()
+	}
 }
 
-// send reports every day held. On success the days before today are
-// dropped — unless they were counted into while the report was on its way.
-func (u *TelemetryService) send(ctx context.Context) error {
-	if u.off.Load() {
-		return nil
-	}
-	u.mu.Lock()
+func (u *TelemetryService) recordActivityLocked() (bool, error) {
 	rec := u.loadLocked()
-	if len(rec.Days) == 0 {
+	u.pruneLocked()
+	today := u.now().Format(telemetryDayLayout)
+	for _, day := range rec.Days {
+		if day.Day == today {
+			return false, u.saveLocked()
+		}
+	}
+	rec.Days = append(rec.Days, telemetryDay{Day: today, Counts: map[string]int{"app.open": 1}})
+	sort.Slice(rec.Days, func(i, j int) bool { return rec.Days[i].Day < rec.Days[j].Day })
+	u.dirty = true
+	return true, u.saveLocked()
+}
+
+func (u *TelemetryService) wakeLocked() {
+	select {
+	case u.wake <- struct{}{}:
+	default:
+	}
+}
+
+// send reports retained active days, but never creates activity itself.
+func (u *TelemetryService) send(ctx context.Context) error {
+	u.sendMu.Lock()
+	defer u.sendMu.Unlock()
+	u.mu.Lock()
+	if u.endpoint == "" || u.off.Load() {
 		u.mu.Unlock()
 		return nil
+	}
+	rec := u.loadLocked()
+	u.pruneLocked()
+	if len(rec.Days) == 0 {
+		err := u.saveLocked()
+		u.mu.Unlock()
+		return err
 	}
 	report := telemetryReport{
 		Install: rec.Install,
@@ -271,7 +321,15 @@ func (u *TelemetryService) send(ctx context.Context) error {
 	if err := u.saveLocked(); err != nil {
 		u.log.Debug("telemetry: counts not saved", "error", err)
 	}
+	ctx, cancel := context.WithCancel(ctx)
+	u.cancelSend = cancel
 	u.mu.Unlock()
+	defer func() {
+		cancel()
+		u.mu.Lock()
+		u.cancelSend = nil
+		u.mu.Unlock()
+	}()
 
 	body, err := json.Marshal(report)
 	if err != nil {
@@ -342,18 +400,49 @@ func (u *TelemetryService) loadLocked() *telemetryRecord {
 		rec.Install = newInstallID()
 		u.dirty = true
 	}
-	for i := range rec.Days {
-		if rec.Days[i].Counts == nil {
-			rec.Days[i].Counts = map[string]int{}
+	// Older builds queued feature counters. Only a positive app.open proves
+	// an active day; all feature names and startup frequencies are discarded.
+	days := make([]telemetryDay, 0, len(rec.Days))
+	seen := make(map[string]bool, len(rec.Days))
+	for _, day := range rec.Days {
+		if day.Counts["app.open"] > 0 && !seen[day.Day] {
+			days = append(days, telemetryDay{Day: day.Day, Counts: map[string]int{"app.open": 1}})
+			seen[day.Day] = true
 		}
 	}
+	sort.Slice(days, func(i, j int) bool { return days[i].Day < days[j].Day })
+	rec.Days = days
+	u.dirty = true
 	u.rec = rec
+	u.pruneLocked()
 	return rec
+}
+
+// Retention is by local calendar age, not the number of rows collected.
+func (u *TelemetryService) pruneLocked() {
+	if u.rec == nil {
+		return
+	}
+	now := u.now()
+	today := now.Format(telemetryDayLayout)
+	oldest := now.AddDate(0, 0, 1-telemetryKeepDays).Format(telemetryDayLayout)
+	kept := u.rec.Days[:0]
+	for _, day := range u.rec.Days {
+		parsed, err := time.Parse(telemetryDayLayout, day.Day)
+		if err != nil || parsed.Format(telemetryDayLayout) != day.Day || day.Day < oldest || day.Day > today {
+			continue
+		}
+		kept = append(kept, day)
+	}
+	if len(kept) != len(u.rec.Days) {
+		u.rec.Days = kept
+		u.dirty = true
+	}
 }
 
 // saveLocked writes telemetry.json when it changed; u.mu must be held.
 func (u *TelemetryService) saveLocked() error {
-	if u.rec == nil || !u.dirty {
+	if u.off.Load() || u.rec == nil || !u.dirty {
 		return nil
 	}
 	path, ok := u.path()

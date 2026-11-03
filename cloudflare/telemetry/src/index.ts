@@ -1,19 +1,20 @@
 /**
- * PKP's anonymous usage statistics. Each install posts, about once an hour, its running
- * counts per local day: how often each feature was used. One row per
- * (install, day) is kept and replaced by every later copy, so a repeat or a
- * retry never counts twice; a day's row existing is that install being
- * active that day.
+ * PKP's daily active installation reports. Current unreleased source defaults
+ * statistics on with a one-time notice and easy opt-out, not a consent gate.
+ * One row per (install, local day) records presence, never launch frequency or
+ * feature behavior. Repeated reports replace that row without increasing the
+ * active installation count. Only installations that successfully report appear.
  *
- * The install id is a random UUID the app forgets when the user switches
- * statistics off. Counts have fixed names and the address is used for rate
- * limiting, not stored in the statistics database. Reports are unauthenticated
- * and can be forged; rate limiting does not establish their authenticity.
+ * The install id is a random UUID the app forgets when statistics are disabled.
+ * Incoming count maps are bounded and checked, then discarded; only app.open=1
+ * is stored. The address is used for rate limiting, not stored in the database.
+ * Reports are unauthenticated and can be forged; rate limiting does not
+ * establish their authenticity.
  */
 
 const MAX_BODY_BYTES = 32 * 1024;
 const MAX_DAYS = 31;
-const MAX_NAMES = 64;
+const MAX_ENTRIES = 64;
 const MAX_COUNT = 1_000_000;
 // A local day may run a day ahead of UTC; one past this many days back is
 // a clock that is wrong, not a backlog.
@@ -26,24 +27,16 @@ const OS: Record<string, true> = { darwin: true, windows: true, linux: true };
 const ARCH: Record<string, true> = { arm64: true, amd64: true };
 const LOCALE = /^[a-z]{2}(-[A-Za-z]{2,4})?$/;
 const DAY = /^[0-9]{4}-[0-9]{2}-[0-9]{2}$/;
-// Keep in sync with telemetryNames in internal/services/telemetry.go.
-const NAMES: Record<string, true> = {
-	"app.open": true, "app_lock.on": true,
-	"route.files": true, "route.transfers": true, "route.player": true, "route.shares": true, "route.settings": true,
-	"route.viewer": true, "route.assistant": true, "route.cleanup": true,
-	"play.video": true, "play.audio": true, upload: true, download: true, cloud_add: true, "viewer.open": true,
-	"scope.drive": true, search: true, "share.create": true, "assistant.ask": true, "organize.run": true,
-	"organize.undo": true, "cleanup.scan": true, "cleanup.remove": true, "menubar.open": true,
-};
+const NAME = /^[a-z][a-z0-9_]{0,23}(\.[a-z0-9_]{1,24})?$/;
 
-/** One install's report, as checked. */
+/** A checked report containing only installation metadata and active dates. */
 export interface Report {
 	install: string;
 	version: string;
 	os: string;
 	arch: string;
 	locale: string;
-	days: { day: string; counts: Record<string, number> }[];
+	days: { day: string }[];
 }
 
 /** A JSON error the app can read, never echoing what was sent. */
@@ -80,15 +73,13 @@ export function parseReport(body: unknown, now: number): Report | string {
 		seen.add(d.day);
 		if (!isObject(d.counts)) return "days[].counts";
 		const entries = Object.entries(d.counts);
-		if (entries.length > MAX_NAMES) return "days[].counts";
-		const counts: Record<string, number> = {};
+		if (entries.length > MAX_ENTRIES) return "days[].counts";
 		for (const [name, n] of entries) {
-			if (!Object.hasOwn(NAMES, name) || !Number.isSafeInteger(n) || (n as number) < 0 || (n as number) > MAX_COUNT) {
+			if (!NAME.test(name) || !Number.isSafeInteger(n) || (n as number) < 0 || (n as number) > MAX_COUNT) {
 				return "days[].counts";
 			}
-			counts[name] = n as number;
 		}
-		checked.push({ day: d.day, counts });
+		checked.push({ day: d.day });
 	}
 	return { install, version, os, arch, locale, days: checked };
 }
@@ -124,12 +115,12 @@ ON CONFLICT (install_id, day) DO UPDATE SET
 	version = excluded.version, os = excluded.os, arch = excluded.arch, locale = excluded.locale,
 	counts = excluded.counts, updated_at = excluded.updated_at`;
 
-/** Keeps a report: every day it names replaces that day's earlier copy. */
+/** Keeps only daily presence; historical rows are untouched unless reported again. */
 export async function store(db: D1Database, r: Report, now: number): Promise<void> {
 	const at = Math.floor(now / 1000);
 	await db.batch(
 		r.days.map((d) =>
-			db.prepare(UPSERT).bind(r.install, d.day, r.version, r.os, r.arch, r.locale, JSON.stringify(d.counts), at),
+			db.prepare(UPSERT).bind(r.install, d.day, r.version, r.os, r.arch, r.locale, '{"app.open":1}', at),
 		),
 	);
 }

@@ -3,11 +3,12 @@ import { onMounted, ref, watch } from "vue";
 import { Window } from "@wailsio/runtime";
 import FileViewer from "./components/FileViewer.vue";
 import LockScreen from "./components/LockScreen.vue";
-import { appLocked, bootstrapViewerWindow, dismiss, ui, viewer, watchAppLock } from "./store";
+import { appLocked, bootstrapViewerWindow, dismiss, ui, useTelemetryActivity, viewer, watchAppLock } from "./store";
 import { t } from "./i18n";
 
 const ready = ref(false);
 const failure = ref("");
+useTelemetryActivity();
 watch([() => viewer.entry?.name, appLocked], ([name, locked]) => {
   void Window.SetTitle(locked ? "PKP" : name || "PKP").catch(() => undefined);
 }, { immediate: true });

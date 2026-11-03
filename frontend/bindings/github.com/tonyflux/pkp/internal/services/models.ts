@@ -1654,9 +1654,14 @@ export interface LocalSettings {
     "notifyInForeground"?: boolean;
 
     /**
-     * UsageStatsEnabled records explicit consent to anonymous usage statistics.
+     * UsageStatsEnabled controls daily active installation statistics; it defaults on.
      */
-    "usageStatsEnabled"?: boolean;
+    "usageStatsEnabled": boolean;
+
+    /**
+     * Keep false on disk so unrelated saves do not look like an older explicit answer.
+     */
+    "usageStatsNoticeSeen": boolean;
 
     /**
      * Language is Interface Language: one of i18n.Langs, or "" to follow this
@@ -2729,6 +2734,7 @@ export interface TaskSummary {
  */
 export interface TelemetryState {
     "enabled": boolean;
+    "needsNotice": boolean;
 }
 
 /**

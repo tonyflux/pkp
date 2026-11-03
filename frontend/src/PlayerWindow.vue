@@ -7,11 +7,12 @@ import PlayerView from "./components/PlayerView.vue";
 import MusicPlayer from "./components/MusicPlayer.vue";
 import { PlayerService } from "../bindings/github.com/tonyflux/pkp/internal/services";
 import LockScreen from "./components/LockScreen.vue";
-import { appLocked, bootstrapPlayerWindow, dismiss, nowPlaying, returnToMain, ui, watchAppLock } from "./store";
+import { appLocked, bootstrapPlayerWindow, dismiss, nowPlaying, returnToMain, ui, useTelemetryActivity, watchAppLock } from "./store";
 import { t } from "./i18n";
 
 const ready = ref(false);
 const failure = ref("");
+useTelemetryActivity();
 
 // The page draws its own title bar; the window's name still shows in
 // Mission Control, the Window menu and the Dock, and in Windows' taskbar —

@@ -34,6 +34,7 @@ import AccountDialogs from "./components/AccountDialogs.vue";
 import AccountScreen from "./components/AccountScreen.vue";
 import LockScreen from "./components/LockScreen.vue";
 import AppLockPasswordSheet from "./components/AppLockPasswordSheet.vue";
+import TelemetryNoticeSheet from "./components/TelemetryNoticeSheet.vue";
 import ConnectivityNotice from "./components/ConnectivityNotice.vue";
 import UpdateSettings from "./components/UpdateSettings.vue";
 import UpdateNotice from "./components/UpdateNotice.vue";
@@ -42,7 +43,7 @@ import { watchConnectivity } from "./connectivity";
 import { WORKSPACE_QUERY, useMedia } from "./dom";
 import { t } from "./i18n";
 import { installShortcuts } from "./shortcuts";
-import { accounts, appLocked, bootstrap, drive, nowPlaying, player, ui, videoWorksShown, watchAppLock } from "./store";
+import { accounts, appLocked, bootstrap, drive, nowPlaying, player, telemetry, ui, useTelemetryActivity, videoWorksShown, watchAppLock } from "./store";
 
 // The shell stays up while there is an account on screen, signed in or not:
 // an account whose session ended shows Log In Again in place, and
@@ -61,6 +62,7 @@ const bar = computed(() => !immersive.value && (player.presentation === "bar" ||
 // Nothing is known until the first Status() answers: no account, no theme
 // of content. The scene alone would be a blank window on a slow link.
 const booting = computed(() => drive.status === null);
+const showTelemetryNotice = computed(() => !!telemetry.state?.needsNotice && !booting.value && !appLocked.value);
 
 // File browsing — the list, or the viewer on top of it — has the context
 // column on its right. Under 960px the files and the column take
@@ -101,6 +103,8 @@ watch(
   },
   { flush: "pre" },
 );
+
+useTelemetryActivity();
 
 // The lock comes first: with App Lock on, PKP starts locked and bootstrap's
 // calls wait in Go until the owner unlocks.
@@ -188,7 +192,8 @@ onMounted(() => {
     <!-- Last: its questions come up over any of these sheets. -->
     <AccountDialogs />
   </div>
-  <UpdateNotice v-if="!booting && !appLocked && ui.route !== 'player' && ui.route !== 'settings'" />
+  <TelemetryNoticeSheet v-if="showTelemetryNotice" />
+  <UpdateNotice v-if="!booting && !appLocked && !showTelemetryNotice && ui.route !== 'player' && ui.route !== 'settings'" />
 
   <!-- App Lock: replaces whatever is above, the player included. -->
   <LockScreen v-if="appLocked" />

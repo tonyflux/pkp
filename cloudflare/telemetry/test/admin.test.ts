@@ -7,6 +7,8 @@ import { d1, database } from "./d1";
 const A = "0f8e3c2a-5b1d-4e6f-9a7b-1c2d3e4f5a6b";
 const B = "9a1b2c3d-4e5f-4a6b-8c7d-0e1f2a3b4c5d";
 const C = "1b2c3d4e-5f6a-4b7c-9d8e-0f1a2b3c4d5e";
+const D = "2c3d4e5f-6a7b-4c8d-9e0f-1a2b3c4d5e6f";
+const E = "3d4e5f6a-7b8c-4d9e-a0f1-2b3c4d5e6f7a";
 const TODAY = "2026-10-18";
 
 let db: DatabaseSync;
@@ -33,39 +35,62 @@ beforeEach(() => {
 	row(A, "2026-09-10", { search: 1 });
 	row(A, "2026-10-17", { search: 3, "route.files": 2 });
 	row(A, "2026-10-18", { search: 1, upload: 2 }, { version: "1.1.0" });
-	// B: new today on Windows, in English.
+	// B: first observed today on Windows; its actual install date is unknown.
 	row(B, "2026-10-18", { upload: 1, "route.shares": 1 }, { os: "windows", arch: "amd64", locale: "en" });
-	// C: new yesterday; a day after today (a clock ahead) is not counted.
+	// C: first observed yesterday; a day after today is not counted yet.
 	row(C, "2026-10-17", { "play.video": 4 });
 	row(C, "2026-10-19", { "play.video": 9 });
+	// D is inside 30 days but outside 7; E is only in cumulative history.
+	row(D, "2026-10-01", { "app.open": 1 });
+	row(E, "2026-09-01", { "app.open": 1 });
 });
 
 describe("stats", () => {
-	it("draws every day of the range, oldest first, with active and new installs", async () => {
+	it("draws every date with active installations and earliest observed IDs", async () => {
 		const s = await stats(d1(db), TODAY, 7);
 		expect(s.daily.map((p) => p.day)).toEqual(["2026-10-12", "2026-10-13", "2026-10-14", "2026-10-15", "2026-10-16", "2026-10-17", "2026-10-18"]);
-		expect(s.daily.at(-2)).toEqual({ day: "2026-10-17", active: 2, new: 1 });
-		expect(s.daily.at(-1)).toEqual({ day: "2026-10-18", active: 2, new: 1 });
-		expect(s.daily[0]).toEqual({ day: "2026-10-12", active: 0, new: 0 });
+		expect(s.daily.at(-2)).toEqual({ day: "2026-10-17", active: 2, firstSeen: 1 });
+		expect(s.daily.at(-1)).toEqual({ day: "2026-10-18", active: 2, firstSeen: 1 });
+		expect(s.daily[0]).toEqual({ day: "2026-10-12", active: 0, firstSeen: 0 });
 	});
 
 	it("sums the headline numbers over their own windows", async () => {
 		const s = await stats(d1(db), TODAY, 7);
-		expect(s.summary).toEqual({ today: 2, yesterday: 2, wau: 3, mau: 3, active: 3, new: 2, total: 3 });
-		// A's first day is outside 7 days but inside 90: new there, and in the month.
+		expect(s.summary).toEqual({ today: 2, yesterday: 2, active7: 3, active30: 4, active: 3, firstSeen: 2, observed: 5 });
+		// Older first-observed IDs enter a wider range, not the current daily count.
 		const q = await stats(d1(db), TODAY, 90);
-		expect(q.summary.new).toBe(3);
+		expect(q.summary.firstSeen).toBe(5);
+		expect(q.summary.active).toBe(5);
+		expect(q.summary.today).toBe(2);
 	});
 
-	it("ranks features by installs, then uses, then name", async () => {
+	it("counts IDs, not verified newly installed devices or people", async () => {
+		const before = await stats(d1(db), TODAY, 7);
+		// A returning ID is not first seen again, however long it was inactive.
+		row(E, TODAY, { "app.open": 1 });
+		const returning = await stats(d1(db), TODAY, 7);
+		expect(returning.summary.firstSeen).toBe(before.summary.firstSeen);
+		expect(returning.summary.observed).toBe(before.summary.observed);
+		expect(returning.summary.today).toBe(before.summary.today + 1);
+		// A rotated ID (reinstall/re-enable) is indistinguishable from a new device.
+		row("4e5f6a7b-8c9d-4e0f-a1b2-3c4d5e6f7a8b", TODAY, { "app.open": 1 });
+		const rotated = await stats(d1(db), TODAY, 7);
+		expect(rotated.summary.firstSeen).toBe(returning.summary.firstSeen + 1);
+		expect(rotated.summary.observed).toBe(returning.summary.observed + 1);
+	});
+
+	it("moves first-seen dates when delayed earlier activity arrives without adding an ID", async () => {
+		row(B, "2026-10-01", { "app.open": 1 });
 		const s = await stats(d1(db), TODAY, 7);
-		expect(s.features).toEqual([
-			{ name: "upload", installs: 2, uses: 3 },
-			{ name: "play.video", installs: 1, uses: 4 },
-			{ name: "search", installs: 1, uses: 4 },
-			{ name: "route.files", installs: 1, uses: 2 },
-			{ name: "route.shares", installs: 1, uses: 1 },
-		]);
+		expect(s.summary.firstSeen).toBe(1);
+		expect(s.summary.observed).toBe(5);
+		expect(s.daily.at(-1)).toEqual({ day: TODAY, active: 2, firstSeen: 0 });
+	});
+
+	it("returns installation statistics without exposing historical feature details", async () => {
+		const s = await stats(d1(db), TODAY, 7);
+		expect(Object.keys(s).sort()).toEqual(["daily", "days", "locales", "platforms", "summary", "today", "versions"]);
+		expect(db.prepare("SELECT counts FROM daily WHERE install_id = ? AND day = ?").get(A, TODAY)).toEqual({ counts: '{"search":1,"upload":2}' });
 	});
 
 	it("counts an install once, as of its latest day, in the breakdowns", async () => {
@@ -91,7 +116,7 @@ describe("the admin Worker", () => {
 		for (const path of ["/", "/api/stats?days=7"]) {
 			const res = await call(path, null);
 			expect(res.status).toBe(403);
-			expect(await res.text()).not.toContain("search");
+			expect(res.headers.get("Cache-Control")).toBe("no-store");
 		}
 	});
 
