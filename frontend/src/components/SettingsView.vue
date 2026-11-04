@@ -243,7 +243,7 @@ const BASE_URL_OPTIONS = computed<SuggestOption[]>(() =>
   AI_PRESETS.filter((p) => p.provider === "openai" && p.baseUrl).map((p) => ({ value: p.baseUrl, detail: p.label })),
 );
 const MODEL_OPTIONS = computed<SuggestOption[]>(() =>
-  (sameModelConnection.value && modelList.ids?.length ? modelList.ids : presetOf(conn).models).map((value) => ({ value })),
+  (sameModelConnection.value && modelList.ids !== null ? modelList.ids : presetOf(conn).models).map((value) => ({ value })),
 );
 
 // The connection fields edit a copy; a change or blur saves what differs.
@@ -1142,6 +1142,7 @@ onBeforeUnmount(() => {
                 </SuggestMenu>
               </div>
               <p class="hint" :class="{ bad: sameModelConnection && modelList.error }" role="status">{{ modelHint }}</p>
+              <p v-if="sameModelConnection && modelList.ids !== null" class="hint">{{ t("按服务端原始模型 ID 展示，不做本地筛选；能否调用取决于账号权限、配额及接口支持。") }}</p>
 
               <div class="field">
                 <span id="ai-key">API Key</span>

@@ -705,6 +705,12 @@ export default {
     ja: "現在の接続先から {n} 個のモデルを取得しました。手動入力もできます。",
     ko: "현재 엔드포인트에서 모델 {n}개를 가져왔습니다. 직접 입력할 수도 있습니다.",
   },
+  "按服务端原始模型 ID 展示，不做本地筛选；能否调用取决于账号权限、配额及接口支持。": {
+    tw: "按伺服器原始模型 ID 顯示，不做本機篩選；能否呼叫取決於帳號權限、配額及介面支援。",
+    en: "Shown with the server's original model IDs, without local filtering. Access depends on account permissions, quota, and API support.",
+    ja: "サーバーが返したモデル ID をローカルで絞り込まずに表示します。利用可否はアカウント権限、割り当て、API の対応状況によります。",
+    ko: "서버에서 반환한 원본 모델 ID를 로컬 필터링 없이 표시합니다. 호출 가능 여부는 계정 권한, 할당량 및 API 지원에 따라 달라집니다.",
+  },
   "节点没有返回模型；仍可手动输入。": {
     tw: "節點沒有傳回模型；仍可手動輸入。",
     en: "This endpoint returned no models; you can still enter one manually.",

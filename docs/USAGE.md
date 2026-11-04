@@ -35,7 +35,7 @@
 
 AI 助手的本地规则与统计可在未配置模型时使用。连接模型或 TMDB 是可选项，使用你自己的服务地址与凭据；发送前阅读数据授权提示，执行前检查实际文件操作计划。AI 可能判断错误，模型费用由所选服务决定。详见[隐私说明](../PRIVACY.md)。
 
-Gemini API：在「设置 → AI」的提供商预设中选择「Google Gemini」，从 [Google AI Studio](https://aistudio.google.com/apikey) 创建自己的 API Key，保存后测试连接；助手内的连接弹窗也可选择该预设。默认模型为 `gemini-3.8-flash`，可刷新模型列表后选择该 Key 有权使用的模型。请求通过 Google 官方 OpenAI 兼容接口发送，API 配额与计费独立于 Google AI Pro／Ultra 订阅；不支持 Google 账号或订阅 OAuth 登录。
+Gemini API：在「设置 → AI」的提供商预设中选择「Google Gemini」，从 [Google AI Studio](https://aistudio.google.com/api-keys) 创建自己的 API Key，保存后刷新模型目录并测试连接；助手内的连接弹窗也可选择该预设。设置页完整展示当前服务端返回的模型列表，不使用本地白名单，也不删除或改写 `models/` 等模型 ID 前缀；选择后按原始 ID 保存并发送请求。预设自带的模型名只是初始值，不保证当前账号可用；应以官方目录中的实际模型 ID 为准。目录可能包含当前账号无法调用或不支持聊天接口的型号，权限与配额仍需「测试连接」确认。保留手动输入和已保存的模型，不自动替换，也不逐个调用探测。请求通过 Google 官方 OpenAI 兼容接口 `https://generativelanguage.googleapis.com/v1beta/openai` 发送，API 配额与计费独立于 Google AI Pro／Ultra 订阅；不支持 Google 账号或订阅 OAuth 登录。
 
 新入库提醒只在已有可处理的整理建议时出现，助手首页、导航角标和菜单栏都遵循此规则。没有建议的文件仍保持未处理，不会自动忽略或标记为已整理；索引或命名设置变化后会重新检查。后台检查不会自动请求模型。
 
