@@ -387,6 +387,7 @@ export interface AIToolCall {
      * model wrote it, so the webview checks it before acting on it.
      */
     "arguments": string;
+    "thoughtSignature"?: string;
 }
 
 /**

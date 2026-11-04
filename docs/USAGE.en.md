@@ -33,6 +33,8 @@ Paused sync does not automatically resume when network connectivity is restored.
 
 The AI assistant’s local rules and statistics can be used without configuring a model. Connecting a model or TMDB is optional; use your own service addresses and credentials. Read the data authorization notice before sending data, and inspect the actual file operation plan before execution. AI may make incorrect judgments, and model costs are determined by the selected service. See the [Privacy Notice](../PRIVACY.en.md) for details.
 
+Gemini API: choose “Google Gemini” under the provider presets in “Settings → AI”, create your own API key in [Google AI Studio](https://aistudio.google.com/apikey), save it, and test the connection. The assistant’s connection sheet offers the same preset. The default model is `gemini-3.8-flash`; refresh the model list to choose a model available to your key. Requests use Google’s official OpenAI-compatible endpoint. API quotas and billing are separate from Google AI Pro / Ultra subscriptions; Google account or subscription OAuth sign-in is not supported.
+
 Newly added files trigger reminders only when actionable organization suggestions are available, consistently across the assistant home, navigation badge, and menu bar. Files without suggestions remain unprocessed; they are not automatically dismissed or marked as organized, and are checked again after index or naming-setting changes. Background checks do not automatically call a model.
 
 ## Settings and Quitting

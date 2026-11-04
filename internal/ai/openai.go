@@ -47,9 +47,16 @@ type openAIFunction struct {
 }
 
 type openAIToolCall struct {
-	ID       string         `json:"id"`
-	Type     string         `json:"type"`
-	Function openAIFunction `json:"function"`
+	ID           string              `json:"id"`
+	Type         string              `json:"type"`
+	Function     openAIFunction      `json:"function"`
+	ExtraContent *openAIExtraContent `json:"extra_content,omitempty"`
+}
+
+type openAIExtraContent struct {
+	Google struct {
+		ThoughtSignature string `json:"thought_signature"`
+	} `json:"google"`
 }
 
 type openAITool struct {
@@ -114,9 +121,10 @@ type openAIChunk struct {
 		Delta struct {
 			Content   json.RawMessage `json:"content"`
 			ToolCalls []struct {
-				Index    *int           `json:"index"`
-				ID       string         `json:"id"`
-				Function openAIFunction `json:"function"`
+				Index        *int                `json:"index"`
+				ID           string              `json:"id"`
+				Function     openAIFunction      `json:"function"`
+				ExtraContent *openAIExtraContent `json:"extra_content"`
 			} `json:"tool_calls"`
 		} `json:"delta"`
 		FinishReason *string `json:"finish_reason"`
@@ -255,11 +263,16 @@ func openAIChatMessages(req Request) []openAIMessage {
 	for _, m := range req.Messages {
 		msg := openAIMessage{Role: m.Role, Content: m.Content, ToolCallID: m.ToolCallID}
 		for _, c := range m.ToolCalls {
-			msg.ToolCalls = append(msg.ToolCalls, openAIToolCall{
+			call := openAIToolCall{
 				ID:       c.ID,
 				Type:     "function",
 				Function: openAIFunction{Name: c.Name, Arguments: string(arguments(c.Arguments))},
-			})
+			}
+			if c.ThoughtSignature != "" {
+				call.ExtraContent = &openAIExtraContent{}
+				call.ExtraContent.Google.ThoughtSignature = c.ThoughtSignature
+			}
+			msg.ToolCalls = append(msg.ToolCalls, call)
 		}
 		out = append(out, msg)
 	}
@@ -308,7 +321,11 @@ func chatOpenAI(ctx context.Context, cfg Config, base string, req Request, strea
 	choice := answer.Choices[0]
 	out.Text = stripThink(contentText(choice.Message.Content))
 	for i, c := range choice.Message.ToolCalls {
-		out.ToolCalls = append(out.ToolCalls, ToolCall{ID: callID(c.ID, i), Name: c.Function.Name, Arguments: received(c.Function.Arguments)})
+		call := ToolCall{ID: callID(c.ID, i), Name: c.Function.Name, Arguments: received(c.Function.Arguments)}
+		if c.ExtraContent != nil {
+			call.ThoughtSignature = c.ExtraContent.Google.ThoughtSignature
+		}
+		out.ToolCalls = append(out.ToolCalls, call)
 	}
 	out.Stop = stopOf(choice.FinishReason == "length", len(out.ToolCalls))
 	whole(req, out)
@@ -319,8 +336,8 @@ func chatOpenAI(ctx context.Context, cfg Config, base string, req Request, strea
 // come (a <think> block held back), tool calls are put together by index.
 func (cfg Config) openAIStream(ctx context.Context, resp *http.Response, req Request) (Response, error) {
 	type call struct {
-		id, name string
-		args     strings.Builder
+		id, name, signature string
+		args                strings.Builder
 	}
 	calls := map[int]*call{}
 	last := -1
@@ -380,6 +397,9 @@ func (cfg Config) openAIStream(ctx context.Context, resp *http.Response, req Req
 				c.name = d.Function.Name
 			}
 			c.args.WriteString(d.Function.Arguments)
+			if d.ExtraContent != nil && d.ExtraContent.Google.ThoughtSignature != "" {
+				c.signature = d.ExtraContent.Google.ThoughtSignature
+			}
 		}
 		if choice.FinishReason != nil && *choice.FinishReason != "" {
 			finish = *choice.FinishReason
@@ -400,7 +420,7 @@ func (cfg Config) openAIStream(ctx context.Context, resp *http.Response, req Req
 	slices.Sort(indexes)
 	for n, i := range indexes {
 		c := calls[i]
-		out.ToolCalls = append(out.ToolCalls, ToolCall{ID: callID(c.id, n), Name: c.name, Arguments: received(c.args.String())})
+		out.ToolCalls = append(out.ToolCalls, ToolCall{ID: callID(c.id, n), Name: c.name, Arguments: received(c.args.String()), ThoughtSignature: c.signature})
 	}
 	out.Text = text.String()
 	out.Stop = stopOf(finish == "length", len(out.ToolCalls))

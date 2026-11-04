@@ -47,6 +47,8 @@ export interface AIToolCall {
   name: string;
   /** JSON text. */
   arguments: string;
+  /** Opaque Gemini reasoning state; kept with the call for its tool continuation. */
+  thoughtSignature?: string;
 }
 
 export interface AIChatMessage {

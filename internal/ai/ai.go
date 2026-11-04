@@ -148,6 +148,8 @@ type ToolCall struct {
 	// compacted when it is one. A model may write anything here, so the
 	// caller checks it before acting on it.
 	Arguments json.RawMessage
+	// ThoughtSignature is opaque Gemini reasoning state, replayed with this call.
+	ThoughtSignature string
 }
 
 // Request asks the model for one JSON object (OutputSchema set) or for a

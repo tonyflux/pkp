@@ -180,7 +180,8 @@ type AIToolCall struct {
 	Name string `json:"name"`
 	// Arguments is the JSON object the model passed, as text — as the
 	// model wrote it, so the webview checks it before acting on it.
-	Arguments string `json:"arguments"`
+	Arguments        string `json:"arguments"`
+	ThoughtSignature string `json:"thoughtSignature,omitempty"`
 }
 
 // AIChatMessage is one turn of a conversation: Role "user", "assistant"
@@ -439,7 +440,7 @@ func (d *DriveService) AIChat(id string, req AIChatRequest) (AIChatReply, error)
 	for i, m := range req.Messages {
 		msg := ai.Message{Role: m.Role, Content: m.Content, ToolCallID: m.ToolCallID}
 		for _, c := range m.ToolCalls {
-			msg.ToolCalls = append(msg.ToolCalls, ai.ToolCall{ID: c.ID, Name: c.Name, Arguments: json.RawMessage(c.Arguments)})
+			msg.ToolCalls = append(msg.ToolCalls, ai.ToolCall{ID: c.ID, Name: c.Name, Arguments: json.RawMessage(c.Arguments), ThoughtSignature: c.ThoughtSignature})
 		}
 		areq.Messages[i] = msg
 	}
@@ -462,7 +463,7 @@ func (d *DriveService) AIChat(id string, req AIChatRequest) (AIChatReply, error)
 	}
 	reply := AIChatReply{Text: resp.Text, Stop: resp.Stop, Input: resp.Usage.Input, OutputTokens: resp.Usage.Output}
 	for _, c := range resp.ToolCalls {
-		reply.ToolCalls = append(reply.ToolCalls, AIToolCall{ID: c.ID, Name: c.Name, Arguments: string(c.Arguments)})
+		reply.ToolCalls = append(reply.ToolCalls, AIToolCall{ID: c.ID, Name: c.Name, Arguments: string(c.Arguments), ThoughtSignature: c.ThoughtSignature})
 	}
 	return reply, nil
 }

@@ -58,6 +58,15 @@ export const AI_PRESETS: readonly AIPreset[] = [
     keyUrl: "https://platform.openai.com/api-keys",
   },
   {
+    id: "gemini",
+    label: "Google Gemini",
+    provider: "openai",
+    baseUrl: "https://generativelanguage.googleapis.com/v1beta/openai",
+    model: "gemini-3.8-flash",
+    models: ["gemini-3.8-flash", "gemini-4-argon"],
+    keyUrl: "https://aistudio.google.com/apikey",
+  },
+  {
     id: "anthropic",
     label: "Anthropic",
     provider: "anthropic",
