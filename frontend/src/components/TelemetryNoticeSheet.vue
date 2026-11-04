@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import AssistantSheet from "./AssistantSheet.vue";
 import { t } from "../i18n";
-import { acknowledgeTelemetryNotice, setTelemetryEnabled, telemetry } from "../store";
+import { acknowledgeTelemetryNotice, telemetry } from "../store";
 </script>
 
 <template>
@@ -23,7 +23,6 @@ import { acknowledgeTelemetryNotice, setTelemetryEnabled, telemetry } from "../s
     <p class="sheet-small">{{ t("可随时关闭；会删除本机编号和待发送记录，不会删除服务端已收到的数据。再次开启会生成新编号。") }}</p>
     <p v-if="telemetry.error" class="sheet-error" role="alert">{{ telemetry.error }}</p>
     <div class="sheet-actions">
-      <button class="sheet-btn" type="button" :disabled="telemetry.saving" @click="setTelemetryEnabled(false)">{{ t("关闭统计") }}</button>
       <button class="sheet-btn primary" type="button" data-autofocus :disabled="telemetry.saving" @click="acknowledgeTelemetryNotice">{{ t("知道了") }}</button>
     </div>
   </AssistantSheet>
