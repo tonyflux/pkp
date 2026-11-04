@@ -1,8 +1,6 @@
 name: Release
 
 on:
-  push:
-    tags: ['v*']
   workflow_dispatch:
     inputs:
       tag:
@@ -18,18 +16,18 @@ permissions:
   contents: read
 
 concurrency:
-  group: release-${{ inputs.tag || github.ref_name }}
+  group: release-${{ inputs.tag }}
   cancel-in-progress: false
 
 jobs:
   checks:
-    if: github.event_name == 'push' || github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main'
     uses: ./.github/workflows/ci.yml
     with:
-      source-ref: ${{ inputs.tag || github.ref_name }}
+      source-ref: ${{ inputs.tag }}
 
   release:
-    if: github.event_name != 'workflow_dispatch' || !inputs.publish
+    if: ${{ !inputs.publish }}
     needs: checks
     runs-on: macos-15
     timeout-minutes: 180
@@ -37,7 +35,7 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
-          ref: ${{ inputs.tag || github.ref_name }}
+          ref: ${{ inputs.tag }}
           fetch-depth: 0
           persist-credentials: false
       - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
@@ -50,7 +48,7 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
       - name: Validate stable source tag and notes
         env:
-          RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
+          RELEASE_TAG: ${{ inputs.tag }}
         shell: bash
         run: |
           set -euo pipefail
@@ -95,7 +93,7 @@ jobs:
           make release-verify
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: signed-release-${{ inputs.tag || github.ref_name }}
+          name: signed-release-${{ inputs.tag }}
           path: bin/releases/v*
           if-no-files-found: error
           retention-days: 14
@@ -107,7 +105,7 @@ jobs:
           go run ./cmd/pkp-release publish -dir "bin/releases/v$version"
 
   promote:
-    if: github.event_name == 'workflow_dispatch' && inputs.publish
+    if: inputs.publish
     needs: checks
     runs-on: ubuntu-24.04
     timeout-minutes: 20

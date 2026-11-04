@@ -44,6 +44,8 @@ type Client struct {
 	log  *slog.Logger
 	logs *mpvLog
 
+	// Native callers hold mu until their handle use ends; Close drains them
+	// before detaching. The event loop is drained separately via loopDone.
 	mu     sync.RWMutex
 	handle *C.mpv_handle
 	rect   Rect
@@ -158,8 +160,8 @@ func (c *Client) AttachSurface(nsWindow unsafe.Pointer) error {
 		return nil
 	}
 	c.mu.RLock()
+	defer c.mu.RUnlock()
 	handle := c.handle
-	c.mu.RUnlock()
 	if handle == nil {
 		return ErrNotRunning
 	}
@@ -285,13 +287,8 @@ func (c *Client) Command(_ context.Context, args ...any) error {
 	if len(args) == 0 {
 		return fmt.Errorf("mpv: empty command")
 	}
-	c.mu.RLock()
-	handle := c.handle
-	c.mu.RUnlock()
-	if handle == nil {
-		return ErrNotRunning
-	}
-
+	// Convert values before borrowing the core: a Stringer may call back
+	// into the client, including closing it.
 	argv := make([]*C.char, len(args)+1)
 	for i, arg := range args {
 		argv[i] = C.CString(scalarString(arg))
@@ -304,7 +301,16 @@ func (c *Client) Command(_ context.Context, args ...any) error {
 		}
 	}()
 
-	if status := C.mpv_command(handle, &argv[0]); status < 0 {
+	c.mu.RLock()
+	handle := c.handle
+	if handle == nil {
+		c.mu.RUnlock()
+		return ErrNotRunning
+	}
+
+	status := C.mpv_command(handle, &argv[0])
+	c.mu.RUnlock()
+	if status < 0 {
 		return fmt.Errorf("mpv: %v: %s", args[0], errorString(status))
 	}
 	return nil
@@ -314,8 +320,8 @@ func (c *Client) Command(_ context.Context, args ...any) error {
 func (c *Client) GetProperty(_ context.Context, name string, out any) error {
 	c.mu.RLock()
 	handle := c.handle
-	c.mu.RUnlock()
 	if handle == nil {
+		c.mu.RUnlock()
 		return ErrNotRunning
 	}
 
@@ -323,7 +329,9 @@ func (c *Client) GetProperty(_ context.Context, name string, out any) error {
 	defer C.free(unsafe.Pointer(cName))
 
 	var node C.mpv_node
-	if status := C.mpv_get_property(handle, cName, C.MPV_FORMAT_NODE, unsafe.Pointer(&node)); status < 0 {
+	status := C.mpv_get_property(handle, cName, C.MPV_FORMAT_NODE, unsafe.Pointer(&node))
+	c.mu.RUnlock()
+	if status < 0 {
 		return fmt.Errorf("mpv: get %s: %s", name, errorString(status))
 	}
 	defer C.mpv_free_node_contents(&node)
@@ -344,13 +352,14 @@ func (c *Client) GetProperty(_ context.Context, name string, out any) error {
 // SetProperty writes a property. Values go over as strings, which mpv parses
 // per the property's own type.
 func (c *Client) SetProperty(_ context.Context, name string, value any) error {
+	text := scalarString(value)
 	c.mu.RLock()
+	defer c.mu.RUnlock()
 	handle := c.handle
-	c.mu.RUnlock()
 	if handle == nil {
 		return ErrNotRunning
 	}
-	if err := setPropertyString(handle, name, scalarString(value)); err != nil {
+	if err := setPropertyString(handle, name, text); err != nil {
 		return err
 	}
 	return nil
@@ -360,10 +369,10 @@ func (c *Client) SetProperty(_ context.Context, name string, value any) error {
 // events named EventPropertyChange.
 func (c *Client) ObserveProperty(_ context.Context, name string) error {
 	c.mu.Lock()
+	defer c.mu.Unlock()
 	handle := c.handle
 	c.observeID++
 	id := c.observeID
-	c.mu.Unlock()
 	if handle == nil {
 		return ErrNotRunning
 	}

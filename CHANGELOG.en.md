@@ -2,6 +2,11 @@
 
 [简体中文](CHANGELOG.md) · English
 
+## Unreleased
+
+- Make release builds explicitly dispatched from `main` only, avoiding duplicate signing/upload jobs when local publication creates a tag. Keep normal CI and independent public-download verification after a Release is published; existing assets remain unchanged.
+- Fix native player handle lifetime during shutdown concurrent with background track restoration. macOS and Windows native calls retain the handle lock until complete, so shutdown drains them before destroying the core while allowing event callbacks to exit. Add real-player concurrent-shutdown regressions.
+
 ## 0.3.0 · 2026-11-04
 
 - Fix duplicate password-reveal icons in initial sign-in, adding accounts and reauthentication by hiding Edge/WebView2's native reveal control where the app supplies its own. Preserve password entry, autofill and keyboard access.

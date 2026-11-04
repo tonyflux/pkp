@@ -212,12 +212,151 @@ func TestCloseStopsTheCore(t *testing.T) {
 	if c.Running() {
 		t.Error("Running() = true after Close")
 	}
-	if err := c.Command(context.Background(), "loadfile", testClip); err != ErrNotRunning {
-		t.Errorf("command after close: err = %v, want ErrNotRunning", err)
+	ctx := context.Background()
+	for name, call := range map[string]func() error{
+		"command": func() error { return c.Command(ctx, "loadfile", testClip) },
+		"get":     func() error { return c.GetProperty(ctx, "track-list", nil) },
+		"set":     func() error { return c.SetProperty(ctx, "pause", true) },
+		"observe": func() error { return c.ObserveProperty(ctx, "pause") },
+	} {
+		if err := call(); err != ErrNotRunning {
+			t.Errorf("%s after close: err = %v, want ErrNotRunning", name, err)
+		}
 	}
 	// Idempotent: ServiceShutdown may run after the core already quit.
 	if err := c.Close(); err != nil {
 		t.Errorf("second close: %v", err)
+	}
+}
+
+// Argument conversion can overlap shutdown before the native call starts.
+// Closing from a Stringer makes that old snapshot-to-call gap deterministic.
+func TestCloseDuringValueConversion(t *testing.T) {
+	for name, call := range map[string]func(*Client, any) error{
+		"command": func(c *Client, value any) error {
+			return c.Command(context.Background(), "set", "pause", value)
+		},
+		"set": func(c *Client, value any) error {
+			return c.SetProperty(context.Background(), "pause", value)
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			c, _ := startClient(t)
+			var closeErr error
+			value := lifecycleValue(func() string {
+				shutdown := make(chan error, 1)
+				go func() { shutdown <- c.Close() }()
+				closeErr = <-shutdown
+				return "yes"
+			})
+			result := make(chan error, 1)
+			go func() { result <- call(c, value) }()
+			select {
+			case err := <-result:
+				if closeErr != nil {
+					t.Fatalf("close during conversion: %v", closeErr)
+				}
+				if err != ErrNotRunning {
+					t.Fatalf("call after shutdown during conversion: %v, want ErrNotRunning", err)
+				}
+			case <-time.After(5 * time.Second):
+				t.Fatal("shutdown deadlocked during value conversion")
+			}
+			if c.Running() {
+				t.Fatal("Running() = true after shutdown during conversion")
+			}
+		})
+	}
+}
+
+type lifecycleValue func() string
+
+func (v lifecycleValue) String() string { return v() }
+
+// The service's deferred track restoration may still be reading or writing
+// properties when shutdown starts. Exercise real native calls on both sides
+// of detach, rather than substituting a fake core.
+func TestCloseWithConcurrentNativeCalls(t *testing.T) {
+	c, events := startClient(t)
+	ctx := context.Background()
+	if err := c.Command(ctx, "loadfile", testClip, "replace"); err != nil {
+		t.Fatalf("loadfile: %v", err)
+	}
+	waitEvent(t, events, func(ev Event) bool { return ev.Name == EventFileLoaded }, 20*time.Second)
+
+	calls := []func() error{
+		func() error {
+			var tracks []struct {
+				ID   int    `json:"id"`
+				Type string `json:"type"`
+			}
+			return c.GetProperty(ctx, "track-list", &tracks)
+		},
+		func() error { return c.Command(ctx, "set", "pause", "yes") },
+		func() error { return c.SetProperty(ctx, "volume", 50) },
+		func() error { return c.ObserveProperty(ctx, "pause") },
+	}
+	const workersPerCall = 4
+	ready := make(chan error, workersPerCall*len(calls))
+	errs := make(chan error, workersPerCall*len(calls))
+	closing := make(chan struct{})
+	var wg sync.WaitGroup
+	for range workersPerCall {
+		for _, call := range calls {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				err := call()
+				ready <- err
+				if err != nil {
+					return
+				}
+				<-closing
+				for {
+					switch err := call(); err {
+					case nil:
+					case ErrNotRunning:
+						return
+					default:
+						errs <- err
+						return
+					}
+				}
+			}()
+		}
+	}
+	for range cap(ready) {
+		if err := <-ready; err != nil {
+			t.Errorf("native call before shutdown: %v", err)
+		}
+	}
+	closed := make(chan error, 1)
+	go func() {
+		<-closing
+		closed <- c.Close()
+	}()
+	close(closing)
+	done := make(chan struct{})
+	go func() {
+		wg.Wait()
+		close(done)
+	}()
+	select {
+	case <-done:
+	case <-time.After(5 * time.Second):
+		t.Fatal("native callers did not stop after shutdown")
+	}
+	close(errs)
+	for err := range errs {
+		t.Errorf("native call during shutdown: %v", err)
+	}
+	select {
+	case err := <-closed:
+		if err != nil {
+			t.Fatalf("close: %v", err)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("Close did not drain native callers and the event loop")
 	}
 }
 
@@ -228,6 +367,8 @@ func TestCloseWhilePlaying(t *testing.T) {
 	c := New(Options{Headless: true, Logger: quiet()})
 	playing := make(chan struct{})
 	gate := make(chan struct{})
+	release := sync.OnceFunc(func() { close(gate) })
+	defer release()
 	var once sync.Once
 	c.SetEventHandler(func(ev Event) {
 		if ev.Name == EventPropertyChange && ev.Property == "time-pos" && string(ev.Data) != "null" {
@@ -242,6 +383,7 @@ func TestCloseWhilePlaying(t *testing.T) {
 	if err := c.Start(context.Background()); err != nil {
 		t.Fatalf("start mpv: %v", err)
 	}
+	t.Cleanup(func() { _ = c.Close() })
 
 	ctx := context.Background()
 	if err := c.SetProperty(ctx, "loop-file", "inf"); err != nil {
@@ -261,8 +403,24 @@ func TestCloseWhilePlaying(t *testing.T) {
 
 	closed := make(chan error, 1)
 	go func() { closed <- c.Close() }()
-	time.Sleep(200 * time.Millisecond)
-	close(gate)
+	detached := make(chan error, 1)
+	go func() {
+		for {
+			if err := c.GetProperty(ctx, "mpv-version", nil); err != nil {
+				detached <- err
+				return
+			}
+		}
+	}()
+	select {
+	case err := <-detached:
+		if err != ErrNotRunning {
+			t.Fatalf("read during close: %v, want ErrNotRunning", err)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("Close did not detach while the event handler was pending")
+	}
+	release()
 
 	select {
 	case err := <-closed:
