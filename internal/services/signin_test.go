@@ -9,6 +9,7 @@ import (
 	"net/http/httptest"
 	"path/filepath"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -300,5 +301,56 @@ func TestEndedSessionWithoutAutoSignInAsks(t *testing.T) {
 	}
 	if sent := srv.sent(); len(sent) != 1 {
 		t.Errorf("passwords sent = %q, want none at launch", sent)
+	}
+}
+
+func TestSignInFailureClassification(t *testing.T) {
+	const captchaPath = "/v1/shield/captcha/init"
+	const signInPath = "/v1/auth/signin"
+	for _, tc := range []struct {
+		name, path, body, want string
+		status                 int
+	}{
+		{"captcha gateway rejection", captchaPath, "<html>Forbidden</html>", "other", http.StatusForbidden},
+		{"sign-in gateway rejection", signInPath, "<html>Forbidden</html>", "other", http.StatusForbidden},
+		{"client rejection with reused code", signInPath, `{"error":"invalid_client","error_code":4002}`, "other", http.StatusBadRequest},
+		{"password name before password exchange", captchaPath, `{"error":"password_not_match","error_code":4002}`, "other", http.StatusBadRequest},
+		{"password rejection in success envelope", signInPath, `{"error":"password_not_match","error_code":4002}`, "credentials", http.StatusOK},
+		{"captcha rejection with reused code", signInPath, `{"error":"captcha_invalid","error_code":4002}`, "verification", http.StatusBadRequest},
+		{"rate limit takes precedence", signInPath, `{"error":"password_not_match"}`, "busy", http.StatusTooManyRequests},
+		{"server failure takes precedence", signInPath, `{"error":"password_not_match"}`, "network", http.StatusServiceUnavailable},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			var signIns atomic.Int32
+			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.URL.Path == signInPath {
+					signIns.Add(1)
+				}
+				if r.URL.Path == tc.path {
+					w.WriteHeader(tc.status)
+					_, _ = io.WriteString(w, tc.body)
+					return
+				}
+				if r.URL.Path == captchaPath {
+					_, _ = io.WriteString(w, `{"captcha_token":"captcha","expires_in":300}`)
+					return
+				}
+				t.Errorf("unexpected request: %s", r.URL.Path)
+				w.WriteHeader(http.StatusNotFound)
+			}))
+			t.Cleanup(srv.Close)
+			svc := startSignInService(t, t.TempDir(), &signInServer{Server: srv}, &memoryVault{})
+
+			res, err := svc.SignIn(SignInRequest{Login: "user@example.com", Password: "correct-password"})
+			if err != nil || res.Failure != tc.want {
+				t.Fatalf("sign-in failure = %q, error = %v, want %q", res.Failure, err, tc.want)
+			}
+			if tc.path == captchaPath && signIns.Load() != 0 {
+				t.Errorf("captcha rejection sent %d password exchanges", signIns.Load())
+			}
+			if len(svc.Accounts()) != 0 {
+				t.Error("refused sign-in created an account")
+			}
+		})
 	}
 }

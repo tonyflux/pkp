@@ -4,6 +4,7 @@
 
 ## Unreleased
 
+- Fix sign-in error classification: report incorrect credentials only when the sign-in endpoint explicitly rejects the password. Unknown 4xx responses, including captcha initialization failures, gateway refusals and client identity errors, now use the generic sign-in failure message. Keep separate human-verification, rate-limit and network-failure messages.
 - Rewrite the English README for a public launch: English interface illustrations, release badges, install and build sections, and v0.2.0 as the published latest release. Move the previous v0.1.0 / v0.2.0 licensing notes to `docs/legal/version-licensing.en.md` with their wording kept. Align the install, privacy, and release docs with that published release.
 - Make the English project overview the default `README.md`, retain Simplified Chinese as `README.zh-CN.md`, and update language-switching and documentation links.
 - Show AI assistant home reminders, navigation badges, and menu bar prompts only for newly added files with actionable organization suggestions. Arrivals without suggestions stay silent and unprocessed, and are checked again after index or naming-setting changes. Background checks never call a model automatically.

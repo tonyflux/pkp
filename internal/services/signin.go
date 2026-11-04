@@ -309,7 +309,8 @@ func signInFailure(err error) (kind, message string) {
 			return "busy", i18n.T("登录尝试过于频繁，请稍后再试")
 		case apiErr.Status >= 500:
 			return "network", i18n.T("PikPak 服务暂时不可用，请稍后再试")
-		case apiErr.Status >= 400:
+		// Only a password rejection from sign-in says anything about the credentials.
+		case apiErr.Path == "/v1/auth/signin" && apiErr.Name == "password_not_match":
 			return "credentials", i18n.T("账号或密码不正确，请检查后重试")
 		}
 	}
