@@ -700,8 +700,30 @@ func (d *DriveService) restore() error {
 // resume restores one account's session from its credentials file.
 func (d *DriveService) resume(s *accountSession) {
 	rec := s.record()
-	tokens := d.newTokenManager(s, rec.DeviceID, d.credentialsStore(s.key))
+	tokens := d.newTokenManager(s, rec.DeviceID, d.profile(), d.credentialsStore(s.key))
 	stored, err := tokens.Current()
+	// Credentials are authoritative if a reauthentication persisted before the
+	// separate account-list write. Keep both its issuing device and client.
+	if err == nil {
+		profile := tokens.Profile()
+		if stored.ClientID != "" && stored.ClientID != profile.ClientID {
+			if stored.ClientID == drive.WebClientID {
+				profile = drive.WebProfile()
+			} else {
+				err = drive.ErrPasswordRequired
+			}
+		}
+		deviceID := rec.DeviceID
+		if stored.DeviceID != "" {
+			deviceID = stored.DeviceID
+		}
+		if deviceID != rec.DeviceID || profile.ClientID != tokens.Profile().ClientID {
+			s.mu.Lock()
+			s.rec.DeviceID = deviceID
+			s.mu.Unlock()
+			tokens = d.newTokenManager(s, deviceID, profile, d.credentialsStore(s.key))
+		}
+	}
 	switch {
 	case err != nil:
 		d.log.Warn("drive: stored session unreadable", "account", s.key, "error", err)
@@ -724,10 +746,10 @@ func (d *DriveService) resume(s *accountSession) {
 // newTokenManager builds the token manager of an account's session. The
 // password rung asks the session: the password this process signed in
 // with, or the remembered one when Auto Sign-In is on.
-func (d *DriveService) newTokenManager(s *accountSession, deviceID string, store drive.Store) *drive.TokenManager {
+func (d *DriveService) newTokenManager(s *accountSession, deviceID string, profile drive.ClientProfile, store drive.Store) *drive.TokenManager {
 	return drive.NewTokenManager(drive.TokenManagerConfig{
 		AuthBaseURL: d.opts.AuthBaseURL,
-		Profile:     d.profile(),
+		Profile:     profile,
 		DeviceID:    deviceID,
 		Store:       store,
 		Password:    func() (string, error) { return d.passwordFor(s) },
@@ -737,10 +759,11 @@ func (d *DriveService) newTokenManager(s *accountSession, deviceID string, store
 // buildSession brings an account's client up on tokens, with its upload and
 // download queues, play record and index.
 func (d *DriveService) buildSession(s *accountSession, tokens *drive.TokenManager) error {
+	profile := tokens.Profile()
 	client, err := drive.New(drive.Config{
 		APIBaseURL:  d.opts.APIBaseURL,
 		AuthBaseURL: d.opts.AuthBaseURL,
-		Profile:     d.profile(),
+		Profile:     profile,
 		DeviceID:    tokens.DeviceID(),
 		Captcha:     tokens.Captcha(),
 		Logger:      d.log,
@@ -767,7 +790,7 @@ func (d *DriveService) buildSession(s *accountSession, tokens *drive.TokenManage
 	downloads := download.New(client, download.Options{
 		Parallel:  settings.ParallelDownloads,
 		Threads:   settings.DownloadThreads,
-		UserAgent: d.profile().UserAgent,
+		UserAgent: profile.UserAgent,
 		OnChange:  func(t download.Task) { d.publishDownload(s, t) },
 	})
 	if d.configErr == nil {

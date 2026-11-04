@@ -8,6 +8,8 @@ import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } 
 import Icon from "./Icon.vue";
 import Orbit from "./Orbit.vue";
 import AccountIdentity from "./AccountIdentity.vue";
+import QRSignIn from "./QRSignIn.vue";
+import { completeQRSignIn } from "../store";
 import { WORKSPACE_QUERY, keychainName } from "../dom";
 import { maskLogin } from "../format";
 import {
@@ -36,6 +38,7 @@ const dialog = computed(() => accounts.dialog);
 const sheet = ref<HTMLElement>();
 const loginField = ref<HTMLInputElement>();
 const passwordField = ref<HTMLInputElement>();
+const passwordShown = ref(false);
 const renameField = ref<HTMLInputElement>();
 
 // The account the dialog is about.
@@ -78,6 +81,22 @@ const title = computed(() => {
 const emptySaved = (): SavedSignIn => ({ supported: false, account: "", hasPassword: false, remember: false, autoSignIn: false });
 const signin = reactive({ login: "", password: "", label: "", remember: true, autoSignIn: true, pending: false, error: "" });
 const saved = ref<SavedSignIn>(emptySaved());
+const mode = ref<"qr" | "password">("qr");
+const changingMode = ref(false);
+async function setMode(value: "qr" | "password") {
+  if (value === mode.value || changingMode.value) return;
+  const d = accounts.dialog;
+  const serial = ++signinSerial;
+  changingMode.value = true;
+  if (signin.pending) await cancelSignIn();
+  changingMode.value = false;
+  if (accounts.dialog !== d || serial !== signinSerial) return;
+  signin.pending = false;
+  mode.value = value;
+  passwordShown.value = false;
+  signin.error = "";
+  void nextTick(() => document.getElementById(value === "qr" ? "account-qr-tab" : "account-password-tab")?.focus());
+}
 // Bumped whenever an answer in flight stops mattering: the form was closed,
 // or another one opened.
 let signinSerial = 0;
@@ -100,6 +119,7 @@ function toggleAutoSignIn() {
 
 async function submitSignin() {
   const d = accounts.dialog;
+  if (mode.value !== "password") return;
   if (d?.kind !== "signin" || signin.pending) return;
   const login = signin.login.trim();
   const label = signin.label.trim();
@@ -114,6 +134,7 @@ async function submitSignin() {
   }
   signin.error = "";
   signin.pending = true;
+  passwordShown.value = false;
   const serial = ++signinSerial;
   const res = await submitSignIn({
     login,
@@ -223,13 +244,14 @@ function answer(go: boolean) {
 
 // Esc, ×, Cancel and the scrim: a sign-in in flight is called off first, and
 // its late answer ignored.
-function dismiss() {
+async function dismiss() {
+  const d = accounts.dialog;
   if (signin.pending) {
     signinSerial += 1;
+    await cancelSignIn();
     signin.pending = false;
-    void cancelSignIn();
   }
-  closeAccountDialog();
+  if (accounts.dialog === d) closeAccountDialog();
 }
 
 function focusDefault() {
@@ -242,6 +264,9 @@ function focusDefault() {
 
 async function open(d: AccountDialog) {
   signinSerial += 1;
+  mode.value = "qr";
+  passwordShown.value = false;
+  changingMode.value = false;
   Object.assign(signin, { login: "", password: "", label: "", remember: true, autoSignIn: true, pending: false, error: "" });
   saved.value = emptySaved();
   Object.assign(rename, { name: "", error: "", saving: false });
@@ -379,6 +404,16 @@ onBeforeUnmount(() => {
           <p class="lead">
             {{ reauth ? t("验证此账号后恢复访问，原有任务保留归属。") : t("保留已登录账号，添加你的备用号或内容分区。") }}
           </p>
+          <div class="signin-tabs" role="tablist" :aria-label="t('登录方式')" @keydown.left.prevent="setMode(mode === 'qr' ? 'password' : 'qr')" @keydown.right.prevent="setMode(mode === 'qr' ? 'password' : 'qr')">
+            <button id="account-qr-tab" type="button" role="tab" :aria-selected="mode === 'qr'" aria-controls="account-qr-panel" :tabindex="mode === 'qr' ? 0 : -1" @click="setMode('qr')">{{ t("扫码登录") }}</button>
+            <button id="account-password-tab" type="button" role="tab" :aria-selected="mode === 'password'" aria-controls="account-password-panel" :tabindex="mode === 'password' ? 0 : -1" @click="setMode('password')">{{ t("密码登录") }}</button>
+          </div>
+          <div v-if="mode === 'qr'" id="account-qr-panel" role="tabpanel" aria-labelledby="account-qr-tab">
+            <QRSignIn :key="dialog.account" :account="dialog.account" @complete="completeQRSignIn" />
+            <p v-if="!reauth" class="foot">{{ t("登录后可在账号菜单中添加本机备注") }}</p>
+            <div class="actions"><button type="button" @click="dismiss">{{ t("取消") }}</button></div>
+          </div>
+          <div v-else id="account-password-panel" class="password-panel" role="tabpanel" aria-labelledby="account-password-tab">
           <label class="field">
             <span>{{ t("账号（邮箱或手机号）") }}</span>
             <input
@@ -390,17 +425,32 @@ onBeforeUnmount(() => {
               :data-autofocus="reauth ? undefined : ''"
             />
           </label>
-          <label class="field">
-            <span>{{ t("密码") }}</span>
-            <input
-              ref="passwordField"
-              v-model="signin.password"
-              type="password"
-              autocomplete="current-password"
-              :placeholder="usesSaved ? t('已记住密码，可直接登录') : ''"
-              :data-autofocus="reauth ? '' : undefined"
-            />
-          </label>
+          <div class="field">
+            <label for="account-signin-password">{{ t("密码") }}</label>
+            <div class="pw-field">
+              <input
+                id="account-signin-password"
+                ref="passwordField"
+                v-model="signin.password"
+                :type="passwordShown ? 'text' : 'password'"
+                autocomplete="current-password"
+                autocapitalize="off"
+                spellcheck="false"
+                :placeholder="usesSaved ? t('已记住密码，可直接登录') : ''"
+                :data-autofocus="reauth ? '' : undefined"
+              />
+              <button
+                type="button"
+                class="pw-eye"
+                :aria-label="passwordShown ? t('隐藏密码') : t('显示密码')"
+                :aria-pressed="passwordShown"
+                @mousedown.prevent
+                @click="passwordShown = !passwordShown"
+              >
+                <Icon :name="passwordShown ? 'eyeOff' : 'eye'" :size="18" />
+              </button>
+            </div>
+          </div>
           <label v-if="!reauth" class="field">
             <span>{{ t("本机备注") }} <small>{{ t("可选") }}</small></span>
             <input v-model="signin.label" :maxlength="LABEL_MAX" :placeholder="t('例如：影视收藏')" />
@@ -441,6 +491,7 @@ onBeforeUnmount(() => {
               <Orbit v-if="signin.pending" :size="15" :label="t('正在登录')" />
               {{ signin.pending ? t("正在登录…") : reauth ? t("重新登录") : t("登录并添加") }}
             </button>
+          </div>
           </div>
           <p class="foot">{{ t("登录成功后切换到此账号；同一账号不会重复添加。") }}</p>
         </form>
@@ -508,6 +559,10 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
+.signin-tabs { display: flex; padding: 3px; border-radius: 10px; background: var(--accent-soft); }
+.signin-tabs button { flex: 1; padding: 9px 8px; border: 0; border-radius: 8px; background: transparent; color: var(--fg-dim); font-size: 13px; }
+.signin-tabs button[aria-selected="true"] { background: var(--primary); color: var(--on-primary); box-shadow: inset 0 1px 0 var(--primary-rim), 0 2px 7px var(--primary-glow); }
+.password-panel { display: flex; flex-direction: column; gap: 14px; }
 /* Above every other sheet: its questions come up over them. */
 .account-scrim {
   z-index: 50;
@@ -570,7 +625,8 @@ h2 {
   gap: 6px;
 }
 
-.field > span {
+.field > span,
+.field > label {
   font-size: 13px;
   font-weight: 600;
   color: var(--fg);
@@ -584,6 +640,34 @@ h2 {
 .field input {
   height: 44px;
   font-size: 15px;
+}
+
+.pw-field {
+  position: relative;
+  display: flex;
+}
+
+.pw-field input {
+  flex: 1;
+  min-width: 0;
+  padding-right: 44px;
+}
+
+.pw-eye {
+  position: absolute;
+  right: 2px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 36px;
+  min-height: 34px;
+  padding: 0;
+  border-color: transparent;
+  background: transparent;
+  color: var(--fg-dim);
+}
+
+.pw-eye:active:not(:disabled) {
+  transform: translateY(-50%);
 }
 
 .login {

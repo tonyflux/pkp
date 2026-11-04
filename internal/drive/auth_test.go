@@ -767,3 +767,40 @@ func TestStoredCredentialsCarryNoPassword(t *testing.T) {
 		t.Errorf("the password reached the credentials file: %s", encoded)
 	}
 }
+
+func TestRenewalDoesNotAdoptAnotherClientSession(t *testing.T) {
+	srv := newAuthServer(t)
+	store := FileStore{Path: filepath.Join(t.TempDir(), "credentials.json")}
+	android := processManager(srv, store.Path, func() (string, error) { return "hunter2", nil })
+	if err := android.Seed(Token{Username: "user@example.com", RefreshToken: "android-refresh"}); err != nil {
+		t.Fatal(err)
+	}
+	web := NewTokenManager(TokenManagerConfig{
+		AuthBaseURL: srv.URL, Profile: WebProfile(),
+		DeviceID: android.DeviceID(), Store: store,
+	})
+	if err := web.Seed(Token{Username: "user@example.com", AccessToken: "web-access", RefreshToken: "web-refresh", ExpiresAt: time.Now().Add(time.Hour)}); err != nil {
+		t.Fatal(err)
+	}
+	granted, err := store.Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := android.Token(context.Background()); !errors.Is(err, ErrPasswordRequired) {
+		t.Fatalf("old client adopted the web session: %v", err)
+	}
+	if err := android.Seed(granted); err == nil {
+		t.Fatal("old client accepted the web grant")
+	}
+	stored, err := store.Load()
+	if err != nil || stored != granted {
+		t.Fatal("old client overwrote the web session")
+	}
+	if captcha, signIns, refreshes := srv.counts(); captcha != 0 || signIns != 0 || refreshes != 0 {
+		t.Fatalf("old client attempted authentication: captcha=%d signIns=%d refreshes=%d", captcha, signIns, refreshes)
+	}
+	restoredWrongClient := processManager(srv, store.Path, nil)
+	if _, err := restoredWrongClient.Token(context.Background()); !errors.Is(err, ErrPasswordRequired) {
+		t.Fatalf("fresh wrong-client manager adopted the web session: %v", err)
+	}
+}

@@ -18,6 +18,7 @@
     "docx-preview": "0.3.7",
     "dompurify": "3.4.17",
     "pdfjs-dist": "5.4.296",
+    "qrcode-generator": "1.4.4",
     "read-excel-file": "6.0.1",
     "vue": "^3.2.45"
   },

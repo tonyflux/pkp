@@ -109,6 +109,8 @@ export type {
     ProxyInput,
     ProxySettings,
     ProxyTestResult,
+    QRSignInRequest,
+    QRSignInState,
     Quality,
     QualityState,
     QuotaInfo,

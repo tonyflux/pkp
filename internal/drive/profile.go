@@ -68,3 +68,33 @@ func AndroidProfile() ClientProfile {
 		},
 	}
 }
+
+// WebClientID identifies the public client used by PikPak's web QR login.
+const WebClientID = "YUMx5nI8ZU8Ap8pm"
+
+// WebProfile uses the web drive's captcha identity, without an Android secret.
+// Source: https://mypikpak.com/drive/3877.fc93f11b.js (build 89b307c6).
+func WebProfile() ClientProfile {
+	return ClientProfile{
+		ClientID:      WebClientID,
+		PackageName:   "mypikpak.com",
+		ClientVersion: "2.0.0",
+		CaptchaSalts: []string{
+			"C9qPpZLN8ucRTaTiUMWYS9cQvWOE",
+			"+r6CQVxjzJV6LCV",
+			"F",
+			"pFJRC",
+			"9WXYIDGrwTCz2OiVlgZa90qpECPD6olt",
+			"/750aCr4lm/Sly/c",
+			"RB+DT/gZCrbV",
+			"",
+			"CyLsf7hdkIRxRm215hl",
+			"7xHvLi2tOYP0Y92b",
+			"ZGTXXxu8E/MIWaEDB+Sm/",
+			"1UI3",
+			"E7fP5Pfijd+7K+t6Tg/NhuLq0eEUVChpJSkrKxpO",
+			"ihtqpG6FMt65+Xk+tWUH2",
+			"NhXXU9rg4XXdzo7u5o",
+		},
+	}
+}

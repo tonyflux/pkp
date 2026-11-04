@@ -8,11 +8,13 @@
 // The first account on this computer; more come from Add Account.
 // Network & Proxy opens here too (LoginProxySheet): without a route out there is
 // no signing in, so the setting cannot wait for Settings.
-import { computed, nextTick, onMounted, reactive, ref } from "vue";
+import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref } from "vue";
 import Icon from "./Icon.vue";
 import LoginProxySheet from "./LoginProxySheet.vue";
 import Logo from "./Logo.vue";
 import Orbit from "./Orbit.vue";
+import QRSignIn from "./QRSignIn.vue";
+import { completeQRSignIn, cancelSignIn } from "../store";
 import { keychainName } from "../dom";
 import { drive, loadProxySettings, openSettings, openSignUp, proxySettings, submitSignIn, ui } from "../store";
 import { PROXY_MODES } from "../proxydraft";
@@ -27,8 +29,27 @@ const error = ref("");
 // The server could not be reached: the notice offers Network & Proxy.
 const unreachable = ref(false);
 const passwordField = ref<HTMLInputElement>();
+const passwordShown = ref(false);
 const netOpen = ref(false);
 const netButton = ref<HTMLButtonElement>();
+const mode = ref<"qr" | "password">("qr");
+let signinSerial = 0;
+let mounted = true;
+const changingMode = ref(false);
+async function setMode(value: "qr" | "password") {
+  if (value === mode.value || changingMode.value) return;
+  changingMode.value = true;
+  signinSerial++;
+  if (pending.value) await cancelSignIn();
+  pending.value = false;
+  changingMode.value = false;
+  if (!mounted) return;
+  mode.value = value;
+  passwordShown.value = false;
+  error.value = "";
+  void nextTick(() => document.getElementById(value === "qr" ? "login-qr-tab" : "login-password-tab")?.focus());
+}
+onBeforeUnmount(() => { mounted = false; signinSerial++; });
 
 // The route in force, in the words of Connection Method; a custom one names its server.
 const netLabel = computed(() => {
@@ -65,8 +86,10 @@ function toggleAutoSignIn() {
 }
 
 async function submit() {
-  if (!canSubmit.value || pending.value) return;
+  if (!canSubmit.value || pending.value || changingMode.value || mode.value !== "password") return;
+  const serial = ++signinSerial;
   pending.value = true;
+  passwordShown.value = false;
   error.value = "";
   unreachable.value = false;
   const res = await submitSignIn({
@@ -77,6 +100,7 @@ async function submit() {
     remember: form.remember,
     autoSignIn: form.autoSignIn,
   });
+  if (!mounted || serial !== signinSerial) return;
   pending.value = false;
   form.password = "";
   // Success puts the account on screen and this page goes away.
@@ -125,6 +149,14 @@ function netApplied() {
         </button>
       </header>
 
+      <div class="signin-tabs" role="tablist" :aria-label="t('登录方式')" @keydown.left.prevent="setMode(mode === 'qr' ? 'password' : 'qr')" @keydown.right.prevent="setMode(mode === 'qr' ? 'password' : 'qr')">
+        <button id="login-qr-tab" type="button" role="tab" :aria-selected="mode === 'qr'" aria-controls="login-qr-panel" :tabindex="mode === 'qr' ? 0 : -1" @click="setMode('qr')">{{ t("扫码登录") }}</button>
+        <button id="login-password-tab" type="button" role="tab" :aria-selected="mode === 'password'" aria-controls="login-password-panel" :tabindex="mode === 'password' ? 0 : -1" @click="setMode('password')">{{ t("密码登录") }}</button>
+      </div>
+      <div v-if="mode === 'qr'" id="login-qr-panel" role="tabpanel" aria-labelledby="login-qr-tab">
+        <QRSignIn network-link @complete="completeQRSignIn" @network="netOpen = true" />
+      </div>
+      <div v-else id="login-password-panel" class="password-panel" role="tabpanel" aria-labelledby="login-password-tab">
       <p v-if="error" class="notice" role="alert">
         {{ error }}
         <button v-if="unreachable" type="button" class="notice-link" @click="netOpen = true">{{ t("检查网络与代理") }}</button>
@@ -135,17 +167,32 @@ function netApplied() {
         <span>{{ t("账号（邮箱或手机号）") }}</span>
         <input v-model="form.account" autocomplete="username" spellcheck="false" placeholder="you@example.com" @keyup.enter="submit" />
       </label>
-      <label class="field">
-        <span>{{ t("密码") }}</span>
-        <input
-          ref="passwordField"
-          v-model="form.password"
-          type="password"
-          autocomplete="current-password"
-          :placeholder="usesSaved ? t('已记住密码，可直接登录') : ''"
-          @keyup.enter="submit"
-        />
-      </label>
+      <div class="field">
+        <label for="login-password">{{ t("密码") }}</label>
+        <div class="pw-field">
+          <input
+            id="login-password"
+            ref="passwordField"
+            v-model="form.password"
+            :type="passwordShown ? 'text' : 'password'"
+            autocomplete="current-password"
+            autocapitalize="off"
+            spellcheck="false"
+            :placeholder="usesSaved ? t('已记住密码，可直接登录') : ''"
+            @keyup.enter="submit"
+          />
+          <button
+            type="button"
+            class="pw-eye"
+            :aria-label="passwordShown ? t('隐藏密码') : t('显示密码')"
+            :aria-pressed="passwordShown"
+            @mousedown.prevent
+            @click="passwordShown = !passwordShown"
+          >
+            <Icon :name="passwordShown ? 'eyeOff' : 'eye'" :size="18" />
+          </button>
+        </div>
+      </div>
 
       <div v-if="saved.supported" class="choices">
         <button
@@ -178,6 +225,7 @@ function netApplied() {
         <Orbit v-if="pending" :size="16" :label="t('登录中')" />
         {{ pending ? t("登录中…") : t("登录") }}
       </button>
+      </div>
 
       <!-- PKP has no sign-up form: PikPak's own page opens in the browser. -->
       <p class="signup">
@@ -200,13 +248,19 @@ function netApplied() {
 </template>
 
 <style scoped>
+.signin-tabs { display: flex; padding: 3px; border-radius: 10px; background: var(--accent-soft); margin-bottom: 5px; }
+.signin-tabs button { flex: 1; padding: 9px 8px; border: 0; border-radius: 8px; background: transparent; color: var(--fg-dim); font-size: 13px; }
+.signin-tabs button[aria-selected="true"] { background: var(--primary); color: var(--on-primary); box-shadow: inset 0 1px 0 var(--primary-rim), 0 2px 7px var(--primary-glow); }
+.password-panel { display: flex; flex-direction: column; gap: 14px; }
 .login-wrap {
   position: relative;
   z-index: 1;
   height: 100%;
+  overflow-y: auto;
   display: grid;
   place-items: center;
-  padding: 40px;
+  align-items: safe center;
+  padding: clamp(16px, 5vw, 40px);
 }
 
 .login {
@@ -244,9 +298,38 @@ header p {
   gap: 6px;
 }
 
-.field > span {
+.field > span,
+.field > label {
   font-size: 12px;
   color: var(--fg-dim);
+}
+
+.pw-field {
+  position: relative;
+  display: flex;
+}
+
+.pw-field input {
+  flex: 1;
+  min-width: 0;
+  padding-right: 44px;
+}
+
+.pw-eye {
+  position: absolute;
+  right: 2px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 36px;
+  min-height: 34px;
+  padding: 0;
+  border-color: transparent;
+  background: transparent;
+  color: var(--fg-dim);
+}
+
+.pw-eye:active:not(:disabled) {
+  transform: translateY(-50%);
 }
 
 .choices {
@@ -403,5 +486,11 @@ header p {
   background: var(--accent-soft);
   border-color: var(--glass-edge);
   color: var(--fg);
+}
+.login > .quiet { min-height: 28px; padding: 4px 10px; font-size: 12px; }
+
+@media (max-height: 740px) {
+  .login-wrap { padding: 16px; }
+  .login { padding: 20px; gap: 10px; }
 }
 </style>

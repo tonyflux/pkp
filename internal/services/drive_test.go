@@ -53,7 +53,7 @@ func seedSession(t *testing.T, svc *DriveService, account string) *accountSessio
 		svc.accounts = append(svc.accounts, s)
 		svc.mu.Unlock()
 	}
-	tokens := svc.newTokenManager(s, key, svc.credentialsStore(key))
+	tokens := svc.newTokenManager(s, key, svc.profile(), svc.credentialsStore(key))
 	if err := tokens.Seed(drive.Token{Username: account, RefreshToken: "seed"}); err != nil {
 		t.Fatalf("seed session: %v", err)
 	}

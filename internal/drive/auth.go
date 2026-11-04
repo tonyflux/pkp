@@ -52,10 +52,11 @@ var (
 )
 
 // Token is one session. ExpiresAt is absolute so a stored token survives
-// process restarts without re-deriving a deadline from expires_in. Username
-// and DeviceID travel with it because both are needed to re-authenticate.
+// process restarts without re-deriving a deadline from expires_in. ClientID
+// and DeviceID keep refreshes bound to the identity that issued the session.
 type Token struct {
 	Username     string    `json:"username"`
+	ClientID     string    `json:"client_id,omitempty"`
 	DeviceID     string    `json:"device_id"`
 	AccessToken  string    `json:"access_token"`
 	RefreshToken string    `json:"refresh_token"`
@@ -231,8 +232,8 @@ func (s *MemoryStore) Lock(ctx context.Context) (func(), error) {
 type TokenManagerConfig struct {
 	// AuthBaseURL is the authorisation host, e.g. https://user.mypikpak.com.
 	AuthBaseURL string
-	// Profile is the application identity. Its ClientSecret and salt cascade
-	// are what make password sign-in possible.
+	// Profile is the issuing client's identity for authentication and captcha.
+	// Public web clients have no ClientSecret.
 	Profile ClientProfile
 	// DeviceID must stay stable for an account; DeviceIDFor derives one.
 	DeviceID string
@@ -290,6 +291,9 @@ func (m *TokenManager) Captcha() CaptchaSource { return m.captcha }
 // DeviceID is the identifier this manager presents.
 func (m *TokenManager) DeviceID() string { return m.cfg.DeviceID }
 
+// Profile is the immutable client identity used for this session's requests.
+func (m *TokenManager) Profile() ClientProfile { return m.cfg.Profile }
+
 func (m *TokenManager) currentUserID() string {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -301,6 +305,10 @@ func (m *TokenManager) currentUserID() string {
 func (m *TokenManager) Seed(tok Token) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+	if tok.ClientID != "" && tok.ClientID != m.cfg.Profile.ClientID {
+		return errors.New("drive: token belongs to a different client")
+	}
+	tok.ClientID = m.cfg.Profile.ClientID
 	ctx, cancel := context.WithTimeout(context.Background(), storeLockTimeout)
 	defer cancel()
 	release, err := m.lockStore(ctx)
@@ -401,6 +409,9 @@ func (m *TokenManager) Token(ctx context.Context) (Token, error) {
 
 	if err := m.loadLocked(); err != nil {
 		return Token{}, err
+	}
+	if m.token.ClientID != "" && m.token.ClientID != m.cfg.Profile.ClientID {
+		return Token{}, ErrPasswordRequired
 	}
 	if m.token.Usable() {
 		return m.token, nil
@@ -519,7 +530,7 @@ func (m *TokenManager) reloadLocked() bool {
 		// and the next save replaces the damaged file.
 		return true
 	}
-	if stored.DeviceID != m.cfg.DeviceID {
+	if stored.DeviceID != m.cfg.DeviceID || (stored.ClientID != "" && stored.ClientID != m.cfg.Profile.ClientID) {
 		if m.token.Username == "" && m.token.RefreshToken == "" {
 			return true // never signed in here: nothing to end
 		}
@@ -585,6 +596,7 @@ func (m *TokenManager) signInLocked(ctx context.Context, username, password stri
 	// replace this session with the stale one.
 	m.loaded = true
 	m.token.DeviceID = m.cfg.DeviceID
+	m.token.ClientID = m.cfg.Profile.ClientID
 	m.applyLocked(parsed)
 	if err := m.persistLocked(); err != nil {
 		return Token{}, err
@@ -632,6 +644,10 @@ func (m *TokenManager) applyLocked(parsed tokenResponse) {
 }
 
 func (m *TokenManager) exchange(ctx context.Context, path string, body map[string]string) (tokenResponse, error) {
+	// The public web client has no client secret.
+	if m.cfg.Profile.ClientSecret == "" {
+		delete(body, "client_secret")
+	}
 	payload, err := json.Marshal(body)
 	if err != nil {
 		return tokenResponse{}, err

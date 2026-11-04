@@ -6,9 +6,11 @@ This document describes current product behavior and does not imply that a publi
 
 ## Accounts and Files
 
-Sign in with your own PikPak account. Use the account entry in the lower-left corner to add, switch, and manage accounts; switching the account you are browsing does not stop local transfers already running for other accounts. Accounts are not merged into a single cloud drive.
+Sign in with your own PikPak account. QR sign-in is selected by default: scan the code with the PikPak app and confirm on your phone to enter your drive. Refresh an expired code to try again. Adding accounts and reauthentication also support QR sign-in; when reauthenticating, select the matching account on your phone. QR codes contain temporary authorization information; do not publish screenshots or forward them.
 
-“Remember account password” saves your password in the system credential store, and “Auto sign-in” depends on it. Both are currently selected by default and can be deselected when signing in. Signing out and removing an account clears the corresponding local session and records. It does not delete your PikPak account, delete its cloud files, or revoke its shares; cloud-add tasks may continue running on the server.
+You can switch to “Password.” Its “Remember account password” option saves your password in the system credential store, and “Auto sign-in” depends on it. Both are selected by default and can be deselected before signing in. QR sign-in needs no password and leaves an existing account’s remembered-password settings unchanged. The resulting session is still stored locally and renewed with a refresh token. A revoked session requires renewed authorization; existing password auto-sign-in preferences continue to apply.
+
+Use the account entry in the lower-left corner to add, switch, and manage accounts; switching the account you are browsing does not stop local transfers already running for other accounts. Accounts are not merged into a single cloud drive. Signing out and removing an account clears the corresponding local session and records. It does not delete your PikPak account, delete its cloud files, or revoke its shares; cloud-add tasks may continue running on the server.
 
 The Files page supports folder browsing, filtering by type, searching, starring, sharing, and previews. Building the initial local index may take some time. After you create a share, anyone who obtains the link or access code may be able to access the shared content. Configure sharing according to your actual needs and revoke shares promptly when they are no longer needed.
 

@@ -281,8 +281,9 @@ type DriveService struct {
 	settingsMu sync.Mutex
 	accountsMu sync.Mutex
 	// signIn is the sign-in in flight, which CancelSignIn can call off.
-	signInMu sync.Mutex
-	signIn   *signInAttempt
+	signInMu       sync.Mutex
+	signIn         *signInAttempt
+	signInCommitMu sync.Mutex
 	// organizing and removing hold the stop of each account's Cloud Drive Organization
 	// and Delete run in flight.
 	organizing runs
@@ -426,6 +427,7 @@ func (d *DriveService) Status() DriveStatus {
 		return status
 	}
 	status.DeviceID = tokens.DeviceID()
+	status.ClientID = tokens.Profile().ClientID
 	if tok, err := tokens.Current(); err == nil {
 		if tok.UserID != "" {
 			status.UserID = tok.UserID
@@ -441,6 +443,7 @@ func (d *DriveService) Status() DriveStatus {
 // transfers and index loop. It runs before PlayerService's shutdown, whose
 // position it records.
 func (d *DriveService) ServiceShutdown() error {
+	d.CancelSignIn()
 	d.connectivityMu.Lock()
 	if d.connectivityCancel != nil {
 		d.connectivityCancel()

@@ -4,6 +4,9 @@
 
 ## Unreleased
 
+- Add show/hide controls to password fields for initial sign-in, adding accounts and reauthentication, using the existing five-language labels. Toggling preserves the input without submitting the form; switching sign-in methods, submitting or reopening the dialog restores masking.
+- Fix the QR sign-in identity: use the web `client_id = YUMx5nI8ZU8Ap8pm` instead of the Android ID. Credentials retain the issuing client so token refresh, restart recovery and drive requests use the same identity. The password sign-in form retains the Android identity, and older credentials still restore.
+- Add sign-in by scanning with the PikPak app, selected by default for first sign-in, adding accounts and reauthentication, while retaining password sign-in. QR codes are generated locally, with mobile confirmation, expiry refresh, rate-limit backoff, network retries and cancellation. Reauthentication checks account identity, and QR sign-in preserves existing remembered-password settings.
 - Fix sign-in error classification: report incorrect credentials only when the sign-in endpoint explicitly rejects the password. Unknown 4xx responses, including captcha initialization failures, gateway refusals and client identity errors, now use the generic sign-in failure message. Keep separate human-verification, rate-limit and network-failure messages.
 - Rewrite the English README for a public launch: English interface illustrations, release badges, install and build sections, and v0.2.0 as the published latest release. Move the previous v0.1.0 / v0.2.0 licensing notes to `docs/legal/version-licensing.en.md` with their wording kept. Align the install, privacy, and release docs with that published release.
 - Make the English project overview the default `README.md`, retain Simplified Chinese as `README.zh-CN.md`, and update language-switching and documentation links.

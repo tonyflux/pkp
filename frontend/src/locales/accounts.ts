@@ -1,6 +1,28 @@
 import type { Messages } from "./types";
 
 export default {
+  "网络连接失败，请重试": { tw: "網路連線失敗，請重試", en: "Connection failed. Please retry.", ja: "接続に失敗しました。再試行してください", ko: "연결에 실패했습니다. 다시 시도하세요" },
+  "登录后可在账号菜单中添加本机备注": { tw: "登入後可在帳號選單中新增本機備註", en: "Add a local nickname from the account menu after signing in", ja: "ログイン後、アカウントメニューでローカルメモを追加できます", ko: "로그인 후 계정 메뉴에서 로컬 메모를 추가할 수 있습니다" },
+  登录方式: { tw: "登入方式", en: "Sign-in method", ja: "ログイン方法", ko: "로그인 방식" },
+  扫码登录: { tw: "掃碼登入", en: "QR code", ja: "QRコード", ko: "QR 코드" },
+  密码登录: { tw: "密碼登入", en: "Password", ja: "パスワード", ko: "암호" },
+  "打开 PikPak App 扫一扫": { tw: "開啟 PikPak App 掃一掃", en: "Scan with the PikPak app", ja: "PikPak アプリでスキャン", ko: "PikPak 앱으로 스캔하세요" },
+  "在手机上确认后，自动完成登录": { tw: "在手機上確認後，自動完成登入", en: "Confirm on your phone to sign in automatically", ja: "スマートフォンで承認するとログインします", ko: "휴대폰에서 확인하면 자동으로 로그인됩니다" },
+  "PikPak 登录二维码": { tw: "PikPak 登入 QR 碼", en: "PikPak sign-in QR code", ja: "PikPak ログイン用QRコード", ko: "PikPak 로그인 QR 코드" },
+  "已扫码，请在手机上确认": { tw: "已掃碼，請在手機上確認", en: "Scanned. Confirm on your phone.", ja: "スキャン済み。スマートフォンで承認してください", ko: "스캔되었습니다. 휴대폰에서 확인하세요" },
+  二维码已失效: { tw: "QR 碼已失效", en: "QR code expired", ja: "QRコードの有効期限が切れました", ko: "QR 코드가 만료되었습니다" },
+  已取消授权: { tw: "已取消授權", en: "Authorization declined", ja: "認証がキャンセルされました", ko: "인증이 취소되었습니다" },
+  "网络连接中断，正在重试": { tw: "網路連線中斷，正在重試", en: "Connection interrupted. Retrying…", ja: "接続が切れました。再試行中…", ko: "연결이 끊어졌습니다. 재시도 중…" },
+  暂时无法生成二维码: { tw: "暫時無法產生 QR 碼", en: "Unable to create a QR code right now", ja: "現在QRコードを生成できません", ko: "지금은 QR 코드를 생성할 수 없습니다" },
+  登录成功: { tw: "登入成功", en: "Signed in", ja: "ログインしました", ko: "로그인되었습니다" },
+  "正在生成二维码…": { tw: "正在產生 QR 碼…", en: "Creating QR code…", ja: "QRコードを生成中…", ko: "QR 코드 생성 중…" },
+  等待扫码: { tw: "等待掃碼", en: "Waiting for scan", ja: "スキャンを待っています", ko: "스캔 대기 중" },
+  扫码成功: { tw: "掃碼成功", en: "Code scanned", ja: "スキャンしました", ko: "스캔 완료" },
+  "请在 PikPak App 中确认登录": { tw: "請在 PikPak App 中確認登入", en: "Confirm sign-in in the PikPak app", ja: "PikPak アプリでログインを承認してください", ko: "PikPak 앱에서 로그인을 확인하세요" },
+  刷新二维码: { tw: "重新整理 QR 碼", en: "Refresh QR code", ja: "QRコードを更新", ko: "QR 코드 새로고침" },
+  "{n} 秒后失效": { tw: "{n} 秒後失效", en: "Expires in {n} seconds", ja: "あと{n}秒で期限切れ", ko: "{n}초 후 만료" },
+  重试连接: { tw: "重試連線", en: "Retry connection", ja: "接続を再試行", ko: "연결 재시도" },
+  "无需向 PKP 提供账号密码": { tw: "無需向 PKP 提供帳號密碼", en: "No account password is shared with PKP", ja: "PKPにパスワードを渡す必要はありません", ko: "PKP에 계정 암호를 제공할 필요가 없습니다" },
   // Account dialogs
   当前账号: { tw: "目前帳號", en: "Current account", ja: "現在のアカウント", ko: "현재 계정" },
   "重新登录「{name}」": { tw: "重新登入「{name}」", en: "Sign in to \"{name}\" again", ja: "「{name}」に再ログイン", ko: "“{name}”에 다시 로그인" },

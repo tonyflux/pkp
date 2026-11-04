@@ -1172,9 +1172,9 @@ export function accountById(id: string): Account | null {
  * else the server's nickname, else its masked login. Several accounts may
  * share a label; the masked login next to it tells them apart.
  */
-export function accountLabel(a: Pick<Account, "label" | "nickname" | "login"> | null | undefined): string {
+export function accountLabel(a: Pick<Account, "label" | "nickname" | "login"> & Partial<Pick<Account, "id">> | null | undefined): string {
   if (!a) return "";
-  return a.label || a.nickname || maskLogin(a.login);
+  return a.label || a.nickname || maskLogin(a.login) || (a.id ? `PikPak · ${a.id.slice(0, 3)}…${a.id.slice(-3)}` : "PikPak");
 }
 
 /** accountName is accountLabel by id; "Original Account" for one no longer here. */
@@ -1621,15 +1621,24 @@ export function openSignUp(): void {
  */
 export async function submitSignIn(req: SignInRequest): Promise<SignInResult> {
   return own(async () => {
-    const from = currentId.value;
     let res: SignInResult;
     try {
       res = await DriveService.SignIn(req);
     } catch (err) {
       return { failure: "other", message: errorText(err) } as SignInResult;
     }
+    return applySignInResult(res);
+  });
+}
+
+/** Password and QR sign-in share account switching and playback ownership. */
+export async function completeQRSignIn(res: SignInResult): Promise<SignInResult> {
+  return own(() => applySignInResult(res));
+}
+
+async function applySignInResult(res: SignInResult): Promise<SignInResult> {
     if (res.failure) return res;
-    // The form is done once the server said yes; the account's files come in behind it.
+    const from = currentId.value;
     if (accounts.dialog?.kind === "signin") accounts.dialog = null;
     const id = res.status.accountId;
     const paused = id !== from ? await settlePlayback(id) : "";
@@ -1646,7 +1655,6 @@ export async function submitSignIn(req: SignInRequest): Promise<SignInResult> {
     const message = [res.existed ? t("已切换到「{name}」", { name }) : t("已添加并切换到「{name}」", { name }), paused].filter(Boolean).join(" · ");
     await enterAccount(res.status, { fresh: !res.existed, message });
     return res;
-  });
 }
 
 /** cancelSignIn calls off a sign-in in flight: a late success is not kept. */
