@@ -4,11 +4,11 @@
 
 ## 下载状态
 
-**v0.2.0 是已发布的最新版本**（2026-11-01）。GitHub 将其标为稳定的 Latest。从 [最新 Release](https://github.com/tonyflux/pkp/releases/latest) 下载：[macOS Universal](https://github.com/tonyflux/pkp/releases/download/v0.2.0/PKP-0.2.0-macos-universal.dmg) / [Windows x64 与 ARM64](https://github.com/tonyflux/pkp/releases/download/v0.2.0/PKP-0.2.0-windows-x64-arm64-setup.exe)。对照同一 Release 的 `SHA256SUMS` 并验证签名。请从本仓库的 Releases 获取安装包。
+**v0.3.0** 新增扫码登录、Gemini API Key 支持及登录修复。从 [最新 Release](https://github.com/tonyflux/pkp/releases/latest) 下载：[macOS Universal](https://github.com/tonyflux/pkp/releases/download/v0.3.0/PKP-0.3.0-macos-universal.dmg) / [Windows x64 与 ARM64](https://github.com/tonyflux/pkp/releases/download/v0.3.0/PKP-0.3.0-windows-x64-arm64-setup.exe)。对照同一 Release 的 `SHA256SUMS` 并验证签名。请从本仓库的 Releases 获取安装包。
 
-v0.2.0 是首个开源版本，包含 `PKP-0.2.0-source.tar.gz`（与该安装包对应的 PKP 自有源码）和 `libmpv-sources.tar.gz`（第三方对应源码，不含 PKP 自有源码）。
+v0.2.0 是首个开源版本。v0.3.0 继续提供 `PKP-0.3.0-source.tar.gz`（与安装包对应的 PKP 自有源码）和 `libmpv-sources.tar.gz`（第三方对应源码，不含 PKP 自有源码）。
 
-**v0.1.0 仍可下载**，作为历史版本：[macOS Universal](https://github.com/tonyflux/pkp/releases/download/v0.1.0/PKP-0.1.0-macos-universal.dmg) / [Windows x64 与 ARM64](https://github.com/tonyflux/pkp/releases/download/v0.1.0/PKP-0.1.0-windows-x64-arm64-setup.exe)。该 Release 同时提供 `libmpv-sources.tar.gz` 和当时的使用条款。v0.1.0 安装包不是由本仓库当前源码构建，仍适用[当时的闭源条款](legal/v0.1.0-proprietary.txt)。新安装请优先使用 v0.2.0。使用统计在 v0.2.0 默认关闭，在 v0.1.0 默认开启。
+**v0.1.0 仍可下载**，作为历史版本：[macOS Universal](https://github.com/tonyflux/pkp/releases/download/v0.1.0/PKP-0.1.0-macos-universal.dmg) / [Windows x64 与 ARM64](https://github.com/tonyflux/pkp/releases/download/v0.1.0/PKP-0.1.0-windows-x64-arm64-setup.exe)。该 Release 同时提供 `libmpv-sources.tar.gz` 和当时的使用条款。v0.1.0 安装包不是由本仓库当前源码构建，仍适用[当时的闭源条款](legal/v0.1.0-proprietary.txt)。新安装请优先使用最新版本。使用统计在 v0.2.0 默认关闭，在 v0.1.0 默认开启；v0.3.0 改为默认开启每日活跃安装统计。
 
 ## 校验发布附件
 
@@ -65,7 +65,7 @@ v0.2.0 已随上述 macOS 更新流程发布。发布本身不表示系统授权
 ## 首次启动
 
 - 使用自己的 PikPak 账号登录。当前「记住账号密码」与「自动登录」默认勾选，不希望保存密码时请取消勾选。
-- 先阅读[隐私说明](../PRIVACY.md)。已发布的 v0.1.0 默认开启使用统计，v0.2.0 默认关闭。当前尚未发布的源码改为默认开启每日活跃安装统计，已有配置未明确选择时也随默认开启，已有明确关闭会保留。一次性提示说明已开启及「设置 → 隐私与安全」中的关闭入口，不提供关闭统计按钮；确认或关闭提示只是已阅，不是同意，也不会关闭统计。有收集地址时启动即记录，约 30 秒后可发送，不等待提示已阅；无地址的开发构建不记录、不发送、不提示。此源码变更尚未发布或部署。当前登录成功后还会提交邀请关系。
+- 先阅读[隐私说明](../PRIVACY.md)。v0.1.0 默认开启使用统计，v0.2.0 默认关闭；v0.3.0 默认开启每日活跃安装统计，已有配置未明确选择时也随默认开启，可识别的明确关闭会保留。一次性提示说明已开启及「设置 → 隐私与安全」中的关闭入口，登录前也可访问；提示框不提供关闭统计按钮，确认或关闭只是已阅，不是同意，也不会关闭统计。有收集地址时启动即记录，约 30 秒后可发送，不等待提示已阅；无地址的开发构建不记录、不发送、不提示。应用发布不等于配套统计服务已部署。当前登录成功后还会提交邀请关系。
 - 首次登录会建立本地文件索引，期间仍可浏览；搜索与全盘统计可能要等待索引就绪。
 - macOS 可能请求系统通知权限；是否允许由你决定。当前 ad hoc 构建的实际通知表现尚待真机确认。
 - 使用同步或批量整理前，先备份重要数据，并仔细检查预览和确认内容。
