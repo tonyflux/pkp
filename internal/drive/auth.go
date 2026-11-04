@@ -320,9 +320,14 @@ func (m *TokenManager) Seed(tok Token) error {
 	if tok.DeviceID == "" {
 		tok.DeviceID = m.cfg.DeviceID
 	}
+	if m.cfg.Store != nil {
+		if err := m.cfg.Store.Save(tok); err != nil {
+			return err
+		}
+	}
 	m.token = tok
 	m.loaded = true
-	return m.persistLocked()
+	return nil
 }
 
 // Persist moves a session signed in on a manager without a store onto store

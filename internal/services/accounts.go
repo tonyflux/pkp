@@ -267,6 +267,8 @@ func (d *DriveService) Accounts() []Account {
 // leaving stops: its uploads and its index carry on in the background, and
 // the player is the webview's to settle first.
 func (d *DriveService) SwitchAccount(id string) (DriveStatus, error) {
+	d.signInCommitMu.Lock()
+	defer d.signInCommitMu.Unlock()
 	d.mu.Lock()
 	s := d.byKeyLocked(id)
 	if s != nil {
@@ -322,6 +324,8 @@ func (d *DriveService) RenameAccount(id, label string) (Account, error) {
 // there is no account on screen. If its session cannot be cleared, nothing
 // is removed.
 func (d *DriveService) RemoveAccount(id string) (DriveStatus, error) {
+	d.signInCommitMu.Lock()
+	defer d.signInCommitMu.Unlock()
 	s := d.byKey(id)
 	if s == nil {
 		return d.Status(), errNoSuchAccount
@@ -549,6 +553,8 @@ func (d *DriveService) saveAccounts() error {
 	if d.configErr != nil {
 		return nil
 	}
+	d.accountsMu.Lock()
+	defer d.accountsMu.Unlock()
 	d.mu.RLock()
 	file := accountsFile{Version: accountsVersion, Accounts: make([]accountRecord, 0, len(d.accounts))}
 	if d.current != nil {
@@ -559,12 +565,19 @@ func (d *DriveService) saveAccounts() error {
 	}
 	d.mu.RUnlock()
 
-	d.accountsMu.Lock()
-	defer d.accountsMu.Unlock()
+	return d.writeAccounts(file)
+}
+
+// writeAccounts replaces the list while accountsMu is held.
+func (d *DriveService) writeAccounts(file accountsFile) error {
 	data, err := json.MarshalIndent(file, "", "  ")
 	if err != nil {
 		return err
 	}
+	return d.replaceAccounts(data)
+}
+
+func (d *DriveService) replaceAccounts(data []byte) error {
 	if err := os.MkdirAll(d.configDir, 0o700); err != nil {
 		return err
 	}
@@ -759,18 +772,29 @@ func (d *DriveService) newTokenManager(s *accountSession, deviceID string, profi
 // buildSession brings an account's client up on tokens, with its upload and
 // download queues, play record and index.
 func (d *DriveService) buildSession(s *accountSession, tokens *drive.TokenManager) error {
-	profile := tokens.Profile()
-	client, err := drive.New(drive.Config{
+	client, err := d.newSessionClient(tokens)
+	if err != nil {
+		return err
+	}
+	d.installSession(s, tokens, client)
+	return nil
+}
+
+// Validate the client before a sign-in changes persistent or live state.
+func (d *DriveService) newSessionClient(tokens *drive.TokenManager) (*drive.Client, error) {
+	return drive.New(drive.Config{
 		APIBaseURL:  d.opts.APIBaseURL,
 		AuthBaseURL: d.opts.AuthBaseURL,
-		Profile:     profile,
+		Profile:     tokens.Profile(),
 		DeviceID:    tokens.DeviceID(),
 		Captcha:     tokens.Captcha(),
 		Logger:      d.log,
 	}, tokens)
-	if err != nil {
-		return err
-	}
+}
+
+// installSession has no fallible setup; callers hold no account-list lock here
+// because queue shutdown may call back into the service.
+func (d *DriveService) installSession(s *accountSession, tokens *drive.TokenManager, client *drive.Client) {
 
 	// The old queues write their journals before the new ones read them:
 	// they are the same files. Close waits on jobs that call back into the
@@ -790,7 +814,7 @@ func (d *DriveService) buildSession(s *accountSession, tokens *drive.TokenManage
 	downloads := download.New(client, download.Options{
 		Parallel:  settings.ParallelDownloads,
 		Threads:   settings.DownloadThreads,
-		UserAgent: profile.UserAgent,
+		UserAgent: tokens.Profile().UserAgent,
 		OnChange:  func(t download.Task) { d.publishDownload(s, t) },
 	})
 	if d.configErr == nil {
@@ -811,7 +835,6 @@ func (d *DriveService) buildSession(s *accountSession, tokens *drive.TokenManage
 	s.mu.Unlock()
 
 	d.replaceIndex(s, client)
-	return nil
 }
 
 // parkQueues lists an account's transfer records while it cannot run them:

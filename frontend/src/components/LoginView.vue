@@ -240,7 +240,10 @@ function netApplied() {
         <Icon name="globe" :size="14" />
         {{ t("网络与代理") }} · {{ netLabel }}
       </p>
-      <button class="quiet" type="button" @click="openSettings('updates')">{{ t("关于与更新") }}</button>
+      <div class="settings-links">
+        <button class="quiet" type="button" @click="openSettings('privacy')">{{ t("tab|隐私与安全") }}</button>
+        <button class="quiet" type="button" @click="openSettings('updates')">{{ t("关于与更新") }}</button>
+      </div>
     </section>
 
     <LoginProxySheet v-if="netOpen" @close="closeNet" @applied="netApplied" />
@@ -248,6 +251,7 @@ function netApplied() {
 </template>
 
 <style scoped>
+.settings-links { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px 16px; }
 .signin-tabs { display: flex; padding: 3px; border-radius: 10px; background: var(--accent-soft); margin-bottom: 5px; }
 .signin-tabs button { flex: 1; padding: 9px 8px; border: 0; border-radius: 8px; background: transparent; color: var(--fg-dim); font-size: 13px; }
 .signin-tabs button[aria-selected="true"] { background: var(--primary); color: var(--on-primary); box-shadow: inset 0 1px 0 var(--primary-rim), 0 2px 7px var(--primary-glow); }

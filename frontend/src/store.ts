@@ -330,10 +330,10 @@ export const syncDraft = reactive({ pending: false, busy: false, discard: null a
  * The Settings tab a page sends the user to — Manage Accounts opens Account Management. The page
  * reads it when it mounts or when it changes, and clears it.
  */
-export const settingsFocus = reactive({ tab: "" as "" | "accounts" | "ai" | "network" | "keys" | "updates" });
+export const settingsFocus = reactive({ tab: "" as "" | "accounts" | "ai" | "network" | "keys" | "updates" | "privacy" });
 
 /** openSettings is Settings (⌘,), on `tab` when one is named. */
-export function openSettings(tab: "" | "accounts" | "ai" | "network" | "keys" | "updates" = "") {
+export function openSettings(tab: "" | "accounts" | "ai" | "network" | "keys" | "updates" | "privacy" = "") {
   if (!leaveSavedHistory(() => openSettings(tab))) return;
   ui.accountsOpen = false;
   settingsFocus.tab = tab;

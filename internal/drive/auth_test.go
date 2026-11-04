@@ -804,3 +804,42 @@ func TestRenewalDoesNotAdoptAnotherClientSession(t *testing.T) {
 		t.Fatalf("fresh wrong-client manager adopted the web session: %v", err)
 	}
 }
+
+func TestSeedPersistenceFailureKeepsCurrentToken(t *testing.T) {
+	store := FileStore{Path: filepath.Join(t.TempDir(), "credentials.json")}
+	m := NewTokenManager(TokenManagerConfig{DeviceID: "seed-device", Store: store})
+	if err := m.Seed(Token{AccessToken: "old-access", RefreshToken: "old-refresh", ExpiresAt: time.Now().UTC().Add(time.Hour)}); err != nil {
+		t.Fatal(err)
+	}
+	before, err := m.Current()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Rename(store.Path, store.Path+".before"); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Mkdir(store.Path, 0700); err != nil {
+		t.Fatal(err)
+	}
+	if err := m.Seed(Token{AccessToken: "new-access", RefreshToken: "new-refresh", ExpiresAt: time.Now().Add(time.Hour)}); err == nil {
+		t.Fatal("blocked credentials file accepted replacement")
+	}
+	if current, err := m.Current(); err != nil || current != before {
+		t.Fatal("failed persistence published a new token")
+	}
+	if err := os.Remove(store.Path); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Rename(store.Path+".before", store.Path); err != nil {
+		t.Fatal(err)
+	}
+	if stored, err := store.Load(); err != nil || stored != before {
+		t.Fatal("failed persistence replaced stored token")
+	}
+	if err := m.Seed(Token{AccessToken: "new-access", RefreshToken: "new-refresh", ExpiresAt: time.Now().Add(time.Hour)}); err != nil {
+		t.Fatal(err)
+	}
+	if current, err := m.Current(); err != nil || current.AccessToken != "new-access" {
+		t.Fatal("successful replacement was not published")
+	}
+}

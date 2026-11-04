@@ -4,6 +4,9 @@
 
 ## Unreleased
 
+- Fix duplicate password-reveal icons in initial sign-in, adding accounts and reauthentication by hiding Edge/WebView2's native reveal control where the app supplies its own. Preserve password entry, autofill and keyboard access.
+- Make QR sign-in persistence transactional: failed account-list or credential writes preserve the existing session, current account, and transfer queues; publish new tokens only after persistence succeeds. Keep successful in-flight QR results when the local countdown expires, while preserving explicit cancellation and sign-in-mode changes.
+- Make Privacy settings and the anonymous-statistics switch accessible before sign-in without adding an opt-out button to the notice. Preserve legacy pending active dates evidenced only by feature use after midnight, converting them to daily presence without reporting feature details.
 - Display the current service's complete model catalog, removing the Gemini recommendation allowlist and `models/` prefix rewriting. Save and send selected original model IDs without replacing existing settings automatically. A successfully fetched empty catalog no longer falls back to built-in models. Clarify that catalog listing does not establish account access or quota; retain manual entry and Test Connection.
 - Add Community & Feedback to About & Updates with the website's Telegram community and GitHub project links, available before and after sign-in. Open links through the system browser, report failures in the card, and support all five interface languages.
 - Add a Google Gemini API-key preset to AI Assistant using the official OpenAI-compatible endpoint and existing system credential storage. Preserve and replay Gemini thought signatures for ordinary and streamed tool calls so tool-result continuations work. Document setup and separate API billing; Google account or subscription OAuth sign-in is not included.

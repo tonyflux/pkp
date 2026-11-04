@@ -185,26 +185,27 @@ func (d *DriveService) finishSignIn(trial *drive.TokenManager, tok drive.Token, 
 		}
 	}
 
-	s, previousLogin, err := d.commitSignIn(existing, trial, tok, login, password, label, trial.DeviceID())
-	if err != nil {
-		return SignInResult{}, err
-	}
-	if options != nil {
-		d.keepSignIn(s, previousLogin, login, password, *options)
-	}
-	d.mu.Lock()
-	previousCurrent := d.current
-	d.current = s
-	d.mu.Unlock()
-	s.touch()
-	if err := d.saveAccounts(); err != nil {
-		if options == nil {
-			if existing == nil {
-				d.discardQRAccount(s, previousCurrent)
-			}
+	var s *accountSession
+	var err error
+	if options == nil {
+		s, err = d.commitQRSignIn(existing, trial, tok, login, password, label)
+		if err != nil {
 			return SignInResult{}, err
 		}
-		d.log.Warn("drive: could not save the account list", "error", err)
+	} else {
+		var previousLogin string
+		s, previousLogin, err = d.commitSignIn(existing, trial, tok, login, password, label, trial.DeviceID())
+		if err != nil {
+			return SignInResult{}, err
+		}
+		d.keepSignIn(s, previousLogin, login, password, *options)
+		d.mu.Lock()
+		d.current = s
+		d.mu.Unlock()
+		s.touch()
+		if err := d.saveAccounts(); err != nil {
+			d.log.Warn("drive: could not save the account list", "error", err)
+		}
 	}
 	d.refreshProfile(s)
 	go d.acceptInvite(s)

@@ -427,3 +427,100 @@ func TestQRSignInCanReturnToPasswordAndRestoreLegacyCredentials(t *testing.T) {
 		t.Fatalf("password session restored with the wrong client: %v", err)
 	}
 }
+
+func TestQRExistingAccountPersistenceFailureKeepsSession(t *testing.T) {
+	for _, mode := range []string{"android-to-web", "web-reauth", "duplicate-live", "parked"} {
+		for _, failure := range []string{"accounts", "credentials"} {
+			if mode == "duplicate-live" && failure == "credentials" {
+				continue // Reusing a live grant does not rewrite credentials.
+			}
+			t.Run(mode+"/"+failure, func(t *testing.T) {
+				api := newQRAccountsAPI(t)
+				api.accountsAPI.add("other@example.com", "other-pw", "other-user")
+				dir := t.TempDir()
+				svc := startAccounts(t, dir, api.accountsAPI, &memoryVault{})
+				original := signIn(t, svc, SignInRequest{Login: api.login, Password: "unused-password"})
+				if mode != "android-to-web" {
+					qr := beginQR(t, svc, QRSignInRequest{Account: original.Account.ID})
+					pollQR(t, svc, qr.ID, "complete")
+				}
+				s := svc.byKey(original.Account.ID)
+				if mode == "parked" {
+					s.mu.Lock()
+					s.client, s.needsPassword = nil, true
+					s.mu.Unlock()
+				}
+				other := signIn(t, svc, SignInRequest{Login: "other@example.com", Password: "other-pw"})
+				beforeRecord := s.record()
+				beforeToken, err := s.tokens.Current()
+				if err != nil {
+					t.Fatal(err)
+				}
+				beforeTokens, beforeClient := s.tokens, s.client
+				beforeUploads, beforeDownloads := s.uploads, s.downloads
+				beforeParked := s.needsPassword
+				credentials := svc.credentialsPath(s.key)
+				beforeCredentials, err := os.ReadFile(credentials)
+				if err != nil {
+					t.Fatal(err)
+				}
+				beforeAccounts, err := os.ReadFile(svc.accountsPath())
+				if err != nil {
+					t.Fatal(err)
+				}
+				request := QRSignInRequest{Account: s.key, Label: "must not persist"}
+				if mode == "duplicate-live" {
+					request.Account = ""
+				}
+				qr := beginQR(t, svc, request)
+				blocked := svc.accountsPath() + ".tmp"
+				if failure == "credentials" {
+					blocked = credentials
+					if err := os.Rename(credentials, credentials+".before"); err != nil {
+						t.Fatal(err)
+					}
+				}
+				if err := os.Mkdir(blocked, 0700); err != nil {
+					t.Fatal(err)
+				}
+				state := pollQR(t, svc, qr.ID, "error")
+				if state.Result != nil || svc.Status().AccountID != other.Account.ID || s.record() != beforeRecord || s.tokens != beforeTokens || s.client != beforeClient || s.uploads != beforeUploads || s.downloads != beforeDownloads || s.needsPassword != beforeParked {
+					t.Fatal("failed QR commit changed live account, current selection or queues")
+				}
+				if token, err := s.tokens.Current(); err != nil || token != beforeToken {
+					t.Fatal("failed QR commit replaced live credentials")
+				}
+				afterAccounts, err := os.ReadFile(svc.accountsPath())
+				if err != nil || !bytes.Equal(beforeAccounts, afterAccounts) {
+					t.Fatal("failed QR commit changed account list on disk")
+				}
+				if err := os.Remove(blocked); err != nil {
+					t.Fatal(err)
+				}
+				if failure == "credentials" {
+					if err := os.Rename(credentials+".before", credentials); err != nil {
+						t.Fatal(err)
+					}
+				}
+				afterCredentials, err := os.ReadFile(credentials)
+				if err != nil || !bytes.Equal(beforeCredentials, afterCredentials) {
+					t.Fatal("failed QR commit changed stored credentials")
+				}
+				restored := startAccounts(t, dir, api.accountsAPI, &memoryVault{})
+				if restored.Status().AccountID != other.Account.ID || restored.byKey(s.key).record().Label != beforeRecord.Label {
+					t.Fatal("restart adopted failed QR metadata")
+				}
+				if _, err := restored.SwitchAccount(s.key); err != nil {
+					t.Fatal(err)
+				}
+				if _, err := restored.Quota(); err != nil {
+					t.Fatalf("previous credentials unusable after failure: %v", err)
+				}
+				qr = beginQR(t, svc, request)
+				if result := pollQR(t, svc, qr.ID, "complete").Result; result == nil || result.Account.ID != s.key {
+					t.Fatal("retry after storage recovery failed")
+				}
+			})
+		}
+	}
+}

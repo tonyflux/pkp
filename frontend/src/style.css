@@ -733,6 +733,11 @@ textarea:focus {
   background: var(--canvas);
 }
 
+/* Sign-in forms already provide an accessible reveal button; Edge/WebView2 adds another. */
+.pw-field input::-ms-reveal {
+  display: none;
+}
+
 textarea {
   resize: vertical;
   font-family: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, monospace;

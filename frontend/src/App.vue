@@ -37,13 +37,14 @@ import AppLockPasswordSheet from "./components/AppLockPasswordSheet.vue";
 import TelemetryNoticeSheet from "./components/TelemetryNoticeSheet.vue";
 import ConnectivityNotice from "./components/ConnectivityNotice.vue";
 import UpdateSettings from "./components/UpdateSettings.vue";
+import PrivacySettings from "./components/PrivacySettings.vue";
 import UpdateNotice from "./components/UpdateNotice.vue";
 import { watchUpdates } from "./updatestore";
 import { watchConnectivity } from "./connectivity";
 import { WORKSPACE_QUERY, useMedia } from "./dom";
 import { t } from "./i18n";
 import { installShortcuts } from "./shortcuts";
-import { accounts, appLocked, bootstrap, drive, nowPlaying, player, telemetry, ui, useTelemetryActivity, videoWorksShown, watchAppLock } from "./store";
+import { accounts, appLocked, bootstrap, drive, nowPlaying, openSettings, player, settingsFocus, telemetry, ui, useTelemetryActivity, videoWorksShown, watchAppLock } from "./store";
 
 // The shell stays up while there is an account on screen, signed in or not:
 // an account whose session ended shows Log In Again in place, and
@@ -125,9 +126,16 @@ onMounted(() => {
 
   <BootSplash v-if="booting" />
 
-  <div v-else-if="!signedIn && ui.route === 'settings'" class="signedout-updates glass glass-sheet">
-    <button class="pill" @click="ui.route = 'files'">{{ t("返回登录") }}</button>
-    <UpdateSettings />
+  <div v-else-if="!signedIn && ui.route === 'settings'" class="signedout-settings glass glass-sheet">
+    <div class="signedout-settings-head">
+      <button class="pill" @click="ui.route = 'files'">{{ t("返回登录") }}</button>
+      <nav :aria-label="t('设置分组')">
+        <button class="pill" :aria-pressed="settingsFocus.tab === 'privacy'" @click="openSettings('privacy')">{{ t("tab|隐私与安全") }}</button>
+        <button class="pill" :aria-pressed="settingsFocus.tab !== 'privacy'" @click="openSettings('updates')">{{ t("关于与更新") }}</button>
+      </nav>
+    </div>
+    <PrivacySettings v-if="settingsFocus.tab === 'privacy'" />
+    <UpdateSettings v-else />
   </div>
   <LoginView v-else-if="!signedIn" />
 
@@ -192,6 +200,7 @@ onMounted(() => {
     <!-- Last: its questions come up over any of these sheets. -->
     <AccountDialogs />
   </div>
+  <AppLockPasswordSheet v-if="!signedIn" />
   <TelemetryNoticeSheet v-if="showTelemetryNotice" />
   <UpdateNotice v-if="!booting && !appLocked && !showTelemetryNotice && ui.route !== 'player' && ui.route !== 'settings'" />
 
@@ -200,8 +209,10 @@ onMounted(() => {
 </template>
 
 <style scoped>
-.signedout-updates { position: fixed; z-index: 1; inset: 44px 20px 20px; max-width: 780px; margin: 0 auto; padding: 24px; overflow: auto; border-radius: 26px; }
-.signedout-updates > button { margin-bottom: 24px; }
+.signedout-settings { position: fixed; z-index: 1; inset: 44px 20px 20px; max-width: 780px; margin: 0 auto; padding: 24px; overflow: auto; border-radius: 26px; }
+.signedout-settings-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 24px; }
+.signedout-settings-head nav { display: flex; flex-wrap: wrap; gap: 8px; }
+.signedout-settings-head [aria-pressed="true"] { color: var(--accent); border-color: var(--accent); }
 /* Layer 3 floats over the scene with wallpaper between the islands. The file
    page uses 20px outside and 16px between navigation, content and context.
    With the title bar hidden, traffic lights sit on wallpaper and both islands

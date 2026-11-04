@@ -5,6 +5,8 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"errors"
+	"fmt"
+	"os"
 	"strings"
 	"sync"
 	"time"
@@ -176,6 +178,7 @@ func (d *DriveService) PollQRSignIn(id string) (QRSignInState, error) {
 		res, commitErr := d.finishSignIn(q.trial, result.Token, "", "", q.label, q.target, a, nil)
 		q.code, q.state.URL = "", ""
 		if commitErr != nil {
+			d.log.Error("drive: QR sign-in commit failed", "error", commitErr)
 			q.state.State, q.state.Message = "error", i18n.T("没能保存登录信息，请重试")
 			d.endQRSignIn(a)
 			return q.state, nil
@@ -216,29 +219,100 @@ func (d *DriveService) endQRSignIn(a *signInAttempt) {
 	a.cancel()
 }
 
-// A new QR account must not appear successful or leave orphaned credentials
-// when its account-list entry could not be saved.
-func (d *DriveService) discardQRAccount(s, previous *accountSession) {
-	d.mu.Lock()
-	for i, account := range d.accounts {
-		if account == s {
-			d.accounts = append(d.accounts[:i], d.accounts[i+1:]...)
-			break
+// commitQRSignIn holds signInCommitMu through preparation and publication.
+// Write the proposed account list before credentials; a failed credential write
+// restores only that list, never a stale token snapshot over a concurrent refresh.
+func (d *DriveService) commitQRSignIn(existing *accountSession, trial *drive.TokenManager, tok drive.Token, login, password, label string) (*accountSession, error) {
+	s := existing
+	if s == nil {
+		key := d.newKey(trial.DeviceID())
+		s = &accountSession{key: key, rec: accountRecord{Key: key, AddedAt: time.Now().UTC().Format(time.RFC3339Nano)}}
+	}
+	s.mu.RLock()
+	liveTokens, live := s.tokens, s.client != nil
+	s.mu.RUnlock()
+	reuse := live && liveTokens != nil && liveTokens.DeviceID() == trial.DeviceID() && liveTokens.Profile().ClientID == trial.Profile().ClientID
+	var client *drive.Client
+	var err error
+	if !reuse {
+		client, err = d.newSessionClient(trial)
+		if err != nil {
+			return nil, err
 		}
 	}
-	if d.current == s {
-		d.current = nil
-		if previous != nil {
-			d.current = d.byKeyLocked(previous.key)
+
+	err = func() error {
+		d.accountsMu.Lock()
+		defer d.accountsMu.Unlock()
+		before, readErr := os.ReadFile(d.accountsPath())
+		missing := errors.Is(readErr, os.ErrNotExist)
+		if readErr != nil && !missing {
+			return readErr
 		}
+		proposed := s.record()
+		proposed.Login, proposed.UserID, proposed.DeviceID = login, tok.UserID, trial.DeviceID()
+		proposed.UsedAt = time.Now().UTC().Format(time.RFC3339Nano)
+		if label != "" {
+			proposed.Label = label
+		}
+		d.mu.RLock()
+		file := accountsFile{Version: accountsVersion, Current: s.key, Accounts: make([]accountRecord, 0, len(d.accounts)+1)}
+		for _, account := range d.accounts {
+			if account == s {
+				file.Accounts = append(file.Accounts, proposed)
+			} else {
+				file.Accounts = append(file.Accounts, account.record())
+			}
+		}
+		d.mu.RUnlock()
+		if existing == nil {
+			file.Accounts = append(file.Accounts, proposed)
+		}
+		if err := d.writeAccounts(file); err != nil {
+			return err
+		}
+		var credentialErr error
+		if reuse {
+			if liveTokens != trial {
+				credentialErr = liveTokens.Seed(tok)
+			}
+		} else {
+			credentialErr = trial.Persist(d.credentialsStore(s.key), func() (string, error) { return d.passwordFor(s) })
+		}
+		if credentialErr != nil {
+			var restoreErr error
+			if missing {
+				restoreErr = os.Remove(d.accountsPath())
+			} else {
+				restoreErr = d.replaceAccounts(before)
+			}
+			if restoreErr != nil {
+				return errors.Join(credentialErr, fmt.Errorf("restore account list after failed QR sign-in: %w", restoreErr))
+			}
+			return credentialErr
+		}
+		// Publish only sign-in-owned fields; profile/consent edits can occur
+		// while persistence runs and will save again after accountsMu is released.
+		d.mu.Lock()
+		s.mu.Lock()
+		s.rec.Login, s.rec.UserID, s.rec.DeviceID, s.rec.UsedAt = proposed.Login, proposed.UserID, proposed.DeviceID, proposed.UsedAt
+		if label != "" {
+			s.rec.Label = label
+		}
+		s.password = password
+		s.mu.Unlock()
+		if existing == nil {
+			d.accounts = append(d.accounts, s)
+		}
+		d.current = s
+		d.mu.Unlock()
+		return nil
+	}()
+	if err != nil {
+		return nil, err
 	}
-	d.mu.Unlock()
-	if q := s.queue(); q != nil {
-		q.Close()
+	if !reuse {
+		d.installSession(s, trial, client)
 	}
-	if q := s.downloadQueue(); q != nil {
-		q.Close()
-	}
-	d.replaceIndex(s, nil)
-	d.removeAccountFiles(s.key)
+	return s, nil
 }

@@ -573,7 +573,13 @@ func TestTelemetrySanitizesLegacyPendingAndPrunesByCalendarAge(t *testing.T) {
 	record := `{"install":"00000000-0000-4000-8000-000000000001","days":[
 		{"day":"2026-09-17","counts":{"app.open":1}},
 		{"day":"2026-09-18","counts":{"app.open":8,"search":200}},
+		{"day":"2026-09-19","counts":{"app.open":0,"search":0}},
+		{"day":"2026-09-20","counts":{"search":-1}},
+		{"day":"2026-09-21","counts":{}},
+		{"day":"2026-09-22","counts":null},
+		{"day":"2026-10-15","counts":{"play.video":0}},
 		{"day":"2026-10-15","counts":{"play.video":3}},
+		{"day":"2026-10-15","counts":{"download":2}},
 		{"day":"2026-10-16","counts":{"app.open":9,"upload":30}},
 		{"day":"2026-10-16","counts":{"app.open":2}},
 		{"day":"2026-10-17","counts":{"app.open":0,"search":3}},
@@ -590,8 +596,13 @@ func TestTelemetrySanitizesLegacyPendingAndPrunesByCalendarAge(t *testing.T) {
 		t.Fatal("503 treated as delivered")
 	}
 	rep := srv.last(t)
-	want := map[string]map[string]int{"2026-09-18": {"app.open": 1}, "2026-10-16": {"app.open": 1}}
-	if rep.Install != "00000000-0000-4000-8000-000000000001" || len(rep.Days) != 2 || !equalDays(dayCounts(rep), want) {
+	want := map[string]map[string]int{
+		"2026-09-18": {"app.open": 1},
+		"2026-10-15": {"app.open": 1},
+		"2026-10-16": {"app.open": 1},
+		"2026-10-17": {"app.open": 1},
+	}
+	if rep.Install != "00000000-0000-4000-8000-000000000001" || len(rep.Days) != len(want) || !equalDays(dayCounts(rep), want) {
 		t.Fatalf("legacy data was not sanitized: %+v", rep)
 	}
 	data, err := os.ReadFile(path)
@@ -602,7 +613,7 @@ func TestTelemetrySanitizesLegacyPendingAndPrunesByCalendarAge(t *testing.T) {
 	if err := json.Unmarshal(data, &saved); err != nil {
 		t.Fatal(err)
 	}
-	if len(saved.Days) != 2 || !equalDays(dayCounts(telemetryReport{Days: saved.Days}), want) {
+	if len(saved.Days) != len(want) || !equalDays(dayCounts(telemetryReport{Days: saved.Days}), want) {
 		t.Fatalf("unsafe legacy data still on disk: %+v", saved)
 	}
 	clock.set(clock.now().AddDate(0, 0, 31))

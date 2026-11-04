@@ -58,13 +58,12 @@ function expire() {
 }
 async function poll(serial: number) {
   if (serial !== generation || !session || terminal.value) return;
-  if (polling) { schedule(serial); return; }
+  if (polling) return;
   if (deadline.value <= Date.now()) { expire(); return; }
   polling = true;
   try {
     const result = await DriveService.PollQRSignIn(session);
     if (serial !== generation) return;
-    if (deadline.value <= Date.now()) { expire(); return; }
     interval = Math.max(1, result.interval || interval);
     state.value = result.state;
     message.value = result.message;
@@ -74,10 +73,13 @@ async function poll(serial: number) {
       emit("complete", result.result);
       return;
     }
+    if (deadline.value <= Date.now()) { expire(); return; }
     if (terminal.value) stopTimers();
   } catch {
-    if (serial === generation) message.value = "";
-    if (serial === generation) state.value = "network";
+    if (serial !== generation) return;
+    if (deadline.value <= Date.now()) { expire(); return; }
+    message.value = "";
+    state.value = "network";
   } finally {
     polling = false;
     if (serial === generation) schedule(serial);
@@ -111,7 +113,11 @@ async function begin() {
     now.value = Date.now();
     clock = setInterval(() => {
       now.value = Date.now();
-      if (remaining.value === 0) expire();
+      if (remaining.value === 0) {
+        stopTimers();
+        // An in-flight poll may already have committed a sign-in.
+        if (!polling) expire();
+      }
     }, 1000);
     schedule(serial);
   } catch {
@@ -119,6 +125,7 @@ async function begin() {
   }
 }
 function retry() {
+  if (polling) return;
   if (session && deadline.value > Date.now() && state.value === "network") {
     // Retry still observes the server's minimum polling interval.
     schedule(generation);

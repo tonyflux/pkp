@@ -400,14 +400,20 @@ func (u *TelemetryService) loadLocked() *telemetryRecord {
 		rec.Install = newInstallID()
 		u.dirty = true
 	}
-	// Older builds queued feature counters. Only a positive app.open proves
-	// an active day; all feature names and startup frequencies are discarded.
+	// A legacy day can contain only feature use when the app stayed open
+	// across midnight. Preserve presence, but discard every feature counter.
 	days := make([]telemetryDay, 0, len(rec.Days))
 	seen := make(map[string]bool, len(rec.Days))
 	for _, day := range rec.Days {
-		if day.Counts["app.open"] > 0 && !seen[day.Day] {
-			days = append(days, telemetryDay{Day: day.Day, Counts: map[string]int{"app.open": 1}})
-			seen[day.Day] = true
+		if seen[day.Day] {
+			continue
+		}
+		for _, count := range day.Counts {
+			if count > 0 {
+				days = append(days, telemetryDay{Day: day.Day, Counts: map[string]int{"app.open": 1}})
+				seen[day.Day] = true
+				break
+			}
 		}
 	}
 	sort.Slice(days, func(i, j int) bool { return days[i].Day < days[j].Day })

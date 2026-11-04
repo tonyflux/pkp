@@ -1,11 +1,11 @@
 import { resolve } from "node:path";
+import vue from "@vitejs/plugin-vue";
 import { defineConfig } from "vitest/config";
 
-// Pure-function tests, plus switching.test.ts, which replaces the services
-// binding to drive the store. store.ts reads localStorage/matchMedia at
-// import time, hence jsdom; the Wails runtime is stubbed so no socket is
-// opened.
+// Pure-function, component and store tests run in jsdom; the Wails runtime is
+// stubbed so no socket is opened.
 export default defineConfig({
+  plugins: [vue()],
   test: {
     environment: "jsdom",
     include: ["src/**/*.test.ts"],

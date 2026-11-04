@@ -8,6 +8,8 @@ This document describes current product behavior and does not imply that a publi
 
 Sign in with your own PikPak account. QR sign-in is selected by default: scan the code with the PikPak app and confirm on your phone to enter your drive. Refresh an expired code to try again. Adding accounts and reauthentication also support QR sign-in; when reauthenticating, select the matching account on your phone. QR codes contain temporary authorization information; do not publish screenshots or forward them.
 
+If a confirmation request is already in progress when the QR countdown ends, the page waits for its final result: success completes sign-in; otherwise it offers a refresh. Closing the sign-in view or changing sign-in methods still cancels the flow.
+
 You can switch to “Password.” Its “Remember account password” option saves your password in the system credential store, and “Auto sign-in” depends on it. Both are selected by default and can be deselected before signing in. QR sign-in needs no password and leaves an existing account’s remembered-password settings unchanged. The resulting session is still stored locally and renewed with a refresh token. A revoked session requires renewed authorization; existing password auto-sign-in preferences continue to apply.
 
 Use the account entry in the lower-left corner to add, switch, and manage accounts; switching the account you are browsing does not stop local transfers already running for other accounts. Accounts are not merged into a single cloud drive. Signing out and removing an account clears the corresponding local session and records. It does not delete your PikPak account, delete its cloud files, or revoke its shares; cloud-add tasks may continue running on the server.
@@ -40,6 +42,8 @@ Gemini API: choose “Google Gemini” under the provider presets in “Settings
 Newly added files trigger reminders only when actionable organization suggestions are available, consistently across the assistant home, navigation badge, and menu bar. Files without suggestions remain unprocessed; they are not automatically dismissed or marked as organized, and are checked again after index or naming-setting changes. Background checks do not automatically call a model.
 
 ## Settings and Quitting
+
+Before signing in, open Privacy from the login page to turn off Send anonymous usage statistics in local settings. You can also switch to About & Updates there; neither requires a PikPak sign-in.
 
 “Settings” lets you adjust the language, appearance, transfers, the application’s own network proxy, privacy and security, and other options. Proxy settings do not modify the system VPN or system proxy. On macOS 12/13, WebView image loading does not support the same proxy configuration as the application and may still connect directly.
 
