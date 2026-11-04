@@ -2266,6 +2266,27 @@ export interface ProxyTestResult {
 }
 
 /**
+ * QRSignInRequest adds an account, or restores exactly Account when it is set.
+ */
+export interface QRSignInRequest {
+    "account": string;
+    "label": string;
+}
+
+/**
+ * QRSignInState exposes presentation data, never device codes or credentials.
+ */
+export interface QRSignInState {
+    "id": string;
+    "url": string;
+    "expiresAt": string;
+    "interval": number;
+    "state": string;
+    "message": string;
+    "result": SignInResult | null;
+}
+
+/**
  * Quality is one rendition the playing video can switch to.
  */
 export interface Quality {

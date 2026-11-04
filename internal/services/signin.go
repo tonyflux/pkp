@@ -78,6 +78,7 @@ type SavedSignIn struct {
 type signInAttempt struct {
 	cancel    context.CancelFunc
 	cancelled bool
+	qr        *qrSignInSession
 }
 
 func failed(kind, message string) SignInResult {
@@ -139,35 +140,74 @@ func (d *DriveService) SignIn(req SignInRequest) (SignInResult, error) {
 		return failed(kind, message), nil
 	}
 
+	return d.finishSignIn(trial, tok, login, password, label, target, attempt, &req.SignInOptions)
+}
+
+// finishSignIn shares identity checks and account commit across both login methods.
+// A nil options value preserves any existing password and its keychain choices.
+func (d *DriveService) finishSignIn(trial *drive.TokenManager, tok drive.Token, login, password, label string, target *accountSession, attempt *signInAttempt, options *SignInOptions) (SignInResult, error) {
+	d.signInCommitMu.Lock()
+	defer d.signInCommitMu.Unlock()
 	existing := d.byUserID(tok.UserID)
+	seedQR := options == nil
 	if target != nil && existing != target {
 		// A record from before user ids were kept takes the first one it
 		// signs in as with its own login, unless that id is another
 		// account's here. Anything else is someone else.
 		rec := target.record()
-		if existing != nil || rec.UserID != "" || tok.UserID == "" || rec.Login != login {
+		if options == nil || existing != nil || rec.UserID != "" || tok.UserID == "" || rec.Login != login {
 			return failed("mismatch", i18n.T("登录账号与待恢复账号不一致，原账号保持不变")), nil
 		}
 		existing = target
 	}
+	if options == nil {
+		if existing != nil {
+			existing.mu.RLock()
+			login, password = existing.rec.Login, existing.password
+			liveTokens, live := existing.tokens, existing.client != nil
+			existing.mu.RUnlock()
+			// Adding an already connected account only switches to it. Keep
+			// its usable identity and transfers rather than replacing queues.
+			if target == nil && live && liveTokens != nil {
+				if current, err := liveTokens.Current(); err == nil && current.Usable() {
+					trial, tok, seedQR = liveTokens, current, false
+				}
+			}
+		}
+		tok.Username = login
+	}
 	if !d.claimSignIn(attempt) {
 		return failed("cancelled", ""), nil
 	}
+	if seedQR {
+		if err := trial.Seed(tok); err != nil {
+			return SignInResult{}, err
+		}
+	}
 
-	s, previousLogin, err := d.commitSignIn(existing, trial, tok, login, password, label, deviceID)
+	s, previousLogin, err := d.commitSignIn(existing, trial, tok, login, password, label, trial.DeviceID())
 	if err != nil {
 		return SignInResult{}, err
 	}
-	d.keepSignIn(s, previousLogin, login, password, req.SignInOptions)
+	if options != nil {
+		d.keepSignIn(s, previousLogin, login, password, *options)
+	}
 	d.mu.Lock()
+	previousCurrent := d.current
 	d.current = s
 	d.mu.Unlock()
 	s.touch()
-	d.refreshProfile(s)
-	go d.acceptInvite(s)
 	if err := d.saveAccounts(); err != nil {
+		if options == nil {
+			if existing == nil {
+				d.discardQRAccount(s, previousCurrent)
+			}
+			return SignInResult{}, err
+		}
 		d.log.Warn("drive: could not save the account list", "error", err)
 	}
+	d.refreshProfile(s)
+	go d.acceptInvite(s)
 	d.emitAccounts()
 	return SignInResult{Status: d.Status(), Account: s.view(true), Existed: existing != nil}, nil
 }
@@ -182,9 +222,11 @@ func (d *DriveService) commitSignIn(existing *accountSession, trial *drive.Token
 		existing.mu.RLock()
 		tokens, live, previous := existing.tokens, existing.client != nil, existing.rec.Login
 		existing.mu.RUnlock()
-		if live && tokens != nil && tokens.DeviceID() == deviceID {
-			if err := tokens.Seed(tok); err != nil {
-				return nil, "", err
+		if live && tokens != nil && tokens.DeviceID() == deviceID && tokens.Profile().ClientID == trial.Profile().ClientID {
+			if tokens != trial {
+				if err := tokens.Seed(tok); err != nil {
+					return nil, "", err
+				}
 			}
 			existing.mu.Lock()
 			existing.password = password
@@ -266,6 +308,11 @@ func (d *DriveService) CancelSignIn() {
 func (d *DriveService) beginSignIn() (context.Context, *signInAttempt) {
 	ctx, cancel := context.WithTimeout(context.Background(), signInTimeout)
 	a := &signInAttempt{cancel: cancel}
+	d.registerSignIn(a)
+	return ctx, a
+}
+
+func (d *DriveService) registerSignIn(a *signInAttempt) {
 	d.signInMu.Lock()
 	if d.signIn != nil {
 		d.signIn.cancelled = true
@@ -273,7 +320,6 @@ func (d *DriveService) beginSignIn() (context.Context, *signInAttempt) {
 	}
 	d.signIn = a
 	d.signInMu.Unlock()
-	return ctx, a
 }
 
 // claimSignIn decides that an accepted attempt is kept, unless it was
@@ -309,7 +355,8 @@ func signInFailure(err error) (kind, message string) {
 			return "busy", i18n.T("登录尝试过于频繁，请稍后再试")
 		case apiErr.Status >= 500:
 			return "network", i18n.T("PikPak 服务暂时不可用，请稍后再试")
-		case apiErr.Status >= 400:
+		// Only a password rejection from sign-in says anything about the credentials.
+		case apiErr.Path == "/v1/auth/signin" && apiErr.Name == "password_not_match":
 			return "credentials", i18n.T("账号或密码不正确，请检查后重试")
 		}
 	}

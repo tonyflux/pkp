@@ -16,6 +16,8 @@ v0.2.0 起另附 `PKP-<版本>-source.tar.gz`：包含与签名更新清单记�
 
 当前 `isarray` 1.0.0 npm 包在 README 中包含 MIT 正文，生成器会收录；Wails 的 Go 模块另为 `@wailsio/runtime` 提供 MIT 正文。可选原生 `@napi-rs/canvas` 平台包未附许可证文件；安装该版本时生成器会收录 [v0.1.100 上游 MIT 正文](https://github.com/Brooooooklyn/canvas/blob/v0.1.100/LICENSE)。发布前应确认这些包的内容是否进入分发的前端。
 
+扫码登录使用 `qrcode-generator` 1.4.4（MIT）在本机编码二维码，不调用外部二维码图片服务。npm 包仅在 `qrcode.js` 文件头保留版权及 MIT 链接，构建时另将该声明与 MIT 正文写入 `THIRD_PARTY_LICENSES.txt`。
+
 当前源码已移除内置 PPT/PPTX 预览及 `pptx-preview` 依赖，因此其许可冲突不再是当前源码的发布阻断。此前使用的 `pptx-preview` 1.0.7 元数据声明 ISC，但包内 README 及[上游仓库许可证](https://github.com/501351981/pptx-preview/blob/main/LICENSE)限制源码发布和开源；移除依赖不代表已确认其 GPL 兼容性，也不追溯解决历史副本或既有分发的许可义务。v0.1.0 的实际组成与权利仍须以该版本的材料单独审查。
 
 Go 依赖图及声明文件在构建时选取，不能代替对源码内声明、资源来源、许可证兼容性和实际发布二进制的审查。默认壁纸已找到 AI 概念图提示词与后续裁切、调色的记录；应用标志则基于用户提供的 PikPak 图案，并非独立原创的 AI 标志。维护者已确认当前标志可随开源项目和安装包公开及分发，不再将其列为待确认的发布阻断。具体证据、哈希及尚未证明的导出链见[美术素材来源](docs/legal/artwork-provenance.md)。维护者的确认不表示 PikPak 背书或独立法律审计，也不替代对其他资源及生成服务条款的核实。LGPL 覆盖的库可按适用许可证替换，但可能影响兼容性。
@@ -29,6 +31,8 @@ Go 依赖图及声明文件在构建时选取，不能代替对源码内声明�
 公开项目 `Quan666/PikPakAPI` 固定提交 [`c233bd3db99ecd49fe2e42ec8a2d83072e3a9432` 的 `utils.py`](https://github.com/Quan666/PikPakAPI/blob/c233bd3db99ecd49fe2e42ec8a2d83072e3a9432/pikpakapi/utils.py)也包含相同的 ClientID、ClientSecret 和包名，但使用不同版本的 salts，不能据此证明当前 salts 一致。
 
 这些链接仅记录可复核的公开比对证据，不声明它们是本项目的实际原始来源，也不证明第三方源码复制许可、PikPak 的背书或生产服务当前接受这些参数。提交元数据日期不等于首次公开时间。维护者已确认当前身份参数可公开及复用；本版本保留这些参数与签名算法，不再将其列为待确认的发布阻断。该确认不等于独立法律审计，公开副本也不能替代来源链记录。
+
+扫码登录使用独立的 Web 公共客户端 `YUMx5nI8ZU8Ap8pm`，不使用 Android ClientSecret。包名 `mypikpak.com`、客户端版本 `2.0.0` 和有序的 15 项 captcha salts 来自官方网页 build `89b307c6` 的公开脚本 [`3877.fc93f11b.js`](https://mypikpak.com/drive/3877.fc93f11b.js)；登录客户端 ID 也见同一构建的 [`3765.141625f3.js`](https://mypikpak.com/drive/3765.141625f3.js)。此处复用公开身份和签名参数，不复制网页 SDK 实现；公开可访问不代表 PikPak 授权或背书，服务端仍可能改变协议。Web 会话在本机保留签发客户端信息，续期与恢复时不改用 Android 身份。
 
 ## 外部服务与名称
 

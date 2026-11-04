@@ -17,6 +17,7 @@ func init() {
 		"账号或密码不正确，请检查后重试":                  {Hant: "帳號或密碼不正確，請檢查後重試", En: "Incorrect account or password. Check them and try again", Ja: "アカウントまたはパスワードが正しくありません。確認して再試行してください", Ko: "계정 또는 암호가 올바르지 않습니다. 확인 후 다시 시도하세요"},
 		"无法连接 PikPak，请检查网络后重试":             {Hant: "無法連線到 PikPak，請檢查網路後重試", En: "Can't connect to PikPak. Check your network and try again", Ja: "PikPak に接続できません。ネットワークを確認して再試行してください", Ko: "PikPak에 연결할 수 없습니다. 네트워크를 확인하고 다시 시도하세요"},
 		"登录没有成功，请稍后再试":                     {Hant: "登入沒有成功，請稍後再試", En: "Sign-in didn't succeed. Try again later", Ja: "ログインできませんでした。しばらくしてから再試行してください", Ko: "로그인하지 못했습니다. 잠시 후 다시 시도하세요"},
+		"没能保存登录信息，请重试":                     {Hant: "無法儲存登入資訊，請重試", En: "Couldn't save the sign-in information. Try again", Ja: "ログイン情報を保存できませんでした。もう一度お試しください", Ko: "로그인 정보를 저장하지 못했습니다. 다시 시도하세요"},
 
 		// appearance.go
 		"「%s」超过 %d MB，换一张小一点的图片":        {Hant: "「%s」超過 %d MB，請換一張小一點的圖片", En: "\"%s\" is over %d MB; choose a smaller image", Ja: "「%s」は %d MB を超えています。小さめの画像を選んでください", Ko: "‘%s’이(가) %d MB를 초과합니다. 더 작은 이미지를 선택하세요"},

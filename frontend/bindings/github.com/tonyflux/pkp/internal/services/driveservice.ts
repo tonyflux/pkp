@@ -160,10 +160,25 @@ export function AttachWebview(window: application$0.WebviewWindow | null): $Canc
 }
 
 /**
+ * BeginQRSignIn starts an anonymous grant for the web QR client. The same
+ * client and stable device identity are retained for token refresh.
+ */
+export function BeginQRSignIn(req: $models.QRSignInRequest): $CancellablePromise<$models.QRSignInState> {
+    return $Call.ByID(3652479139, req);
+}
+
+/**
  * CancelDownload stops a download for good and deletes its partial file.
  */
 export function CancelDownload(account: string, id: string): $CancellablePromise<void> {
     return $Call.ByID(4261706271, account, id);
+}
+
+/**
+ * CancelQRSignIn is scoped: a disappearing old view cannot cancel its successor.
+ */
+export function CancelQRSignIn(id: string): $CancellablePromise<void> {
+    return $Call.ByID(1905451470, id);
 }
 
 /**
@@ -617,6 +632,14 @@ export function PlayFile(account: string, fileID: string): $CancellablePromise<s
  */
 export function PlayHistoryPage(account: string, pageToken: string): $CancellablePromise<$models.PlayHistoryPage> {
     return $Call.ByID(3374326718, account, pageToken);
+}
+
+/**
+ * PollQRSignIn advances at most one exchange. A per-session lock and server-side
+ * next-poll deadline prevent overlapping UI calls from consuming extra grants.
+ */
+export function PollQRSignIn(id: string): $CancellablePromise<$models.QRSignInState> {
+    return $Call.ByID(3551492889, id);
 }
 
 /**

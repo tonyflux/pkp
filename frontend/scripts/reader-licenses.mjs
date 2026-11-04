@@ -19,6 +19,29 @@ for (const [path, entry] of Object.entries(lock.packages)) {
     if (!section) throw new Error("Missing isarray 1.0.0 README license");
     notices.push(`\n--- README.md: License ---\n${section}`);
   }
+  if (manifest.name === "qrcode-generator" && manifest.version === "1.4.4") {
+    const source = await readFile(resolve(directory, "qrcode.js"), "utf8");
+    notices.push(`\n--- qrcode.js notice ---\n${source.split("\nvar qrcode =")[0]}
+
+--- MIT license text (https://opensource.org/licenses/mit-license.php) ---
+MIT License
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
+associated documentation files (the "Software"), to deal in the Software without restriction, including
+without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the
+following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies or substantial
+portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT
+LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO
+EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
+USE OR OTHER DEALINGS IN THE SOFTWARE.
+`);
+  }
   if (manifest.name.startsWith("@napi-rs/canvas-") && manifest.version === "0.1.100") {
     notices.push(`\n--- upstream canvas v0.1.100 LICENSE ---\n${await readFile(resolve(root, "scripts/canvas-0.1.100-LICENSE.txt"), "utf8")}`);
   }
