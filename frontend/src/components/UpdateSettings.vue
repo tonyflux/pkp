@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed, onMounted } from "vue";
+import { computed, onMounted, ref } from "vue";
+import { Browser } from "@wailsio/runtime";
 import Icon from "./Icon.vue";
 import Orbit from "./Orbit.vue";
 import Toggle from "./Toggle.vue";
@@ -46,6 +47,21 @@ const status = computed(() => {
     default: return t("从 GitHub Releases 获取正式版本。");
   }
 });
+
+const communityLinks = [
+  { href: "https://t.me/+JKfP8XaSayg5OTU1", label: N_("Telegram 交流群"), description: N_("交流使用问题、建议与更新动态"), icon: "shares" },
+  { href: "https://github.com/tonyflux/pkp", label: N_("GitHub 项目"), description: N_("查看源码、发布版本与提交反馈"), icon: "terminal" },
+];
+const communityError = ref("");
+
+async function openCommunity(href: string) {
+  communityError.value = "";
+  try {
+    await Browser.OpenURL(href);
+  } catch (err) {
+    communityError.value = t("无法打开链接：{error}", { error: err instanceof Error ? err.message : String(err) });
+  }
+}
 </script>
 
 <template>
@@ -67,6 +83,18 @@ const status = computed(() => {
       <div><strong>{{ t("自动检查更新") }}</strong><p class="muted">{{ t("启动后检查，之后最多每 24 小时一次；不会自动下载或安装。不发送账号、文件内容或统计编号。") }}</p></div>
       <Toggle :model-value="!!state?.automatic" :label="t('自动检查更新')" :disabled="!state?.supported || busy" @update:model-value="setAutomaticUpdates" />
     </div>
+
+    <section class="update-card glass-well community" aria-labelledby="community-title">
+      <h3 id="community-title">{{ t("社区与反馈") }}</h3>
+      <div class="community-links">
+        <a v-for="link in communityLinks" :key="link.href" class="community-link" :href="link.href" target="_blank" rel="noopener noreferrer" @click.prevent="openCommunity(link.href)">
+          <span class="community-icon"><Icon :name="link.icon" :size="20" /></span>
+          <span class="community-copy"><strong>{{ t(link.label) }}</strong><span>{{ t(link.description) }}</span></span>
+          <Icon class="external" name="popout" :size="16" />
+        </a>
+      </div>
+      <p v-if="communityError" class="error" role="alert">{{ communityError }}</p>
+    </section>
 
     <div v-if="state?.info" class="update-card glass-well release">
       <div class="release-head"><h3>PKP {{ state.info.version }}</h3><span class="muted">{{ state.info.publishedAt.slice(0, 10) }} · {{ bytes(state.info.size) }}</span></div>
@@ -111,5 +139,15 @@ h3 { margin: 0; font-size: 18px; } h4 { font-size: 13px; margin-bottom: 8px; }
 .install-note { margin: 16px 0 0; }
 progress { display: block; width: 100%; height: 7px; accent-color: var(--accent); margin-top: 20px; }
 .download-row { justify-content: space-between; margin-top: 12px; }
+.community h3 { margin-bottom: 8px; }
+.community-link { display: flex; align-items: center; gap: 13px; padding: 15px 0; color: var(--fg); text-decoration: none; }
+.community-link + .community-link { border-top: 1px solid var(--line); }
+.community-icon { display: grid; place-items: center; flex: none; width: 38px; height: 38px; border-radius: 12px; color: var(--accent); background: var(--accent-soft); }
+.community-copy { display: grid; gap: 4px; flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.community-copy strong { font-size: 14px; }
+.community-copy > span { color: var(--fg-dim); font-size: 12px; line-height: 1.6; }
+.community-link > .external { color: var(--fg-dim); }
+.community-link:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; border-radius: 8px; }
+@media (hover: hover) { .community-link:hover .community-copy strong { color: var(--accent); } }
 @media (max-width: 560px) { .update-card { padding: 16px; } .version-row { flex-wrap: wrap; } }
 </style>

@@ -2,6 +2,11 @@ import type { Messages } from "./types";
 
 const messages: Messages = {
   "关于与更新": { tw: "關於與更新", en: "About & Updates", ja: "情報とアップデート", ko: "정보 및 업데이트" },
+  "社区与反馈": { tw: "社群與回饋", en: "Community & Feedback", ja: "コミュニティとフィードバック", ko: "커뮤니티 및 피드백" },
+  "Telegram 交流群": { tw: "Telegram 交流群組", en: "Telegram community", ja: "Telegram コミュニティ", ko: "Telegram 커뮤니티" },
+  "交流使用问题、建议与更新动态": { tw: "交流使用問題、建議與更新動態", en: "Discuss questions, suggestions, and updates", ja: "使い方の質問、提案、更新情報を共有", ko: "사용 질문, 제안 및 업데이트 소식 공유" },
+  "GitHub 项目": { tw: "GitHub 專案", en: "GitHub project", ja: "GitHub プロジェクト", ko: "GitHub 프로젝트" },
+  "查看源码、发布版本与提交反馈": { tw: "查看原始碼、發佈版本與提交回饋", en: "Browse source, releases, and report issues", ja: "ソースコードやリリースを確認し、問題を報告", ko: "소스 코드와 출시 버전 확인 및 문제 제보" },
   "返回登录": { tw: "返回登入", en: "Back to Sign In", ja: "ログインに戻る", ko: "로그인으로 돌아가기" },
   "检查更新": { tw: "檢查更新", en: "Check for Updates", ja: "アップデートを確認", ko: "업데이트 확인" },
   "检查新版本、查看更新说明，并安全下载官方安装包。": { tw: "檢查新版本、查看更新說明，並安全下載官方安裝套件。", en: "Check for new releases, read release notes, and securely download official installers.", ja: "新しいバージョンと変更内容を確認し、公式インストーラを安全にダウンロードします。", ko: "새 버전과 변경 사항을 확인하고 공식 설치 파일을 안전하게 다운로드합니다." },
