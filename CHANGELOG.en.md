@@ -4,6 +4,7 @@
 
 ## Unreleased
 
+- Accept browser `magnet:` links and local `.torrent` files at cold start and while running, opening the existing Cloud Add confirmation sheet without automatic submission. Retain requests through sign-in, App Lock and pending drafts, processing multiple opens in order. Packages advertise protocol/file candidates without taking over existing defaults. Add five-language notices, concurrency regressions and handler-selection instructions. Guard queue staging across discard-and-switch confirmations and native torrent pickers, and resume reads invalidated by account changes so requests are not moved across accounts, overwritten or stalled.
 - Make release builds explicitly dispatched from `main` only, avoiding duplicate signing/upload jobs when local publication creates a tag. Keep normal CI and independent public-download verification after a Release is published; existing assets remain unchanged.
 - Fix native player handle lifetime during shutdown concurrent with background track restoration. macOS and Windows native calls retain the handle lock until complete, so shutdown drains them before destroying the core while allowing event callbacks to exit. Add real-player concurrent-shutdown regressions.
 

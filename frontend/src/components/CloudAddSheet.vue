@@ -13,6 +13,7 @@ import {
   currentAccount,
   currentFolderId,
   drive,
+  externalOpen,
   pickCloudAddFolder,
   pickTorrent,
   relocate,
@@ -32,7 +33,7 @@ const draft = computed({
   },
 });
 const results = ref<OfflineResult[]>([]);
-const submitting = ref(false);
+const submitting = computed(() => cloudAdd.submitting);
 
 interface Line {
   index: number;
@@ -95,13 +96,16 @@ function close() {
 }
 
 async function submit() {
-  submitting.value = true;
-  results.value = (await addOffline(valid.value.map((l) => l.text), destId.value)) ?? [];
-  submitting.value = false;
-  if (results.value.every((r) => r.ok)) {
-    draft.value = "";
-    results.value = [];
-    close();
+  cloudAdd.submitting = true;
+  try {
+    results.value = (await addOffline(valid.value.map((l) => l.text), destId.value)) ?? [];
+    if (results.value.length && results.value.every((r) => r.ok)) {
+      draft.value = "";
+      results.value = [];
+      close();
+    }
+  } finally {
+    cloudAdd.submitting = false;
   }
 }
 
@@ -172,12 +176,14 @@ function glyph(file: TorrentFile): string {
 }
 
 async function submitTorrent() {
-  submitting.value = true;
-  const ok = await addTorrent(destId.value);
-  submitting.value = false;
-  if (!ok) return;
-  clearTorrent();
-  close();
+  cloudAdd.submitting = true;
+  try {
+    if (!(await addTorrent(destId.value))) return;
+    clearTorrent();
+    close();
+  } finally {
+    cloudAdd.submitting = false;
+  }
 }
 </script>
 
@@ -198,6 +204,7 @@ async function submitTorrent() {
             role="tab"
             :class="{ on: cloudAdd.tab === 'link' }"
             :aria-selected="cloudAdd.tab === 'link'"
+            :disabled="submitting || cloudAdd.reading"
             @click="cloudAdd.tab = 'link'"
           >
             <Icon name="link" :size="17" />{{ t("链接") }}
@@ -206,11 +213,16 @@ async function submitTorrent() {
             role="tab"
             :class="{ on: cloudAdd.tab === 'torrent' }"
             :aria-selected="cloudAdd.tab === 'torrent'"
+            :disabled="submitting || cloudAdd.reading"
             @click="cloudAdd.tab = 'torrent'"
           >
             <Icon name="magnet" :size="17" />Torrent
           </button>
         </div>
+
+        <p v-if="externalOpen.pending.length && !cloudAdd.reading" class="pending" role="status">
+          {{ t("另有 {n} 项待打开，提交或清空当前内容后继续。", { n: externalOpen.pending.length }) }}
+        </p>
 
         <!-- The entry well is a recessed near-opaque surface. -->
         <template v-if="cloudAdd.tab === 'link'">
@@ -221,6 +233,7 @@ async function submitTorrent() {
             <textarea
               v-model="draft"
               :rows="rows"
+              :disabled="submitting"
               wrap="off"
               spellcheck="false"
               :aria-label="t('每行一个链接')"
@@ -250,7 +263,7 @@ async function submitTorrent() {
           <div v-if="!torrent" class="well empty">
             <Icon name="magnet" :size="26" />
             <p>{{ t("选择一个 .torrent 文件，挑出要保存的文件") }}</p>
-            <button class="pick" :disabled="cloudAdd.reading" @click="pickTorrent">
+            <button class="pick" :disabled="cloudAdd.reading || submitting" @click="pickTorrent">
               <Orbit v-if="cloudAdd.reading" :size="15" :label="t('读取中')" />
               {{ cloudAdd.reading ? t("读取中…") : t("选择种子文件") }}
             </button>
@@ -263,12 +276,13 @@ async function submitTorrent() {
                 <strong :title="torrent.name">{{ torrent.name }}</strong>
                 <small>{{ t("{n} 个文件 · {size}", { n: files.length, size: bytes(torrent.size) }) }}</small>
               </div>
-              <button class="quiet" :disabled="cloudAdd.reading" @click="pickTorrent">{{ t("换一个") }}</button>
+              <button class="quiet" :disabled="cloudAdd.reading || submitting" @click="clearTorrent">{{ t("移除") }}</button>
+              <button class="quiet" :disabled="cloudAdd.reading || submitting" @click="pickTorrent">{{ t("换一个") }}</button>
             </div>
 
             <div class="well files">
               <label v-for="f in files" :key="f.index" class="file" :class="{ on: cloudAdd.picked.has(f.index) }">
-                <input type="checkbox" :checked="cloudAdd.picked.has(f.index)" @change="toggleFile(f)" />
+                <input type="checkbox" :checked="cloudAdd.picked.has(f.index)" :disabled="submitting" @change="toggleFile(f)" />
                 <Icon :name="glyph(f)" :size="17" />
                 <span class="path" :title="f.path">{{ f.path }}</span>
                 <span class="size">{{ bytes(f.size) }}</span>
@@ -277,9 +291,9 @@ async function submitTorrent() {
 
             <div class="hint">
               <span class="picks">
-                <button class="quiet" @click="pickAll">{{ t("全选") }}</button>
-                <button class="quiet" @click="pickNone">{{ t("全不选") }}</button>
-                <button v-if="videoCount && videoCount < files.length" class="quiet" @click="pickVideos">{{ t("只选视频") }}</button>
+                <button class="quiet" :disabled="submitting" @click="pickAll">{{ t("全选") }}</button>
+                <button class="quiet" :disabled="submitting" @click="pickNone">{{ t("全不选") }}</button>
+                <button v-if="videoCount && videoCount < files.length" class="quiet" :disabled="submitting" @click="pickVideos">{{ t("只选视频") }}</button>
               </span>
               <span class="tally">{{ t("已选 {n} 个 · {size}", { n: pickedFiles.length, size: bytes(pickedSize) }) }}</span>
             </div>
@@ -380,6 +394,13 @@ header p {
 
 .source button:disabled {
   opacity: 0.6;
+}
+
+.pending {
+  margin: 0;
+  color: var(--fg-dim);
+  font-size: 13px;
+  line-height: 1.5;
 }
 
 /* ---------- the entry well ---------- */

@@ -325,6 +325,24 @@ export default {
   },
 
   // CloudAddSheet
+  "另有 {n} 项待打开，提交或清空当前内容后继续。": {
+    tw: "另有 {n} 項待開啟，提交或清空目前內容後繼續。",
+    en: (p) => `${p.n} more ${plural(p.n, "item is", "items are")} waiting. Submit or clear the current input to continue.`,
+    ja: "ほかに {n} 件が待機中です。現在の内容を送信または消去すると続行します。",
+    ko: "{n}개 항목이 더 대기 중입니다. 현재 내용을 제출하거나 지우면 계속합니다.",
+  },
+  待处理的外部打开请求: {
+    tw: "待處理的外部開啟請求",
+    en: "Pending external links or files",
+    ja: "未処理の外部リンク・ファイル",
+    ko: "대기 중인 외부 링크 또는 파일",
+  },
+  "无法读取外部打开请求：{error}": {
+    tw: "無法讀取外部開啟請求：{error}",
+    en: "Could not read external links or files: {error}",
+    ja: "外部リンク・ファイルを読み込めませんでした：{error}",
+    ko: "외부 링크 또는 파일을 읽지 못했습니다: {error}",
+  },
   重复: { tw: "重複", en: "Duplicate", ja: "重複", ko: "중복" },
   无法识别的链接格式: { tw: "無法識別的連結格式", en: "Unrecognized link format", ja: "認識できないリンク形式", ko: "인식할 수 없는 링크 형식" },
   我的文件: { tw: "我的檔案", en: "My Files", ja: "マイファイル", ko: "내 파일" },

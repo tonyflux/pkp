@@ -1,6 +1,6 @@
 # This file contains the configuration for this project.
-# When you update `info` or `fileAssociations`, run `wails3 task common:update:build-assets` to update the assets.
-# Note that this will overwrite any changes you have made to the assets.
+# Association assets include platform-specific non-default registration policies.
+# Keep the plists and NSIS helpers in sync manually; asset regeneration overwrites them.
 version: '3'
 
 # This information is used to generate the build assets.
@@ -68,19 +68,18 @@ dev_mode:
       exit_policy: shutdown
 
 # File Associations
-# More information at: https://v3.wails.io/noit/done/yet
+# Advertise support without changing the user's chosen default handler.
 fileAssociations:
-#  - ext: wails
-#    name: Wails
-#    description: Wails Application File
-#    iconName: wailsFileIcon
-#    role: Editor
-#  - ext: jpg
-#    name: JPEG
-#    description: Image File
-#    iconName: jpegFileIcon
-#    role: Editor
-#    mimeType: image/jpeg  # (optional)
+  - ext: torrent
+    name: PKP.Torrent
+    description: BitTorrent document
+    iconName: icon
+    role: Viewer
+    mimeType: application/x-bittorrent
+
+protocols:
+  - scheme: magnet
+    description: Magnet link
 
 # Other data
 other:

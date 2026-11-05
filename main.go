@@ -64,6 +64,7 @@ func init() {
 	// The menu bar's items that act on the page (appmenu.go).
 	application.RegisterEvent[string](eventMenuCommand)
 	application.RegisterEvent[services.UpdateState](services.EventUpdateState)
+	application.RegisterEvent[application.Void](services.EventExternalOpen)
 }
 
 // defaultTelemetryAPI is where a release build sends Anonymous Usage Statistics: the
@@ -123,6 +124,8 @@ func main() {
 	// Anonymous Usage Statistics: default-on daily active installations with opt-out, never feature activity.
 	telemetry := services.NewTelemetryService(library, telemetryAPI(), cmp.Or(version, "unknown"))
 	updates := services.NewUpdateService(library, menu, lock, cmp.Or(version, "unknown"), releaseBuild)
+	external := services.NewExternalOpenService()
+	workingDir, _ := os.Getwd()
 
 	// The config dir names this profile's single instance and keeps the last
 	// normal frame beside the settings. Without one the window is still
@@ -142,6 +145,7 @@ func main() {
 			application.NewService(notify),
 			application.NewService(telemetry),
 			application.NewService(updates),
+			application.NewService(external),
 		},
 		Assets: application.AssetOptions{
 			Handler:    application.AssetFileServerFS(assets),
@@ -153,8 +157,12 @@ func main() {
 		// config dir: PKP_CONFIG_DIR keeps a test profile apart.
 		SingleInstance: &application.SingleInstanceOptions{
 			UniqueID: instanceID(configDir),
-			OnSecondInstanceLaunch: func(application.SecondInstanceData) {
-				menu.Open("app", "", "")
+			OnSecondInstanceLaunch: func(data application.SecondInstanceData) {
+				if len(data.Args) <= 1 {
+					menu.Open("app", "", "")
+					return
+				}
+				external.OpenArgs(data.Args, data.WorkingDir)
 			},
 		},
 		Mac: application.MacOptions{
@@ -191,6 +199,7 @@ func main() {
 	lock.Attach(app, window)
 	notify.Attach(app)
 	updates.Attach(app)
+	external.Attach(app, menu, workingDir)
 	// The macOS menu bar, in UI Language; its page commands bring the window
 	// back first, as the Dock does.
 	attachAppMenu(app, func() { menu.Open("app", "", "") })
@@ -236,6 +245,10 @@ func main() {
 	window.OnWindowEvent(events.Common.WindowRuntimeReady, func(*application.WindowEvent) {
 		library.AttachWebview(window)
 	})
+
+	// Queue before Run; delivery waits for ApplicationStarted, and then for
+	// the page to stage each request and acknowledge it.
+	external.OpenArgs(os.Args, workingDir)
 
 	if err := app.Run(); err != nil {
 		log.Fatal(err)

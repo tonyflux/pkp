@@ -8,7 +8,7 @@ import { computed, markRaw, nextTick, onBeforeUnmount, onMounted, reactive, watc
 import { Browser, Clipboard, Dialogs, Events, Window } from "@wailsio/runtime";
 import { applyLanguage, i18n, isLocale, N_, t, type LanguagePref } from "./i18n";
 import { playFinished } from "./plays";
-import { AppLockService, AppearanceService, DriveService, MenuBarService, NotifyService, PlayerService, TelemetryService } from "../bindings/github.com/tonyflux/pkp/internal/services";
+import { AppLockService, AppearanceService, DriveService, ExternalOpenService, MenuBarService, NotifyService, PlayerService, TelemetryService } from "../bindings/github.com/tonyflux/pkp/internal/services";
 import type {
   AIChatReply,
   AIDelta,
@@ -36,6 +36,7 @@ import type {
   EmptyFolder,
   EmptyFolderPage,
   Entry,
+  ExternalOpen,
   FileDetail,
   FolderChoice,
   IndexProgress,
@@ -1423,30 +1424,36 @@ async function loadAccountData() {
 export async function switchAccount(id: string): Promise<boolean> {
   ui.accountsOpen = false;
   if (!id || id === (accounts.switching || currentId.value)) return true;
-  if (!(await leaveUnsubmitted(id))) return false;
-  return own(async () => {
-    const paused = await settlePlayback(id);
-    leaveScreen();
-    accounts.switching = id;
-    const serial = ++switchSerial;
-    const call = switchChain.then(() => DriveService.SwitchAccount(id));
-    switchChain = call.catch(() => undefined);
-    let status: DriveStatus;
-    try {
-      status = await call;
-    } catch (err) {
+  externalAccountChanges++;
+  try {
+    if (!(await leaveUnsubmitted(id))) return false;
+    return await own(async () => {
+      const paused = await settlePlayback(id);
+      leaveScreen();
+      accounts.switching = id;
+      const serial = ++switchSerial;
+      const call = switchChain.then(() => DriveService.SwitchAccount(id));
+      switchChain = call.catch(() => undefined);
+      let status: DriveStatus;
+      try {
+        status = await call;
+      } catch (err) {
+        if (serial !== switchSerial) return false;
+        const back = await DriveService.Status().catch(() => null);
+        if (back) await enterAccount(back, { message: t("没有切换到「{name}」：{error}", { name: accountName(id), error: errorText(err) }), tone: "error" });
+        return false;
+      }
       if (serial !== switchSerial) return false;
-      const back = await DriveService.Status().catch(() => null);
-      if (back) await enterAccount(back, { message: t("没有切换到「{name}」：{error}", { name: accountName(id), error: errorText(err) }), tone: "error" });
-      return false;
-    }
-    if (serial !== switchSerial) return false;
-    const name = accountLabel(accounts.list.find((a) => a.id === status.accountId));
-    const switched = status.needsPassword ? t("已切换到「{name}」 · 需要重新登录", { name }) : t("已切换到「{name}」", { name });
-    const message = [switched, paused].filter(Boolean).join(" · ");
-    await enterAccount(status, { message, tone: status.needsPassword ? "info" : "success" });
-    return true;
-  });
+      const name = accountLabel(accounts.list.find((a) => a.id === status.accountId));
+      const switched = status.needsPassword ? t("已切换到「{name}」 · 需要重新登录", { name }) : t("已切换到「{name}」", { name });
+      const message = [switched, paused].filter(Boolean).join(" · ");
+      await enterAccount(status, { message, tone: status.needsPassword ? "info" : "success" });
+      return true;
+    });
+  } finally {
+    externalAccountChanges--;
+    if (!externalAccountChanges) void stageExternalOpen();
+  }
 }
 
 /* ---------- unsubmitted sheets ---------- */
@@ -1465,11 +1472,102 @@ export const cloudAdd = reactive({
   // with all of them.
   picked: new Set<number>(),
   reading: false,
+  submitting: false,
   // Save to: the folder the tasks land in, [] for the server's own download
   // folder (drive.CreateOfflineTask without a parent). The sheet fills it
   // with the page's folder when it opens with nothing pending.
   dest: [] as Crumb[],
 });
+
+// OS launches can arrive before login, unlock or the webview's subscriptions.
+// Go retains them until this window has staged each one for confirmation.
+export const externalOpen = reactive({ pending: [] as ExternalOpen[] });
+let externalListening = false;
+let externalRead = 0;
+let externalStaging = false;
+// Includes the discard confirmation, before accounts.switching is set.
+let externalAccountChanges = 0;
+
+function canOpenExternal(): boolean {
+  return !!drive.status?.configured && !accounts.switching && !externalAccountChanges && !appLocked.value;
+}
+
+async function refreshExternalOpen(): Promise<void> {
+  const serial = ++externalRead;
+  try {
+    const pending = await ExternalOpenService.Pending();
+    if (serial !== externalRead) return;
+    externalOpen.pending = pending ?? [];
+    if (externalOpen.pending.length && canOpenExternal()) {
+      if (ui.route === "player") collapsePlayer();
+      ui.cloudAddOpen = true;
+    }
+    await stageExternalOpen();
+  } catch (err) {
+    notify(t("无法读取外部打开请求：{error}", { error: errorText(err) }), "error");
+  }
+}
+
+async function stageExternalOpen(): Promise<void> {
+  const item = externalOpen.pending[0];
+  if (!item || externalStaging || !canOpenExternal() || cloudAdd.submitting || cloudAdd.reading || cloudAdd.draft.trim() || cloudAdd.torrent) return;
+  externalStaging = true;
+  let handled = false;
+  let interrupted = false;
+  try {
+    cloudAdd.dest = currentFolderId.value ? drive.trail.map((c) => ({ ...c })) : [];
+    if (ui.route === "player") collapsePlayer();
+    ui.cloudAddOpen = true;
+    if (item.kind === "magnet") {
+      cloudAdd.tab = "link";
+      cloudAdd.draft = item.value;
+    } else {
+      cloudAdd.tab = "torrent";
+      cloudAdd.reading = true;
+      try {
+        if (!(await loadCloudTorrent(item.value))) {
+          interrupted = true;
+          return;
+        }
+      } finally {
+        cloudAdd.reading = false;
+      }
+    }
+    // An unreadable torrent was reported by run(); it must not block the
+    // remaining opens. A changed account, by contrast, keeps the request.
+    await ExternalOpenService.Ack(item.id);
+    ++externalRead;
+    externalOpen.pending = externalOpen.pending.filter((p) => p.id !== item.id);
+    handled = true;
+  } catch (err) {
+    notify(t("无法读取外部打开请求：{error}", { error: errorText(err) }), "error");
+  } finally {
+    externalStaging = false;
+    // The reading watcher may already have run while staging was locked.
+    if (interrupted) void stageExternalOpen();
+  }
+  if (handled) await refreshExternalOpen();
+}
+
+/** Only the main window consumes OS requests; other windows leave them in Go. */
+export async function watchExternalOpen(): Promise<void> {
+  if (inPlayerWindow || inMenuBarWindow || inViewerWindow) return;
+  if (!externalListening) {
+    externalListening = true;
+    Events.On("external:open", () => void refreshExternalOpen());
+    watch(
+      [() => drive.status?.configured, () => drive.status?.accountId, () => accounts.switching, appLocked],
+      () => {
+        if (canOpenExternal()) void refreshExternalOpen();
+      },
+    );
+    watch(
+      [() => cloudAdd.draft, () => cloudAdd.torrent, () => cloudAdd.reading, () => cloudAdd.submitting],
+      () => void stageExternalOpen(),
+    );
+  }
+  await refreshExternalOpen();
+}
 
 /** What the account on screen has started and not submitted, "" for nothing. */
 function unsubmitted(): string {
@@ -7944,21 +8042,35 @@ export async function addOffline(urls: string[], parentId: string) {
  * to start with.
  */
 export async function pickTorrent(): Promise<void> {
-  const path = await Dialogs.OpenFile({
-    Title: t("选择种子文件"),
-    Message: t("选择一个 .torrent 文件"),
-    ButtonText: t("打开"),
-    CanChooseFiles: true,
-    CanChooseDirectories: false,
-    Filters: [{ DisplayName: t("种子文件"), Pattern: "*.torrent" }],
-  });
-  if (!path) return;
+  if (cloudAdd.reading || cloudAdd.submitting) return;
+  const stamp = accountKey();
   cloudAdd.reading = true;
+  try {
+    const path = await Dialogs.OpenFile({
+      Title: t("选择种子文件"),
+      Message: t("选择一个 .torrent 文件"),
+      ButtonText: t("打开"),
+      CanChooseFiles: true,
+      CanChooseDirectories: false,
+      Filters: [{ DisplayName: t("种子文件"), Pattern: "*.torrent" }],
+    });
+    if (!path || stamp !== accountKey() || !canOpenExternal()) return;
+    await loadCloudTorrent(path);
+  } finally {
+    cloudAdd.reading = false;
+  }
+}
+
+// false means the page changed while reading: keep an OS request queued.
+async function loadCloudTorrent(path: string): Promise<boolean> {
+  const stamp = accountKey();
   const meta = await run(t("读取种子"), () => DriveService.ReadTorrent(path));
-  cloudAdd.reading = false;
-  if (!meta) return;
-  cloudAdd.torrent = meta;
-  cloudAdd.picked = new Set((meta.files ?? []).map((f) => f.index));
+  if (stamp !== accountKey() || !canOpenExternal()) return false;
+  if (meta) {
+    cloudAdd.torrent = meta;
+    cloudAdd.picked = new Set((meta.files ?? []).map((f) => f.index));
+  }
+  return true;
 }
 
 /** clearTorrent drops the picked torrent and its selection. */
@@ -8864,6 +8976,7 @@ export async function bootstrap() {
   document.documentElement.dataset.skin = ui.skin;
   applyTransparency();
   void loadTelemetry();
+  void watchExternalOpen();
 
   // bootstrap is re-entered from the splash's retry button; the event
   // subscription must not be.
@@ -8910,7 +9023,11 @@ export async function bootstrap() {
       void loadInbox(event.data.account);
     });
     // Quitting asks before what is typed and not submitted is lost; Go asks, so it is told.
-    watch(unsubmitted, (what) => void MenuBarService.SetUnsaved(what).catch(() => undefined), { immediate: true });
+    watch(
+      () => unsubmitted() || (externalOpen.pending.length ? t("待处理的外部打开请求") : ""),
+      (what) => void MenuBarService.SetUnsaved(what).catch(() => undefined),
+      { immediate: true },
+    );
   }
 
   ui.bootError = "";

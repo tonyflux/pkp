@@ -1069,6 +1069,15 @@ export interface Entry {
 }
 
 /**
+ * ExternalOpen is an OS request awaiting the Cloud Add confirmation UI.
+ */
+export interface ExternalOpen {
+    "id": number;
+    "kind": string;
+    "value": string;
+}
+
+/**
  * ExtractRequest starts an extraction. Picks empty extracts everything
  * (the sheet sends that when every item is ticked: the listing it shows
  * may be cut short by the service, the archive is not).
