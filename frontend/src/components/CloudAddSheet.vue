@@ -95,6 +95,20 @@ function close() {
   ui.cloudAddOpen = false;
 }
 
+function clearLinks() {
+  if (submitting.value || cloudAdd.reading) return;
+  draft.value = "";
+  results.value = [];
+}
+
+function cancel() {
+  if (submitting.value || cloudAdd.reading) return;
+  externalOpen.paused = true;
+  if (cloudAdd.tab === "link") clearLinks();
+  else clearTorrent();
+  close();
+}
+
 async function submit() {
   cloudAdd.submitting = true;
   try {
@@ -221,7 +235,7 @@ async function submitTorrent() {
         </div>
 
         <p v-if="externalOpen.pending.length && !cloudAdd.reading" class="pending" role="status">
-          {{ t("另有 {n} 项待打开，提交或清空当前内容后继续。", { n: externalOpen.pending.length }) }}
+          {{ t("另有 {n} 项待打开，提交或清空对应类型的内容后继续。", { n: externalOpen.pending.length }) }}
         </p>
 
         <!-- The entry well is a recessed near-opaque surface. -->
@@ -253,7 +267,10 @@ async function submitTorrent() {
 
           <div class="hint">
             <span>{{ t("每行一个链接，支持批量添加") }}</span>
-            <span class="tally">{{ t("已识别 {n} 条链接", { n: valid.length }) }}</span>
+            <span class="picks">
+              <button v-if="draft" class="quiet" :disabled="submitting || cloudAdd.reading" @click="clearLinks">{{ t("清空链接") }}</button>
+              <span class="tally">{{ t("已识别 {n} 条链接", { n: valid.length }) }}</span>
+            </span>
           </div>
         </template>
 
@@ -309,7 +326,7 @@ async function submitTorrent() {
         </div>
 
         <footer>
-          <button @click="close">{{ t("取消") }}</button>
+          <button :disabled="submitting || cloudAdd.reading" :title="t('丢弃当前内容并关闭')" @click="cancel">{{ t("取消") }}</button>
           <button
             v-if="cloudAdd.tab === 'torrent'"
             class="primary"
@@ -631,6 +648,7 @@ header p {
 
 .picks {
   display: flex;
+  align-items: center;
   gap: 4px;
 }
 

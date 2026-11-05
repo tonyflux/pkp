@@ -1481,7 +1481,8 @@ export const cloudAdd = reactive({
 
 // OS launches can arrive before login, unlock or the webview's subscriptions.
 // Go retains them until this window has staged each one for confirmation.
-export const externalOpen = reactive({ pending: [] as ExternalOpen[] });
+// Cancel pauses automatic staging until a reopen or a new external request.
+export const externalOpen = reactive({ pending: [] as ExternalOpen[], paused: false });
 let externalListening = false;
 let externalRead = 0;
 let externalStaging = false;
@@ -1492,13 +1493,14 @@ function canOpenExternal(): boolean {
   return !!drive.status?.configured && !accounts.switching && !externalAccountChanges && !appLocked.value;
 }
 
-async function refreshExternalOpen(): Promise<void> {
+async function refreshExternalOpen(resume = true): Promise<void> {
+  if (resume) externalOpen.paused = false;
   const serial = ++externalRead;
   try {
     const pending = await ExternalOpenService.Pending();
     if (serial !== externalRead) return;
     externalOpen.pending = pending ?? [];
-    if (externalOpen.pending.length && canOpenExternal()) {
+    if (externalOpen.pending.length && !externalOpen.paused && canOpenExternal()) {
       if (ui.route === "player") collapsePlayer();
       ui.cloudAddOpen = true;
     }
@@ -1508,29 +1510,41 @@ async function refreshExternalOpen(): Promise<void> {
   }
 }
 
+function externalAlreadyStaged(item: ExternalOpen): boolean {
+  return item.kind === "magnet"
+    ? cloudAdd.draft.split("\n").some((line) => line.trim() === item.value)
+    : cloudAdd.torrent?.path === item.value;
+}
+
 async function stageExternalOpen(): Promise<void> {
-  const item = externalOpen.pending[0];
-  if (!item || externalStaging || !canOpenExternal() || cloudAdd.submitting || cloudAdd.reading || cloudAdd.draft.trim() || cloudAdd.torrent) return;
+  if (externalOpen.paused || externalStaging || !canOpenExternal() || cloudAdd.submitting || cloudAdd.reading) return;
+  // A duplicate delivery is acknowledged without replacing edits or selections.
+  const item = externalOpen.pending.find((p) => externalAlreadyStaged(p) || (p.kind === "magnet" ? !cloudAdd.draft.trim() : !cloudAdd.torrent));
+  if (!item) return;
   externalStaging = true;
   let handled = false;
   let interrupted = false;
   try {
-    cloudAdd.dest = currentFolderId.value ? drive.trail.map((c) => ({ ...c })) : [];
+    if (!cloudAdd.draft.trim() && !cloudAdd.torrent) {
+      cloudAdd.dest = currentFolderId.value ? drive.trail.map((c) => ({ ...c })) : [];
+    }
     if (ui.route === "player") collapsePlayer();
     ui.cloudAddOpen = true;
     if (item.kind === "magnet") {
       cloudAdd.tab = "link";
-      cloudAdd.draft = item.value;
+      if (!cloudAdd.draft.trim()) cloudAdd.draft = item.value;
     } else {
       cloudAdd.tab = "torrent";
-      cloudAdd.reading = true;
-      try {
-        if (!(await loadCloudTorrent(item.value))) {
-          interrupted = true;
-          return;
+      if (!externalAlreadyStaged(item)) {
+        cloudAdd.reading = true;
+        try {
+          if (!(await loadCloudTorrent(item.value))) {
+            interrupted = true;
+            return;
+          }
+        } finally {
+          cloudAdd.reading = false;
         }
-      } finally {
-        cloudAdd.reading = false;
       }
     }
     // An unreadable torrent was reported by run(); it must not block the
@@ -1546,7 +1560,7 @@ async function stageExternalOpen(): Promise<void> {
     // The reading watcher may already have run while staging was locked.
     if (interrupted) void stageExternalOpen();
   }
-  if (handled) await refreshExternalOpen();
+  if (handled) await refreshExternalOpen(false);
 }
 
 /** Only the main window consumes OS requests; other windows leave them in Go. */
@@ -1559,6 +1573,14 @@ export async function watchExternalOpen(): Promise<void> {
       [() => drive.status?.configured, () => drive.status?.accountId, () => accounts.switching, appLocked],
       () => {
         if (canOpenExternal()) void refreshExternalOpen();
+      },
+    );
+    watch(
+      () => ui.cloudAddOpen,
+      (open) => {
+        if (!open) return;
+        externalOpen.paused = false;
+        void stageExternalOpen();
       },
     );
     watch(

@@ -134,6 +134,16 @@ func (s *ExternalOpenService) OpenArgs(args []string, workingDir string) {
 
 func (s *ExternalOpenService) enqueue(kind, value string) {
 	s.mu.Lock()
+	for _, item := range s.pending {
+		if item.Kind == kind && item.Value == value {
+			notify := s.notify
+			s.mu.Unlock()
+			if notify != nil {
+				notify()
+			}
+			return
+		}
+	}
 	s.nextID++
 	s.pending = append(s.pending, ExternalOpen{ID: s.nextID, Kind: kind, Value: value})
 	notify := s.notify

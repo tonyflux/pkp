@@ -147,6 +147,25 @@ func TestExternalOpenRejectsWithoutRaising(t *testing.T) {
 	}
 }
 
+func TestExternalOpenCoalescesPendingDuplicatesButAllowsReopening(t *testing.T) {
+	s := NewExternalOpenService()
+	cwd := t.TempDir()
+	s.OpenURL(externalTestMagnet)
+	s.OpenURL(strings.Replace(externalTestMagnet, "magnet:", "MAGNET:", 1))
+	s.OpenFile("sample.torrent", cwd)
+	s.OpenArgs([]string{"pkp", externalTestMagnet, "sample.torrent"}, cwd)
+	pending := s.Pending()
+	if len(pending) != 2 || pending[0].Kind != "magnet" || pending[1].Kind != "torrent" {
+		t.Fatalf("duplicate OS deliveries were queued again: %+v", pending)
+	}
+	s.Ack(pending[0].ID)
+	s.OpenURL(externalTestMagnet)
+	reopened := s.Pending()
+	if len(reopened) != 2 || reopened[0] != pending[1] || reopened[1].Value != externalTestMagnet || reopened[1].ID <= pending[1].ID {
+		t.Fatalf("deliberately reopening an acknowledged link was lost: %+v", reopened)
+	}
+}
+
 func TestExternalOpenAckDoesNotLoseConcurrentArrivals(t *testing.T) {
 	s := NewExternalOpenService()
 	s.OpenURL(externalTestMagnet)

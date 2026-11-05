@@ -1,5 +1,5 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import { nextTick } from "vue";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { createApp, nextTick } from "vue";
 import type { AppLockState, DriveStatus, ExternalOpen, TorrentMeta } from "../bindings/github.com/tonyflux/pkp/internal/services";
 
 const backend = vi.hoisted(() => ({
@@ -30,6 +30,7 @@ vi.mock("../bindings/github.com/tonyflux/pkp/internal/services", () => {
 });
 
 import { accounts, appLock, clearTorrent, cloudAdd, drive, externalOpen, pickTorrent, switchAccount, ui, watchExternalOpen } from "./store";
+import CloudAddSheet from "./components/CloudAddSheet.vue";
 
 const magnet = "magnet:?xt=urn:btih:0123456789012345678901234567890123456789&dn=Example";
 const status = (id = "a") => ({ configured: true, accountId: id } as DriveStatus);
@@ -46,6 +47,26 @@ function deferred<T>() {
     withResolvers<T>(): { promise: Promise<T>; resolve: (value: T) => void; reject: (reason?: unknown) => void };
   }).withResolvers<T>();
 }
+
+const unmounts = new Set<() => void>();
+async function mountSheet() {
+  const host = document.createElement("div");
+  document.body.append(host);
+  const app = createApp(CloudAddSheet);
+  app.mount(host);
+  unmounts.add(() => { app.unmount(); host.remove(); });
+  await nextTick();
+}
+function sheetButton(label: string) {
+  const button = Array.from(document.querySelectorAll<HTMLButtonElement>('[role="dialog"] button'))
+    .find((b) => b.textContent?.trim() === label || b.title === label);
+  if (!button) throw new Error(`Missing sheet button: ${label}`);
+  return button;
+}
+afterEach(() => {
+  for (const unmount of unmounts) unmount();
+  unmounts.clear();
+});
 
 beforeEach(async () => {
   backend.pending = [];
@@ -91,19 +112,79 @@ describe("external cloud-add consumption", () => {
     expect(backend.calls).not.toContain("AddTorrent");
   });
 
-  it("does not replace an edited draft when a torrent arrives in the running app", async () => {
+  it("shows an external torrent without replacing edited links or their destination", async () => {
     drive.status = status();
     cloudAdd.draft = "https://example.com/my-draft.mp4";
+    cloudAdd.dest = [{ id: "chosen", name: "Chosen destination" }];
     add({ id: 2, kind: "torrent", value: "/tmp/second.torrent" });
-    await vi.waitFor(() => expect(externalOpen.pending.map((p) => p.id)).toEqual([2]));
-    expect(cloudAdd.draft).toBe("https://example.com/my-draft.mp4");
-    expect(backend.calls).not.toContain("ReadTorrent");
-    expect(ui.cloudAddOpen).toBe(true);
-    cloudAdd.draft = "";
     await vi.waitFor(() => expect(cloudAdd.torrent?.path).toBe("/tmp/second.torrent"));
+    expect(cloudAdd.draft).toBe("https://example.com/my-draft.mp4");
+    expect(cloudAdd.dest.map((p) => p.id)).toEqual(["chosen"]);
     expect([...cloudAdd.picked]).toEqual([0, 1]);
     expect(cloudAdd.tab).toBe("torrent");
+    expect(ui.cloudAddOpen).toBe(true);
+    await vi.waitFor(() => expect(backend.pending).toEqual([]));
     expect(backend.calls).not.toContain("AddTorrent");
+  });
+
+  it.each([true, false])("switches to a new magnet while preserving the previous torrent (sheet open: %s)", async (open) => {
+    drive.status = status();
+    add({ id: 20, kind: "torrent", value: "/tmp/previous.torrent" });
+    await vi.waitFor(() => expect(cloudAdd.torrent?.path).toBe("/tmp/previous.torrent"));
+    await vi.waitFor(() => expect(backend.pending).toEqual([]));
+    cloudAdd.picked.delete(1);
+    cloudAdd.dest = [{ id: "chosen", name: "Chosen destination" }];
+    ui.cloudAddOpen = open;
+
+    add({ id: 21, kind: "magnet", value: magnet });
+    await vi.waitFor(() => expect(cloudAdd.draft).toBe(magnet));
+    expect(cloudAdd.tab).toBe("link");
+    expect(ui.cloudAddOpen).toBe(true);
+    expect(cloudAdd.torrent?.path).toBe("/tmp/previous.torrent");
+    expect([...cloudAdd.picked]).toEqual([0]);
+    expect(cloudAdd.dest.map((p) => p.id)).toEqual(["chosen"]);
+    await vi.waitFor(() => expect(backend.pending).toEqual([]));
+    expect(backend.calls).not.toContain("AddOfflineTasks");
+    expect(backend.calls).not.toContain("AddTorrent");
+  });
+
+  it("does not let another queued torrent hide a new magnet", async () => {
+    drive.status = status();
+    backend.pending = [
+      { id: 22, kind: "torrent", value: "/tmp/previous.torrent" },
+      { id: 23, kind: "torrent", value: "/tmp/queued.torrent" },
+    ];
+    await watchExternalOpen();
+    await vi.waitFor(() => expect(externalOpen.pending.map((p) => p.id)).toEqual([23]));
+
+    add({ id: 24, kind: "magnet", value: magnet });
+    await vi.waitFor(() => expect(cloudAdd.draft).toBe(magnet));
+    expect(cloudAdd.tab).toBe("link");
+    expect(cloudAdd.torrent?.path).toBe("/tmp/previous.torrent");
+    await vi.waitFor(() => expect(backend.pending.map((p) => p.id)).toEqual([23]));
+
+    clearTorrent();
+    await vi.waitFor(() => expect(cloudAdd.torrent?.path).toBe("/tmp/queued.torrent"));
+    expect(cloudAdd.draft).toBe(magnet);
+    await vi.waitFor(() => expect(backend.pending).toEqual([]));
+  });
+
+  it.each(["reading", "submitting"] as const)("waits for %s before showing a magnet beside a retained torrent", async (busy) => {
+    drive.status = status();
+    cloudAdd.torrent = meta("/tmp/previous.torrent");
+    cloudAdd.tab = "torrent";
+    cloudAdd[busy] = true;
+    add({ id: 25, kind: "magnet", value: magnet });
+    await idle();
+    expect(cloudAdd.draft).toBe("");
+    expect(cloudAdd.tab).toBe("torrent");
+    expect(backend.pending.map((p) => p.id)).toEqual([25]);
+
+    cloudAdd[busy] = false;
+    await vi.waitFor(() => expect(cloudAdd.draft).toBe(magnet));
+    expect(cloudAdd.tab).toBe("link");
+    expect(cloudAdd.torrent?.path).toBe("/tmp/previous.torrent");
+    await vi.waitFor(() => expect(backend.pending).toEqual([]));
   });
 
   it("keeps additional torrents queued through closing and submission, advancing only after the current input clears", async () => {
@@ -297,5 +378,134 @@ describe("external cloud-add consumption", () => {
     expect(cloudAdd.torrent).toBe(null);
     await vi.waitFor(() => expect(backend.pending).toEqual([]));
     expect(backend.calls).not.toContain("AddOfflineTasks");
+  });
+});
+
+describe("discarding cloud-add input", () => {
+  it("clears links without submitting or removing a retained torrent", async () => {
+    drive.status = status();
+    await mountSheet();
+    cloudAdd.torrent = meta("/tmp/retained.torrent");
+    cloudAdd.picked = new Set([0]);
+    cloudAdd.dest = [{ id: "chosen", name: "Chosen destination" }];
+    add({ id: 30, kind: "magnet", value: magnet });
+    await vi.waitFor(() => expect(cloudAdd.draft).toBe(magnet));
+    await vi.waitFor(() => expect(backend.pending).toEqual([]));
+
+    sheetButton("清空链接").click();
+    await idle();
+    expect(document.querySelector<HTMLTextAreaElement>("textarea")?.value).toBe("");
+    expect(sheetButton("添加 0 项").disabled).toBe(true);
+    expect(cloudAdd.torrent?.path).toBe("/tmp/retained.torrent");
+    expect([...cloudAdd.picked]).toEqual([0]);
+    expect(cloudAdd.dest.map((p) => p.id)).toEqual(["chosen"]);
+    sheetButton("关闭").click();
+    await nextTick();
+    ui.cloudAddOpen = true;
+    await idle();
+    expect(document.querySelector<HTMLTextAreaElement>("textarea")?.value).toBe("");
+    expect(backend.calls).not.toContain("AddOfflineTasks");
+  });
+
+  it("coalesces repeated opens so deleting the link does not fill it again", async () => {
+    drive.status = status();
+    await mountSheet();
+    add({ id: 31, kind: "magnet", value: magnet });
+    await vi.waitFor(() => expect(backend.pending).toEqual([]));
+    add({ id: 32, kind: "magnet", value: magnet });
+    await idle();
+    const input = document.querySelector<HTMLTextAreaElement>("textarea")!;
+    input.value = "";
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    await idle();
+    expect(input.value).toBe("");
+    expect(cloudAdd.draft).toBe("");
+    expect(backend.pending).toEqual([]);
+  });
+
+  it("cancels the current links and waits until reopening before staging the next", async () => {
+    drive.status = status();
+    await mountSheet();
+    cloudAdd.torrent = meta("/tmp/retained.torrent");
+    cloudAdd.picked = new Set([0]);
+    backend.pending = [
+      { id: 33, kind: "magnet", value: magnet },
+      { id: 34, kind: "magnet", value: `${magnet}&next=1` },
+    ];
+    await watchExternalOpen();
+    await vi.waitFor(() => expect(externalOpen.pending.map((p) => p.id)).toEqual([34]));
+
+    sheetButton("取消").click();
+    await idle();
+    expect(ui.cloudAddOpen).toBe(false);
+    expect(cloudAdd.draft).toBe("");
+    expect(cloudAdd.torrent?.path).toBe("/tmp/retained.torrent");
+    expect([...cloudAdd.picked]).toEqual([0]);
+    expect(backend.pending.map((p) => p.id)).toEqual([34]);
+    ui.cloudAddOpen = true;
+    await vi.waitFor(() => expect(cloudAdd.draft).toBe(`${magnet}&next=1`));
+    expect(backend.calls).not.toContain("AddOfflineTasks");
+  });
+
+  it("cancels a torrent without discarding the other tab's edited links", async () => {
+    drive.status = status();
+    await mountSheet();
+    cloudAdd.draft = "https://example.com/keep.mp4";
+    cloudAdd.torrent = meta("/tmp/discard.torrent");
+    cloudAdd.picked = new Set([0]);
+    cloudAdd.tab = "torrent";
+    ui.cloudAddOpen = true;
+    await nextTick();
+    sheetButton("取消").click();
+    await idle();
+    expect(ui.cloudAddOpen).toBe(false);
+    expect(cloudAdd.torrent).toBe(null);
+    expect([...cloudAdd.picked]).toEqual([]);
+    expect(cloudAdd.draft).toBe("https://example.com/keep.mp4");
+    expect(backend.calls).not.toContain("AddTorrent");
+  });
+
+  it.each(["reading", "submitting"] as const)("does not discard input while %s", async (busy) => {
+    drive.status = status();
+    await mountSheet();
+    cloudAdd.draft = magnet;
+    cloudAdd.tab = "link";
+    cloudAdd[busy] = true;
+    ui.cloudAddOpen = true;
+    await nextTick();
+    expect(sheetButton("清空链接").disabled).toBe(true);
+    expect(sheetButton("取消").disabled).toBe(true);
+    sheetButton("清空链接").click();
+    sheetButton("取消").click();
+    expect(cloudAdd.draft).toBe(magnet);
+    expect(ui.cloudAddOpen).toBe(true);
+  });
+
+  it("keeps a draft when closed rather than cancelled", async () => {
+    drive.status = status();
+    await mountSheet();
+    cloudAdd.draft = magnet;
+    cloudAdd.tab = "link";
+    ui.cloudAddOpen = true;
+    await nextTick();
+    sheetButton("关闭").click();
+    await nextTick();
+    expect(ui.cloudAddOpen).toBe(false);
+    ui.cloudAddOpen = true;
+    await nextTick();
+    expect(document.querySelector<HTMLTextAreaElement>("textarea")?.value).toBe(magnet);
+  });
+
+  it("resumes from a new external open after cancelling instead of keeping the queue paused", async () => {
+    drive.status = status();
+    await mountSheet();
+    add({ id: 35, kind: "magnet", value: magnet });
+    await vi.waitFor(() => expect(backend.pending).toEqual([]));
+    sheetButton("取消").click();
+    await idle();
+    add({ id: 36, kind: "magnet", value: magnet });
+    await vi.waitFor(() => expect(cloudAdd.draft).toBe(magnet));
+    expect(ui.cloudAddOpen).toBe(true);
+    expect(cloudAdd.tab).toBe("link");
   });
 });
