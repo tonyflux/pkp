@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>PKP - 分享转存确认</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"/>
+<style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #0b1522;
+      color: #edf4fc;
+      user-select: none;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* macOS Window Shell & Atmosphere */
+    .macos-frame {
+      width: 1200px;
+      height: 940px;
+      border-radius: 18px;
+      background: #0f1c2d radial-gradient(circle at 75% 20%, rgba(38, 77, 118, 0.28) 0%, rgba(13, 24, 38, 0.95) 75%);
+      box-shadow: 0 35px 80px -15px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(255, 255, 255, 0.08);
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Translucent Frosted Glass Modal */
+    .pkp-glass-modal {
+      width: 740px;
+      height: 790px;
+      border-radius: 28px;
+      background: linear-gradient(175deg, rgba(41, 62, 85, 0.94) 0%, rgba(27, 45, 69, 0.96) 100%);
+      backdrop-filter: blur(48px);
+      -webkit-backdrop-filter: blur(48px);
+      border: 1px solid rgba(82, 107, 132, 0.45);
+      box-shadow: 
+        inset 0 1px 1.5px 0 rgba(255, 255, 255, 0.22),
+        0 24px 60px -8px rgba(3, 8, 16, 0.75),
+        0 0 0 1px rgba(18, 98, 231, 0.15);
+    }
+
+    /* Inset Dark Navy Wells */
+    .pkp-inset-well {
+      background: #0e1929;
+      border: 1px solid rgba(82, 107, 132, 0.35);
+      border-radius: 16px;
+    }
+
+    /* Primary Cobalt Button */
+    .btn-cobalt-primary {
+      background: linear-gradient(180deg, #4da0ff 0%, #1262e7 100%);
+      box-shadow: inset 0 1px 1px 0 rgba(255, 255, 255, 0.35), 0 4px 14px rgba(18, 98, 231, 0.38);
+      transition: all 0.15s ease;
+    }
+    .btn-cobalt-primary:hover {
+      background: linear-gradient(180deg, #5da8ff 0%, #176bf0 100%);
+      box-shadow: inset 0 1px 1px 0 rgba(255, 255, 255, 0.45), 0 5px 18px rgba(18, 98, 231, 0.52);
+    }
+
+    /* Secondary Muted Steel Button */
+    .btn-steel-secondary {
+      background: #36536c;
+      border: 1px solid rgba(175, 189, 207, 0.2);
+      box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.12);
+      transition: all 0.15s ease;
+    }
+    .btn-steel-secondary:hover {
+      background: #3f607c;
+      border-color: rgba(175, 189, 207, 0.35);
+    }
+
+    /* Scrollbar */
+    .custom-scroll::-webkit-scrollbar {
+      width: 5px;
+    }
+    .custom-scroll::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    .custom-scroll::-webkit-scrollbar-thumb {
+      background: rgba(82, 107, 132, 0.5);
+      border-radius: 4px;
+    }
+    .custom-scroll::-webkit-scrollbar-thumb:hover {
+      background: rgba(175, 189, 207, 0.5);
+    }
+  </style>
+</head>
+<body class="flex items-center justify-center min-h-screen bg-[#060b12] p-4">
+<!-- macOS Window Container: 1200 x 940 -->
+<div class="macos-frame flex flex-col">
+<!-- macOS Window Titlebar -->
+<div class="h-10 px-4 flex items-center justify-between border-b border-white/[0.06] bg-[#122033]/60 backdrop-blur-md z-10 shrink-0">
+<div class="flex items-center gap-2">
+<span class="w-3 h-3 rounded-full bg-[#ff5f56] border border-[#e0443e] inline-block"></span>
+<span class="w-3 h-3 rounded-full bg-[#ffbd2e] border border-[#dea123] inline-block"></span>
+<span class="w-3 h-3 rounded-full bg-[#27c93f] border border-[#1aab29] inline-block"></span>
+<span class="ml-4 text-xs font-medium text-[#7d93ac] tracking-wide flex items-center gap-1.5">
+<i class="fa-solid fa-cloud text-[#388bfd] text-[11px]"></i> PKP · PikPak Cloud Client
+        </span>
+</div>
+</div>
+<!-- App Main Body (Simulated background library with realistic PKP layout) -->
+<div class="flex flex-1 overflow-hidden relative">
+<!-- Left Sidebar (PKP Menu) -->
+<div class="w-56 bg-[#0e1b2b]/95 border-r border-white/[0.06] flex flex-col justify-between p-3.5 shrink-0 select-none">
+<div>
+<!-- Logo & Brand -->
+<div class="flex items-center gap-2.5 px-2 py-2 mb-3">
+<div class="w-7 h-7 rounded-lg bg-gradient-to-tr from-[#1262e7] to-[#4da0ff] flex items-center justify-center shadow-md">
+<i class="fa-solid fa-cloud-arrow-down text-white text-xs"></i>
+</div>
+<span class="text-sm font-bold tracking-wider text-white">PKP 云盘</span>
+</div>
+<!-- New Button -->
+<button class="w-full mb-4 py-2 px-3 rounded-xl bg-[#1b3452] border border-[#37557a] text-xs font-medium text-[#c8d9ed] flex items-center justify-center gap-2 hover:bg-[#234267] transition">
+<i class="fa-solid fa-plus text-[#4da0ff]"></i> 新建下载 / 任务
+          </button>
+<!-- Nav Items -->
+<nav class="space-y-1 text-xs">
+<div class="flex items-center gap-2.5 px-3 py-2 rounded-lg bg-[#182b42] text-[#4da0ff] font-medium">
+<i class="fa-solid fa-folder-open text-xs w-4"></i> 全部文件
+            </div>
+<div class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-[#8da2bb] hover:bg-white/[0.04] hover:text-[#edf4fc]">
+<i class="fa-solid fa-star text-xs w-4"></i> 星标
+            </div>
+<div class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-[#8da2bb] hover:bg-white/[0.04] hover:text-[#edf4fc]">
+<i class="fa-solid fa-wand-magic-sparkles text-xs w-4"></i> AI 助手
+            </div>
+<div class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-[#8da2bb] hover:bg-white/[0.04] hover:text-[#edf4fc]">
+<i class="fa-solid fa-clock-rotate-left text-xs w-4"></i> 播放历史
+            </div>
+<div class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-[#8da2bb] hover:bg-white/[0.04] hover:text-[#edf4fc]">
+<i class="fa-solid fa-arrow-down-up-across-line text-xs w-4"></i> 传输中心
+              <span class="ml-auto bg-[#1b3b64] text-[#4da0ff] text-[10px] px-1.5 py-0.5 rounded-full">2</span>
+</div>
+<div class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-[#8da2bb] hover:bg-white/[0.04] hover:text-[#edf4fc]">
+<i class="fa-solid fa-share-nodes text-xs w-4"></i> 我的分享
+            </div>
+</nav>
+</div>
+<!-- Sidebar Bottom User Profile -->
+<div class="pt-3 border-t border-white/[0.06] flex items-center justify-between px-2">
+<div class="flex items-center gap-2">
+<div class="w-7 h-7 rounded-full bg-[#1b3b60] border border-[#3d6594] flex items-center justify-center text-xs text-[#a2c2e6]">
+              主
+            </div>
+<div class="flex flex-col">
+<span class="text-xs text-[#cddae8] font-medium leading-none">主账号</span>
+<span class="text-[10px] text-[#6d849e] mt-0.5">VIP · 剩余 248 天</span>
+</div>
+</div>
+<i class="fa-solid fa-gear text-[#667e98] text-xs"></i>
+</div>
+</div>
+<!-- Main Library Background (Subtly Blurred & Dimmed Under Overlay) -->
+<div class="flex-1 flex flex-col bg-[#0b1624] overflow-hidden">
+<!-- Top Toolbar -->
+<div class="h-12 px-6 flex items-center justify-between border-b border-white/[0.05]">
+<div class="flex items-center gap-3 text-xs text-[#7f95ac]">
+<span class="text-white font-medium">全部文件</span>
+<i class="fa-solid fa-chevron-right text-[9px] text-[#4b6075]"></i>
+<span>媒体归档</span>
+</div>
+<div class="flex items-center gap-3">
+<div class="h-7 px-3 rounded-lg bg-[#142337] border border-white/[0.06] flex items-center gap-2 text-xs text-[#6e859f]">
+<i class="fa-solid fa-magnifying-glass text-[10px]"></i>
+<span>搜索文件...</span>
+</div>
+</div>
+</div>
+<!-- File List Background Hint -->
+<div class="p-6 space-y-3 opacity-40">
+<div class="h-10 rounded-xl bg-[#112135] border border-white/[0.04] flex items-center px-4 gap-4 text-xs text-[#8ca1b8]">
+<i class="fa-solid fa-folder text-[#388bfd]"></i>
+<span class="flex-1 font-medium text-white/80">4K 电影收藏库</span>
+<span>28 个项目</span>
+<span>2024-03-12</span>
+</div>
+<div class="h-10 rounded-xl bg-[#112135] border border-white/[0.04] flex items-center px-4 gap-4 text-xs text-[#8ca1b8]">
+<i class="fa-solid fa-folder text-[#388bfd]"></i>
+<span class="flex-1 font-medium text-white/80">旅行纪录 / 2024</span>
+<span>14 个项目</span>
+<span>2024-04-01</span>
+</div>
+<div class="h-10 rounded-xl bg-[#112135] border border-white/[0.04] flex items-center px-4 gap-4 text-xs text-[#8ca1b8]">
+<i class="fa-solid fa-file-video text-[#388bfd]"></i>
+<span class="flex-1 font-medium text-white/80">Documentary_S01.mkv</span>
+<span>4.18 GB</span>
+<span>2024-04-10</span>
+</div>
+</div>
+</div>
+<!-- Right quiet info panel hint -->
+<div class="w-64 bg-[#0d1a29]/80 border-l border-white/[0.05] p-4 opacity-35 hidden md:flex flex-col gap-3">
+<div class="w-full aspect-video rounded-lg bg-[#16273c] border border-white/[0.05] flex items-center justify-center text-[#556e87]">
+<i class="fa-regular fa-image text-2xl"></i>
+</div>
+<div class="h-3 w-2/3 bg-white/10 rounded"></div>
+<div class="h-2 w-1/2 bg-white/5 rounded"></div>
+</div>
+<!-- Backdrop Dimmer Overlay -->
+<div class="absolute inset-0 bg-[#050c16]/65 backdrop-blur-[5px] flex items-center justify-center z-30">
+<!-- ============================================================== -->
+<!-- THE PKP MODAL: 740px Wide x 790px High Frosted Glass Confirmation -->
+<!-- ============================================================== -->
+<div class="pkp-glass-modal p-7 flex flex-col justify-between relative text-[#edf4fc]">
+<!-- TOP HEADER SECTION -->
+<div class="relative pb-4">
+<!-- Close Button (Top Right 40px round glass X) -->
+<button class="absolute top-0 right-0 w-10 h-10 rounded-full bg-[#344d67]/50 hover:bg-[#3d5b7a]/80 border border-white/[0.12] flex items-center justify-center text-[#afbdcf] hover:text-white transition shadow-sm" title="关闭">
+<i class="fa-solid fa-xmark text-sm"></i>
+</button>
+<!-- Title & Subtitle -->
+<div class="pr-12">
+<h1 class="text-[26px] font-semibold leading-tight tracking-tight text-[#edf4fc] flex items-center gap-2.5">
+<span>分享转存</span>
+</h1>
+<p class="text-[13px] text-[#afbdcf] mt-1.5 leading-normal">
+                先预览分享内容，再选择要保存的文件
+              </p>
+</div>
+</div>
+<!-- 2. SOURCE SUMMARY INSET WELL -->
+<div class="pkp-inset-well p-3.5 flex items-center justify-between gap-3.5 mb-3.5">
+<div class="flex items-center gap-3 min-w-0">
+<!-- Folder / Share Icon (Small Cyan Blue) -->
+<div class="w-10 h-10 rounded-xl bg-[#122d47] border border-[#23588a]/60 flex items-center justify-center shrink-0">
+<i class="fa-solid fa-folder-open text-[#38bdf8] text-base"></i>
+</div>
+<div class="min-w-0">
+<div class="flex items-center gap-2">
+<span class="text-[15px] font-semibold text-[#edf4fc] truncate">山海纪行 · 旅行影像合集</span>
+<span class="text-[10px] font-medium px-1.5 py-0.5 rounded bg-[#17375a] text-[#5eb1ff] border border-[#2b5787]/50 shrink-0">
+                    PikPak 分享
+                  </span>
+</div>
+<div class="flex items-center gap-2 text-[12px] text-[#afbdcf] mt-0.5">
+<span>来自「山海」的分享</span>
+<span class="text-[#48637e]">·</span>
+<span>5 个文件</span>
+<span class="text-[#48637e]">·</span>
+<span class="font-medium text-[#d3e2f5]">6.03 GB</span>
+<span class="text-[#48637e]">·</span>
+<span class="text-[#7d92ab] font-mono text-[11px]">mypikpak.com/s/…</span>
+</div>
+</div>
+</div>
+<!-- Right Action: 浏览器打开 -->
+<button class="shrink-0 flex items-center gap-1.5 text-[13px] text-[#58a6ff] hover:text-[#82beff] px-2.5 py-1.5 rounded-lg hover:bg-white/[0.04] transition">
+<span>浏览器打开</span>
+<i class="fa-solid fa-arrow-up-right-from-square text-[11px]"></i>
+</button>
+</div>
+<!-- 3. FILE SELECTION & LIST SECTION -->
+<div class="flex-1 flex flex-col min-h-0 mb-3.5">
+<!-- Toolbar Above List -->
+<div class="flex items-center justify-between px-1 mb-2">
+<div class="flex items-center gap-2 text-[14px] font-medium text-[#edf4fc]">
+<span>文件预览</span>
+<span class="text-[11px] px-1.5 py-0.5 rounded-full bg-[#1b3149] text-[#8da6c3] border border-white/[0.05]">5</span>
+</div>
+<div class="text-[13px] text-[#58a6ff] flex items-center gap-2">
+<button class="hover:text-[#8fc3ff] transition font-medium">全选</button>
+<span class="text-[#48637e] text-xs">·</span>
+<button class="text-[#8ba2bd] hover:text-[#edf4fc] transition">全不选</button>
+</div>
+</div>
+<!-- Recessed Dark List Container -->
+<div class="pkp-inset-well flex-1 flex flex-col overflow-hidden">
+<!-- Subtle Breadcrumb hierarchy row -->
+<div class="px-4 py-2 bg-[#09121f]/70 border-b border-[#526b84]/25 text-[11px] text-[#7189a5] flex items-center gap-1.5">
+<i class="fa-regular fa-folder text-[10px] text-[#4d7ca8]"></i>
+<span>全部文件</span>
+<i class="fa-solid fa-chevron-right text-[8px] text-[#3e5672]"></i>
+<span class="text-[#afbdcf]">旅行影像合集</span>
+</div>
+<!-- File Rows Scrollable -->
+<div class="flex-1 overflow-y-auto custom-scroll divide-y divide-[#526b84]/20">
+<!-- Row 1: Checked 4K EP01 -->
+<label class="flex items-center justify-between px-4 py-3 hover:bg-[#172b43]/50 cursor-pointer transition group">
+<div class="flex items-center gap-3 min-w-0">
+<!-- Cobalt Checked Checkbox -->
+<div class="w-[18px] h-[18px] rounded-[5px] bg-[#1262e7] border border-[#4da0ff] flex items-center justify-center text-white text-[11px] shadow-sm">
+<i class="fa-solid fa-check"></i>
+</div>
+<i class="fa-solid fa-file-video text-[#38bdf8] text-base w-5 text-center"></i>
+<span class="text-[14px] font-medium text-[#edf4fc] truncate">山海纪行 EP01.mp4</span>
+<span class="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-[#173250] text-[#78b7ff] border border-[#2b5687]/60">4K</span>
+</div>
+<div class="text-[13px] text-[#afbdcf] font-mono shrink-0 pl-3">
+                    3.20 GB
+                  </div>
+</label>
+<!-- Row 2: Checked 4K EP02 -->
+<label class="flex items-center justify-between px-4 py-3 hover:bg-[#172b43]/50 cursor-pointer transition group">
+<div class="flex items-center gap-3 min-w-0">
+<!-- Cobalt Checked Checkbox -->
+<div class="w-[18px] h-[18px] rounded-[5px] bg-[#1262e7] border border-[#4da0ff] flex items-center justify-center text-white text-[11px] shadow-sm">
+<i class="fa-solid fa-check"></i>
+</div>
+<i class="fa-solid fa-file-video text-[#38bdf8] text-base w-5 text-center"></i>
+<span class="text-[14px] font-medium text-[#edf4fc] truncate">山海纪行 EP02.mp4</span>
+<span class="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-[#173250] text-[#78b7ff] border border-[#2b5687]/60">4K</span>
+</div>
+<div class="text-[13px] text-[#afbdcf] font-mono shrink-0 pl-3">
+                    2.80 GB
+                  </div>
+</label>
+<!-- Row 3: Unchecked srt -->
+<label class="flex items-center justify-between px-4 py-3 hover:bg-[#172b43]/40 cursor-pointer transition group opacity-75 hover:opacity-100">
+<div class="flex items-center gap-3 min-w-0">
+<!-- Unchecked Checkbox -->
+<div class="w-[18px] h-[18px] rounded-[5px] bg-[#0c1624] border border-[#445d77] group-hover:border-[#6787aa] flex items-center justify-center text-transparent">
+<i class="fa-solid fa-check text-[10px]"></i>
+</div>
+<i class="fa-solid fa-closed-captioning text-[#8fa7c4] text-base w-5 text-center"></i>
+<span class="text-[14px] text-[#cad8e8] truncate">中文字幕.srt</span>
+</div>
+<div class="text-[13px] text-[#7f94ab] font-mono shrink-0 pl-3">
+                    86 KB
+                  </div>
+</label>
+<!-- Row 4: Unchecked jpg -->
+<label class="flex items-center justify-between px-4 py-3 hover:bg-[#172b43]/40 cursor-pointer transition group opacity-75 hover:opacity-100">
+<div class="flex items-center gap-3 min-w-0">
+<div class="w-[18px] h-[18px] rounded-[5px] bg-[#0c1624] border border-[#445d77] group-hover:border-[#6787aa] flex items-center justify-center text-transparent">
+<i class="fa-solid fa-check text-[10px]"></i>
+</div>
+<i class="fa-solid fa-file-image text-[#8fa7c4] text-base w-5 text-center"></i>
+<span class="text-[14px] text-[#cad8e8] truncate">封面.jpg</span>
+</div>
+<div class="text-[13px] text-[#7f94ab] font-mono shrink-0 pl-3">
+                    24 MB
+                  </div>
+</label>
+<!-- Row 5: Unchecked txt -->
+<label class="flex items-center justify-between px-4 py-3 hover:bg-[#172b43]/40 cursor-pointer transition group opacity-75 hover:opacity-100">
+<div class="flex items-center gap-3 min-w-0">
+<div class="w-[18px] h-[18px] rounded-[5px] bg-[#0c1624] border border-[#445d77] group-hover:border-[#6787aa] flex items-center justify-center text-transparent">
+<i class="fa-solid fa-check text-[10px]"></i>
+</div>
+<i class="fa-solid fa-file-lines text-[#8fa7c4] text-base w-5 text-center"></i>
+<span class="text-[14px] text-[#cad8e8] truncate">使用说明.txt</span>
+</div>
+<div class="text-[13px] text-[#7f94ab] font-mono shrink-0 pl-3">
+                    4 KB
+                  </div>
+</label>
+</div>
+<!-- List Footer Summary -->
+<div class="px-4 py-2.5 bg-[#0a1421] border-t border-[#526b84]/25 flex items-center justify-between text-[12px]">
+<div class="flex items-center gap-2">
+<span class="text-[#edf4fc] font-medium">已选 2 个文件</span>
+<span class="text-[#48637e]">·</span>
+<span class="text-[#4da0ff] font-semibold">6.00 GB</span>
+</div>
+<div class="text-[#7d93ac] flex items-center gap-1.5">
+<i class="fa-solid fa-circle-info text-[11px] text-[#4d6a8a]"></i>
+<span>仅保存勾选的文件，不会自动播放</span>
+</div>
+</div>
+</div>
+</div>
+<!-- 4. DESTINATION AREA (Stacked rows in clean glass well) -->
+<div class="pkp-inset-well p-3 space-y-2 mb-4">
+<!-- Row 1: Account -->
+<div class="flex items-center justify-between px-2 py-1">
+<div class="flex items-center gap-2.5 text-[13px]">
+<div class="w-6 h-6 rounded-full bg-[#172d47] border border-[#3b5d84] flex items-center justify-center text-[#7cb0e8] text-[11px]">
+<i class="fa-solid fa-user"></i>
+</div>
+<span class="text-[#afbdcf]">转存账号</span>
+<span class="font-semibold text-[#edf4fc] ml-1">主账号</span>
+<span class="text-[12px] text-[#718aa7] font-mono">to•••@example.com</span>
+</div>
+<button class="text-[13px] text-[#58a6ff] hover:text-[#8dc0ff] px-2 py-1 rounded hover:bg-white/[0.04] transition">
+                更换
+              </button>
+</div>
+<div class="h-[1px] bg-[#526b84]/20 mx-1"></div>
+<!-- Row 2: Save Destination -->
+<div class="flex items-center justify-between px-2 py-1">
+<div class="flex items-center gap-2.5 text-[13px]">
+<div class="w-6 h-6 rounded-md bg-[#172d47] border border-[#3b5d84] flex items-center justify-center text-[#38bdf8] text-[11px]">
+<i class="fa-solid fa-folder"></i>
+</div>
+<span class="text-[#afbdcf]">保存到</span>
+<span class="font-semibold text-[#edf4fc] ml-1 flex items-center gap-1.5">
+                  我的文件 <span class="text-[#516b87] font-normal">/</span> 旅行纪录
+                </span>
+</div>
+<button class="text-[13px] text-[#58a6ff] hover:text-[#8dc0ff] px-2 py-1 rounded hover:bg-white/[0.04] transition">
+                更改
+              </button>
+</div>
+</div>
+<!-- 5. FOOTER ACTION AREA -->
+<div class="pt-2 flex items-center justify-between border-t border-[#526b84]/25">
+<!-- Left Security Note -->
+<div class="flex items-center gap-2 text-[12px] text-[#8fa5be]">
+<i class="fa-solid fa-shield-halved text-[#4da0ff] text-xs"></i>
+<span>仅在确认后转存</span>
+</div>
+<!-- Right Buttons (Pill shaped, 46px high, ~170px width) -->
+<div class="flex items-center gap-3">
+<button class="btn-steel-secondary h-[46px] w-[160px] rounded-full text-[14px] font-medium text-[#edf4fc] flex items-center justify-center cursor-pointer">
+                取消
+              </button>
+<button class="btn-cobalt-primary h-[46px] w-[180px] rounded-full text-[14px] font-semibold text-white flex items-center justify-center gap-2 cursor-pointer">
+<i class="fa-solid fa-cloud-arrow-down text-sm"></i>
+<span>转存 2 个文件</span>
+</button>
+</div>
+</div>
+</div>
+<!-- End PKP Modal -->
+</div>
+<!-- End Overlay -->
+</div>
+</div>
+</body>
+</html>
