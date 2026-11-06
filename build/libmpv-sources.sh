@@ -30,7 +30,8 @@ The source of libmpv and the libraries PKP bundles with it.
 
 src/ holds each pinned download as name-version (any tar format); the
 list, with sha256 and origin, is SOURCES.txt. build/darwin/libmpv.sh builds
-the macOS dylibs, build/windows/libmpv.sh the Windows libmpv-2.dll, both
+the macOS dylibs and universal ffmpeg/ffprobe tools; build/windows/libmpv.sh
+builds the Windows libmpv-2.dll and ffmpeg.exe/ffprobe.exe, all
 from the pins in build/libmpv-common.sh; copy src/* to
 ~/Library/Caches/pkp/libmpv/src and they build offline (bar the Windows
 toolchain, llvm-mingw, fetched from its pinned URL).

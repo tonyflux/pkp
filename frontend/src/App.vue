@@ -11,6 +11,7 @@ import AssistantView from "./components/AssistantView.vue";
 import CleanupView from "./components/CleanupView.vue";
 import PlayHistoryView from "./components/PlayHistoryView.vue";
 import SyncView from "./components/SyncView.vue";
+import LANView from "./components/LANView.vue";
 import SyncDraft from "./components/SyncDraft.vue";
 import SyncDialogs from "./components/SyncDialogs.vue";
 import SavedHistoryDialogs from "./components/SavedHistoryDialogs.vue";
@@ -76,7 +77,7 @@ const showPanel = computed(() => browsing.value && !covered.value && (narrow.val
 // The account states that take the page's place: a switch
 // on its way, or the account on screen needing Log In Again where its files
 // would be. Transfer Center and Settings stay usable while it is signed out.
-const switching = computed(() => !!accounts.switching && ui.route !== "player");
+const switching = computed(() => !!accounts.switching && ui.route !== "player" && ui.route !== "lan");
 const expired = computed(
   () =>
     !!drive.status?.needsPassword &&
@@ -137,13 +138,17 @@ onMounted(() => {
     <PrivacySettings v-if="settingsFocus.tab === 'privacy'" />
     <UpdateSettings v-else />
   </div>
+  <div v-else-if="!signedIn && ui.route === 'lan'" class="signedout-lan">
+    <button class="pill" @click="ui.route = 'files'">{{ t("返回登录") }}</button>
+    <LANView />
+  </div>
   <LoginView v-else-if="!signedIn" />
 
   <div v-else class="shell" :class="{ immersive, fullscreen: immersive && ui.fullscreen }">
     <FloatingNav v-if="!immersive" />
 
     <main ref="stack" class="stack">
-      <FloatingToolbar v-if="!immersive" />
+      <FloatingToolbar v-if="!immersive && ui.route !== 'lan'" />
 
       <div v-if="browsing && narrow && !covered" v-slide class="workspace glass-well" role="tablist" :aria-label="t('工作区')">
         <button
@@ -173,6 +178,7 @@ onMounted(() => {
         <AssistantView v-if="ui.route === 'assistant' && !covered" />
         <CleanupView v-if="ui.route === 'cleanup' && !covered" />
         <SyncView v-if="ui.route === 'sync' && !switching" />
+        <LANView v-if="ui.route === 'lan'" />
         <SettingsView v-if="ui.route === 'settings' && !switching" />
         <MusicPlayer v-if="ui.route === 'player' && music" />
         <PlayerView v-else-if="ui.route === 'player'" />
@@ -213,6 +219,8 @@ onMounted(() => {
 .signedout-settings-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 24px; }
 .signedout-settings-head nav { display: flex; flex-wrap: wrap; gap: 8px; }
 .signedout-settings-head [aria-pressed="true"] { color: var(--accent); border-color: var(--accent); }
+.signedout-lan { position: fixed; inset: 48px 20px 20px; overflow: auto; }
+.signedout-lan > button { margin-bottom: 12px; }
 /* Layer 3 floats over the scene with wallpaper between the islands. The file
    page uses 20px outside and 16px between navigation, content and context.
    With the title bar hidden, traffic lights sit on wallpaper and both islands

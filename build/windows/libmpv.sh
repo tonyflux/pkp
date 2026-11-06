@@ -194,10 +194,10 @@ build_ffmpeg() {
 		--cc="$triple-clang" --cxx="$triple-clang++" --ar=llvm-ar --ranlib=llvm-ranlib --nm=llvm-nm \
 		--strip=llvm-strip --windres="$triple-windres" \
 		--x86asmexe="$tools/bin/nasm" --pkg-config="$tools/bin/pkgconf" --pkg-config-flags=--static \
-		--extra-cflags="-I$prefix/include" --extra-ldflags="-L$prefix/lib" \
-		--enable-static --disable-shared --disable-programs --disable-doc --disable-debug --disable-avdevice \
+		--extra-cflags="-I$prefix/include" --extra-ldflags="-L$prefix/lib -static" \
+		--enable-static --disable-shared --enable-ffmpeg --enable-ffprobe --disable-ffplay --disable-doc --disable-debug --disable-avdevice \
 		--disable-autodetect --disable-iconv --enable-w32threads --enable-zlib --enable-bzlib \
-		--enable-d3d11va --enable-dxva2 --enable-d3d12va --enable-ffnvcodec --enable-nvdec \
+		--disable-gpl --disable-nonfree --enable-mediafoundation --enable-d3d11va --enable-dxva2 --enable-d3d12va --enable-ffnvcodec --enable-nvdec \
 		--enable-schannel --enable-libdav1d --disable-filter=gfxcapture
 	make -j"$jobs"
 	make install
@@ -314,12 +314,23 @@ for arch in $ARCHS; do
 		api-ms-win-crt-* | api-ms-win-core-* | kernel32.dll | ntdll.dll | user32.dll | gdi32.dll | \
 			advapi32.dll | ole32.dll | shell32.dll | shlwapi.dll | shcore.dll | uxtheme.dll | dwmapi.dll | \
 			imm32.dll | version.dll | avrt.dll | opengl32.dll | ws2_32.dll | bcrypt.dll | crypt32.dll | \
-			ncrypt.dll | secur32.dll) ;;
+			ncrypt.dll | secur32.dll | oleaut32.dll | mfplat.dll | mf.dll | mfuuid.dll | propsys.dll | strmiids.dll) ;;
 		*) die "$f imports $dll" ;;
 		esac
 	done
 	mkdir -p "$stage/$dir"
 	cp "$f" "$stage/$dir/"
+	for program in ffmpeg ffprobe; do
+		f=$work/$arch/prefix/bin/$program.exe
+		grep -q "Machine: IMAGE_FILE_MACHINE_$machine" <<<"$(llvm-readobj --file-headers "$f")" || die "$f is not $machine"
+		for dll in $(llvm-readobj --coff-imports "$f" | awk '/^  Name:/ {print tolower($2)}'); do
+			case $dll in
+				api-ms-win-crt-* | api-ms-win-core-* | kernel32.dll | ntdll.dll | user32.dll | gdi32.dll | advapi32.dll | ole32.dll | oleaut32.dll | shell32.dll | shlwapi.dll | ws2_32.dll | bcrypt.dll | crypt32.dll | ncrypt.dll | secur32.dll | mfplat.dll | mf.dll | mfuuid.dll | propsys.dll | strmiids.dll | avrt.dll) ;;
+				*) die "$f imports non-bundled DLL $dll" ;;
+			esac
+		done
+		cp "$f" "$stage/$dir/"
+	done
 done
 install_licenses "$stage/licenses"
 

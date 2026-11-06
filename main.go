@@ -126,6 +126,7 @@ func main() {
 	updates := services.NewUpdateService(library, menu, lock, cmp.Or(version, "unknown"), releaseBuild)
 	external := services.NewExternalOpenService()
 	workingDir, _ := os.Getwd()
+	lan := services.NewLANService(library)
 
 	// The config dir names this profile's single instance and keeps the last
 	// normal frame beside the settings. Without one the window is still
@@ -146,6 +147,7 @@ func main() {
 			application.NewService(telemetry),
 			application.NewService(updates),
 			application.NewService(external),
+			application.NewService(lan),
 		},
 		Assets: application.AssetOptions{
 			Handler:    application.AssetFileServerFS(assets),

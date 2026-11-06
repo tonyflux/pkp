@@ -14,15 +14,18 @@ import (
 )
 
 type runtimePair struct {
-	record  pairRecord
-	runMu   sync.Mutex
-	cancel  context.CancelFunc
-	wake    chan struct{}
-	hints   chan struct{}
-	stop    chan struct{}
-	editing bool
-	started bool
-	broken  bool
+	record           pairRecord
+	runMu            sync.Mutex
+	cancel           context.CancelFunc
+	wake             chan struct{}
+	hints            chan struct{}
+	stop             chan struct{}
+	editing          bool
+	started          bool
+	broken           bool
+	completedVersion string
+	completedPaths   map[string]string
+	completedPending map[string]struct{}
 }
 
 type pendingPreview struct {

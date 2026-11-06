@@ -235,6 +235,7 @@ export function shortcutGroups(): { title: string; rows: ShortcutRow[] }[] {
     transfers: t("传输中心"),
     shares: t("我的分享"),
     trash: t("回收站"),
+    lan: t("局域网共享"),
   };
   const space = t("空格");
   return [

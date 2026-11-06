@@ -5,6 +5,7 @@ import * as AppLockService from "./applockservice.js";
 import * as AppearanceService from "./appearanceservice.js";
 import * as DriveService from "./driveservice.js";
 import * as ExternalOpenService from "./externalopenservice.js";
+import * as LANService from "./lanservice.js";
 import * as MenuBarService from "./menubarservice.js";
 import * as NotifyService from "./notifyservice.js";
 import * as PlayerService from "./playerservice.js";
@@ -15,6 +16,7 @@ export {
     AppearanceService,
     DriveService,
     ExternalOpenService,
+    LANService,
     MenuBarService,
     NotifyService,
     PlayerService,

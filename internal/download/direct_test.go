@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"io"
 	"os"
 	"path/filepath"
 	"sync"
@@ -124,5 +125,44 @@ func TestDirectReceiveDoesNotOverwriteDestinationAppearingDuringTransfer(t *test
 	got, err = os.ReadFile(req.Path + PartialExt)
 	if err != nil || !bytes.Equal(got, payload) {
 		t.Fatalf("complete staging bytes not preserved: %v", err)
+	}
+}
+
+func TestDirectReceiveVerificationPrecedesPublication(t *testing.T) {
+	cdn := newCDN(t, &fakeCDN{})
+	backend := &versionedBackend{fakeBackend: &fakeBackend{url: cdn.URL}, version: "complete-version"}
+	queue := New(backend, Options{Parallel: 1, Threads: 2})
+	t.Cleanup(queue.Close)
+	rejected := errors.New("completion proof rejected")
+	request := DirectRequest{ID: "verified-original", FileID: "f", Path: filepath.Join(t.TempDir(), "original"), Checkpoint: filepath.Join(t.TempDir(), "checkpoint"), Size: int64(len(payload))}
+	request.VerifyComplete = func(file *os.File) error {
+		got, err := io.ReadAll(io.NewSectionReader(file, 0, int64(len(payload))))
+		if err != nil || !bytes.Equal(got, payload) {
+			t.Fatalf("verification observed incomplete bytes: %v", err)
+		}
+		if _, err := os.Stat(request.Path); !errors.Is(err, os.ErrNotExist) {
+			t.Fatal("original published before verification")
+		}
+		return rejected
+	}
+	if err := queue.Receive(context.Background(), request, nil); !errors.Is(err, rejected) {
+		t.Fatalf("verification failure lost: %v", err)
+	}
+	if _, err := os.Stat(request.Path); !errors.Is(err, os.ErrNotExist) {
+		t.Fatal("rejected original published")
+	}
+	request.VerifyComplete = func(file *os.File) error {
+		got, err := io.ReadAll(io.NewSectionReader(file, 0, int64(len(payload))))
+		if err != nil || !bytes.Equal(got, payload) {
+			t.Fatalf("resumed proof differs: %v", err)
+		}
+		return nil
+	}
+	if err := queue.Receive(context.Background(), request, nil); err != nil {
+		t.Fatal(err)
+	}
+	got, err := os.ReadFile(request.Path)
+	if err != nil || !bytes.Equal(got, payload) {
+		t.Fatalf("verified original differs: %v", err)
 	}
 }

@@ -22,6 +22,14 @@ Features such as login, session renewal, browsing, sharing, transfers, cloud add
 
 Creating a share allows people who obtain its link or passcode to access the content according to server-side rules. Do not publicly disclose private share links, passcodes, or signed download URLs.
 
+## Optional LAN Sharing
+
+LAN sharing is off by default, listens only on the LAN address you select, and does not automatically create a public port mapping. When enabled, anyone with the separate sharing password can read filenames, relative folders, sizes, modification times, and contents in every enabled space, including hidden files within authorized folders. The visitor page does not receive cloud login tokens, signed cloud download URLs, or absolute local paths; the computer prepares and transfers cloud files.
+
+Sharing configuration, account/root bindings, a salted password verifier, preparation records, and compatibility-copy manifests are stored in the local configuration directory. The sharing password is not stored in plaintext. Visitors use an HttpOnly, SameSite session cookie, and their language choice is stored locally in their browser. Preparation permission lets visitors trigger cloud downloads and media processing on the computer, consuming network, storage, and processing resources. Originals remain at the download location displayed in the interface; compatibility copies use a separate cache.
+
+**Plain HTTP is unencrypted. Network observers may obtain the sharing password, session, or file contents.** Use only on trusted networks and do not expose the service publicly. Stopping sharing, resetting its password, or disabling a space revokes the corresponding access, but cannot recall downloaded content. App lock and hiding the window do not stop sharing; quitting the application stops the service. Compatibility-cache cleanup does not delete originals.
+
 ## Optional AI and TMDB
 
 Local index searches, rule parsing, and local statistics do not require sending filenames to a model. After you configure and use AI, requests are sent to your chosen Anthropic or OpenAI-compatible service (including the Google Gemini API or a compatible local service). They may include your questions, conversation context, relevant filenames, folder paths, sizes, modification times, and subtitle text you have authorized, among other content. With the Google Gemini preset, requests go directly to Google’s `generativelanguage.googleapis.com` using your own API key, not Google account or subscription OAuth sign-in.

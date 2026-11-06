@@ -14,6 +14,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -110,7 +111,7 @@ func Validate(id Identity) error {
 	if err != nil {
 		return err
 	}
-	if fresh.Volume != id.Volume || fresh.File != id.File || fresh.Path != id.Path || fresh.CaseSensitive != id.CaseSensitive || fresh.UnicodeSensitive != id.UnicodeSensitive {
+	if !sameVolumeFile(fresh.Volume, fresh.File, id.Volume, id.File) || fresh.Path != id.Path || fresh.CaseSensitive != id.CaseSensitive || fresh.UnicodeSensitive != id.UnicodeSensitive {
 		return ErrRootChanged
 	}
 	dir, err := os.Open(id.Path)
@@ -147,10 +148,32 @@ func checkComponents(path string) error {
 	}
 }
 
+func sameVolumeFile(aVolume, aFile, bVolume, bFile string) bool {
+	if aVolume == "" || aVolume != bVolume || aFile == "" || bFile == "" {
+		return false
+	}
+	if aFile == bFile {
+		return true
+	}
+	if runtime.GOOS != "darwin" {
+		return false
+	}
+	// Darwin st_dev can change after remount/reboot; the volume UUID and inode cannot.
+	inode := func(file string) (uint64, bool) {
+		device, number, ok := strings.Cut(file, ":")
+		dev, deviceErr := strconv.ParseUint(device, 10, 64)
+		ino, inodeErr := strconv.ParseUint(number, 10, 64)
+		return ino, ok && deviceErr == nil && inodeErr == nil && dev != 0 && ino != 0
+	}
+	a, aOK := inode(aFile)
+	b, bOK := inode(bFile)
+	return aOK && bOK && a == b
+}
+
 // Overlaps is deliberately conservative for Unicode canonical aliases, even on
 // volumes that allow both spellings. A second writer must never claim that alias.
 func Overlaps(a, b Identity) bool {
-	if a.Volume != "" && a.Volume == b.Volume && a.File != "" && a.File == b.File {
+	if sameVolumeFile(a.Volume, a.File, b.Volume, b.File) {
 		return true
 	}
 	sensitive := a.CaseSensitive && b.CaseSensitive
@@ -270,6 +293,18 @@ func ValidateRelative(root Identity, rel string) (string, error) {
 const stageName = ".pkp-sync"
 const markerName = "owner.json"
 
+// IsStagePath reports an exact reserved staging component anywhere in an absolute
+// or relative path, using the root's filesystem name semantics. It is lexical;
+// callers must also validate the identity and check canonical opened paths.
+func IsStagePath(path string, identity Identity) bool {
+	for _, part := range strings.Split(filepath.ToSlash(path), "/") {
+		if CollisionKey(part, identity) == stageName {
+			return true
+		}
+	}
+	return false
+}
+
 type stageOwner struct {
 	Version int    `json:"version"`
 	Pair    string `json:"pair"`
@@ -293,7 +328,7 @@ func readStage(root Identity, pair string) error {
 	defer f.Close()
 	var owner stageOwner
 	dec := json.NewDecoder(io.LimitReader(f, 4097))
-	if dec.Decode(&owner) != nil || owner.Version != 1 || owner.Pair == "" || owner.Volume != root.Volume || owner.Root != root.File || (pair != "" && owner.Pair != pair) {
+	if dec.Decode(&owner) != nil || owner.Version != 1 || owner.Pair == "" || !sameVolumeFile(owner.Volume, owner.Root, root.Volume, root.File) || (pair != "" && owner.Pair != pair) {
 		return ErrStageOccupied
 	}
 	if dec.Decode(new(any)) != io.EOF {

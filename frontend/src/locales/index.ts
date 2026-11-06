@@ -29,8 +29,9 @@ import readerPdf from "./reader-pdf";
 import readerTimed from "./reader-timed";
 import savedsearches from "./savedsearches";
 import medialibrary from "./medialibrary";
+import lan from "./lan";
 
-const areas: Messages[] = [core, shell, accounts, store, settings, ai, assistant, search, files, history, player, transfers, panels, cleanup, shares, sync, updates, readerCore, readerBook, readerComic, readerTable, readerOffice, readerPdf, readerTimed, savedsearches, medialibrary];
+const areas: Messages[] = [core, shell, accounts, store, settings, ai, assistant, search, files, history, player, transfers, panels, cleanup, shares, sync, updates, readerCore, readerBook, readerComic, readerTable, readerOffice, readerPdf, readerTimed, savedsearches, medialibrary, lan];
 
 const catalog: Messages = Object.assign({}, ...areas);
 

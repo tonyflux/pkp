@@ -73,12 +73,16 @@ Var installingNew
     !ifdef SUPPORTS_AMD64
         ${if} ${IsNativeAMD64}
             File "/oname=libmpv-2.dll" "${ARG_LIBMPV_AMD64}"
+            File "/oname=ffmpeg.exe" "${ARG_FFMPEG_AMD64}"
+            File "/oname=ffprobe.exe" "${ARG_FFPROBE_AMD64}"
         ${EndIf}
     !endif
 
     !ifdef SUPPORTS_ARM64
         ${if} ${IsNativeARM64}
             File "/oname=libmpv-2.dll" "${ARG_LIBMPV_ARM64}"
+            File "/oname=ffmpeg.exe" "${ARG_FFMPEG_ARM64}"
+            File "/oname=ffprobe.exe" "${ARG_FFPROBE_ARM64}"
         ${EndIf}
     !endif
 
@@ -241,6 +245,8 @@ Section
     # Recover a power-loss/interrupted transaction before touching its backups.
     !insertmacro pkp.restore "${PRODUCT_EXECUTABLE}"
     !insertmacro pkp.restore "libmpv-2.dll"
+    !insertmacro pkp.restore "ffmpeg.exe"
+    !insertmacro pkp.restore "ffprobe.exe"
     !insertmacro pkp.restore "licenses"
     !insertmacro pkp.restore "LICENSE.txt"
     !insertmacro pkp.restore "uninstall.exe"
@@ -259,12 +265,16 @@ Section
     Call pkp.checkRunning
     !insertmacro pkp.backup "${PRODUCT_EXECUTABLE}"
     !insertmacro pkp.backup "libmpv-2.dll"
+    !insertmacro pkp.backup "ffmpeg.exe"
+    !insertmacro pkp.backup "ffprobe.exe"
     !insertmacro pkp.backup "licenses"
     !insertmacro pkp.backup "LICENSE.txt"
     !insertmacro pkp.backup "uninstall.exe"
     StrCpy $installingNew 1
     !insertmacro pkp.activate "${PRODUCT_EXECUTABLE}"
     !insertmacro pkp.activate "libmpv-2.dll"
+    !insertmacro pkp.activate "ffmpeg.exe"
+    !insertmacro pkp.activate "ffprobe.exe"
     !insertmacro pkp.activate "licenses"
     !insertmacro pkp.activate "LICENSE.txt"
     !insertmacro pkp.activate "uninstall.exe"
@@ -291,12 +301,16 @@ rollback:
     ${If} $installingNew == 1
         Delete "$INSTDIR\${PRODUCT_EXECUTABLE}"
         Delete "$INSTDIR\libmpv-2.dll"
+        Delete "$INSTDIR\ffmpeg.exe"
+        Delete "$INSTDIR\ffprobe.exe"
         Delete "$INSTDIR\LICENSE.txt"
         Delete "$INSTDIR\uninstall.exe"
         RMDir /r "$INSTDIR\licenses"
     ${EndIf}
     !insertmacro pkp.restore "${PRODUCT_EXECUTABLE}"
     !insertmacro pkp.restore "libmpv-2.dll"
+    !insertmacro pkp.restore "ffmpeg.exe"
+    !insertmacro pkp.restore "ffprobe.exe"
     !insertmacro pkp.restore "licenses"
     !insertmacro pkp.restore "LICENSE.txt"
     !insertmacro pkp.restore "uninstall.exe"

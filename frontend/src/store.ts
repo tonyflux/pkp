@@ -200,7 +200,7 @@ export const inMenuBarWindow = new URLSearchParams(location.search).get("window"
 
 export const inViewerWindow = new URLSearchParams(location.search).get("window") === "viewer";
 
-export type Route = "files" | "transfers" | "player" | "shares" | "settings" | "viewer" | "assistant" | "cleanup" | "sync" | "history";
+export type Route = "files" | "transfers" | "player" | "shares" | "settings" | "viewer" | "assistant" | "cleanup" | "sync" | "history" | "lan";
 export type LibraryView = "all" | "starred" | "trash";
 export type CategoryFilter = "all" | "video" | "image" | "document" | "audio" | "other";
 /** All Files's Browse Scope: one folder's direct children, or every file of the drive. */
@@ -347,7 +347,7 @@ export function openAccountManager() {
 }
 
 /** Navigation targets in the order of their number shortcuts. */
-export type NavKey = LibraryView | "cleanup" | "assistant" | "sync" | "transfers" | "shares" | "history";
+export type NavKey = LibraryView | "cleanup" | "assistant" | "sync" | "transfers" | "shares" | "history" | "lan";
 export const NAV_KEYS: readonly NavKey[] = ["all", "starred", "cleanup", "assistant", "history", "transfers", "sync", "shares", "trash"];
 
 /** openNav is a click on the nav's item (or its ⌘1…⌘9). */
@@ -356,6 +356,9 @@ export function openNav(key: NavKey) {
   switch (key) {
     case "history":
       openHistory();
+      return;
+    case "lan":
+      ui.route = "lan";
       return;
     case "sync":
       ui.route = "sync";

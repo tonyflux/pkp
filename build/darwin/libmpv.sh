@@ -1,8 +1,9 @@
 #!/bin/bash
 # Builds libmpv and every library it loads as universal (arm64 + x86_64)
 # dylibs for macOS 12+, from the sources pinned in build/libmpv-common.sh,
-# into build/darwin/libmpv/{include,lib,licenses}. `make app-go` copies lib/
-# into pkp.app/Contents/Frameworks and licenses/ into its Resources, so the
+# into build/darwin/libmpv/{include,lib,bin,licenses}, including ffmpeg/ffprobe.
+# `make app-go` copies lib/ to Contents/Frameworks, bin/ to Contents/Helpers,
+# and licenses/ to Resources, so the
 # app runs without Homebrew. Versions follow the Homebrew formulae PKP was
 # developed against. The build is LGPL (see build/libmpv-common.sh).
 #
@@ -87,9 +88,9 @@ build_ffmpeg() {
 		--enable-cross-compile --target-os=darwin --arch="$arch" \
 		--cc="clang $cc" --cxx="clang++ $cc" --objcc="clang $cc" \
 		--x86asmexe="$tools/bin/nasm" --pkg-config="$tools/bin/pkgconf" \
-		--enable-shared --disable-static --disable-programs --disable-doc --disable-debug --disable-avdevice \
+		--enable-shared --disable-static --enable-ffmpeg --enable-ffprobe --disable-ffplay --disable-doc --disable-debug --disable-avdevice \
 		--disable-autodetect --disable-iconv --enable-pthreads --enable-zlib --enable-bzlib \
-		--enable-videotoolbox --enable-audiotoolbox --enable-libdav1d
+		--disable-gpl --disable-nonfree --enable-videotoolbox --enable-audiotoolbox --enable-libdav1d
 	make -j"$jobs"
 	make install
 }
@@ -182,6 +183,16 @@ build_names() {
 		# each slice's signature, so the universal file needs no other.
 		codesign --force --sign - "$f"
 	done
+	for f in "$prefix/bin/ffmpeg" "$prefix/bin/ffprobe"; do
+		for dep in $(otool -L "$f" | awk 'NR > 1 {print $1}'); do
+			case $dep in "$prefix"/*) install_name_tool -change "$dep" "@rpath/$(basename "$dep")" "$f" ;; esac
+		done
+		for dep in $(otool -l "$f" | awk '/LC_RPATH/ {getline; getline; print $2}'); do
+			install_name_tool -delete_rpath "$dep" "$f"
+		done
+		install_name_tool -add_rpath @executable_path/../Frameworks -add_rpath @executable_path/../lib "$f"
+		codesign --force --sign - "$f"
+	done
 }
 
 arch=host
@@ -196,8 +207,22 @@ done
 # Merge libmpv and everything it loads over @rpath into universal dylibs.
 stage=$work/out
 rm -rf "$stage"
-mkdir -p "$stage/lib" "$stage/include"
+mkdir -p "$stage/lib" "$stage/include" "$stage/bin"
 libs=libmpv.2.dylib
+for program in ffmpeg ffprobe; do
+	for dep in $(otool -L "$work/arm64/prefix/bin/$program" | awk 'NR > 1 && sub("^@rpath/", "", $1) {print $1}'); do
+		case " $libs " in *" $dep "*) ;; *) libs="$libs $dep" ;; esac
+	done
+	lipo -create "$work/arm64/prefix/bin/$program" "$work/x86_64/prefix/bin/$program" -output "$stage/bin/$program"
+	codesign --force --sign - "$stage/bin/$program"
+	lipo "$stage/bin/$program" -verify_arch $ARCHS || die "$program lacks an arch"
+	codesign --verify "$stage/bin/$program" || die "$program is not validly signed"
+	for a in $ARCHS; do
+		for dep in $(otool -arch "$a" -L "$stage/bin/$program" | awk 'NR > 1 {print $1}'); do
+			case $dep in @rpath/* | /usr/lib/* | /System/Library/*) ;; *) die "$program ($a) loads $dep" ;; esac
+		done
+	done
+done
 queue=$libs
 while [ -n "$queue" ]; do
 	set -- $queue
@@ -237,6 +262,12 @@ for lib in $libs; do
 			die "$lib ($a) carries rpath $dep"
 		done
 	done
+done
+for a in $ARCHS; do
+	arch "-$a" "$stage/bin/ffprobe" -version >/dev/null
+	encoders=$(arch "-$a" "$stage/bin/ffmpeg" -hide_banner -encoders 2>&1)
+	grep -q ' h264_videotoolbox ' <<<"$encoders" || die "missing LGPL H.264 encoder ($a)"
+	grep -q ' aac ' <<<"$encoders" || die "missing native AAC encoder ($a)"
 done
 install_licenses "$stage/licenses"
 

@@ -243,6 +243,7 @@ function netApplied() {
       <div class="settings-links">
         <button class="quiet" type="button" @click="openSettings('privacy')">{{ t("tab|隐私与安全") }}</button>
         <button class="quiet" type="button" @click="openSettings('updates')">{{ t("关于与更新") }}</button>
+        <button class="quiet" type="button" data-lan-entry @click="ui.route = 'lan'">{{ t("局域网共享") }}</button>
       </div>
     </section>
 

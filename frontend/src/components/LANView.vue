@@ -1,0 +1,468 @@
+<script setup lang="ts">
+import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from "vue";
+import { Clipboard, Dialogs } from "@wailsio/runtime";
+import qrcode from "qrcode-generator";
+import Icon from "./Icon.vue";
+import Orbit from "./Orbit.vue";
+import SelectMenu from "./SelectMenu.vue";
+import { inSelectMenu } from "../dom";
+import * as DriveService from "../../bindings/github.com/tonyflux/pkp/internal/services/driveservice";
+import type { FolderChoice } from "../../bindings/github.com/tonyflux/pkp/internal/services/models";
+import { accounts, accountLabel, appLocked, openNav, syncDraft as syncDraftGuard, trailPath } from "../store";
+import { bytes } from "../format";
+import { t } from "../i18n";
+import { lan, LANService, changeLAN, refreshLAN, loadLANInterfaces, lanError, lanTaskState, type LANSpace } from "../lanstore";
+import { loadSync, openSyncCreate, sync, syncDialog, syncStateName, type SyncPair } from "../syncstore";
+
+const selected = ref("");
+const space = computed(() => lan.status?.spaces.find(item => item.id === selected.value));
+const tab = ref("settings");
+const network = ref("");
+const modal = ref<"" | "start" | "stop" | "password" | "create" | "remove" | "disable" | "prepare" | "cache" | "cancel" | "resume">("");
+const dialog = ref<HTMLElement>();
+const password = ref("");
+const repeat = ref("");
+const showPassword = ref(false);
+const acknowledged = ref(false);
+const needsAcknowledgement = ref(true);
+const modalError = ref("");
+const notice = ref("");
+const taskID = ref("");
+const targetID = ref("");
+const draft = reactive({ name: "", kind: "local", accountId: "", rootId: "", localPath: "", allowPrepare: false });
+const nameEdited = ref(false);
+const folders = ref<{ id: string; name: string }[]>([]);
+const trail = ref<{ id: string; name: string }[]>([]);
+const picking = ref(false);
+const cloudChosen = ref(false);
+const chosenTrail = ref<{ id: string; name: string }[]>([]);
+const cloudPickerOpen = ref(false);
+const folderLoading = ref(false);
+const folderReady = ref(false);
+const folderError = ref("");
+const folderList = ref<HTMLElement>();
+const folderQuery = ref("");
+const folderMatches = ref<FolderChoice[]>([]);
+const folderSearching = ref(false);
+const folderSearchReady = ref(true);
+const folderSearchError = ref("");
+const folderSearchActive = computed(() => !!folderQuery.value.trim());
+let folderSearchGeneration = 0;
+let folderSearchTimer: ReturnType<typeof setTimeout> | undefined;
+let folderBrowseScroll = 0;
+const cloudPath = computed(() => [t("lan|云盘根目录"), ...chosenTrail.value.map(item => item.name)].join(" / "));
+const currentFolder = computed(() => trail.value.at(-1)?.name ?? t("lan|云盘根目录"));
+let folderGeneration = 0;
+let opener: HTMLElement | null = null;
+let timer: ReturnType<typeof setTimeout> | undefined;
+let disposed = false;
+const tasks = computed(() => lan.status?.tasks.filter(item => !selected.value || item.spaceId === selected.value) ?? []);
+const networkOptions = computed(() => [{ value: "", label: t("lan|请选择网卡") }, ...lan.interfaces.map(item => ({ value: item.id, label: `${item.name} · ${item.address}` }))]);
+const sourceOptions = computed(() => [{ value: "local", label: t("lan|本地目录") }, { value: "cloud", label: t("lan|云盘目录") }]);
+const accountOptions = computed(() => [{ value: "", label: t("lan|请选择账号") }, ...accounts.list.map(account => ({ value: account.id, label: `${accountLabel(account)} · ${account.login}`, disabled: account.needsPassword }))]);
+const spaceOptions = computed(() => [{ value: "", label: t("lan|全部空间") }, ...(lan.status?.spaces ?? []).map(item => ({ value: item.id, label: item.name }))]);
+const syncTrail = ref<{ id: string; name: string }[]>([]);
+const syncTrailReady = ref(false);
+const syncLoading = ref(false);
+const syncError = ref("");
+let syncGeneration = 0;
+const sourceAccountReady = computed(() => {
+  const account = accounts.list.find(item => item.id === space.value?.accountId);
+  return !!account && !account.needsPassword;
+});
+const coveringSyncs = computed(() => {
+  const item = space.value;
+  if (item?.kind !== "cloud") return [];
+  const roots = new Set([item.rootId, ...(syncTrailReady.value ? ["", ...syncTrail.value.map(crumb => crumb.id)] : [])]);
+  return sync.pairs.filter(pair => pair.account === item.accountId && (pair.mode === "download" || pair.mode === "bidirectional") && roots.has(pair.cloudId));
+});
+const canPrepareSync = computed(() => sourceAccountReady.value && syncTrailReady.value && !syncLoading.value && !sync.draftOpen && !syncDialog.kind && !syncDraftGuard.busy);
+watch([() => space.value?.id, () => space.value?.kind, () => space.value?.accountId, () => space.value?.rootId, sourceAccountReady], () => { void loadSpaceSync(); }, { immediate: true, flush: "sync" });
+async function loadSpaceSync() {
+  const generation = ++syncGeneration, item = space.value;
+  syncTrail.value = []; syncTrailReady.value = false; syncLoading.value = false; syncError.value = "";
+  if (item?.kind !== "cloud" || !sourceAccountReady.value) return;
+  syncLoading.value = true;
+  try {
+    const actual = await DriveService.SyncFolderTrail(item.accountId, item.rootId);
+    if (generation !== syncGeneration) return;
+    syncTrail.value = actual ?? []; syncTrailReady.value = true;
+  } catch (error) {
+    if (generation === syncGeneration) syncError.value = lanError(error);
+  } finally {
+    if (generation === syncGeneration) syncLoading.value = false;
+  }
+}
+function manageSync(pair: SyncPair) {
+  sync.scope = "all"; sync.query = ""; sync.selected = pair.id; sync.detail = true; sync.tab = "settings";
+  openNav("sync");
+}
+function prepareSync() {
+  const item = space.value;
+  if (item?.kind !== "cloud" || !canPrepareSync.value) return;
+  openSyncCreate(item.accountId, { name: item.name, cloudId: item.rootId, cloudPath: ["全部文件", ...syncTrail.value.map(crumb => crumb.name)].join(" / "), mode: "download" }); // i18n-ignore: canonical root metadata
+}
+const qr = computed(() => {
+  const address = lan.status?.running && !lan.error ? lan.status.address : "";
+  if (!address) return null;
+  const code = qrcode(0, "M"); code.addData(address); code.make();
+  const size = code.getModuleCount();
+  let path = "";
+  for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) if (code.isDark(y, x)) path += `M${x + 4} ${y + 4}h1v1h-1z`;
+  return { size: size + 8, path };
+});
+const canStart = computed(() => !!lan.status?.hasPassword && !!network.value && !!lan.status?.spaces.some(item => item.enabled && item.available));
+const canCreate = computed(() => draft.name.trim() && (draft.kind === "local" ? draft.localPath : draft.accountId && cloudChosen.value && !cloudPickerOpen.value) && !picking.value);
+const canSubmit = computed(() => !lan.busy && (!needsAcknowledgement.value || acknowledged.value) && (modal.value === "create" ? canCreate.value : modal.value === "password" ? !!password.value && password.value === repeat.value : modal.value === "start" ? canStart.value : !!modal.value));
+const title = computed(() => ({ start: t("lan|开始共享"), stop: t("lan|停止共享"), password: lan.status?.hasPassword ? t("lan|重置共享密码") : t("lan|设置共享密码"), create: t("lan|新建共享空间"), remove: t("lan|移除空间"), disable: lan.status?.spaces.find(item => item.id === targetID.value)?.enabled ? t("lan|停用空间") : t("lan|启用空间"), prepare: t("lan|准备权限"), cache: t("lan|清理兼容副本"), cancel: t("lan|取消准备"), resume: t("lan|恢复准备") }[modal.value || "start"]));
+watch(() => lan.status, status => {
+  if (!status) return;
+  if ((selected.value || tab.value !== "tasks") && !status.spaces.some(item => item.id === selected.value)) selected.value = status.spaces[0]?.id ?? "";
+  if (status.running) network.value = status.interfaceId;
+});
+function open(kind: Exclude<typeof modal.value, "">, id = "") {
+  if (lan.busy || picking.value) return;
+  opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+  targetID.value = id || selected.value; acknowledged.value = false; modalError.value = ""; password.value = ""; repeat.value = "";
+  needsAcknowledgement.value = (kind !== "password" || !!lan.status?.hasPassword) && localStorage.getItem(`pkp.lan.confirmed.${kind}`) !== "1";
+  if (!needsAcknowledgement.value && kind !== "create" && kind !== "password") { void perform(kind); return; }
+  modal.value = kind;
+  showPassword.value = false;
+  if (kind === "create") { Object.assign(draft, { name: "", kind: "local", accountId: "", rootId: "", localPath: "", allowPrepare: false }); nameEdited.value = false; accountChanged(); }
+  void nextTick(() => dialog.value?.querySelector<HTMLElement>("input,button,[role=combobox]")?.focus());
+}
+function close() { if (lan.busy || picking.value) return; folderGeneration++; resetFolderSearch(); folderLoading.value = false; modal.value = ""; password.value = ""; repeat.value = ""; opener?.focus(); }
+function dialogFocusables() {
+  return Array.from(dialog.value?.querySelectorAll<HTMLElement>("button:not(:disabled), input:not(:disabled), [role=combobox]:not([aria-disabled=true])") ?? []).filter(item => item.offsetParent !== null);
+}
+function dialogKey(event: KeyboardEvent) {
+  if (!modal.value || appLocked.value || accounts.dialog || inSelectMenu(event)) return;
+  if (event.key === "Escape") { event.preventDefault(); event.stopImmediatePropagation(); close(); }
+  else if (event.key === "Tab") {
+    const items = dialogFocusables(), first = items[0], last = items.at(-1);
+    if (!first) { event.preventDefault(); dialog.value?.focus(); }
+    else if (event.shiftKey && (document.activeElement === first || document.activeElement === dialog.value)) { event.preventDefault(); last?.focus(); }
+    else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+  }
+}
+function dialogFocus(event: FocusEvent) {
+  if (!modal.value || appLocked.value || accounts.dialog || (event.target as HTMLElement)?.closest("[data-select-list]")) return;
+  if (dialog.value && !dialog.value.contains(event.target as Node)) (dialogFocusables()[0] ?? dialog.value).focus({ preventScroll: true });
+}
+async function networks() { try { await loadLANInterfaces(); if (!lan.interfaces.some(item => item.id === network.value)) network.value = ""; } catch (error) { lan.error = lanError(error); } }
+async function poll() { await refreshLAN(); if (!disposed) timer = setTimeout(poll, 2000); }
+onMounted(() => { void networks(); void poll(); window.addEventListener("keydown", dialogKey, true); document.addEventListener("focusin", dialogFocus); });
+onBeforeUnmount(() => { disposed = true; syncGeneration++; folderGeneration++; resetFolderSearch(); clearTimeout(timer); window.removeEventListener("keydown", dialogKey, true); document.removeEventListener("focusin", dialogFocus); });
+async function localRoot() {
+  picking.value = true; modalError.value = "";
+  try { const path = await Dialogs.OpenFile({ Title: t("lan|选择本地授权目录"), CanChooseFiles: false, CanChooseDirectories: true, CanCreateDirectories: false }); if (path && path !== draft.localPath) { draft.localPath = path; acknowledged.value = false; if (!nameEdited.value || !draft.name.trim()) { draft.name = path.replace(/[\\/]+$/, "").split(/[\\/]/).at(-1) || path; nameEdited.value = false; } } }
+  catch (error) { modalError.value = lanError(error); }
+  finally { picking.value = false; }
+}
+function resetFolderSearch() {
+  folderSearchGeneration++; clearTimeout(folderSearchTimer);
+  folderQuery.value = ""; folderMatches.value = []; folderSearching.value = false;
+  folderSearchReady.value = true; folderSearchError.value = "";
+}
+function searchFolders(query: string) {
+  const wasSearching = folderSearchActive.value;
+  if (!wasSearching && query.trim()) folderBrowseScroll = folderList.value?.scrollTop ?? 0;
+  resetFolderSearch();
+  folderQuery.value = query;
+  if (!query.trim()) {
+    if (wasSearching) void nextTick(() => { if (folderList.value) folderList.value.scrollTop = folderBrowseScroll; });
+    return;
+  }
+  if (!draft.accountId || draft.kind !== "cloud" || !cloudPickerOpen.value) return;
+  const generation = folderSearchGeneration, account = draft.accountId;
+  folderSearching.value = true;
+  folderSearchTimer = setTimeout(async () => {
+    try {
+      const result = await DriveService.SearchFolders(account, query.trim());
+      if (generation !== folderSearchGeneration || account !== draft.accountId) return;
+      folderSearchReady.value = result.ready; folderMatches.value = result.folders ?? [];
+    } catch (error) {
+      if (generation === folderSearchGeneration) folderSearchError.value = lanError(error);
+    } finally {
+      if (generation === folderSearchGeneration) folderSearching.value = false;
+    }
+  }, 200);
+}
+async function browse(next: { id: string; name: string }[]) {
+  if (!draft.accountId || draft.kind !== "cloud") return;
+  resetFolderSearch(); folderBrowseScroll = 0;
+  const generation = ++folderGeneration;
+  const active = document.activeElement;
+  const moveFocus = active instanceof HTMLElement && !!active.closest("[data-lan-cloud-picker], [data-lan-change-cloud]");
+  const revealPicker = moveFocus || (active instanceof HTMLElement && active.getAttribute("aria-label") === t("lan|固定来源账号"));
+  trail.value = [...next]; folders.value = [];
+  folderLoading.value = true; folderReady.value = false; folderError.value = "";
+  try {
+    const result = await LANService.CloudFolders(draft.accountId, next.at(-1)?.id ?? "");
+    if (generation !== folderGeneration) return;
+    folders.value = result ?? []; folderReady.value = true;
+  } catch (error) {
+    if (generation === folderGeneration) folderError.value = lanError(error);
+  } finally {
+    if (generation === folderGeneration) {
+      folderLoading.value = false;
+      void nextTick(() => {
+        const crumbs = dialog.value?.querySelector<HTMLElement>(".folder-crumbs");
+        if (crumbs) crumbs.scrollLeft = crumbs.scrollWidth;
+        if (generation !== folderGeneration || (document.activeElement !== active && document.activeElement !== document.body)) return;
+        if (revealPicker) folderList.value?.closest("[data-lan-cloud-picker]")?.scrollIntoView({ block: "nearest" });
+        if (moveFocus && !folderError.value) (folderList.value?.querySelector<HTMLElement>("[data-lan-folder]") ?? dialog.value?.querySelector<HTMLElement>("[data-lan-choose-cloud]"))?.focus({ preventScroll: true });
+      });
+    }
+  }
+}
+function chooseCloud() {
+  if (folderSearchActive.value || !folderReady.value || folderLoading.value || folderError.value) return;
+  draft.rootId = trail.value.at(-1)?.id ?? ""; chosenTrail.value = [...trail.value];
+  cloudChosen.value = true; cloudPickerOpen.value = false; acknowledged.value = false;
+  if (!nameEdited.value || !draft.name.trim()) { draft.name = currentFolder.value; nameEdited.value = false; }
+  void nextTick(() => {
+    const change = dialog.value?.querySelector<HTMLElement>("[data-lan-change-cloud]");
+    change?.closest("[data-lan-chosen-directory]")?.scrollIntoView({ block: "nearest" });
+    change?.focus({ preventScroll: true });
+  });
+}
+function editCloud() { cloudPickerOpen.value = true; void browse(chosenTrail.value); }
+function cancelCloud() {
+  folderGeneration++; resetFolderSearch(); folderLoading.value = false; cloudPickerOpen.value = false;
+  void nextTick(() => dialog.value?.querySelector<HTMLElement>("[data-lan-change-cloud]")?.focus({ preventScroll: true }));
+}
+function accountChanged() {
+  folderGeneration++; resetFolderSearch(); draft.rootId = ""; folders.value = []; trail.value = []; chosenTrail.value = [];
+  cloudChosen.value = false; folderReady.value = false; folderLoading.value = false; folderError.value = ""; acknowledged.value = false;
+  cloudPickerOpen.value = draft.kind === "cloud" && !!draft.accountId;
+  if (cloudPickerOpen.value) void browse([]);
+}
+function sourceName(item: LANSpace) { return item.kind === "local" ? t("lan|本地目录") : accountLabel(accounts.list.find(account => account.id === item.accountId) ?? null) || item.accountId; }
+async function copy() { try { await Clipboard.SetText(lan.status?.address ?? ""); notice.value = t("lan|地址已复制"); } catch (error) { lan.error = lanError(error); } }
+async function submit() {
+  if (!canSubmit.value || !modal.value) return;
+  await perform(modal.value);
+}
+async function perform(kind: Exclude<typeof modal.value, "">) {
+  const target = lan.status?.spaces.find(item => item.id === targetID.value);
+  const ok = await changeLAN(async () => {
+    switch (kind) {
+      case "start": await LANService.Start({ interfaceId: network.value, port: 17891 }); break;
+      case "stop": await LANService.Stop(); break;
+      case "password": await LANService.SetPassword(password.value); break;
+      case "create": { const item = await LANService.AddSpace({ ...draft, name: draft.name.trim(), accountId: draft.kind === "cloud" ? draft.accountId : "", rootId: draft.kind === "cloud" ? draft.rootId : "", localPath: draft.kind === "local" ? draft.localPath : "" }); selected.value = item.id; break; }
+      case "remove": await LANService.RemoveSpace(targetID.value); break;
+      case "disable": if (target) await LANService.UpdateSpace({ id: target.id, name: target.name, enabled: !target.enabled, allowPrepare: target.allowPrepare }); break;
+      case "prepare": if (target) await LANService.UpdateSpace({ id: target.id, name: target.name, enabled: target.enabled, allowPrepare: !target.allowPrepare }); break;
+      case "cache": { const result = await LANService.ClearCache(); notice.value = t("lan|已清理 {size}，跳过 {n} 个正在使用的副本", { size: bytes(result.removedBytes), n: result.skipped }); break; }
+      case "cancel": await LANService.CancelTask(taskID.value); break;
+      case "resume": await LANService.ResumeTask(taskID.value); break;
+    }
+  });
+  if (ok) {
+    if (needsAcknowledgement.value) localStorage.setItem(`pkp.lan.confirmed.${kind}`, "1");
+    close();
+  } else modalError.value = lan.error;
+}
+const rename = ref("");
+watch(() => [space.value?.id, space.value?.name], ([id, name], previous) => { if (id !== previous?.[0] || name !== previous?.[1]) rename.value = name ?? ""; });
+async function saveName() { const item = space.value; if (!item || !rename.value.trim()) return; await changeLAN(() => LANService.UpdateSpace({ id: item.id, name: rename.value.trim(), enabled: item.enabled, allowPrepare: item.allowPrepare })); }
+</script>
+
+<template>
+  <section class="lan-page" data-lan-view>
+    <header class="page-heading"><div><p class="eyebrow">{{ t('lan|这台电脑 · 只读共享') }}</p><h1>{{ t('局域网共享') }}</h1><p>{{ t('lan|电脑作中转，只分享你明确选中的目录。') }}</p></div><button class="primary" data-lan-create :disabled="lan.busy || !lan.status" @click="open('create')"><Icon name="plus" :size="16" />{{ t('lan|新建共享空间') }}</button></header>
+    <p v-if="lan.error || lan.status?.error" class="error" role="alert">{{ lan.error || lan.status?.error }} <button @click="refreshLAN">{{ t('lan|刷新状态') }}</button></p>
+    <p v-if="notice" role="status">{{ notice }}</p>
+    <section class="service glass glass-sheet" data-lan-service>
+      <div class="service-main"><div class="status-line"><span class="dot" :class="{ live: lan.status?.running && !lan.error }"></span><h2>{{ lan.error ? t('lan|连接状态待确认') : lan.status?.running ? t('lan|正在共享') : t('lan|共享已关闭') }}</h2></div><p>{{ t('lan|普通 HTTP 不加密，局域网内可观察网络的人可能看到共享密码和文件内容。请仅在可信网络使用。') }}</p>
+        <div class="network"><span>{{ t('lan|监听网卡') }}</span><span class="select glass-well"><SelectMenu id="lan-network" v-model="network" class="face" :options="networkOptions" :label="t('lan|监听网卡')" :disabled="lan.status?.running || lan.busy"/><Icon name="chevronDown" :size="16"/></span><button :disabled="lan.busy" @click="networks">{{ t('lan|刷新网卡') }}</button></div>
+        <p v-if="lan.status?.running">{{ t('lan|更换网卡前请停止共享；旧连接将中断。') }}</p>
+        <div v-if="lan.status?.running && !lan.error" class="address"><code data-lan-address>{{ lan.status.address }}</code><button @click="copy">{{ t('lan|复制地址') }}</button></div>
+        <div class="actions"><button class="primary" data-lan-start-stop :disabled="lan.busy || !lan.status || (!lan.status.running && !canStart)" @click="open(lan.status?.running ? 'stop' : 'start')">{{ lan.status?.running ? t('lan|停止共享') : t('lan|开始共享') }}</button><button data-lan-password :disabled="lan.busy || !lan.status" @click="open('password')">{{ lan.status?.hasPassword ? t('lan|重置共享密码') : t('lan|设置共享密码') }}</button></div>
+        <p v-if="!lan.status?.running">{{ t('lan|开启前：选择网卡、设置密码，并启用至少一个可用空间。') }}</p>
+      </div><div class="qr-panel"><svg v-if="qr" data-lan-qr :viewBox="`0 0 ${qr.size} ${qr.size}`" role="img" :aria-label="t('lan|访问地址二维码')" shape-rendering="crispEdges"><rect width="100%" height="100%" fill="white"/><path :d="qr.path" fill="black"/></svg><Icon v-else name="globe" :size="64"/><strong>{{ t('lan|扫码访问') }}</strong><small>{{ t('lan|二维码只含地址，不含密码。') }}</small></div>
+    </section>
+    <div class="content-grid"><section class="spaces"><h2>{{ t('lan|共享空间') }} <small>{{ lan.status?.spaces.length ?? 0 }}</small></h2><p v-if="!lan.status?.spaces.length" class="empty">{{ t('lan|还没有共享空间，添加目录不会自动开始共享。') }}</p>
+      <button v-for="item in lan.status?.spaces" :key="item.id" class="space-card glass glass-sheet" :class="{ selected: selected === item.id }" :aria-pressed="selected === item.id" :data-lan-space="item.id" @click="selected = item.id"><Icon :name="item.kind === 'local' ? 'folder' : 'cloud'" :size="24"/><span><strong>{{ item.name }}</strong><small>{{ sourceName(item) }}</small><small class="root">{{ item.localPath || item.rootId || t('lan|云盘根目录') }}</small><span class="chips"><span>{{ !item.enabled ? t('lan|已停用') : !item.available ? t('lan|来源暂不可用') : t('lan|已启用') }}</span><span>{{ item.allowPrepare ? t('lan|允许准备文件') : t('lan|仅下载已就绪文件') }}</span></span></span></button>
+      <p class="read-note"><Icon name="lock" :size="18"/>{{ t('lan|网页只读，不允许上传、删除、移动或修改设置。') }}</p>
+    </section><section class="detail glass glass-sheet" data-lan-detail><div class="tabs"><button :aria-pressed="tab === 'settings'" @click="tab = 'settings'">{{ t('lan|空间设置') }}</button><button :aria-pressed="tab === 'tasks'" @click="tab = 'tasks'">{{ t('lan|准备任务') }}</button><button :aria-pressed="tab === 'cache'" @click="tab = 'cache'">{{ t('lan|兼容副本') }}</button></div>
+      <template v-if="tab === 'settings' && space"><h2>{{ space.name }}</h2><p>{{ sourceName(space) }}</p><p class="root">{{ space.localPath || space.rootId || t('lan|云盘根目录') }}</p><p>{{ t('lan|来源账号和根目录固定，切换桌面账号不会改变此空间。更换来源请新建空间。') }}</p><p v-if="space.error" class="error" role="alert">{{ space.error }}</p><label class="field">{{ t('lan|空间名称') }}<input v-model="rename" maxlength="120" /></label><button :disabled="lan.busy || !rename.trim() || rename.trim() === space.name" @click="saveName">{{ t('lan|保存名称') }}</button>
+        <section v-if="space.kind === 'cloud'" data-lan-sync>
+          <hr/><h3>{{ t('lan|提前准备原件') }}</h3>
+          <p>{{ t('lan|已完成且核对一致的同步原件会自动复用；访客仍按需准备文件，不能创建或控制同步关系。兼容副本单独管理。') }}</p>
+          <p>{{ t('lan|提前准备会打开现有同步设置：请选择本地目录，扫描并检查预览，明确确认后才会开始云端下载到本地。仅打开设置不会开始同步。') }}</p>
+          <p v-if="!sourceAccountReady" role="status">{{ t('lan|来源账号不可用，请先在账号管理中恢复登录。') }}</p>
+          <p v-if="syncLoading" role="status">{{ t('正在加载') }}</p>
+          <p v-if="syncError" class="error" role="alert">{{ syncError }} <button @click="loadSpaceSync">{{ t('lan|刷新状态') }}</button></p>
+          <p v-if="sync.error" class="error" role="alert">{{ sync.error }} <button @click="loadSync">{{ t('刷新同步状态') }}</button></p>
+          <p v-if="!sync.loading && !sync.error && !syncLoading && syncTrailReady && !coveringSyncs.length">{{ t('lan|尚无覆盖此云盘目录的同步关系。') }}</p>
+          <article v-for="pair in coveringSyncs" :key="pair.id" class="task" :data-lan-sync-pair="pair.id">
+            <strong>{{ pair.name }}</strong><small class="root">{{ pair.localPath }}</small><span>{{ syncStateName(pair) }}</span>
+            <button @click="manageSync(pair)">{{ t('lan|查看与管理同步') }}</button>
+          </article>
+          <button data-lan-sync-create :disabled="!canPrepareSync" @click="prepareSync">{{ t('lan|设置提前下载') }}</button>
+        </section>
+        <hr/><div class="setting"><div><strong>{{ t('lan|允许准备文件') }}</strong><p>{{ t('lan|访客可让这台电脑下载云文件并生成兼容副本，会占用网络、磁盘和算力。本地空间仅生成兼容副本。') }}</p></div><button role="switch" :aria-checked="space.allowPrepare" :disabled="lan.busy" data-lan-prepare @click="open('prepare')">{{ space.allowPrepare ? t('lan|已允许') : t('lan|未允许') }}</button></div><div class="actions"><button :disabled="lan.busy" @click="open('disable')">{{ space.enabled ? t('lan|停用空间') : t('lan|启用空间') }}</button><button class="danger" :disabled="lan.busy" @click="open('remove')">{{ t('lan|移除空间') }}</button></div></template>
+      <p v-else-if="tab === 'settings'" class="empty">{{ t('lan|选择一个空间查看授权范围。') }}</p>
+      <template v-if="tab === 'tasks'"><h2>{{ t('lan|准备任务') }}</h2><label class="field">{{ t('lan|任务范围') }}<span class="select glass-well"><SelectMenu v-model="selected" class="face" :options="spaceOptions" :label="t('lan|任务范围')"/><Icon name="chevronDown" :size="16"/></span></label><p>{{ t('lan|停止共享不自动取消电脑准备；恢复等待任务需重新确认授权。') }}</p><p v-if="!tasks.length" class="empty">{{ t('lan|暂无准备任务') }}</p><article v-for="item in tasks" :key="item.id" class="task" :data-lan-task="item.id"><strong>{{ item.name }}</strong><small>{{ lan.status?.spaces.find(value => value.id === item.spaceId)?.name }}</small><span>{{ lanTaskState(item.state) }}</span><progress v-if="item.total > 0" :value="item.done" :max="item.total" :aria-label="lanTaskState(item.state)"/><small v-if="item.total > 0">{{ bytes(item.done) }} / {{ bytes(item.total) }}</small><p v-if="item.error" class="error">{{ item.error }}</p><div class="actions"><button v-if="item.state === 'held'" :disabled="lan.busy" @click="taskID = item.id; open('resume')">{{ t('lan|恢复准备') }}</button><button v-if="!['ready', 'failed', 'cancelled'].includes(item.state)" :disabled="lan.busy" @click="taskID = item.id; open('cancel')">{{ t('lan|取消准备') }}</button></div></article></template>
+      <template v-if="tab === 'cache'"><h2>{{ t('lan|兼容副本') }}</h2><strong class="cache-size">{{ bytes(lan.status?.cacheBytes ?? 0) }}</strong><p>{{ t('lan|容量上限：{size}', { size: bytes(lan.status?.cacheLimit ?? 0) }) }}</p><p>{{ t('lan|仅清理本功能生成的兼容副本，正在使用的副本会跳过。不会删除源原件、已下载原件或其他下载结果。') }}</p><button data-lan-cache :disabled="lan.busy || !lan.status" @click="open('cache')">{{ t('lan|清理兼容副本') }}</button></template>
+      <p v-if="(tab === 'tasks' || tab === 'cache') && lan.status?.originalDir" class="root">{{ t('lan|准备的原件保留在 {path}', { path: lan.status.originalDir }) }}</p>
+    </section></div><footer>{{ t('lan|锁定应用、关窗驻留后继续共享；退出 PKP 或主动停止会断开访客连接。') }}</footer>
+    <Teleport to="body"><div v-if="modal" class="scrim lan-scrim"><section ref="dialog" class="lan-dialog" :class="{ 'create-dialog': modal === 'create' }" role="dialog" aria-modal="true" aria-labelledby="lan-dialog-title" tabindex="-1" @keydown.stop><form @submit.prevent="submit"><header><h2 id="lan-dialog-title">{{ title }}</h2><button type="button" :disabled="lan.busy || picking" :aria-label="t('lan|关闭对话框')" @click="close">×</button></header>
+      <div class="dialog-body">
+      <template v-if="modal === 'create'">
+        <label class="field">{{ t('lan|空间名称') }}<input v-model="draft.name" maxlength="120" required @input="nameEdited = true" /></label>
+        <label class="field">{{ t('lan|来源类型') }}<span class="select glass-well"><SelectMenu v-model="draft.kind" class="face" :options="sourceOptions" :label="t('lan|来源类型')" :disabled="picking || lan.busy" @update:model-value="accountChanged"/><Icon name="chevronDown" :size="16"/></span></label>
+        <div v-if="draft.kind === 'local'" class="folder-field" role="group" aria-labelledby="lan-folder-title">
+          <h3 id="lan-folder-title" class="field-title">{{ t('lan|共享目录') }}</h3>
+          <div class="folder-selection" :class="{ chosen: !!draft.localPath }">
+            <span class="folder-mark"><Icon name="folder" :size="22"/></span>
+            <div class="folder-copy"><strong>{{ draft.localPath ? draft.localPath.replace(/[\\/]+$/, '').split(/[\\/]/).at(-1) || draft.localPath : t('尚未选择文件夹') }}</strong><p v-if="draft.localPath" class="folder-path">{{ draft.localPath }}</p></div>
+            <button type="button" :disabled="picking || lan.busy" data-lan-local-picker @click="localRoot">{{ draft.localPath ? t('lan|更改目录') : t('lan|选择本地授权目录') }}</button>
+          </div>
+        </div>
+        <template v-else>
+          <label class="field">{{ t('lan|固定来源账号') }}<span class="select glass-well"><SelectMenu v-model="draft.accountId" class="face" :options="accountOptions" :label="t('lan|固定来源账号')" :disabled="lan.busy" @update:model-value="accountChanged"/><Icon name="chevronDown" :size="16"/></span></label>
+          <div class="folder-field" role="group" aria-labelledby="lan-folder-title">
+            <h3 id="lan-folder-title" class="field-title">{{ t('lan|共享目录') }}</h3>
+            <p v-if="!draft.accountId" class="folder-placeholder"><Icon name="folder" :size="22"/>{{ t('lan|先选择来源账号，再选择共享目录。') }}</p>
+            <div v-else-if="cloudChosen && !cloudPickerOpen" class="folder-selection chosen" data-lan-chosen-directory>
+              <span class="folder-mark"><Icon name="folder" :size="22"/></span>
+              <div class="folder-copy"><small class="folder-choice-status"><Icon name="check" :size="14"/>{{ t('lan|已选择此目录') }}</small><strong>{{ chosenTrail.at(-1)?.name ?? t('lan|云盘根目录') }}</strong><p v-if="chosenTrail.length" class="folder-path">{{ cloudPath }}</p><p v-else class="folder-root-warning">{{ t('lan|选择云盘根目录将共享此账号下的全部文件，请确认范围。') }}</p></div>
+              <button type="button" :disabled="lan.busy" data-lan-change-cloud @click="editCloud">{{ t('lan|更改目录') }}</button>
+            </div>
+            <div v-else class="folder-picker" data-lan-cloud-picker>
+              <p class="folder-picker-hint">{{ t('lan|进入文件夹浏览，确认后共享该目录及其子目录。') }}</p>
+              <label class="folder-search"><Icon name="search" :size="17"/><input type="search" :value="folderQuery" :placeholder="t('lan|搜索此账号的文件夹')" :aria-label="t('lan|搜索此账号的文件夹')" autocomplete="off" spellcheck="false" data-lan-folder-search @input="searchFolders(($event.target as HTMLInputElement).value)" @keydown.enter.prevent/><button v-if="folderQuery" type="button" class="quiet" :aria-label="t('清除搜索')" @click="searchFolders('')"><Icon name="close" :size="16"/></button></label>
+              <div v-if="!folderSearchActive" class="folder-toolbar">
+                <button type="button" class="quiet folder-back" :disabled="!trail.length || folderLoading" :aria-label="t('lan|返回上级目录')" :title="t('lan|返回上级目录')" @click="browse(trail.slice(0, -1))"><Icon name="arrowLeft" :size="18"/></button>
+                <nav class="folder-crumbs" :aria-label="t('lan|授权根目录')">
+                  <button v-if="trail.length" type="button" class="quiet" :disabled="folderLoading" @click="browse([])">{{ t('lan|云盘根目录') }}</button><span v-else aria-current="location">{{ t('lan|云盘根目录') }}</span>
+                  <template v-for="(crumb, index) in trail" :key="crumb.id"><Icon name="chevronRight" :size="13"/><span v-if="index === trail.length - 1" aria-current="location" :title="crumb.name">{{ crumb.name }}</span><button v-else type="button" class="quiet" :disabled="folderLoading" :title="crumb.name" @click="browse(trail.slice(0, index + 1))">{{ crumb.name }}</button></template>
+                </nav>
+              </div>
+              <p v-else class="folder-search-scope">{{ t('搜索整个云盘的文件夹') }}</p>
+              <div ref="folderList" class="folder-list" :aria-busy="folderSearchActive ? folderSearching : folderLoading">
+                <template v-if="folderSearchActive">
+                  <p v-if="folderSearching" class="folder-state" role="status"><Orbit :size="20"/>{{ t('正在搜索…') }}</p>
+                  <div v-else-if="folderSearchError" class="folder-state"><p class="error" role="alert">{{ folderSearchError }}</p><button type="button" @click="searchFolders(folderQuery)">{{ t('重试') }}</button></div>
+                  <p v-else-if="!folderSearchReady" class="folder-state" role="status">{{ t('云盘索引还在建立，暂时不能搜索全盘；可以逐层浏览。') }}</p>
+                  <p v-else-if="!folderMatches.length" class="folder-state" role="status">{{ t('没有找到文件夹，试试其他名称') }}</p>
+                  <template v-else>
+                    <button v-for="folder in folderMatches" :key="folder.id" type="button" class="quiet folder-row folder-result" :data-lan-folder-result="folder.id" :title="trailPath(folder.trail ?? [])" @click="browse(folder.trail ?? [])"><Icon name="folder" :size="20" filled/><span><strong>{{ folder.name }}</strong><small>{{ trailPath(folder.trail ?? []) }}</small></span><Icon name="chevronRight" :size="16"/></button>
+                    <p v-if="folderMatches.length >= 100" class="folder-search-limit">{{ t('lan|最多显示 100 个结果，请缩小搜索范围。') }}</p>
+                  </template>
+                </template>
+                <template v-else>
+                  <p v-if="folderLoading" class="folder-state" role="status"><Orbit :size="20"/>{{ t('lan|读取目录中') }}</p>
+                  <div v-else-if="folderError" class="folder-state"><Icon name="alert" :size="22"/><p class="error" role="alert">{{ folderError }}</p><button type="button" @click="browse(trail)">{{ t('重试') }}</button></div>
+                  <p v-else-if="folderReady && !folders.length" class="folder-state">{{ t('这里没有子文件夹，可以选择这里。') }}</p>
+                  <button v-for="folder in folders" v-else :key="folder.id" type="button" class="quiet folder-row" :data-lan-folder="folder.id" :title="folder.name" @click="browse([...trail, folder])"><Icon name="folder" :size="20" filled/><span>{{ folder.name }}</span><Icon name="chevronRight" :size="16"/></button>
+                </template>
+              </div>
+              <div v-if="!folderSearchActive" class="folder-current"><span>{{ t('lan|当前目录') }}</span><strong :title="currentFolder">{{ currentFolder }}</strong></div>
+              <p v-if="!folderSearchActive && folderReady && !trail.length" class="folder-root-warning"><Icon name="info" :size="16"/>{{ t('lan|选择云盘根目录将共享此账号下的全部文件，请确认范围。') }}</p>
+              <div class="folder-actions"><button v-if="cloudChosen" type="button" @click="cancelCloud">{{ t('取消') }}</button><button type="button" class="primary" :disabled="folderSearchActive || folderLoading || !folderReady || !!folderError" data-lan-choose-cloud @click="chooseCloud">{{ t('选择这个文件夹') }}</button></div>
+            </div>
+          </div>
+        </template>
+        <label class="check"><input v-model="draft.allowPrepare" type="checkbox"/>{{ t('lan|允许准备文件') }}</label>
+        <p>{{ t('lan|访客可让这台电脑下载云文件并生成兼容副本，会占用网络、磁盘和算力。本地空间仅生成兼容副本。') }}</p>
+        <p>{{ t('lan|持有共享密码的人均可读取此目录，包括其中的隐藏文件。请勿授权含敏感内容的目录。') }}</p>
+      </template>
+      <template v-else-if="modal === 'password'"><p>{{ t('lan|密码独立于应用锁和云盘登录，两次输入一致即可。密码不会显示在二维码中。') }}</p><label class="field">{{ t('lan|共享密码') }}<input v-model="password" :type="showPassword ? 'text' : 'password'" autocomplete="new-password" required /></label><label class="field">{{ t('lan|再次输入密码') }}<input v-model="repeat" :type="showPassword ? 'text' : 'password'" autocomplete="new-password" required /></label><button type="button" :aria-pressed="showPassword" @click="showPassword = !showPassword">{{ showPassword ? t('隐藏密码') : t('显示密码') }}</button><p v-if="lan.status?.hasPassword">{{ t('lan|所有访客将退出，正在下载和播放会中断；已取得的文件无法收回。电脑准备不自动取消。') }}</p></template>
+      <p v-else-if="modal === 'start'">{{ t('lan|普通 HTTP 不加密，局域网内可观察网络的人可能看到共享密码和文件内容。请仅在可信网络使用。') }}</p>
+      <p v-else-if="modal === 'stop'">{{ t('lan|所有访客会退出，下载到设备和播放会中断。已启动的电脑准备不自动取消，原件和完成结果会保留；若需结束准备，请到任务中取消。') }}</p>
+      <p v-else-if="modal === 'cache'">{{ t('lan|仅清理本功能生成的兼容副本，正在使用的副本会跳过。不会删除源原件、已下载原件或其他下载结果。') }}</p>
+      <template v-else-if="modal === 'prepare'"><p>{{ t('lan|访客可让这台电脑下载云文件并生成兼容副本，会占用网络、磁盘和算力。本地空间仅生成兼容副本。') }}</p><p>{{ t('lan|关闭准备权限会阻止新任务及后续阶段，已有准备等待电脑处理；已完成文件仍可按当前授权读取。') }}</p></template>
+      <p v-else-if="modal === 'cancel'">{{ t('lan|取消此电脑准备？所有等待此任务的访客都会受到影响。保留原件，未完成副本不会发布。') }}</p>
+      <p v-else-if="modal === 'resume'">{{ t('lan|恢复会重新核验来源和准备权限，并继续占用网络、磁盘和算力。') }}</p>
+      <p v-else>{{ t('lan|停用或移除会中断此空间的访问和传输，准备任务等待处理；不删除源文件和完成结果。启用后持有密码的访客可读取。') }}</p>
+      <p v-if="modal === 'create' && draft.kind === 'local'">{{ t('lan|所选目录中的隐藏文件也可能被共享。请选择专用目录；符号链接和目录联接不会提供给访客。') }}</p>
+      <label v-if="needsAcknowledgement" class="check"><input v-model="acknowledged" type="checkbox" data-lan-ack/>{{ t('lan|我已了解授权范围和影响，同类操作不再提示') }}</label><p v-if="modalError" class="error" role="alert">{{ modalError }}</p>
+      </div><footer><button type="button" :disabled="lan.busy || picking" @click="close">{{ t('lan|暂不操作') }}</button><button class="primary" data-lan-confirm :disabled="!canSubmit">{{ lan.busy ? t('lan|正在处理') : title }}</button></footer>
+    </form></section></div></Teleport>
+  </section>
+</template>
+
+<style scoped>
+.lan-scrim { background: #15242d66; }
+.lan-scrim .lan-dialog { background: var(--glass-panel); backdrop-filter: blur(24px); }
+.select { display: flex; align-items: center; position: relative; min-width: 0; width: 100%; border-radius: 10px; }
+.select .face { width: 100%; min-width: 0; padding: 10px 36px 10px 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.select > .icon { position: absolute; right: 12px; pointer-events: none; }
+.network .select { flex: 1; min-width: 180px; width: auto; }
+.space-card small { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.space-card > span { flex: 1; }
+.lan-page {
+  flex: 1;
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+  padding: 24px;
+  overflow: auto;
+  color: var(--fg);
+  background: var(--canvas);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-island);
+}
+.page-heading,.status-line,.actions,.network,.setting,.lan-dialog header,.lan-dialog footer { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.page-heading { justify-content: space-between; margin-bottom: 24px; } h1 { font-size: 30px; letter-spacing: -.8px; margin: 5px 0 8px; } h2 { font-size: 18px; margin: 0 0 16px; } p { color: var(--fg-dim); line-height: 1.65; } .eyebrow { font-size: 13px; font-weight: 500; letter-spacing: .02em; margin: 0; } button { border-radius: 11px; padding: 9px 13px; cursor: pointer; } button:disabled { opacity: .45; cursor: default; } button:focus-visible,input:focus-visible,[role=combobox]:focus-visible { outline: 2px solid var(--accent, #3b9a91); outline-offset: 3px; } .primary { background: var(--primary); color: var(--on-primary); display: inline-flex; align-items: center; gap: 7px; } .service { display: flex; gap: 28px; padding: 24px; border-radius: 22px; margin-bottom: 26px; } .service-main { flex: 1; min-width: 0; } .status-line h2 { margin: 0; } .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--fg-dim); } .dot.live { background: #41a48a; box-shadow: 0 0 0 5px #41a48a18; } input:not([type=checkbox]) { width: 100%; min-width: 0; border: 1px solid var(--stroke, #8884); background: var(--glass-fill, #8881); color: inherit; padding: 10px; border-radius: 10px; } .address { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; margin: 16px 0; } code { font-size: 17px; overflow-wrap: anywhere; } .qr-panel { width: 155px; flex: 0 0 155px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; text-align: center; } .qr-panel svg { width: 145px; height: 145px; border-radius: 12px; } small { font-size: 13px; color: var(--fg-dim); line-height: 1.5; } .content-grid { display: grid; grid-template-columns: minmax(260px, 1fr) minmax(330px, 1.15fr); gap: 22px; align-items: start; } .spaces h2 { display: flex; justify-content: space-between; } .space-card { display: flex; width: 100%; gap: 16px; text-align: left; padding: 20px; border-radius: 18px; margin: 12px 0; border: 1px solid transparent; color: inherit; } .space-card.selected { border-color: var(--accent, #378d83); background: #60ab9514; } .space-card > span { display: grid; gap: 7px; min-width: 0; } strong,.root,.task { overflow-wrap: anywhere; } .chips { display: flex; flex-wrap: wrap; gap: 8px; font-size: 13px; } .chips > span { padding: 4px 7px; background: #8881; border-radius: 7px; } .detail { padding: 22px; border-radius: 22px; min-width: 0; } .tabs { display: flex; gap: 5px; flex-wrap: wrap; padding-bottom: 20px; } .tabs button[aria-pressed=true] { background: #60ab9525; } .field { display: grid; gap: 8px; margin: 16px 0; } .setting { align-items: flex-start; } .setting > div { flex: 1; min-width: 160px; } hr { border: 0; border-top: 1px solid #8883; margin: 22px 0; } .danger,.error { color: var(--danger, #b95555); } .empty { padding: 24px 0; } .read-note { display: flex; align-items: flex-start; gap: 10px; font-size: 14px; } .task { display: grid; gap: 8px; padding: 18px 0; border-bottom: 1px solid #8883; } progress { width: 100%; accent-color: var(--accent, #378d83); } .cache-size { display: block; font-size: 30px; margin: 25px 0; } .lan-page > footer { font-size: 13px; line-height: 1.65; color: var(--fg-dim); border-top: 1px solid var(--line); margin-top: 24px; padding-top: 16px; } .lan-dialog { width: min(560px, calc(100vw - 48px)); max-height: calc(100dvh - 64px); overflow: hidden; border: 1px solid var(--stroke, #8885); border-radius: 24px; padding: 26px; color: var(--fg); background: var(--surface, #f2f3f2); box-shadow: 0 24px 90px #0005; } .lan-dialog header { justify-content: space-between; } .lan-dialog h2 { margin: 0; flex: 1; } .lan-dialog footer { justify-content: flex-end; padding-top: 20px; } .check { display: flex; gap: 10px; align-items: flex-start; line-height: 1.6; margin-top: 18px; } .check input { margin-top: 5px; flex: none; }
+.service .actions { margin-top: 16px; }
+.read-note .icon { flex: none; margin-top: 2px; }
+.lan-dialog.create-dialog { width: min(640px, calc(100vw - 48px)); }
+.lan-dialog form { display: flex; flex-direction: column; max-height: calc(100dvh - 116px); }
+.lan-dialog header { flex: none; padding-bottom: 4px; }
+.dialog-body { min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 0 4px 2px; margin: 0 -4px; }
+.lan-dialog footer { flex: none; border-top: 1px solid var(--line); margin-top: 18px; padding-top: 16px; }
+.folder-field { margin: 18px 0; min-width: 0; }
+.field-title { font-size: 15px; font-weight: 500; margin: 0 0 10px; }
+.folder-selection { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 14px; border: 1px solid var(--line); border-radius: 14px; background: var(--canvas); }
+.folder-selection.chosen { border-color: color-mix(in srgb, var(--accent) 35%, var(--line)); }
+.folder-mark { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 11px; color: var(--accent); background: var(--accent-soft); }
+.folder-copy { display: grid; gap: 4px; min-width: 0; }
+.folder-copy strong { font-weight: 600; overflow-wrap: anywhere; }
+.folder-copy .folder-path { margin: 0; font-size: 13px; line-height: 1.6; overflow-wrap: anywhere; }
+.folder-copy .folder-root-warning { margin: 0; padding: 0; }
+.folder-choice-status { display: flex; align-items: center; gap: 4px; color: var(--success); }
+.folder-placeholder { display: flex; align-items: center; gap: 12px; border: 1px dashed var(--line); border-radius: 14px; padding: 18px; font-size: 14px; }
+.folder-picker { overflow: hidden; border: 1px solid var(--line); border-radius: 16px; background: var(--canvas); }
+.folder-picker .folder-picker-hint { margin: 0; padding: 12px 14px 8px; font-size: 13px; }
+.folder-search { display: flex; align-items: center; gap: 8px; margin: 4px 14px 10px; padding: 0 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--field); }
+.folder-search > .icon { flex: none; color: var(--fg-dim); }
+.folder-search input { flex: 1; min-width: 0; width: 100%; padding: 10px 0; border: 0; background: transparent; color: var(--fg); }
+.folder-search input::-webkit-search-cancel-button { display: none; }
+.folder-search button { display: grid; place-items: center; flex: none; padding: 6px; }
+.folder-picker .folder-search-scope,.folder-search-limit { margin: 0; padding: 0 14px 8px; font-size: 13px; color: var(--fg-dim); }
+.folder-result > span { display: grid; gap: 3px; }
+.folder-result strong { font-weight: 500; overflow: hidden; text-overflow: ellipsis; }
+.folder-result small { color: var(--fg-dim); white-space: normal; overflow-wrap: anywhere; line-height: 1.5; }
+.folder-toolbar { display: flex; align-items: center; gap: 4px; padding: 4px 8px 8px; border-bottom: 1px solid var(--line); }
+.folder-toolbar .folder-back { display: grid; place-items: center; flex: none; width: 34px; min-height: 34px; padding: 6px; }
+.folder-crumbs { display: flex; align-items: center; gap: 3px; flex: 1; min-width: 0; overflow-x: auto; white-space: nowrap; scrollbar-width: thin; }
+.folder-crumbs button,.folder-crumbs > span { flex: none; max-width: 200px; overflow: hidden; text-overflow: ellipsis; padding: 6px; font-size: 13px; }
+.folder-crumbs [aria-current] { font-weight: 600; color: var(--fg); }
+.folder-list { min-height: 116px; max-height: clamp(116px, 18dvh, 188px); overflow-y: auto; padding: 6px; overscroll-behavior: contain; }
+.folder-state { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; text-align: center; min-height: 104px; margin: 0; padding: 18px; font-size: 14px; }
+.folder-state p { margin: 0; }
+.folder-row { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 42px; padding: 8px 10px; text-align: left; font-size: 14px; }
+.folder-row > .icon:first-child { color: var(--accent); }
+.folder-row > span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.folder-row > .icon:last-child { color: var(--fg-dim); }
+.folder-current { display: grid; gap: 4px; border-top: 1px solid var(--line); padding: 12px 14px 0; }
+.folder-current > span { font-size: 13px; color: var(--fg-dim); }
+.folder-current strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+.folder-root-warning { display: flex; align-items: flex-start; gap: 8px; margin: 0; padding: 10px 14px 0; color: var(--warning); font-size: 13px; }
+.folder-root-warning .icon { flex: none; margin-top: 3px; }
+.folder-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; padding: 12px 14px; }
+@media (max-width: 600px) {
+  .lan-dialog { padding: 20px; }
+  .lan-dialog form { max-height: calc(100dvh - 104px); }
+  .folder-selection { grid-template-columns: auto minmax(0, 1fr); }
+  .folder-selection > button { grid-column: 2; justify-self: start; }
+}
+@media (max-width: 1100px) { .lan-page { padding: 18px; } .content-grid { grid-template-columns: minmax(230px, .9fr) minmax(300px, 1.1fr); gap: 14px; } .service { gap: 18px; padding: 20px; } .qr-panel { width: 125px; flex-basis: 125px; } .qr-panel svg { width: 120px; height: 120px; } .detail { padding: 18px; } }
+@media (max-width: 760px) { .content-grid { grid-template-columns: 1fr; } .service { flex-wrap: wrap; } .qr-panel { width: 100%; flex-basis: 100%; } .lan-page { padding: 12px; } }
+</style>
