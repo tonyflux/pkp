@@ -26,7 +26,6 @@ const (
 	lockMethodSystem   = "system"
 	lockMethodPassword = "password"
 
-	minLockPassword = 8
 	maxLockPassword = 128
 
 	// lockMaxFails wrong passwords in a row start a cooldown of
@@ -97,13 +96,11 @@ func (t LockThrottle) failed(now time.Time) LockThrottle {
 	return t
 }
 
-// lockPasswordProblem says what is wrong with a new password; "" when it may
-// be used. Only the length counts: it stays on this computer, and it is the
-// owner's to choose.
+// lockPasswordProblem rejects empty or oversized input, not weak passwords.
 func lockPasswordProblem(password string) string {
 	switch n := utf8.RuneCountInString(password); {
-	case n < minLockPassword:
-		return i18n.F("密码至少 %d 位", minLockPassword)
+	case n == 0:
+		return i18n.T("请输入新密码")
 	case n > maxLockPassword:
 		return i18n.F("密码最多 %d 位", maxLockPassword)
 	}

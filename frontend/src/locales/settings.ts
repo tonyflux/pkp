@@ -43,12 +43,7 @@ export default {
   验证: { tw: "驗證", en: "Verify", ja: "確認", ko: "확인" },
   当前密码不正确: { tw: "目前密碼不正確", en: "Current password is incorrect", ja: "現在のパスワードが正しくありません", ko: "현재 암호가 올바르지 않습니다" },
   请输入当前密码: { tw: "請輸入目前密碼", en: "Enter your current password", ja: "現在のパスワードを入力してください", ko: "현재 암호를 입력하세요" },
-  "密码至少 {n} 位": {
-    tw: "密碼至少 {n} 位",
-    en: "Password must be at least {n} characters",
-    ja: "パスワードは {n} 文字以上にしてください",
-    ko: "암호는 {n}자 이상이어야 합니다",
-  },
+  请输入新密码: { tw: "請輸入新密碼", en: "Enter a new password", ja: "新しいパスワードを入力してください", ko: "새 암호를 입력하세요" },
   两次输入不一致: { tw: "兩次輸入不一致", en: "Passwords don't match", ja: "入力したパスワードが一致しません", ko: "암호가 일치하지 않습니다" },
   移除前请输入当前密码: {
     tw: "移除前請輸入目前密碼",
@@ -57,12 +52,7 @@ export default {
     ko: "제거하려면 현재 암호를 입력하세요",
   },
   当前密码: { tw: "目前密碼", en: "Current password", ja: "現在のパスワード", ko: "현재 암호" },
-  "新密码（至少 {n} 位）": {
-    tw: "新密碼（至少 {n} 位）",
-    en: "New password (at least {n} characters)",
-    ja: "新しいパスワード（{n} 文字以上）",
-    ko: "새 암호({n}자 이상)",
-  },
+  新密码: { tw: "新密碼", en: "New password", ja: "新しいパスワード", ko: "새 암호" },
   再次输入: { tw: "再次輸入", en: "Confirm password", ja: "もう一度入力", ko: "암호 확인" },
   移除密码: { tw: "移除密碼", en: "Remove password", ja: "パスワードを削除", ko: "암호 제거" },
 

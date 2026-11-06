@@ -899,7 +899,7 @@ async function runLockSheet(step: () => Promise<AppLockResult | null>): Promise<
   else appLockSheet.error = r.result === "wrong" ? t("当前密码不正确") : lockNote(r, false);
 }
 
-/** submitLockSheet hands the sheet's fields (already checked for length and repeat) to the flow that opened it. */
+/** submitLockSheet hands the sheet's fields (already checked for nonempty input and repeat) to the flow that opened it. */
 export function submitLockSheet(input: LockSheetInput): Promise<void> {
   const next = sheetNext;
   return next ? runLockSheet(() => next(input)) : Promise.resolve();
