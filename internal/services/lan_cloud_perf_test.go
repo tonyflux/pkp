@@ -27,8 +27,8 @@ func TestLANCloudProofScopeSharesAncestorsOnlyWithinOperation(t *testing.T) {
 	files := map[string]drive.File{
 		"root":    {ID: "root", Kind: drive.KindFolder, UserID: "u"},
 		"inside":  {ID: "inside", ParentID: "root", Kind: drive.KindFolder, UserID: "u"},
-		"one":     {ID: "one", ParentID: "inside", Kind: drive.KindFile, UserID: "u", Phase: drive.PhaseComplete, ModifiedTime: "v1"},
-		"two":     {ID: "two", ParentID: "inside", Kind: drive.KindFile, UserID: "u", Phase: drive.PhaseComplete, ModifiedTime: "v1"},
+		"one":     {ID: "one", Name: "one.mp4", ParentID: "inside", Kind: drive.KindFile, UserID: "u", Phase: drive.PhaseComplete, ModifiedTime: "v1"},
+		"two":     {ID: "two", Name: "two.mp4", ParentID: "inside", Kind: drive.KindFile, UserID: "u", Phase: drive.PhaseComplete, ModifiedTime: "v1"},
 		"outside": {ID: "outside", Kind: drive.KindFolder, UserID: "u"},
 	}
 	svc := newDriveService(t, func(w http.ResponseWriter, r *http.Request) {
@@ -37,6 +37,17 @@ func TestLANCloudProofScopeSharesAncestorsOnlyWithinOperation(t *testing.T) {
 		}
 		mu.Lock()
 		defer mu.Unlock()
+		if r.URL.Path == "/drive/v1/files:batchGet" {
+			list := drive.FileList{}
+			for _, id := range r.URL.Query()["ids"] {
+				calls[id]++
+				if f, ok := files[id]; ok {
+					list.Files = append(list.Files, f)
+				}
+			}
+			_ = json.NewEncoder(w).Encode(list)
+			return
+		}
 		id := strings.TrimPrefix(r.URL.Path, "/drive/v1/files/")
 		calls[id]++
 		_ = json.NewEncoder(w).Encode(files[id])

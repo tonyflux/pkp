@@ -500,7 +500,7 @@ func TestDesktopCompatibleReadinessProof(t *testing.T) {
 	if err = m.Close(); err != nil {
 		t.Fatal(err)
 	}
-	reopened, err := New(Options{ConfigDir: config, AllowLoopback: true, CacheLimit: 64 << 20, MinFreeBytes: 1})
+	reopened, err := New(Options{ConfigDir: config, AllowLoopback: true, MinFreeBytes: 1})
 	if err != nil {
 		t.Fatal(err)
 	}

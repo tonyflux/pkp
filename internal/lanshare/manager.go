@@ -31,31 +31,35 @@ type passwordRecord struct {
 }
 
 type preparedFile struct {
-	Path  string `json:"path"`
-	Token string `json:"token"`
+	Path  string          `json:"path"`
+	Token string          `json:"token"`
+	Root  syncfs.Identity `json:"root,omitempty"`
 }
 
 type cacheFile struct {
-	Path    string    `json:"path"`
-	Token   string    `json:"token"`
-	Size    int64     `json:"size"`
-	Kind    string    `json:"kind"`
-	MIME    string    `json:"mime"`
-	PlanKey string    `json:"planKey"`
-	Used    time.Time `json:"used"`
-	Readers int       `json:"-"`
+	Path      string          `json:"path"`
+	Token     string          `json:"token"`
+	Size      int64           `json:"size"`
+	Kind      string          `json:"kind"`
+	MIME      string          `json:"mime"`
+	PlanKey   string          `json:"planKey"`
+	Used      time.Time       `json:"used"`
+	Readers   int             `json:"-"`
+	Directory syncfs.Identity `json:"directory,omitempty"`
 }
 
 type persisted struct {
-	Version          int                      `json:"version"`
-	Secret           []byte                   `json:"secret"`
-	Password         passwordRecord           `json:"password"`
-	Spaces           map[string]*spaceRecord  `json:"spaces"`
-	Tasks            map[string]*taskRecord   `json:"tasks"`
-	Originals        map[string]*preparedFile `json:"originals"`
-	Cache            map[string]*cacheFile    `json:"cache"`
-	OriginalIdentity syncfs.Identity          `json:"originalIdentity"`
-	Pending          map[string]string        `json:"pending"`
+	Version           int                        `json:"version"`
+	Secret            []byte                     `json:"secret"`
+	Password          passwordRecord             `json:"password"`
+	Spaces            map[string]*spaceRecord    `json:"spaces"`
+	Tasks             map[string]*taskRecord     `json:"tasks"`
+	Originals         map[string]*preparedFile   `json:"originals"`
+	Cache             map[string]*cacheFile      `json:"cache"`
+	OriginalIdentity  syncfs.Identity            `json:"originalIdentity"`
+	Pending           map[string]string          `json:"pending"`
+	CopyIdentity      syncfs.Identity            `json:"copyIdentity"`
+	PendingIdentities map[string]syncfs.Identity `json:"pendingIdentities"`
 }
 
 type session struct {
@@ -84,6 +88,8 @@ type Manager struct {
 	dir                                   string
 	originalsDir                          string
 	originalIdentity                      syncfs.Identity
+	copyIdentity                          syncfs.Identity
+	pendingIdentities                     map[string]syncfs.Identity
 	storage                               *os.Root
 	cloud                                 Cloud
 	media                                 *lanmedia.Processor
@@ -104,7 +110,7 @@ type Manager struct {
 	probeSlot                             chan struct{}
 	apiSlots                              chan struct{}
 	reserved                              int64
-	cacheLimit, minFree                   int64
+	minFree                               int64
 	allowLoopback                         bool
 	generation                            uint64
 	running                               bool
@@ -154,24 +160,12 @@ func New(opts Options) (*Manager, error) {
 	if err != nil {
 		return nil, err
 	}
-	for _, name := range []string{"originals", "cache"} {
-		if err = storage.Mkdir(name, 0700); err != nil && !errors.Is(err, os.ErrExist) {
-			storage.Close()
-			return nil, err
-		}
-		f, e := openAbsolute(filepath.Join(dir, name), true)
-		if e != nil {
-			storage.Close()
-			return nil, e
-		}
-		f.Close()
-	}
 	ctx, cancel := context.WithCancel(context.Background())
 	m := &Manager{dir: dir, storage: storage, cloud: opts.Cloud, media: opts.Media, web: opts.Web,
 		spaces: make(map[string]*spaceRecord), tasks: make(map[string]*taskRecord), originals: make(map[string]*preparedFile), cache: make(map[string]*cacheFile),
 		sessions: make(map[string]*session), responses: make(map[*activeResponse]struct{}), rates: make(map[string]loginRate),
 		loginSlot: make(chan struct{}, 1), transferSlots: make(chan struct{}, 4), probeSlot: make(chan struct{}, 1),
-		cacheLimit: opts.CacheLimit, minFree: opts.MinFreeBytes, allowLoopback: opts.AllowLoopback, wake: make(chan struct{}, 1), ctx: ctx, cancel: cancel}
+		minFree: opts.MinFreeBytes, allowLoopback: opts.AllowLoopback, wake: make(chan struct{}, 1), ctx: ctx, cancel: cancel}
 	m.originalsDir = filepath.Join(dir, "originals")
 	if opts.OriginalDir != "" {
 		base, e := filepath.Abs(opts.OriginalDir)
@@ -181,9 +175,6 @@ func New(opts Options) (*Manager, error) {
 			return nil, e
 		}
 		m.originalsDir = filepath.Join(base, "PKP-LAN-Originals")
-	}
-	if m.cacheLimit <= 0 {
-		m.cacheLimit = defaultCacheLimit
 	}
 	if m.minFree <= 0 {
 		m.minFree = defaultMinFree
@@ -239,6 +230,19 @@ func New(opts Options) (*Manager, error) {
 		if m.originalIdentity.Path != "" {
 			m.originalsDir = m.originalIdentity.Path
 		}
+		m.copyIdentity, m.pendingIdentities = saved.CopyIdentity, saved.PendingIdentities
+		// Legacy task paths belong only to the recorded root, never today's setting.
+		for _, task := range m.tasks {
+			if task.Original != "" && task.OriginalRoot.Path == "" {
+				root := saved.OriginalIdentity
+				if root.Path == "" && filepath.Dir(task.Original) == filepath.Join(dir, "originals") {
+					root, _ = syncfs.Identify(filepath.Join(dir, "originals"))
+				}
+				if root.Path == filepath.Dir(task.Original) {
+					task.OriginalRoot = root
+				}
+			}
+		}
 		for _, s := range m.spaces {
 			if s.References == nil {
 				s.References = make(map[string]localReference)
@@ -266,6 +270,22 @@ func New(opts Options) (*Manager, error) {
 	if m.pending == nil {
 		m.pending = make(map[string]string)
 	}
+	if m.pendingIdentities == nil {
+		m.pendingIdentities = make(map[string]syncfs.Identity)
+	}
+	if m.copyIdentity.Path == "" {
+		if err = storage.Mkdir("cache", 0700); err != nil && !errors.Is(err, os.ErrExist) {
+			storage.Close()
+			cancel()
+			return nil, errStorageUnavailable
+		}
+		m.copyIdentity, err = syncfs.Identify(filepath.Join(dir, "cache"))
+		if err != nil {
+			storage.Close()
+			cancel()
+			return nil, errStorageUnavailable
+		}
+	}
 	m.apiSlots = make(chan struct{}, 16)
 	m.mediaInfo = make(map[string]lanmedia.Info)
 	m.recoverPending()
@@ -281,7 +301,7 @@ func New(opts Options) (*Manager, error) {
 }
 
 func (m *Manager) saveLocked() error {
-	saved := persisted{Version: 1, Secret: m.secret, Password: m.password, Spaces: m.spaces, Tasks: m.tasks, Originals: m.originals, Cache: m.cache, OriginalIdentity: m.originalIdentity, Pending: m.pending}
+	saved := persisted{Version: 1, Secret: m.secret, Password: m.password, Spaces: m.spaces, Tasks: m.tasks, Originals: m.originals, Cache: m.cache, OriginalIdentity: m.originalIdentity, Pending: m.pending, CopyIdentity: m.copyIdentity, PendingIdentities: m.pendingIdentities}
 	data, err := json.Marshal(saved)
 	if err != nil {
 		return err
@@ -645,7 +665,8 @@ func (m *Manager) Tasks() []Task {
 
 func (m *Manager) Status() Status {
 	m.mu.Lock()
-	result := Status{Running: m.running, Address: m.address, InterfaceID: m.interfaceID, HasPassword: len(m.password.Hash) > 0, CacheLimit: m.cacheLimit, CacheBytes: m.cacheBytesLocked() + m.pendingBytesLocked(), OriginalDir: m.originalsDir, Error: m.lastError, Spaces: []Space{}}
+	result := Status{Running: m.running, Address: m.address, InterfaceID: m.interfaceID, HasPassword: len(m.password.Hash) > 0, CacheBytes: m.cacheBytesLocked() + m.pendingBytesLocked(), OriginalDir: m.originalsDir, Error: m.lastError, Spaces: []Space{}}
+	result.CopyDir, result.StorageBusy = m.copyIdentity.Path, m.storageBusyLocked()
 	snapshots := make([]spaceRecord, 0, len(m.spaces))
 	for _, s := range m.spaces {
 		copy := *s

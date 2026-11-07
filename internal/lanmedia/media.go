@@ -22,31 +22,32 @@ var (
 )
 
 type Info struct {
-	Container    string  `json:"container"`
-	VideoCodec   string  `json:"videoCodec"`
-	AudioCodec   string  `json:"audioCodec"`
-	AudioProfile string  `json:"audioProfile"`
-	Width        int     `json:"width"`
-	Height       int     `json:"height"`
-	Duration     float64 `json:"duration"`
-	HDR          bool    `json:"hdr"`
-	Encrypted    bool    `json:"encrypted"`
-	Subtitles    bool    `json:"subtitles"`
-	BitDepth     int     `json:"bitDepth"`
-	PixelFormat  string  `json:"pixelFormat"`
-	Profile      string  `json:"profile"`
-	Level        int     `json:"level"`
-	VideoMIME    string  `json:"videoMime"`
-	AudioMIME    string  `json:"audioMime"`
-	FrameRate    float64 `json:"frameRate"`
-	VideoBitrate int64   `json:"videoBitrate"`
-	SampleAspect float64 `json:"sampleAspect"`
-	Rotation     int     `json:"rotation"`
-	VideoIndex   int     `json:"videoIndex"`
-	AudioIndex   int     `json:"audioIndex"`
-	AudioTracks  int     `json:"audioTracks"`
-	VideoTracks  int     `json:"videoTracks"`
-	MIME         string  `json:"mime"`
+	Container     string  `json:"container"`
+	VideoCodec    string  `json:"videoCodec"`
+	AudioCodec    string  `json:"audioCodec"`
+	AudioProfile  string  `json:"audioProfile"`
+	Width         int     `json:"width"`
+	Height        int     `json:"height"`
+	Duration      float64 `json:"duration"`
+	HDR           bool    `json:"hdr"`
+	Encrypted     bool    `json:"encrypted"`
+	Subtitles     bool    `json:"subtitles"`
+	BitDepth      int     `json:"bitDepth"`
+	PixelFormat   string  `json:"pixelFormat"`
+	Profile       string  `json:"profile"`
+	Level         int     `json:"level"`
+	VideoMIME     string  `json:"videoMime"`
+	AudioMIME     string  `json:"audioMime"`
+	FrameRate     float64 `json:"frameRate"`
+	VideoBitrate  int64   `json:"videoBitrate"`
+	SampleAspect  float64 `json:"sampleAspect"`
+	Rotation      int     `json:"rotation"`
+	VideoIndex    int     `json:"videoIndex"`
+	AudioIndex    int     `json:"audioIndex"`
+	AudioTracks   int     `json:"audioTracks"`
+	VideoTracks   int     `json:"videoTracks"`
+	MIME          string  `json:"mime"`
+	MP4IndexBytes int64   `json:"mp4IndexBytes,omitempty"`
 }
 
 type Capabilities struct {
@@ -65,14 +66,15 @@ type Capabilities struct {
 }
 
 type Plan struct {
-	Kind      string   `json:"kind"`
-	Reason    string   `json:"reason"`
-	MaxBytes  int64    `json:"-"`
-	Info      Info     `json:"info"`
-	Container string   `json:"container"`
-	MIME      string   `json:"mime"`
-	CopyAudio bool     `json:"copyAudio"`
-	Warnings  []string `json:"warnings"`
+	Kind               string   `json:"kind"`
+	Reason             string   `json:"reason"`
+	MaxBytes           int64    `json:"-"`
+	Info               Info     `json:"info"`
+	Container          string   `json:"container"`
+	MIME               string   `json:"mime"`
+	CopyAudio          bool     `json:"copyAudio"`
+	Warnings           []string `json:"warnings"`
+	CanOptimizeStartup bool     `json:"canOptimizeStartup,omitempty"`
 }
 
 type Processor struct{ ffmpeg, ffprobe string }
@@ -173,6 +175,12 @@ func (p *Processor) probe(ctx context.Context, in *mediaInput) (Info, error) {
 		n, _ := in.file.ReadAt(header, 0)
 		if webmHeader(header[:n]) {
 			info.Container = "webm"
+		}
+	}
+	if info.Container == "mp4" {
+		info.MP4IndexBytes, err = mp4IndexBytes(ctx, in.file, in.before.Size())
+		if err != nil {
+			return Info{}, err
 		}
 	}
 	info.MIME = mediaMIME(info.Container, info.VideoCodec != "")
@@ -381,6 +389,8 @@ func MakePlan(info Info, caps Capabilities) (Plan, error) {
 	}
 	if videoOK && audioOK && containerOK {
 		p.Kind, p.Reason, p.Container, p.MIME = "direct", "compatible", info.Container, info.MIME
+		// A large index is a startup cost, not an incompatibility.
+		p.CanOptimizeStartup = info.Container == "mp4" && info.VideoCodec != "" && !info.HDR && info.VideoTracks <= 1 && info.AudioTracks <= 1 && !info.Subtitles && info.MP4IndexBytes > 4<<20
 		return p, nil
 	}
 	// No validated HDR tone mapping or metadata preservation pipeline is bundled.
@@ -413,5 +423,18 @@ func MakePlan(info Info, caps Capabilities) (Plan, error) {
 	}
 	p.Kind, p.Reason = "video", "video_unsupported"
 	p.CopyAudio = audioOK && mp4Audio
+	return p, nil
+}
+
+// MakeStartupPlan is opt-in: it never substitutes a lossy compatibility conversion.
+func MakeStartupPlan(info Info, caps Capabilities) (Plan, error) {
+	p, err := MakePlan(info, caps)
+	if err != nil {
+		return p, err
+	}
+	if !p.CanOptimizeStartup {
+		return p, ErrUnsupported
+	}
+	p.Kind, p.Reason, p.CanOptimizeStartup = "remux", "startup_index", false
 	return p, nil
 }

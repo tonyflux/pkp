@@ -30,6 +30,9 @@ type DirectRequest struct {
 	// VerifyComplete observes the engine's still-open, fully received file
 	// before publication. An error keeps it partial; the callback must not close it.
 	VerifyComplete func(*os.File) error
+	// ValidateDestination runs after the queue slot is acquired, before any
+	// checkpoint directory can be created beneath a caller-selected disk.
+	ValidateDestination func() error
 }
 
 type fileVersion struct {
@@ -116,7 +119,13 @@ func (q *Queue) Receive(ctx context.Context, req DirectRequest, onProgress func(
 	j.lastAt = time.Now()
 	q.mu.Unlock()
 	q.emit(j, true)
-	err := q.restoreDirect(j)
+	var err error
+	if req.ValidateDestination != nil {
+		err = req.ValidateDestination()
+	}
+	if err == nil {
+		err = q.restoreDirect(j)
+	}
 	if err == nil {
 		err = q.download(ctx, j, threads)
 	}

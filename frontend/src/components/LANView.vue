@@ -217,6 +217,15 @@ async function localRoot() {
   catch (error) { modalError.value = lanError(error); }
   finally { picking.value = false; }
 }
+async function storageRoot(kind: "original" | "copies") {
+  if (lan.busy || picking.value || !lan.status || lan.status.storageBusy) return;
+  picking.value = true; lan.error = "";
+  try {
+    const path = await Dialogs.OpenFile({ Title: kind === "original" ? t("lan|选择准备原件保存目录") : t("lan|选择兼容与无损副本保存目录"), CanChooseFiles: false, CanChooseDirectories: true, CanCreateDirectories: false, Directory: (kind === "original" ? lan.status.originalDir : lan.status.copyDir) || undefined });
+    if (path) await changeLAN(() => LANService.SetStorageDirectory(kind, path));
+  } catch (error) { lan.error = lanError(error); }
+  finally { picking.value = false; }
+}
 function resetFolderSearch() {
   folderSearchGeneration++; clearTimeout(folderSearchTimer);
   folderQuery.value = ""; folderMatches.value = []; folderSearching.value = false;
@@ -357,7 +366,7 @@ async function saveName() { const item = space.value; if (!item || !rename.value
         <button v-for="item in lan.status?.spaces" :key="item.id" class="space-card glass glass-sheet" :class="{ selected: selected === item.id }" :aria-pressed="selected === item.id" :data-lan-space="item.id" @click="selected = item.id"><Icon :name="item.kind === 'local' ? 'folder' : 'cloud'" :size="24"/><span><strong :title="item.name">{{ item.name }}</strong><small :title="sourceName(item)">{{ sourceName(item) }}</small><small class="root" :title="item.localPath || item.rootId || t('lan|云盘根目录')">{{ item.localPath || item.rootId || t('lan|云盘根目录') }}</small><span class="chips"><span>{{ !item.enabled ? t('lan|已停用') : !item.available ? t('lan|来源暂不可用') : t('lan|已启用') }}</span><span>{{ item.allowPrepare ? t('lan|允许准备文件') : t('lan|仅下载已就绪文件') }}</span></span></span></button>
       </div>
       <p class="read-note"><Icon name="lock" :size="18"/>{{ t('lan|网页只读，不允许上传、删除、移动或修改设置。') }}</p>
-    </section><section class="detail glass glass-sheet" data-lan-detail><div class="tabs"><button :aria-pressed="tab === 'settings'" @click="tab = 'settings'">{{ t('lan|空间设置') }}</button><button :aria-pressed="tab === 'tasks'" @click="tab = 'tasks'">{{ t('lan|准备任务') }}</button><button :aria-pressed="tab === 'cache'" @click="tab = 'cache'">{{ t('lan|兼容副本') }}</button></div>
+    </section><section class="detail glass glass-sheet" data-lan-detail><div class="tabs"><button :aria-pressed="tab === 'settings'" @click="tab = 'settings'">{{ t('lan|空间设置') }}</button><button :aria-pressed="tab === 'tasks'" @click="tab = 'tasks'">{{ t('lan|准备任务') }}</button><button :aria-pressed="tab === 'cache'" @click="tab = 'cache'">{{ t('lan|存储与副本') }}</button></div>
       <template v-if="tab === 'settings' && space">
         <div class="settings-grid">
         <section class="space-identity">
@@ -403,8 +412,24 @@ async function saveName() { const item = space.value; if (!item || !rename.value
           </article>
         </div>
       </template>
-      <template v-if="tab === 'cache'"><h2>{{ t('lan|兼容副本') }}</h2><strong class="cache-size">{{ bytes(lan.status?.cacheBytes ?? 0) }}</strong><p>{{ t('lan|容量上限：{size}', { size: bytes(lan.status?.cacheLimit ?? 0) }) }}</p><p>{{ t('lan|仅清理本功能生成的兼容副本，正在使用的副本会跳过。不会删除源原件、已下载原件或其他下载结果。') }}</p><button data-lan-cache :disabled="lan.busy || !lan.status" @click="open('cache')">{{ t('lan|清理兼容副本') }}</button></template>
-      <p v-if="(tab === 'tasks' || tab === 'cache') && lan.status?.originalDir" class="root">{{ t('lan|准备的原件保留在 {path}', { path: lan.status.originalDir }) }}</p>
+      <template v-if="tab === 'cache'">
+        <h2>{{ t('lan|存储与副本') }}</h2>
+        <p>{{ t('lan|新任务使用所选目录；已有原件和副本留在原处继续复用，不会移动或删除。等待任务恢复时仍使用原保存位置。') }}</p>
+        <section class="storage-location"><h3>{{ t('lan|准备原件保存目录') }}</h3><p class="root" data-lan-original-directory>{{ lan.status?.originalDir }}</p><button data-lan-original-picker :disabled="lan.busy || picking || !lan.status || lan.status.storageBusy" @click="storageRoot('original')">{{ t('lan|选择准备原件保存目录') }}</button></section>
+        <section class="storage-location"><h3>{{ t('lan|兼容与无损副本保存目录') }}</h3><p class="root" data-lan-copy-directory>{{ lan.status?.copyDir }}</p><button data-lan-copy-picker :disabled="lan.busy || picking || !lan.status || lan.status.storageBusy" @click="storageRoot('copies')">{{ t('lan|选择兼容与无损副本保存目录') }}</button></section>
+        <p v-if="lan.status?.storageBusy" role="status">{{ t('lan|请等待正在准备的任务结束或取消后，再更改保存位置。') }}</p>
+        <p>{{ t('lan|所选目录必须已存在且可写；磁盘断开或目录被替换时会暂停准备，不会自动创建或改用其他位置。') }}</p>
+        <hr/><section class="cache-summary">
+          <div><h3>{{ t('lan|兼容副本') }}</h3>
+            <p v-if="!lan.status || lan.error" role="status">{{ !lan.status && lan.loading ? t('正在加载') : t('lan|状态待确认') }}</p>
+            <p v-else-if="lan.status.cacheBytes === 0" role="status">{{ t('lan|暂无兼容副本') }}</p>
+            <p v-else role="status">{{ t('lan|已占用 {size}', { size: bytes(lan.status.cacheBytes) }) }}</p>
+          </div>
+          <button data-lan-cache :disabled="lan.busy || !lan.status || !!lan.error || lan.status.cacheBytes <= 0" @click="open('cache')">{{ t('lan|清理兼容副本') }}</button>
+        </section>
+        <p>{{ t('lan|仅清理本功能生成的兼容副本，正在使用的副本会跳过。不会删除源原件、已下载原件或其他下载结果。') }}</p>
+      </template>
+      <p v-if="tab === 'tasks' && lan.status?.originalDir" class="root">{{ t('lan|新准备原件保存到 {path}；已有文件留在原处。', { path: lan.status.originalDir }) }}</p>
     </section></div><footer>{{ t('lan|锁定应用、关窗驻留后继续共享；退出 PKP 或主动停止会断开访客连接。') }}</footer>
     <LANPreparationPicker v-if="preparingSpace && space?.id === preparingSpace" :key="preparingSpace" :space-id="preparingSpace" :space-name="space.name" :opener="preparationTrigger" @close="preparingSpace = ''" @tasks="preparingSpace = ''; tab = 'tasks'; refreshLANTasks()" />
     <Teleport to="body"><div v-if="modal" class="scrim lan-scrim"><section ref="dialog" class="lan-dialog" :class="{ 'create-dialog': modal === 'create' }" role="dialog" aria-modal="true" aria-labelledby="lan-dialog-title" tabindex="-1" @keydown.stop><form @submit.prevent="submit"><header><h2 id="lan-dialog-title">{{ title }}</h2><button type="button" :disabled="lan.busy || picking" :aria-label="t('lan|关闭对话框')" @click="close">×</button></header>
@@ -501,15 +526,17 @@ async function saveName() { const item = space.value; if (!item || !rename.value
   min-height: 0;
   padding: 24px;
   overflow: auto;
+  scrollbar-width: none;
   color: var(--fg);
   background: var(--canvas);
   border: 1px solid var(--line);
   container-type: inline-size;
   border-radius: var(--radius-island);
 }
+.lan-page::-webkit-scrollbar { display: none; }
 .page-heading,.status-line,.actions,.network,.setting,.lan-dialog header,.lan-dialog footer { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .task-heading h2 { margin: 0; }
-.page-heading { justify-content: space-between; margin-bottom: 24px; } h1 { font-size: 30px; letter-spacing: -.8px; margin: 5px 0 8px; } h2 { font-size: 18px; margin: 0 0 16px; } p { color: var(--fg-dim); line-height: 1.65; } .eyebrow { font-size: 13px; font-weight: 500; letter-spacing: .02em; margin: 0; } button { border-radius: 11px; padding: 9px 13px; cursor: pointer; } button:disabled { opacity: .45; cursor: default; } button:focus-visible,input:focus-visible,[role=combobox]:focus-visible { outline: 2px solid var(--accent, #3b9a91); outline-offset: 3px; } .primary { background: var(--primary); color: var(--on-primary); display: inline-flex; align-items: center; gap: 7px; } .service { display: flex; gap: 28px; padding: 24px; border-radius: 22px; margin-bottom: 26px; } .service-main { flex: 1; min-width: 0; } .status-line h2 { margin: 0; } .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--fg-dim); } .dot.live { background: #41a48a; box-shadow: 0 0 0 5px #41a48a18; } input:not([type=checkbox]) { width: 100%; min-width: 0; border: 1px solid var(--stroke, #8884); background: var(--glass-fill, #8881); color: inherit; padding: 10px; border-radius: 10px; } .address { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; margin: 16px 0; } code { font-size: 17px; overflow-wrap: anywhere; } .qr-panel { width: 155px; flex: 0 0 155px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; text-align: center; } .qr-panel svg { width: 145px; height: 145px; border-radius: 12px; } small { font-size: 13px; color: var(--fg-dim); line-height: 1.5; } .content-grid { display: grid; grid-template-columns: minmax(260px, 1fr) minmax(330px, 1.15fr); gap: 22px; align-items: start; } .spaces h2 { display: flex; justify-content: space-between; } .space-card { display: flex; width: 100%; gap: 16px; text-align: left; padding: 20px; border-radius: 18px; margin: 12px 0; border: 1px solid transparent; color: inherit; } .space-card.selected { border-color: var(--accent, #378d83); background: #60ab9514; } .space-card > span { display: grid; gap: 7px; min-width: 0; } strong,.root,.task { overflow-wrap: anywhere; } .chips { display: flex; flex-wrap: wrap; gap: 8px; font-size: 13px; } .chips > span { padding: 4px 7px; background: #8881; border-radius: 7px; } .detail { padding: 22px; border-radius: 22px; min-width: 0; } .tabs { display: flex; gap: 5px; flex-wrap: wrap; padding-bottom: 20px; } .tabs button[aria-pressed=true] { background: #60ab9525; } .field { display: grid; gap: 8px; margin: 16px 0; } .setting { align-items: flex-start; } .setting > div { flex: 1; min-width: 160px; } hr { border: 0; border-top: 1px solid #8883; margin: 22px 0; } .danger,.error { color: var(--danger, #b95555); } .empty { padding: 24px 0; } .read-note { display: flex; align-items: flex-start; gap: 10px; font-size: 14px; } .task { display: grid; gap: 8px; padding: 18px 0; border-bottom: 1px solid #8883; } progress { width: 100%; accent-color: var(--accent, #378d83); } .cache-size { display: block; font-size: 30px; margin: 25px 0; } .lan-page > footer { font-size: 13px; line-height: 1.65; color: var(--fg-dim); border-top: 1px solid var(--line); margin-top: 24px; padding-top: 16px; } .lan-dialog { width: min(560px, calc(100vw - 48px)); max-height: calc(100dvh - 64px); overflow: hidden; border: 1px solid var(--stroke, #8885); border-radius: 24px; padding: 26px; color: var(--fg); background: var(--surface, #f2f3f2); box-shadow: 0 24px 90px #0005; } .lan-dialog header { justify-content: space-between; } .lan-dialog h2 { margin: 0; flex: 1; } .lan-dialog footer { justify-content: flex-end; padding-top: 20px; } .check { display: flex; gap: 10px; align-items: flex-start; line-height: 1.6; margin-top: 18px; } .check input { margin-top: 5px; flex: none; }
+.page-heading { justify-content: space-between; margin-bottom: 24px; } h1 { font-size: 30px; letter-spacing: -.8px; margin: 5px 0 8px; } h2 { font-size: 18px; margin: 0 0 16px; } p { color: var(--fg-dim); line-height: 1.65; } .eyebrow { font-size: 13px; font-weight: 500; letter-spacing: .02em; margin: 0; } button { border-radius: 11px; padding: 9px 13px; cursor: pointer; } button:disabled { opacity: .45; cursor: default; } button:focus-visible,input:focus-visible,[role=combobox]:focus-visible { outline: 2px solid var(--accent, #3b9a91); outline-offset: 3px; } .primary { background: var(--primary); color: var(--on-primary); display: inline-flex; align-items: center; gap: 7px; } .service { display: flex; gap: 28px; padding: 24px; border-radius: 22px; margin-bottom: 26px; } .service-main { flex: 1; min-width: 0; } .status-line h2 { margin: 0; } .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--fg-dim); } .dot.live { background: #41a48a; box-shadow: 0 0 0 5px #41a48a18; } input:not([type=checkbox]) { width: 100%; min-width: 0; border: 1px solid var(--stroke, #8884); background: var(--glass-fill, #8881); color: inherit; padding: 10px; border-radius: 10px; } .address { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; margin: 16px 0; } code { font-size: 17px; overflow-wrap: anywhere; } .qr-panel { width: 155px; flex: 0 0 155px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; text-align: center; } .qr-panel svg { width: 145px; height: 145px; border-radius: 12px; } small { font-size: 13px; color: var(--fg-dim); line-height: 1.5; } .content-grid { display: grid; grid-template-columns: minmax(260px, 1fr) minmax(330px, 1.15fr); gap: 22px; align-items: start; } .spaces h2 { display: flex; justify-content: space-between; } .space-card { display: flex; width: 100%; gap: 16px; text-align: left; padding: 20px; border-radius: 18px; margin: 12px 0; border: 1px solid transparent; color: inherit; } .space-card.selected { border-color: var(--accent, #378d83); background: #60ab9514; } .space-card > span { display: grid; gap: 7px; min-width: 0; } strong,.root,.task { overflow-wrap: anywhere; } .chips { display: flex; flex-wrap: wrap; gap: 8px; font-size: 13px; } .chips > span { padding: 4px 7px; background: #8881; border-radius: 7px; } .detail { padding: 22px; border-radius: 22px; min-width: 0; } .tabs { display: flex; gap: 5px; flex-wrap: wrap; padding-bottom: 20px; } .tabs button[aria-pressed=true] { background: #60ab9525; } .field { display: grid; gap: 8px; margin: 16px 0; } .setting { align-items: flex-start; } .setting > div { flex: 1; min-width: 160px; } hr { border: 0; border-top: 1px solid #8883; margin: 22px 0; } .danger,.error { color: var(--danger, #b95555); } .empty { padding: 24px 0; } .read-note { display: flex; align-items: flex-start; gap: 10px; font-size: 14px; } .task { display: grid; gap: 8px; padding: 18px 0; border-bottom: 1px solid #8883; } progress { width: 100%; accent-color: var(--accent, #378d83); } .lan-page > footer { font-size: 13px; line-height: 1.65; color: var(--fg-dim); border-top: 1px solid var(--line); margin-top: 24px; padding-top: 16px; } .lan-dialog { width: min(560px, calc(100vw - 48px)); max-height: calc(100dvh - 64px); overflow: hidden; border: 1px solid var(--stroke, #8885); border-radius: 24px; padding: 26px; color: var(--fg); background: var(--surface, #f2f3f2); box-shadow: 0 24px 90px #0005; } .lan-dialog header { justify-content: space-between; } .lan-dialog h2 { margin: 0; flex: 1; } .lan-dialog footer { justify-content: flex-end; padding-top: 20px; } .check { display: flex; gap: 10px; align-items: flex-start; line-height: 1.6; margin-top: 18px; } .check input { margin-top: 5px; flex: none; }
 .task-list { max-height: clamp(240px, 48vh, 480px); overflow-y: auto; overscroll-behavior: contain; padding: 4px; margin: 0 -4px; }
 .task.task-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 8px 14px; padding: 12px 4px; }
 .task-main { min-width: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; }
@@ -542,6 +569,14 @@ async function saveName() { const item = space.value; if (!item || !rename.value
 .space-identity > h2 { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; }
 .space-preparation { border-left: 1px solid var(--line); padding-left: 24px; }
 .desktop-preparation { margin-top: 16px; }
+.storage-location { margin: 18px 0; padding: 14px; border: 1px solid var(--line); border-radius: 14px; min-width: 0; }
+.storage-location h3 { margin: 0; font-size: 15px; }
+.storage-location .root { overflow-wrap: anywhere; user-select: text; }
+.cache-summary { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px 20px; }
+.cache-summary > div { min-width: 0; }
+.cache-summary h3 { margin: 0; font-size: 15px; }
+.cache-summary p { margin: 5px 0 0; font-size: 14px; }
+.cache-summary button { max-width: 100%; }
 .space-actions { border-top: 1px solid var(--line); margin-top: 22px; padding-top: 18px; }
 @container (max-width: 610px) {
   .settings-grid { grid-template-columns: 1fr; gap: 20px; }

@@ -10,6 +10,7 @@ import (
 	"hash"
 	"io"
 	"os"
+	"path/filepath"
 	"slices"
 	"strings"
 	"sync"
@@ -32,6 +33,7 @@ type lanCloud struct {
 	mu        sync.Mutex
 	verified  map[string]bool
 	proofGate chan struct{}
+	paths     map[lanPathKey][]string
 }
 
 type lanAccount struct {
@@ -45,6 +47,11 @@ type lanProofKey struct {
 	client  *drive.Client
 	user    string
 	id      string
+}
+
+type lanPathKey struct {
+	lanProofKey
+	root string
 }
 
 type lanProofScope struct {
@@ -132,7 +139,7 @@ func (c *lanCloud) get(ctx context.Context, a lanAccount, id string) (*drive.Fil
 	}
 	callCtx, cancel := context.WithTimeout(ctx, driveTimeout)
 	defer cancel()
-	f, err := a.client.GetFile(callCtx, id, drive.GetFileParams{})
+	f, err := a.client.GetFile(callCtx, id, drive.GetFileParams{ThumbnailSize: drive.ThumbnailMedium})
 	if err != nil {
 		_ = c.drive.classify(a.session, a.client, err)
 		return nil, errLANSource
@@ -154,28 +161,119 @@ func (c *lanCloud) get(ctx context.Context, a lanAccount, id string) (*drive.Fil
 	return f, nil
 }
 
+// Remember only IDs as request hints; every byte-range request fetches fresh metadata.
+func (c *lanCloud) prefetchPath(ctx context.Context, a lanAccount, root, id string) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	scope, _ := ctx.Value(lanProofContextKey{}).(*lanProofScope)
+	if scope == nil {
+		return nil
+	}
+	c.mu.Lock()
+	ids := c.paths[lanPathKey{lanProofKey{a.session, a.client, a.user, id}, root}]
+	c.mu.Unlock()
+	scope.mu.Lock()
+	generation := scope.generation
+	missing := make([]string, 0, len(ids))
+	for _, id := range ids {
+		if scope.files[lanProofKey{a.session, a.client, a.user, id}] == nil {
+			missing = append(missing, id)
+		}
+	}
+	scope.mu.Unlock()
+	if len(missing) < 2 {
+		return nil
+	}
+	if err := c.current(a); err != nil {
+		return err
+	}
+	call, cancel := context.WithTimeout(ctx, driveTimeout)
+	files, err := a.client.BatchGetFiles(call, missing, drive.GetFileParams{ThumbnailSize: drive.ThumbnailMedium})
+	cancel()
+	if ctx.Err() != nil {
+		return ctx.Err()
+	}
+	if err != nil {
+		_ = c.drive.classify(a.session, a.client, err)
+		return c.current(a)
+	}
+	if err := c.current(a); err != nil {
+		return err
+	}
+	seen := make(map[string]bool, len(files))
+	for i := range files {
+		f := &files[i]
+		if !slices.Contains(missing, f.ID) || seen[f.ID] || f.Trashed || f.DeleteTime != "" || f.UserID != "" && f.UserID != a.user || f.Kind != drive.KindFile && f.Kind != drive.KindFolder {
+			return nil
+		}
+		if !f.IsFolder() && (f.Name == "" || f.Phase == "" || f.ModifiedTime == "" && f.Hash == "" && f.MD5Checksum == "") {
+			return nil
+		}
+		seen[f.ID] = true
+		f.UserID = a.user
+	}
+	scope.mu.Lock()
+	defer scope.mu.Unlock()
+	if scope.generation == generation {
+		for i := range files {
+			f := &files[i]
+			key := lanProofKey{a.session, a.client, a.user, f.ID}
+			if scope.files[key] == nil && len(scope.files) < 4096 {
+				scope.files[key] = f
+			}
+		}
+	}
+	return nil
+}
+
+func (c *lanCloud) rememberPath(a lanAccount, root, id string, path []string) {
+	if len(path) < 2 || len(path) > 64 {
+		return
+	}
+	key := lanPathKey{lanProofKey{a.session, a.client, a.user, id}, root}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if slices.Equal(c.paths[key], path) {
+		return
+	}
+	if c.paths == nil || len(c.paths) >= 128 {
+		c.paths = make(map[lanPathKey][]string)
+	}
+	c.paths[key] = path
+}
+
 // within proves the complete current ancestor chain to the explicitly granted
 // root. A cloud ID is not itself a capability, and prefixes are never compared.
 func (c *lanCloud) within(ctx context.Context, a lanAccount, rootID, id string) (*drive.File, error) {
+	if err := c.prefetchPath(ctx, a, rootID, id); err != nil {
+		return nil, err
+	}
 	f, err := c.get(ctx, a, id)
 	if err != nil {
 		return nil, err
 	}
 	node := f
 	seen := map[string]bool{}
+	path := make([]string, 0, 8)
 	for range 512 {
 		if seen[node.ID] {
 			return nil, errLANScope
 		}
 		seen[node.ID] = true
+		if len(path) <= 64 {
+			path = append(path, node.ID)
+		}
 		if node.ID == rootID {
 			if !node.IsFolder() {
 				return nil, errLANScope
 			}
+			c.rememberPath(a, rootID, id, path)
 			return f, nil
 		}
 		if node.ParentID == "" {
 			if rootID == "" {
+				c.rememberPath(a, rootID, id, path)
 				return f, nil
 			}
 			return nil, errLANScope
@@ -260,7 +358,12 @@ func lanVersion(f *drive.File) string {
 }
 
 func lanEntry(f *drive.File) lanshare.Entry {
-	return lanshare.Entry{ID: f.ID, Name: f.Name, ParentID: f.ParentID, Version: lanVersion(f), MIME: f.MimeType, IsDir: f.IsFolder(), Size: int64(f.Size), Modified: f.ModifiedTime}
+	entry := lanshare.Entry{ID: f.ID, Name: f.Name, ParentID: f.ParentID, Version: lanVersion(f), MIME: f.MimeType, IsDir: f.IsFolder(), Size: int64(f.Size), Modified: f.ModifiedTime}
+	if !entry.IsDir && f.Phase == drive.PhaseComplete {
+		entry.Thumbnail = f.ThumbnailLink
+		entry.HasThumbnail = f.ThumbnailLink != ""
+	}
+	return entry
 }
 
 func (c *lanCloud) List(ctx context.Context, accountID, rootID, parentID, identity string) ([]lanshare.Entry, error) {
@@ -324,7 +427,6 @@ func (c *lanCloud) list(ctx context.Context, accountID, rootID, parentID, identi
 			f.UserID = a.user
 			seen[f.ID] = true
 			entry := lanEntry(&f)
-			entry.Thumbnail = f.ThumbnailLink
 			if !entry.IsDir && f.Phase == drive.PhaseComplete {
 				if downloads == nil {
 					downloads = lanCompletedDownloads(a)
@@ -585,6 +687,16 @@ func (r lanContextReader) Read(p []byte) (int, error) {
 }
 
 func (c *lanCloud) Prepare(ctx context.Context, accountID, rootID, fileID, version, destination, checkpoint, identity string, progress func(int64, int64)) (string, error) {
+	root, storageErr := syncfs.Identify(filepath.Dir(destination))
+	if storageErr != nil || filepath.Dir(checkpoint) != filepath.Dir(destination) {
+		return "", errors.New("storage_unavailable")
+	}
+	validateDestination := func() error {
+		if syncfs.Validate(root) != nil {
+			return errors.New("storage_unavailable")
+		}
+		return nil
+	}
 	a, err := c.account(accountID)
 	if err != nil {
 		return "", err
@@ -648,7 +760,7 @@ func (c *lanCloud) Prepare(ctx context.Context, accountID, rootID, fileID, versi
 			return nil
 		}
 	}
-	err = q.Receive(run, download.DirectRequest{ID: "lan-" + hex.EncodeToString(id[:16]), FileID: fileID, Size: int64(f.Size), Path: destination, Checkpoint: checkpoint, VerifyComplete: verify}, func(task download.Task) {
+	err = q.Receive(run, download.DirectRequest{ID: "lan-" + hex.EncodeToString(id[:16]), FileID: fileID, Size: int64(f.Size), Path: destination, Checkpoint: checkpoint, VerifyComplete: verify, ValidateDestination: validateDestination}, func(task download.Task) {
 		if progress != nil {
 			progress(task.Done, task.Size)
 		}

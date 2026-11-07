@@ -18,6 +18,9 @@ func (m *Manager) preparedReady(sid string, entry Entry) bool {
 	if record == nil {
 		return false
 	}
+	if record.Root.Path != "" && (record.Root.Path != filepath.Dir(record.Path) || syncfs.Validate(record.Root) != nil) {
+		return false
+	}
 	f, token, err := OpenLocal(record.Path)
 	if err != nil {
 		return false
@@ -62,4 +65,26 @@ func (m *Manager) originalStorage() (string, error) {
 		return "", err
 	}
 	return m.originalsDir, nil
+}
+
+func (m *Manager) taskOriginalStorage(t *taskRecord) (string, error) {
+	m.mu.Lock()
+	if t.Original != "" {
+		identity := t.OriginalRoot
+		valid := filepath.Dir(t.Original) == identity.Path && t.Checkpoint == t.Original+".checkpoint"
+		m.mu.Unlock()
+		if !valid || syncfs.Validate(identity) != nil {
+			return "", errStorageUnavailable
+		}
+		return identity.Path, nil
+	}
+	m.mu.Unlock()
+	dir, err := m.originalStorage()
+	if err != nil {
+		return "", errStorageUnavailable
+	}
+	m.mu.Lock()
+	t.OriginalRoot = m.originalIdentity
+	m.mu.Unlock()
+	return dir, nil
 }

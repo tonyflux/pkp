@@ -67,3 +67,26 @@ test('missing real bitrate or frame rate uses canPlayType without invented probe
   assert.equal(caps.videoSupported, false);
 });
 
+test('a rejected codec skips the optional decoder query', async () => {
+  const info = { videoCodec: 'h264', videoMime: 'rejected-profile', width: 640, height: 360, videoBitrate: 4000000, frameRate: 24 };
+  let queries = 0;
+  const caps = await probeCapabilities(info, environment(mime => mime === 'rejected-profile' ? '' : 'probably', () => { queries++; return new Promise(() => {}); }));
+  assert.equal(queries, 0);
+  assert.equal(caps.videoSupported, false);
+  assert.equal(caps.h264, true);
+});
+
+test('a stalled decoder query falls back to the exact codec support', async () => {
+  const info = { videoCodec: 'h264', videoMime: 'video/mp4; codecs="avc1.640028"', width: 640, height: 360, videoBitrate: 4000000, frameRate: 24 };
+  const caps = await probeCapabilities(info, environment(() => 'probably', () => new Promise(() => {})));
+  assert.equal(caps.videoSupported, true);
+});
+
+test('cancelling a pending decoder query stops playback planning immediately', async () => {
+  const controller = new AbortController();
+  const info = { videoCodec: 'h264', videoMime: 'video/mp4; codecs="avc1.640028"', width: 640, height: 360, videoBitrate: 4000000, frameRate: 24 };
+  const result = probeCapabilities(info, environment(() => 'probably', () => new Promise(() => {})), controller.signal);
+  controller.abort();
+  await assert.rejects(result, { name: 'AbortError' });
+});
+

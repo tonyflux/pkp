@@ -75,6 +75,9 @@ func TestVisitorPlaybackChecksCurrentSourceAndDoesNotPrepare(t *testing.T) {
 	m.mu.Lock()
 	m.mediaInfo[resourceKey(space.ID, entry.ID, entry.Version)+"/original/"+token] = lanmedia.Info{Container: "mp4", MIME: "video/mp4", VideoCodec: "h264", AudioCodec: "aac", Duration: 12, BitDepth: 8}
 	m.mu.Unlock()
+	// An unrelated cold probe must not block already-proven codec metadata.
+	m.probeSlot <- struct{}{}
+	defer func() { <-m.probeSlot }()
 	request := playbackRequest{SpaceID: space.ID, FileID: entry.ID, Capabilities: lanmedia.Capabilities{H264: true, AAC: true, MP4: true}}
 	w := apiRequest(t, m, http.MethodPost, "/api/playback", cookie, request)
 	var playback playbackResult
@@ -94,6 +97,40 @@ func TestVisitorPlaybackChecksCurrentSourceAndDoesNotPrepare(t *testing.T) {
 	}
 	if w := apiRequest(t, m, http.MethodPost, "/api/playback", cookie, request); w.Code != 403 {
 		t.Fatalf("playback cache survived revocation: %d %s", w.Code, w.Body.String())
+	}
+}
+
+func TestContentUsesCurrentProbedMediaTypeWithoutChangingDownloads(t *testing.T) {
+	m := newTestManager(t, nil)
+	space, root := localSpace(t, m, false)
+	entries, err := m.list(context.Background(), space.ID, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	entry := entries[0]
+	token, err := LocalVersion(filepath.Join(root, entry.Name))
+	if err != nil {
+		t.Fatal(err)
+	}
+	m.mu.Lock()
+	m.mediaInfo[resourceKey(space.ID, entry.ID, entry.Version)+"/original/"+token] = lanmedia.Info{Container: "mp4", MIME: "video/mp4"}
+	m.mu.Unlock()
+	cookie := authenticated(t, m)
+	endpoint := "/api/content?space=" + space.ID + "&id=" + entry.ID
+	response := apiRequest(t, m, http.MethodGet, endpoint, cookie, nil)
+	if response.Code != 200 || response.Header().Get("Content-Type") != "video/mp4" || response.Body.String() != "authorized bytes" {
+		t.Fatalf("probed media response: %d %s", response.Code, response.Body.String())
+	}
+	download := apiRequest(t, m, http.MethodGet, endpoint+"&download=1", cookie, nil)
+	if download.Header().Get("Content-Type") != "application/octet-stream" || download.Body.String() != "authorized bytes" {
+		t.Fatal("download bytes or disposition changed")
+	}
+	if err = os.WriteFile(filepath.Join(root, entry.Name), []byte("new bytes"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	changed := apiRequest(t, m, http.MethodGet, endpoint, cookie, nil)
+	if changed.Header().Get("Content-Type") == "video/mp4" {
+		t.Fatal("new file identity inherited old media type")
 	}
 }
 

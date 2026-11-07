@@ -227,6 +227,7 @@ onBeforeUnmount(() => {
           <ul v-if="selected.length" class="selection"><li v-for="file in selected" :key="file.id"><div><span>{{ file.path }}</span><span v-if="isReady(file)" class="selected-ready"> · {{ kind === 'original' ? t('lan|原件已就绪') : t('lan|兼容准备已就绪') }}</span><p v-if="file.error" class="error" role="alert">{{ file.error }}</p></div><button type="button" :disabled="busy" :aria-label="t('lan|取消选择 {name}', { name: file.name })" :data-prepare-remove="file.id" @click="selected = selected.filter(item => item.id !== file.id)">×</button></li></ul>
           <fieldset :disabled="busy"><legend>{{ t('lan|准备方式') }}</legend><label><input v-model="kind" type="radio" value="original"/> {{ t('lan|原件') }}</label><label><input v-model="kind" type="radio" value="compatible"/> {{ t('lan|常见设备兼容副本') }}</label></fieldset>
           <p>{{ t('lan|兼容准备以 H.264/AAC/MP4 为常见设备目标，不保证所有设备可用；原件已兼容时可能直接复用，HDR 或不支持的媒体可能失败。') }}</p>
+          <p>{{ t('lan|索引较大的 MP4 可通过兼容准备无损重新封装，加快起播，原件保持不变。') }}</p>
           <p>{{ t('lan|兼容准备仅适用于受支持的媒体文件，其他文件会逐项报告失败；可改选原件。') }}</p>
           <p v-if="submitted && pending.length" role="status">{{ t('lan|部分文件已提交，未提交的文件仍保留在列表中，可继续准备或查看任务。') }}</p>
         </div>

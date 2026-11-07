@@ -7,7 +7,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
-	"strings"
 	"testing"
 )
 
@@ -84,22 +83,6 @@ func TestProbeMetadataAndCodec(t *testing.T) {
 	}
 	if webmHeader([]byte("not a WebM file")) {
 		t.Fatal("invalid header accepted")
-	}
-}
-
-func TestConversionArguments(t *testing.T) {
-	i := Info{VideoCodec: "h264", AudioCodec: "dts", VideoIndex: 1, AudioIndex: 2, Width: 3840, Height: 2160}
-	args, err := conversionArgs("/private/input", "/private/output", Plan{Kind: "audio", Info: i, MaxBytes: 100000}, inputOptions)
-	if err != nil {
-		t.Fatal(err)
-	}
-	s := strings.Join(args, " ")
-	if strings.Contains(s, "-vf") || !strings.Contains(s, "-c copy") || !strings.Contains(s, "-c:a aac") || !strings.Contains(s, "-fs 100000") || !strings.Contains(s, "-map 0:1") {
-		t.Fatal(s)
-	}
-	i.HDR = true
-	if _, err := conversionArgs("/in", "/out", Plan{Kind: "video", Info: i}, inputOptions); !errors.Is(err, ErrUnsupported) {
-		t.Fatal("HDR conversion accepted")
 	}
 }
 

@@ -19,6 +19,7 @@ export interface Entry {
     "needsVerification"?: boolean;
     "compatibleReady": boolean;
     "compatibleKind"?: string;
+    "hasThumbnail"?: boolean;
 }
 
 export interface NetworkInterface {
@@ -40,6 +41,7 @@ export interface PreparationEntry {
     "needsVerification"?: boolean;
     "compatibleReady": boolean;
     "compatibleKind"?: string;
+    "hasThumbnail"?: boolean;
     "thumbnail": string;
     "desktopCompatibleReady": boolean;
 }
@@ -86,8 +88,9 @@ export interface Status {
     "spaces": Space[] | null;
     "tasks": Task[] | null;
     "cacheBytes": number;
-    "cacheLimit": number;
     "originalDir": string;
+    "copyDir": string;
+    "storageBusy": boolean;
     "error": string;
 }
 
@@ -101,4 +104,5 @@ export interface Task {
     "done": number;
     "total": number;
     "error": string;
+    "optimizeStartup"?: boolean;
 }

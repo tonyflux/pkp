@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/tonyflux/pkp/internal/drive"
+	"github.com/tonyflux/pkp/internal/syncfs"
 )
 
 type versionedBackend struct {
@@ -164,5 +165,60 @@ func TestDirectReceiveVerificationPrecedesPublication(t *testing.T) {
 	got, err := os.ReadFile(request.Path)
 	if err != nil || !bytes.Equal(got, payload) {
 		t.Fatalf("verified original differs: %v", err)
+	}
+}
+
+func TestDirectReceiveRevalidatesDestinationAfterQueueWait(t *testing.T) {
+	cdn := newCDN(t, &fakeCDN{holds: map[string]bool{"1": true}})
+	backend := &versionedBackend{fakeBackend: &fakeBackend{url: cdn.URL}, version: "stable"}
+	queue := New(backend, Options{Parallel: 1, Threads: 1})
+	t.Cleanup(queue.Close)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	firstDone := make(chan error, 1)
+	go func() {
+		firstDone <- queue.Receive(ctx, DirectRequest{ID: "occupy", FileID: "f", Path: filepath.Join(t.TempDir(), "first"), Checkpoint: filepath.Join(t.TempDir(), "checkpoint"), Size: int64(len(payload))}, nil)
+	}()
+	cdn.waitHeld(t, 1)
+	selected := filepath.Join(t.TempDir(), "selected-disk")
+	if err := os.Mkdir(selected, 0700); err != nil {
+		t.Fatal(err)
+	}
+	identity, err := syncfs.Identify(selected)
+	if err != nil {
+		t.Fatal(err)
+	}
+	queued := make(chan struct{})
+	secondDone := make(chan error, 1)
+	var once sync.Once
+	request := DirectRequest{ID: "selected-disk", FileID: "f", Path: filepath.Join(selected, "original"), Checkpoint: filepath.Join(selected, "checkpoint"), Size: int64(len(payload)), ValidateDestination: func() error { return syncfs.Validate(identity) }}
+	go func() { secondDone <- queue.Receive(ctx, request, func(Task) { once.Do(func() { close(queued) }) }) }()
+	select {
+	case <-queued:
+	case <-ctx.Done():
+		t.Fatal("download did not queue")
+	}
+	if err := os.Rename(selected, selected+"-detached"); err != nil {
+		t.Fatal(err)
+	}
+	cdn.free()
+	select {
+	case err := <-firstDone:
+		if err != nil {
+			t.Fatal(err)
+		}
+	case <-ctx.Done():
+		t.Fatal("first download did not finish")
+	}
+	select {
+	case err := <-secondDone:
+		if err == nil {
+			t.Fatal("missing destination accepted")
+		}
+	case <-ctx.Done():
+		t.Fatal("queued download did not settle")
+	}
+	if _, err := os.Stat(selected); !errors.Is(err, os.ErrNotExist) {
+		t.Fatal("disconnected root recreated", err)
 	}
 }

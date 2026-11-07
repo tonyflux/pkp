@@ -26,14 +26,16 @@ const clock = seconds => {
   return `${hours ? `${hours}:` : ''}${String(Math.floor(value / 60) % 60).padStart(2, '0')}:${String(value % 60).padStart(2, '0')}`;
 };
 
-export function mountPlayer({ container, entry, source, variant = 'original', language = 'en', connected = true, playlist = [], onBack, onSelect, onDetails, onDownload, onError }) {
+export function mountPlayer({ container, entry, source, variant = 'original', language = 'en', connected = true, playlist = [], onBack, onSelect, onDetails, onDownload, onOptimizeStartup, onError }) {
   const t = key => translate(language, key);
   const h = escapeHTML;
+  const byteNumber = new Intl.NumberFormat(language, { maximumFractionDigits: 0 });
+  const sizeNumber = new Intl.NumberFormat(language, { maximumFractionDigits: 1 });
   const size = value => {
     if (!Number.isFinite(value) || value < 0) return t('unknown');
     const units = ['B', 'KB', 'MB', 'GB', 'TB'];
     const order = value > 0 ? Math.min(4, Math.floor(Math.log(value) / Math.log(1024))) : 0;
-    return `${new Intl.NumberFormat(language, { maximumFractionDigits: order ? 1 : 0 }).format(value / 1024 ** order)} ${units[order]}`;
+    return `${(order ? sizeNumber : byteNumber).format(value / 1024 ** order)} ${units[order]}`;
   };
   const isAudio = /^audio\//i.test(entry.mime || '') || (!/^video\//i.test(entry.mime || '') && /\.(mp3|m4a|aac|flac|ogg|opus|wav)$/i.test(entry.name || ''));
   const badge = t(variant === 'compatible' ? 'compatibleShort' : 'original');
@@ -54,16 +56,17 @@ export function mountPlayer({ container, entry, source, variant = 'original', la
         <div id="player-menu" class="player-menu" role="menu" hidden>
           <button type="button" role="menuitem" data-player-action="details">${h(t('playbackInfo'))}</button>
           <button type="button" role="menuitem" data-player-action="download">${h(t('download'))}</button>
+          ${onOptimizeStartup ? `<button type="button" role="menuitem" data-player-action="optimize-startup">${h(t('optimizeStartup'))}</button>` : ''}
         </div>
       </div>
     </header>
     <div class="player-layout">
       <div class="player-main">
-        <div class="player-stage">
+        <div class="player-stage" aria-busy="true">
           <${mediaTag} class="player-media" playsinline preload="metadata" aria-label="${h(entry.name)}"></${mediaTag}>
           ${isAudio ? `<div class="audio-art" aria-hidden="true">${icon('audio')}</div>` : ''}
           <div class="player-central">${transport()}</div>
-          <div class="player-status" role="status" aria-live="polite" data-state="loading">${h(t('loadingMedia'))}</div>
+          <div class="player-status" data-state="loading"><span class="player-status-spinner" aria-hidden="true"><span></span></span><span class="player-status-text" role="status" aria-live="polite" aria-atomic="true">${h(t('loadingMedia'))}</span></div>
         </div>
         <div class="player-caption"><strong>${h(entry.name)}</strong><small>${h(size(entry.size))}</small><span class="variant-badge">${h(badge)}</span></div>
         <div class="player-controlbar">
@@ -83,16 +86,14 @@ export function mountPlayer({ container, entry, source, variant = 'original', la
       </div>
       <aside id="player-playlist" class="player-playlist" aria-label="${h(t('sameFolder'))}" hidden>
         <div class="playlist-heading"><h2>${h(t('sameFolder'))} <span>${playlist.length}</span></h2>${button('playlist', 'close', 'close')}</div>
-        <div class="playlist-list">${playlist.map(item => {
-          const current = item.id === entry.id;
-          return `<article class="playlist-entry${current ? ' is-current' : ''}"${current ? ' aria-current="true"' : ''}><span class="playlist-art" aria-hidden="true">${icon(current ? 'play' : /^audio\//i.test(item.mime || '') ? 'audio' : 'video')}</span><div class="playlist-copy"><strong>${h(item.name)}</strong><small>${h(size(item.size))} · ${h(t(current ? 'playingNow' : item.compatibleReady ? 'compatibleShort' : item.ready ? 'readyShort' : 'notReadyShort'))}</small></div><button type="button" class="playlist-action" data-player-select="${h(item.id)}"${current ? ' disabled' : ''}>${h(t(current ? 'playingNow' : item.ready || item.compatibleReady ? 'play' : 'prepareShort'))}</button></article>`;
-        }).join('')}</div>
+        <div class="playlist-list"><button type="button" class="playlist-load-more secondary" data-player-action="playlist-more" hidden>${h(t('loadMore'))}</button></div>
       </aside>
     </div>`;
 
   const media = container.querySelector('.player-media');
   const stage = container.querySelector('.player-stage');
   const status = container.querySelector('.player-status');
+  const statusText = container.querySelector('.player-status-text');
   const seek = container.querySelector('.player-seek');
   const played = container.querySelector('.seek-played');
   const buffered = container.querySelector('.seek-buffer');
@@ -105,6 +106,7 @@ export function mountPlayer({ container, entry, source, variant = 'original', la
   const more = container.querySelector('.player-more');
   const list = container.querySelector('.player-playlist');
   const listToggle = container.querySelector('.player-playlist-toggle');
+  const listMore = container.querySelector('.playlist-load-more');
   const fullscreenButton = container.querySelector('.player-fullscreen');
   const pipButton = container.querySelector('.player-pip');
   const playButtons = [...container.querySelectorAll('.player-play')];
@@ -112,7 +114,9 @@ export function mountPlayer({ container, entry, source, variant = 'original', la
   const controller = new AbortController();
   const portrait = window.matchMedia('(max-width: 760px) and (orientation: portrait)');
   let destroyed = false, idleTimer, scrubbing = false, waiting = false, needsGesture = false;
+  let initialLoading = true, explicitlyPaused = false;
   let failure = '', revealOnly = false, selecting = false, playRequest = 0;
+  let playlistStarted = false, playlistOffset = 0;
   const speedMenu = mountSelect(speed, { signal: controller.signal, onChange: value => { media.playbackRate = Number(value); }, onOpenChange: showControls });
   const listen = (target, event, handler, options = {}) => target.addEventListener(event, handler, { ...options, signal: controller.signal });
   const finiteDuration = () => Number.isFinite(media.duration) && media.duration > 0 ? media.duration : 0;
@@ -126,20 +130,27 @@ export function mountPlayer({ container, entry, source, variant = 'original', la
     if (!media.paused && !media.ended) idleTimer = setTimeout(hideControls, 3000);
   }
   function hideControls() {
-    if (destroyed || media.paused || media.ended || scrubbing || media.seeking || waiting || needsGesture || failure || !menu.hidden || speedMenu.open || !list.hidden && !portrait.matches) return;
+    if (destroyed || media.paused || media.ended || scrubbing || media.seeking || initialLoading || waiting || needsGesture || failure || !menu.hidden || speedMenu.open || !list.hidden && !portrait.matches) return;
     const focus = document.activeElement;
     if (focus && container.contains(focus) && focus.closest('button,input,select,.player-menu')) return;
     container.classList.add('controls-hidden');
   }
   function setStatus(text, state) {
-    status.textContent = text;
+    if (statusText.textContent !== text) statusText.textContent = text;
     status.hidden = !text;
     status.dataset.state = state;
-    status.setAttribute('role', state === 'error' ? 'alert' : 'status');
+    const role = state === 'error' ? 'alert' : 'status';
+    if (statusText.getAttribute('role') !== role) {
+      statusText.setAttribute('role', role);
+      statusText.setAttribute('aria-live', state === 'error' ? 'assertive' : 'polite');
+    }
+    stage.setAttribute('aria-busy', String(state === 'loading' || state === 'buffering'));
   }
   function renderState() {
     if (destroyed) return;
     const paused = media.paused || media.ended;
+    if (media.readyState >= 2) initialLoading = false;
+    const loading = initialLoading;
     for (const control of playButtons) {
       const label = t(paused ? 'play' : 'pause');
       control.setAttribute('aria-label', label);
@@ -152,11 +163,11 @@ export function mountPlayer({ container, entry, source, variant = 'original', la
     if (failure) setStatus(failure, 'error');
     else if (needsGesture) setStatus(t('tapToPlay'), 'gesture');
     else if (media.ended) setStatus(t('playbackEnded'), 'ended');
+    else if (explicitlyPaused || paused && !loading) setStatus(t('playbackPaused'), 'paused');
+    else if (loading) setStatus(t('loadingMedia'), 'loading');
     else if (waiting && !paused) setStatus(t('buffering'), 'buffering');
-    else if (media.readyState === 0) setStatus(t('loadingMedia'), 'loading');
-    else if (paused) setStatus(t('playbackPaused'), 'paused');
     else setStatus('', 'playing');
-    if (paused || waiting || failure || needsGesture) showControls();
+    if (paused || loading || waiting || failure || needsGesture) showControls();
   }
   function renderTimeline() {
     if (destroyed) return;
@@ -261,7 +272,30 @@ export function mountPlayer({ container, entry, source, variant = 'original', la
     showControls();
     if (open && focus) menu.querySelector('button').focus();
   }
+  function revealPlaylist() {
+    const items = [];
+    if (!playlistStarted) {
+      const current = playlist.find(item => item.id === entry.id);
+      if (current) items.push(current);
+      playlistStarted = true;
+    }
+    // Append only on explicit requests: native scrolling never replaces or estimates rows.
+    while (playlistOffset < playlist.length && items.length < 50) {
+      const item = playlist[playlistOffset++];
+      if (item.id !== entry.id) items.push(item);
+    }
+    while (playlistOffset < playlist.length && playlist[playlistOffset].id === entry.id) playlistOffset++;
+    const focusMore = document.activeElement === listMore;
+    const previous = listMore.previousElementSibling;
+    listMore.insertAdjacentHTML('beforebegin', items.map(item => {
+      const current = item.id === entry.id;
+      return `<article class="playlist-entry${current ? ' is-current' : ''}"${current ? ' aria-current="true"' : ''}><span class="playlist-art" aria-hidden="true">${icon(current ? 'play' : /^audio\//i.test(item.mime || '') ? 'audio' : 'video')}</span><div class="playlist-copy"><strong>${h(item.name)}</strong><small>${h(size(item.size))} · ${h(t(current ? 'playingNow' : item.compatibleReady ? 'compatibleShort' : item.ready ? 'readyShort' : 'notReadyShort'))}</small></div><button type="button" class="playlist-action" data-player-select="${h(item.id)}"${current ? ' disabled' : ''}>${h(t(current ? 'playingNow' : item.ready || item.compatibleReady ? 'play' : 'prepareShort'))}</button></article>`;
+    }).join(''));
+    listMore.hidden = playlistOffset >= playlist.length;
+    if (focusMore) (previous ? previous.nextElementSibling : listMore.parentElement.firstElementChild)?.querySelector('button:not(:disabled)')?.focus({ preventScroll: true });
+  }
   function togglePlaylist(open = list.hidden) {
+    if (open && !playlistStarted) revealPlaylist();
     list.hidden = !open;
     listToggle.setAttribute('aria-expanded', String(open));
     container.classList.toggle('playlist-open', open);
@@ -298,8 +332,10 @@ export function mountPlayer({ container, entry, source, variant = 'original', la
         break;
       case 'menu': toggleMenu(undefined, true); break;
       case 'playlist': togglePlaylist(); break;
+      case 'playlist-more': revealPlaylist(); break;
       case 'details': toggleMenu(false); more.focus(); await onDetails?.(); break;
       case 'download': toggleMenu(false); more.focus(); await onDownload?.(); break;
+      case 'optimize-startup': toggleMenu(false); more.focus(); await onOptimizeStartup?.(); break;
       case 'fullscreen': await toggleFullscreen(); break;
       case 'pip': await togglePiP(); break;
     }
@@ -311,15 +347,16 @@ export function mountPlayer({ container, entry, source, variant = 'original', la
     if (!select && !action) return;
     event.stopPropagation();
     if (select) {
-      if (selecting) return;
+      if (selecting || select.disabled) return;
       selecting = true;
-      const controls = [...list.querySelectorAll('[data-player-select]:not(:disabled)')];
-      controls.forEach(control => { control.disabled = true; });
+      select.disabled = true;
+      list.setAttribute('aria-busy', 'true');
       media.pause();
       Promise.resolve().then(() => onSelect?.(select.dataset.playerSelect)).catch(showOperationError).finally(() => {
         if (destroyed) return;
         selecting = false;
-        controls.forEach(control => { control.disabled = false; });
+        select.disabled = false;
+        list.removeAttribute('aria-busy');
       });
     } else void activate(action.dataset.playerAction).catch(showOperationError);
   });
@@ -348,17 +385,21 @@ export function mountPlayer({ container, entry, source, variant = 'original', la
   listen(media, 'ratechange', () => { speedMenu.setValue(media.playbackRate); });
   listen(media, 'timeupdate', renderTimeline);
   listen(media, 'progress', renderBuffered);
-  for (const event of ['loadedmetadata', 'durationchange', 'loadeddata', 'canplay']) listen(media, event, () => {
-    waiting = false;
+  for (const event of ['loadedmetadata', 'durationchange']) listen(media, event, () => {
     renderTimeline(); renderBuffered(); renderState(); renderPresentation();
   });
-  listen(media, 'loadstart', () => { waiting = true; renderState(); });
+  for (const event of ['loadeddata', 'canplay']) listen(media, event, () => {
+    if (media.readyState >= 2) waiting = false;
+    renderTimeline(); renderBuffered(); renderState(); renderPresentation();
+  });
+  for (const event of ['loadstart', 'emptied']) listen(media, event, () => { initialLoading = true; waiting = true; renderState(); });
   for (const event of ['waiting', 'stalled']) listen(media, event, () => { waiting = true; renderState(); });
   listen(media, 'seeking', () => { waiting = true; renderState(); showControls(); });
-  listen(media, 'seeked', () => { waiting = false; renderTimeline(); renderState(); showControls(); });
-  listen(media, 'play', () => { needsGesture = false; renderState(); showControls(); });
-  listen(media, 'playing', () => { waiting = false; needsGesture = false; renderState(); showControls(); });
-  for (const event of ['pause', 'ended']) listen(media, event, () => { renderState(); showControls(); });
+  listen(media, 'seeked', () => { if (media.readyState >= 2) waiting = false; renderTimeline(); renderState(); showControls(); });
+  listen(media, 'play', () => { explicitlyPaused = false; needsGesture = false; renderState(); showControls(); });
+  listen(media, 'playing', () => { initialLoading = false; explicitlyPaused = false; waiting = false; needsGesture = false; renderState(); showControls(); });
+  listen(media, 'pause', () => { explicitlyPaused = true; renderState(); showControls(); });
+  listen(media, 'ended', () => { renderState(); showControls(); });
   listen(media, 'error', () => { if (media.error) { renderTimeline(); renderPresentation(); void reportMediaError(media.error); } });
   for (const event of ['fullscreenchange', 'webkitfullscreenchange']) listen(document, event, () => { renderPresentation(); showControls(); });
   for (const event of ['webkitbeginfullscreen', 'webkitendfullscreen', 'enterpictureinpicture', 'leavepictureinpicture', 'webkitpresentationmodechanged']) listen(media, event, renderPresentation);

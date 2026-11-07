@@ -27,7 +27,7 @@ func newTestManager(t *testing.T, cloud Cloud) *Manager {
 	if err != nil {
 		t.Fatal(err)
 	}
-	m, err := New(Options{ConfigDir: dir, Cloud: cloud, AllowLoopback: true, CacheLimit: 64 << 20, MinFreeBytes: 1})
+	m, err := New(Options{ConfigDir: dir, Cloud: cloud, AllowLoopback: true, MinFreeBytes: 1})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -134,9 +134,11 @@ func TestAuthenticationCSRFAndPublicMetadata(t *testing.T) {
 	m := newTestManager(t, nil)
 	s, _ := localSpace(t, m, false)
 	sessionID := authenticated(t, m)
-	asset := apiRequest(t, m, "GET", "/select.js", "", nil)
-	if asset.Code != http.StatusOK || !strings.Contains(asset.Body.String(), "mountSelect") {
-		t.Fatalf("visitor menu module unavailable: %d %s", asset.Code, asset.Body.String())
+	for _, path := range []string{"/app.js", "/player.js", "/gallery.js", "/select.js", "/locales.js"} {
+		asset := apiRequest(t, m, "GET", path, "", nil)
+		if asset.Code != http.StatusOK || !strings.Contains(asset.Header().Get("Content-Type"), "javascript") {
+			t.Fatalf("visitor module unavailable at %s: %d %s", path, asset.Code, asset.Header().Get("Content-Type"))
+		}
 	}
 	for _, path := range []string{"/api/spaces", "/api/files?space=" + s.ID, "/api/file?space=" + s.ID + "&id=forged", "/api/tasks?space=" + s.ID, "/api/content?space=" + s.ID + "&id=forged"} {
 		w := apiRequest(t, m, "GET", path, "", nil)
@@ -540,7 +542,7 @@ func TestPreparePermissionHoldResumeAndSourceRevocation(t *testing.T) {
 	waitState(t, m, task.ID, "held")
 }
 
-func TestCacheOwnershipQuotaAndActiveReaderPin(t *testing.T) {
+func TestCacheOwnershipAndActiveReaderPin(t *testing.T) {
 	m := newTestManager(t, nil)
 	s, _ := localSpace(t, m, true)
 	entries, err := m.list(context.Background(), s.ID, "")
@@ -579,27 +581,92 @@ func TestCacheOwnershipQuotaAndActiveReaderPin(t *testing.T) {
 		t.Fatalf("active copy evicted: %+v %v", cleared, err)
 	}
 	release()
-	budget := m.outputBudget(1, 1) + 1
+	const budget int64 = 1 << 20
 	if err = m.reserve(budget); err != nil {
 		t.Fatal(err)
 	}
 	retained, readErr := os.ReadFile(path)
 	m.release(budget)
 	if readErr != nil || string(retained) != "cache" {
-		t.Fatal("preparing another file evicted an unrelated copy despite unused capacity")
+		t.Fatal("preparing another file evicted an unrelated copy")
 	}
 	cleared, err = m.ClearCache()
 	if err != nil || cleared.RemovedBytes != 5 {
 		t.Fatalf("owned unused copy not cleared: %+v %v", cleared, err)
-	}
-	if err = m.reserve(m.cacheLimit + 1); !errors.Is(err, errDiskFull) {
-		t.Fatal("quota exceeded")
 	}
 	source, _, err := m.original(context.Background(), s.ID, entry.ID, entry.Version)
 	if err != nil {
 		t.Fatal("cache clear touched source", err)
 	}
 	source.Close()
+}
+
+func TestCopyReservationsRespectDiskBudget(t *testing.T) {
+	m := newTestManager(t, nil)
+	free, err := freeBytes(m.copyIdentity.Path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	const capacity int64 = 128 << 20
+	const reservation int64 = 32 << 20
+	const headroom int64 = 16 << 20
+	if free < capacity {
+		t.Skip("insufficient disk space for reservation accounting")
+	}
+	m.mu.Lock()
+	m.minFree = free - capacity
+	m.mu.Unlock()
+	for range 2 {
+		if err := m.reserve(reservation); err != nil {
+			t.Fatal(err)
+		}
+	}
+	m.mu.Lock()
+	reserved := m.reserved
+	m.mu.Unlock()
+	if reserved != 2*reservation {
+		t.Fatalf("repeated reservations not accounted: %d", reserved)
+	}
+	// Allow ordinary filesystem activity without depending on exact free-byte snapshots.
+	if budget := m.outputBudget(headroom); budget < 32<<20 || budget > 64<<20 {
+		t.Fatalf("disk budget ignored reservations or packet headroom: %d", budget)
+	}
+	for _, bytes := range []int64{-1, 96 << 20, 1<<63 - 1} {
+		if err := m.reserve(bytes); !errors.Is(err, errDiskFull) {
+			t.Fatalf("invalid or overcommitted reservation %d: %v", bytes, err)
+		}
+	}
+	if budget := m.outputBudget(1<<63 - 1); budget != 0 {
+		t.Fatalf("oversized packet headroom produced budget %d", budget)
+	}
+	if budget := m.outputBudget(-1); budget != 0 {
+		t.Fatalf("negative packet headroom produced budget %d", budget)
+	}
+	m.release(2 * reservation)
+	if err := m.reserve(96 << 20); err != nil {
+		t.Fatalf("released reservations still consume disk budget: %v", err)
+	}
+	m.release(96 << 20)
+}
+
+func TestCopyReservationAndBudgetExceedEightGiB(t *testing.T) {
+	m := newTestManager(t, nil)
+	const bytes int64 = 9 << 30
+	const headroom int64 = 16 << 20
+	free, err := freeBytes(m.copyIdentity.Path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if free < bytes+headroom+(256<<20) {
+		t.Skip("requires more than 9 GiB of free disk; no output bytes are allocated")
+	}
+	if budget := m.outputBudget(headroom); budget < bytes {
+		t.Fatalf("sufficient disk was capped below 9 GiB: %d", budget)
+	}
+	if err := m.reserve(bytes); err != nil {
+		t.Fatalf("sufficient disk rejected a reservation above 8 GiB: %v", err)
+	}
+	m.release(bytes)
 }
 
 func TestHardLinkDirectoryEntriesHaveDistinctOpaqueIDs(t *testing.T) {
@@ -644,8 +711,18 @@ func TestReplacementReservationPreservesPreviousCopy(t *testing.T) {
 	m.mu.Unlock()
 	unpin := m.pinCurrentCopy("same-source-version")
 	defer unpin()
-	if err = m.reserve(m.cacheLimit); !errors.Is(err, errDiskFull) {
-		t.Fatalf("replacement ignored pinned valid result: %v", err)
+	m.mu.Lock()
+	m.minFree = 1<<63 - 1
+	m.mu.Unlock()
+	if budget := m.outputBudget(16 << 20); budget != 0 {
+		t.Fatalf("disk reserve exhausted but output budget is %d", budget)
+	}
+	if err = m.reserve(1); !errors.Is(err, errDiskFull) {
+		t.Fatalf("replacement ignored exhausted disk reserve: %v", err)
+	}
+	cleared, err := m.ClearCache()
+	if err != nil || cleared.Skipped != 1 || cleared.RemovedBytes != 0 {
+		t.Fatalf("pinned previous copy cleared: %+v %v", cleared, err)
 	}
 	bytes, err := os.ReadFile(path)
 	if err != nil || string(bytes) != "last valid copy" {

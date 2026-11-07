@@ -3,10 +3,10 @@ import { computed, createApp, defineComponent, h, nextTick, reactive, ref, type 
 import type { FolderSearch } from "../bindings/github.com/tonyflux/pkp/internal/services/models";
 import type { Entry } from "../bindings/github.com/tonyflux/pkp/internal/lanshare/models";
 
-const bridge = vi.hoisted(() => ({ Status: vi.fn(), Tasks: vi.fn(), Interfaces: vi.fn(), CloudFolders: vi.fn(), SearchFolders: vi.fn(), AddSpace: vi.fn(), UpdateSpace: vi.fn(), Start: vi.fn(), Stop: vi.fn(), SetPassword: vi.fn(), SyncFolderTrail: vi.fn(), DismissTaskHistory: vi.fn(), CancelTask: vi.fn(), ResumeTask: vi.fn(), ListPreparationEntries: vi.fn(), PreparationThumbnail: vi.fn(), PrepareDesktop: vi.fn(), openNav: vi.fn(), copy: vi.fn() }));
+const bridge = vi.hoisted(() => ({ Status: vi.fn(), Tasks: vi.fn(), Interfaces: vi.fn(), CloudFolders: vi.fn(), SearchFolders: vi.fn(), AddSpace: vi.fn(), UpdateSpace: vi.fn(), Start: vi.fn(), Stop: vi.fn(), SetPassword: vi.fn(), SetStorageDirectory: vi.fn(), ClearCache: vi.fn(), OpenFile: vi.fn(), SyncFolderTrail: vi.fn(), DismissTaskHistory: vi.fn(), CancelTask: vi.fn(), ResumeTask: vi.fn(), ListPreparationEntries: vi.fn(), PreparationThumbnail: vi.fn(), PrepareDesktop: vi.fn(), openNav: vi.fn(), copy: vi.fn() }));
 vi.mock("../bindings/github.com/tonyflux/pkp/internal/services/lanservice", () => bridge);
 vi.mock("../bindings/github.com/tonyflux/pkp/internal/services/driveservice", () => bridge);
-vi.mock("@wailsio/runtime", async importOriginal => ({ ...await importOriginal<object>(), Clipboard: { SetText: bridge.copy } }));
+vi.mock("@wailsio/runtime", async importOriginal => ({ ...await importOriginal<object>(), Clipboard: { SetText: bridge.copy }, Dialogs: { OpenFile: bridge.OpenFile } }));
 vi.mock("./syncstore", () => ({
   sync: reactive({ pairs: [], loading: false, error: "", scope: "current", query: "", selected: "", detail: false, tab: "activity", draftOpen: false }),
   syncDialog: reactive({ kind: "" }), syncStateName: () => "已同步", loadSync: vi.fn(),
@@ -39,7 +39,7 @@ import LANView from "./components/LANView.vue";
 import StatusPill from "./components/StatusPill.vue";
 import { sync, type SyncPair } from "./syncstore";
 import { accounts, appLock, ui } from "./store";
-import { lan, type LANSpace, type LANStatus } from "./lanstore";
+import { lan, refreshLAN, type LANSpace, type LANStatus } from "./lanstore";
 
 const initialAccounts = accounts.list;
 let app: App | undefined;
@@ -76,18 +76,81 @@ beforeEach(() => {
   accounts.list = initialAccounts;
   sync.pairs = []; sync.scope = "current"; sync.query = ""; sync.selected = ""; sync.detail = false;
   bridge.SyncFolderTrail.mockResolvedValue([{ id: "parent", name: "Archive" }, { id: "root", name: "Movies" }]);
-  bridge.Status.mockResolvedValue({ running: false, address: "", interfaceId: "", hasPassword: false, spaces: [], tasks: [], cacheBytes: 0, cacheLimit: 1024, originalDir: "", error: "" });
+  bridge.Status.mockResolvedValue({ running: false, address: "", interfaceId: "", hasPassword: false, spaces: [], tasks: [], cacheBytes: 0, originalDir: "", copyDir: "", storageBusy: false, error: "" });
   bridge.Interfaces.mockResolvedValue([]);
   bridge.CloudFolders.mockResolvedValue([{ id: "existing", name: "Existing" }]);
   bridge.AddSpace.mockResolvedValue({ id: "created" });
 });
 afterEach(() => { app?.unmount(); app = undefined; document.body.replaceChildren(); Reflect.deleteProperty(HTMLElement.prototype, "scrollIntoView"); vi.clearAllTimers(); vi.useRealTimers(); });
 
+describe("LAN storage locations", () => {
+  const initial = (): LANStatus => ({ running: false, address: "", interfaceId: "", hasPassword: false, spaces: [], tasks: [], cacheBytes: 0, originalDir: "/old-originals", copyDir: "/old-copies", storageBusy: false, error: "" });
+  async function mountStorage(status: LANStatus) {
+    bridge.Status.mockImplementation(async () => structuredClone(status));
+    const host = document.createElement("div"); document.body.append(host);
+    app = createApp(LANView); app.mount(host); await settle();
+    const button = Array.from(document.querySelectorAll<HTMLButtonElement>(".tabs button")).find(item => item.textContent === "存储与副本")!;
+    button.click(); await settle();
+  }
+  it("disables location changes while preparation is active and localizes backend rejection", async () => {
+    const status = initial(); status.storageBusy = true;
+    await mountStorage(status);
+    expect(document.querySelector<HTMLButtonElement>("[data-lan-original-picker]")?.disabled).toBe(true);
+    expect(document.querySelector<HTMLButtonElement>("[data-lan-copy-picker]")?.disabled).toBe(true);
+    status.storageBusy = false; await refreshLAN(); await settle();
+    bridge.OpenFile.mockResolvedValueOnce("/missing-disk");
+    bridge.SetStorageDirectory.mockRejectedValueOnce(new Error("storage_unavailable"));
+    await click("[data-lan-copy-picker]");
+    expect(lan.error).toBe("保存位置不可用，请检查磁盘和目录权限。");
+    expect(document.querySelector("[data-lan-copy-directory]")?.textContent).toBe("/old-copies");
+  });
+  it("enables cleanup only for existing copies and disables it during cleanup and after removal", async () => {
+    const status = initial();
+    await mountStorage(status);
+    const cleanup = () => document.querySelector<HTMLButtonElement>("[data-lan-cache]")!;
+    expect(cleanup().disabled).toBe(true);
+    await click("[data-lan-cache]");
+    expect(document.querySelector('[role="dialog"]')).toBeNull();
+
+    status.cacheBytes = 4096; await refreshLAN(); await settle();
+    expect(cleanup().disabled).toBe(false);
+    await click("[data-lan-cache]");
+    expect(document.querySelector('[role="dialog"]')).not.toBeNull();
+    const pending = deferred<{ removedBytes: number; skipped: number }>();
+    bridge.ClearCache.mockImplementationOnce(async () => {
+      const result = await pending.promise; status.cacheBytes = 0; return result;
+    });
+    await click("[data-lan-ack]"); await click("[data-lan-confirm]");
+    expect(cleanup().disabled).toBe(true);
+    pending.resolve({ removedBytes: 4096, skipped: 0 }); await settle();
+    expect(document.querySelector('[role="dialog"]')).toBeNull();
+    expect(cleanup().disabled).toBe(true);
+    await click("[data-lan-cache]");
+    expect(document.querySelector('[role="dialog"]')).toBeNull();
+  });
+  it("keeps cleanup inaccessible while status is unknown or unavailable", async () => {
+    const pending = deferred<LANStatus>();
+    bridge.Status.mockReturnValueOnce(pending.promise);
+    await mountStorage(initial());
+    const cleanup = () => document.querySelector<HTMLButtonElement>("[data-lan-cache]")!;
+    expect(cleanup().disabled).toBe(true);
+    await click("[data-lan-cache]");
+    expect(document.querySelector('[role="dialog"]')).toBeNull();
+    pending.resolve({ ...initial(), cacheBytes: 4096 }); await settle();
+    expect(cleanup().disabled).toBe(false);
+    bridge.Status.mockRejectedValueOnce(new Error("service_closed"));
+    await refreshLAN(); await settle();
+    expect(cleanup().disabled).toBe(true);
+    await click("[data-lan-cache]");
+    expect(document.querySelector('[role="dialog"]')).toBeNull();
+  });
+});
+
 describe("LAN network selection", () => {
   const wifi = { id: "wifi@192.168.1.5", name: "Wi-Fi", address: "192.168.1.5" };
   const ethernet = { id: "ethernet@192.168.1.6", name: "Ethernet", address: "192.168.1.6" };
   const shared: LANSpace = { id: "local", name: "Shared", kind: "local", accountId: "", rootId: "", localPath: "/safe", enabled: true, available: true, allowPrepare: false, error: "" };
-  const stopped: LANStatus = { running: false, address: "", interfaceId: "", hasPassword: true, spaces: [shared], tasks: [], cacheBytes: 0, cacheLimit: 1024, originalDir: "", error: "" };
+  const stopped: LANStatus = { running: false, address: "", interfaceId: "", hasPassword: true, spaces: [shared], tasks: [], cacheBytes: 0, originalDir: "", copyDir: "", storageBusy: false, error: "" };
   async function mountNetwork() {
     const host = document.createElement("div"); document.body.append(host);
     app = createApp(LANView); app.mount(host); await settle();
@@ -145,7 +208,7 @@ describe("LAN network selection", () => {
 
 describe("LAN address copy", () => {
   it("shows current results without changing the service layout, restarts the success timer, and ignores stale results", async () => {
-    bridge.Status.mockResolvedValue({ running: true, address: "http://192.168.1.5:17891", interfaceId: "wifi", hasPassword: true, spaces: [], tasks: [], cacheBytes: 0, cacheLimit: 1024, originalDir: "", error: "" });
+    bridge.Status.mockResolvedValue({ running: true, address: "http://192.168.1.5:17891", interfaceId: "wifi", hasPassword: true, spaces: [], tasks: [], cacheBytes: 0, originalDir: "", copyDir: "", storageBusy: false, error: "" });
     const older = deferred<void>();
     bridge.copy.mockReturnValueOnce(older.promise).mockRejectedValueOnce(new Error("clipboard"));
     const showLAN = ref(true);
@@ -224,7 +287,7 @@ describe("LAN one-time confirmations", () => {
     field.value = value; field.dispatchEvent(new Event("input", { bubbles: true })); await settle();
   }
   beforeEach(() => {
-    status = { running: true, address: "", interfaceId: "en0", hasPassword: true, spaces: ["first", "second"].map(id => ({ id, name: id, kind: "local", accountId: "", rootId: "", localPath: `/${id}`, enabled: true, available: true, allowPrepare: false, error: "" })), tasks: [], cacheBytes: 0, cacheLimit: 1024, originalDir: "", error: "" };
+    status = { running: true, address: "", interfaceId: "en0", hasPassword: true, spaces: ["first", "second"].map(id => ({ id, name: id, kind: "local", accountId: "", rootId: "", localPath: `/${id}`, enabled: true, available: true, allowPrepare: false, error: "" })), tasks: [], cacheBytes: 0, originalDir: "", copyDir: "", storageBusy: false, error: "" };
     bridge.Status.mockImplementation(async () => structuredClone(status));
     bridge.UpdateSpace.mockImplementation(async (request: Partial<LANSpace> & { id: string }) => { Object.assign(status.spaces.find(item => item.id === request.id)!, request); });
     bridge.SetPassword.mockResolvedValue(undefined);
@@ -519,7 +582,6 @@ describe("desktop preparation picker", () => {
     await click("[data-prepare-start]");
     expect(bridge.PrepareDesktop.mock.calls).toEqual([["first", "root-file", "compatible"], ["first", "nested", "compatible"]]);
     expect(document.querySelector(".selection")?.textContent).toContain("root-file");
-    expect(document.querySelector(".selection [role=alert]")?.textContent).toContain("容量不足");
     await click("[data-prepare-start]");
     expect(bridge.PrepareDesktop).toHaveBeenLastCalledWith("first", "root-file", "compatible");
     expect(bridge.PrepareDesktop).toHaveBeenCalledTimes(3);
@@ -585,7 +647,7 @@ describe("LAN preparation history", () => {
   beforeEach(async () => {
     const spaces = ["first", "second"].map(id => ({ id, name: id, kind: "local", accountId: "", rootId: "", localPath: `/${id}`, enabled: true, available: true, allowPrepare: true, error: "" }));
     const task = (id: string, spaceId: string, state: string) => ({ id, spaceId, state, name: id, fileId: id, kind: "local", done: 0, total: 0, error: "" });
-    status = { running: false, address: "", interfaceId: "", hasPassword: true, spaces, tasks: [task("ready", "first", "ready"), task("failed", "first", "failed"), task("cancelled", "second", "cancelled"), task("orphan", "removed", "ready"), ...["queued", "downloading", "converting", "held"].map(state => task(state, "first", state))], cacheBytes: 0, cacheLimit: 1024, originalDir: "", error: "" };
+    status = { running: false, address: "", interfaceId: "", hasPassword: true, spaces, tasks: [task("ready", "first", "ready"), task("failed", "first", "failed"), task("cancelled", "second", "cancelled"), task("orphan", "removed", "ready"), ...["queued", "downloading", "converting", "held"].map(state => task(state, "first", state))], cacheBytes: 0, originalDir: "", copyDir: "", storageBusy: false, error: "" };
     bridge.Status.mockImplementation(async () => structuredClone(status));
     bridge.Tasks.mockImplementation(async () => structuredClone(status.tasks));
     bridge.DismissTaskHistory.mockImplementation(async (scope: string, id: string) => { status.tasks = status.tasks.filter(item => !finished.includes(item.state) || (scope && item.spaceId !== scope) || (id && item.id !== id)); });

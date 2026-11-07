@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/tonyflux/pkp/internal/lanmedia"
+	"github.com/tonyflux/pkp/internal/syncfs"
 )
 
 type taskRecord struct {
@@ -26,6 +27,8 @@ type taskRecord struct {
 	DesktopHidden bool                  `json:"desktopHidden,omitempty"`
 	Sessions      map[string]bool       `json:"-"`
 	Desktop       bool                  `json:"desktop,omitempty"`
+	OriginalRoot  syncfs.Identity       `json:"originalRoot,omitempty"`
+	OutputDir     string                `json:"-"`
 	cancel        context.CancelFunc
 }
 
@@ -56,7 +59,7 @@ func (m *Manager) PrepareDesktop(ctx context.Context, spaceID, fileID, kind stri
 }
 
 func (m *Manager) prepare(ctx context.Context, request prepareRequest, sessionID string) (Task, error) {
-	if request.Kind != "original" && request.Kind != "compatible" {
+	if request.Kind != "original" && request.Kind != "compatible" || request.OptimizeStartup && request.Kind != "compatible" {
 		return Task{}, errInvalid
 	}
 	if _, err := m.space(request.SpaceID, sessionID != ""); err != nil {
@@ -69,6 +72,9 @@ func (m *Manager) prepare(ctx context.Context, request prepareRequest, sessionID
 	if source.Entry.IsDir || source.Entry.Version == "" || source.Entry.Size < 0 {
 		return Task{}, errInvalid
 	}
+	if request.OptimizeStartup && !source.Entry.Ready {
+		return Task{}, errNotReady
+	}
 	key := resourceKey(request.SpaceID, request.FileID, source.Entry.Version) + "/" + request.Kind
 	direct := false
 	if request.Kind == "compatible" {
@@ -77,7 +83,12 @@ func (m *Manager) prepare(ctx context.Context, request prepareRequest, sessionID
 			if err != nil {
 				return Task{}, err
 			}
-			plan, err := lanmedia.MakePlan(info, request.Capabilities)
+			var plan lanmedia.Plan
+			if request.OptimizeStartup {
+				plan, err = lanmedia.MakeStartupPlan(info, request.Capabilities)
+			} else {
+				plan, err = lanmedia.MakePlan(info, request.Capabilities)
+			}
 			if err != nil {
 				return Task{}, err
 			}
@@ -111,7 +122,7 @@ func (m *Manager) prepare(ctx context.Context, request prepareRequest, sessionID
 		if t.State == "queued" || t.State == "downloading" || t.State == "converting" {
 			active++
 		}
-		pendingMatch := request.Kind == "compatible" && (t.State == "queued" || t.State == "downloading" || t.State == "converting") && t.SpaceID == request.SpaceID && t.FileID == request.FileID && t.Version == source.Entry.Version && t.Kind == request.Kind && strings.HasPrefix(t.RequestKey, key+"/pending/")
+		pendingMatch := request.Kind == "compatible" && t.OptimizeStartup == request.OptimizeStartup && (t.State == "queued" || t.State == "downloading" || t.State == "converting") && t.SpaceID == request.SpaceID && t.FileID == request.FileID && t.Version == source.Entry.Version && t.Kind == request.Kind && strings.HasPrefix(t.RequestKey, key+"/pending/")
 		if t.RequestKey != key && !pendingMatch {
 			continue
 		}
@@ -164,6 +175,7 @@ func (m *Manager) prepare(ctx context.Context, request prepareRequest, sessionID
 		delete(m.tasks, oldest.ID)
 	}
 	t := &taskRecord{Task: Task{ID: randomID(), SpaceID: request.SpaceID, FileID: request.FileID, Name: source.Entry.Name, Kind: request.Kind, State: "queued", Total: source.Entry.Size}, Version: source.Entry.Version, RequestKey: key, Capabilities: request.Capabilities, Created: time.Now(), Sessions: make(map[string]bool), Desktop: sessionID == ""}
+	t.OptimizeStartup = request.OptimizeStartup
 	if sessionID != "" {
 		t.Sessions[sessionID] = true
 	}
@@ -365,6 +377,8 @@ func (m *Manager) worker() {
 					next.Done = next.Total
 				} else if next.Error == "disk_full" {
 					next.State = "failed"
+				} else if errors.Is(err, errStorageUnavailable) || next.Error == "storage_unavailable" {
+					next.State, next.Error = "held", "storage_unavailable"
 				} else if next.Hold || errors.Is(err, errHeld) || errors.Is(err, context.Canceled) || errors.Is(err, errForbidden) || errors.Is(err, errPrepareDisabled) || errors.Is(err, errUnavailable) {
 					next.State = "held"
 					if next.Error == "" {
@@ -451,21 +465,30 @@ func (m *Manager) monitorTask(ctx context.Context, cancel context.CancelFunc, t 
 				cancel()
 				return
 			}
-			free, e := freeBytes(m.dir)
 			m.mu.Lock()
-			original, state := t.Original, t.State
+			original, state, output := t.Original, t.State, t.OutputDir
+			identity := t.OriginalRoot
+			if state == "converting" {
+				identity = m.pendingIdentities[output]
+			}
 			m.mu.Unlock()
-			if e == nil && original != "" && state == "downloading" {
-				originalFree, originalErr := freeBytes(filepath.Dir(original))
-				if originalErr != nil {
-					e = originalErr
-				} else {
-					free = min(free, originalFree)
-				}
+			if state != "downloading" && state != "converting" {
+				continue
+			}
+			path := identity.Path
+			if state == "downloading" && filepath.Dir(original) != path {
+				path = ""
+			}
+			free, e := freeBytes(path)
+			if syncfs.Validate(identity) != nil {
+				e = errStorageUnavailable
 			}
 			if e != nil || free < m.minFree {
 				m.mu.Lock()
 				t.Error = "disk_full"
+				if errors.Is(e, errStorageUnavailable) {
+					t.Error = "storage_unavailable"
+				}
 				m.mu.Unlock()
 				cancel()
 				return
@@ -500,12 +523,12 @@ func (m *Manager) runTask(parent context.Context, t *taskRecord) error {
 		if s.Kind != "cloud" {
 			return errNotReady
 		}
-		dir, err := m.originalStorage()
+		dir, err := m.taskOriginalStorage(t)
 		if err != nil {
 			return err
 		}
 		free, err := freeBytes(dir)
-		if err != nil || free < source.Entry.Size+m.minFree {
+		if err != nil || source.Entry.Size < 0 || free < m.minFree || source.Entry.Size > free-m.minFree {
 			return errDiskFull
 		}
 		m.mu.Lock()
@@ -525,6 +548,9 @@ func (m *Manager) runTask(parent context.Context, t *taskRecord) error {
 		}
 		if err = m.validateSpace(ctx, s); err != nil {
 			return err
+		}
+		if syncfs.Validate(t.OriginalRoot) != nil {
+			return errStorageUnavailable
 		}
 		completedToken, prepareErr := m.cloud.Prepare(ctx, s.AccountID, s.RootID, t.FileID, t.Version, destination, checkpoint, s.AccountIdentity, func(done, total int64) { m.taskProgress(t, done, total) })
 		err = prepareErr
@@ -556,7 +582,11 @@ func (m *Manager) runTask(parent context.Context, t *taskRecord) error {
 			m.mu.Unlock()
 			return context.Canceled
 		}
-		m.originals[resourceKey(t.SpaceID, t.FileID, t.Version)] = &preparedFile{Path: destination, Token: token}
+		if syncfs.Validate(t.OriginalRoot) != nil {
+			m.mu.Unlock()
+			return errStorageUnavailable
+		}
+		m.originals[resourceKey(t.SpaceID, t.FileID, t.Version)] = &preparedFile{Path: destination, Token: token, Root: t.OriginalRoot}
 		err = m.saveLocked()
 		m.mu.Unlock()
 		if err != nil {
@@ -581,17 +611,16 @@ func (m *Manager) runTask(parent context.Context, t *taskRecord) error {
 	if err != nil || inputToken != inputEntry.localToken {
 		return errUnavailable
 	}
-	select {
-	case m.probeSlot <- struct{}{}:
-	case <-ctx.Done():
-		return ctx.Err()
-	}
 	info, err := m.probeOpened(ctx, input, t.SpaceID, t.FileID, t.Version, "original", inputToken)
-	<-m.probeSlot
 	if err != nil {
 		return err
 	}
-	plan, err := lanmedia.MakePlan(info, t.Capabilities)
+	var plan lanmedia.Plan
+	if t.OptimizeStartup {
+		plan, err = lanmedia.MakeStartupPlan(info, t.Capabilities)
+	} else {
+		plan, err = lanmedia.MakePlan(info, t.Capabilities)
+	}
 	if err != nil {
 		return err
 	}
@@ -620,15 +649,13 @@ func (m *Manager) runTask(parent context.Context, t *taskRecord) error {
 	defer unpin()
 	// FFmpeg -fs can overshoot by its final packet. Keep headroom outside its output budget.
 	const headroom int64 = 16 << 20
-	// Budget copied streams from their input size, and re-encoded video well
-	// above the configured 7.5 Mbit/s peak plus audio and muxing overhead.
-	estimate := float64(source.Entry.Size)*1.1 + float64(32<<20)
-	if plan.Kind == "video" {
-		estimate = info.Duration*2_000_000 + float64(32<<20)
-	} else if plan.Kind == "audio" {
-		estimate += info.Duration * 32_000
+	m.mu.Lock()
+	copyStorageErr := syncfs.Validate(m.copyIdentity)
+	m.mu.Unlock()
+	if copyStorageErr != nil {
+		return errStorageUnavailable
 	}
-	budget := m.outputBudget(headroom, int64(min(float64(m.cacheLimit), estimate)))
+	budget := m.outputBudget(headroom)
 	if budget < 1 {
 		return errDiskFull
 	}
@@ -646,12 +673,20 @@ func (m *Manager) runTask(parent context.Context, t *taskRecord) error {
 		return err
 	}
 	name := outputDir + "/compatible" + suffix
-	output := filepath.Join(m.dir, name)
+	m.mu.Lock()
+	allocationIdentity := m.pendingIdentities[outputDir]
+	output, validOutput := m.cacheLocation(name, allocationIdentity, false)
+	t.OutputDir = outputDir
+	m.mu.Unlock()
+	if !validOutput {
+		return errStorageUnavailable
+	}
 	published := false
 	defer func() {
 		if !published {
 			m.mu.Lock()
 			m.removePendingLocked(outputDir)
+			t.OutputDir = ""
 			_ = m.saveLocked()
 			m.mu.Unlock()
 		}
@@ -685,15 +720,20 @@ func (m *Manager) runTask(parent context.Context, t *taskRecord) error {
 	if t.State == "cancelled" {
 		return context.Canceled
 	}
+	if syncfs.Validate(allocationIdentity) != nil {
+		return errStorageUnavailable
+	}
 	key := resourceKey(t.SpaceID, t.FileID, t.Version)
 	old := m.cache[key]
 	retired := key + "/retired/" + randomID()
 	if old != nil {
 		m.cache[retired] = old
 	}
-	m.cache[key] = &cacheFile{Path: name, Token: token, Size: stat.Size(), Kind: plan.Kind, MIME: plan.MIME, PlanKey: planKey(plan), Used: time.Now()}
+	m.cache[key] = &cacheFile{Path: name, Token: token, Size: stat.Size(), Kind: plan.Kind, MIME: plan.MIME, PlanKey: planKey(plan), Used: time.Now(), Directory: allocationIdentity}
 	pendingKey := m.pending[outputDir]
 	delete(m.pending, outputDir)
+	delete(m.pendingIdentities, outputDir)
+	t.OutputDir = ""
 	t.OutputToken = token
 	if err = m.saveLocked(); err != nil {
 		delete(m.cache, key)
@@ -702,6 +742,7 @@ func (m *Manager) runTask(parent context.Context, t *taskRecord) error {
 			m.cache[key] = old
 		}
 		m.pending[outputDir] = pendingKey
+		m.pendingIdentities[outputDir] = allocationIdentity
 		return err
 	}
 	published = true
@@ -788,5 +829,11 @@ func (m *Manager) taskList(ctx context.Context, sid, sessionID string, activeOnl
 }
 
 func planKey(plan lanmedia.Plan) string {
+	if plan.Reason == "startup_index" {
+		return "remux/mp4/startup-index-v1"
+	}
+	if plan.Kind == "direct" && plan.Container == "mp4" {
+		return "direct/mp4/index-aware-v1"
+	}
 	return plan.Kind + "/" + plan.Container + "/" + strconv.FormatBool(plan.CopyAudio)
 }

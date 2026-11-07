@@ -233,6 +233,7 @@ func (m *Manager) list(ctx context.Context, sid, parent string) ([]Entry, error)
 			if entries[i].IsDir {
 				continue
 			}
+			entries[i].HasThumbnail = entries[i].HasThumbnail || entries[i].Thumbnail != ""
 			m.decorate(&entries[i], sid)
 			if !entries[i].Ready {
 				entries[i].Ready = m.preparedReady(sid, entries[i])
@@ -382,7 +383,7 @@ func (m *Manager) resolve(ctx context.Context, sid, id string) (Source, error) {
 		m.mu.Lock()
 		prepared := m.originals[resourceKey(sid, id, src.Entry.Version)]
 		m.mu.Unlock()
-		if prepared != nil {
+		if prepared != nil && (prepared.Root.Path == "" || (prepared.Root.Path == filepath.Dir(prepared.Path) && syncfs.Validate(prepared.Root) == nil)) {
 			f, token, e := OpenLocal(prepared.Path)
 			if e == nil {
 				stat, statErr := f.Stat()

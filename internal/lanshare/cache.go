@@ -5,11 +5,11 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
-	"sort"
 	"strings"
 	"time"
 
 	"github.com/tonyflux/pkp/internal/lanmedia"
+	"github.com/tonyflux/pkp/internal/syncfs"
 )
 
 func resourceKey(space, file, version string) string { return space + "/" + file + "/" + version }
@@ -24,10 +24,14 @@ func (m *Manager) cacheBytesLocked() int64 {
 
 func (m *Manager) cachedLocked(key string) (*cacheFile, *os.File) {
 	record := m.cache[key]
-	if record == nil || !validCachePath(record.Path, false) {
+	if record == nil {
 		return nil, nil
 	}
-	f, token, err := OpenLocal(filepath.Join(m.dir, record.Path))
+	path, ok := m.cacheLocation(record.Path, record.Directory, false)
+	if !ok {
+		return nil, nil
+	}
+	f, token, err := OpenLocal(path)
 	if err != nil {
 		return nil, nil
 	}
@@ -94,13 +98,19 @@ func (m *Manager) desktopCompatibleReady(sid string, entry Entry) bool {
 // Only manifest-owned, unchanged, unopened compatibility objects can be removed.
 func (m *Manager) removeCacheLocked(key string) (int64, bool) {
 	record := m.cache[key]
-	if record == nil || !validCachePath(record.Path, false) {
+	if record == nil || record.Readers != 0 {
 		return 0, false
 	}
-	if record.Readers != 0 {
+	path, ok := m.cacheLocation(record.Path, record.Directory, false)
+	if !ok {
 		return 0, false
 	}
-	f, token, err := OpenLocal(filepath.Join(m.dir, record.Path))
+	root, err := os.OpenRoot(filepath.Dir(path))
+	if err != nil {
+		return 0, false
+	}
+	defer root.Close()
+	f, token, err := OpenLocal(path)
 	if errors.Is(err, os.ErrNotExist) {
 		delete(m.cache, key)
 		return 0, true
@@ -111,11 +121,15 @@ func (m *Manager) removeCacheLocked(key string) (int64, bool) {
 		}
 		return 0, false
 	}
+	info, statErr := f.Stat()
 	f.Close()
-	if err := m.storage.Remove(record.Path); err != nil {
+	anchored, anchorErr := root.Stat(filepath.Base(path))
+	if statErr != nil || anchorErr != nil || !os.SameFile(info, anchored) {
 		return 0, false
 	}
-	_ = m.storage.Remove(filepath.Dir(record.Path))
+	if err := root.Remove(filepath.Base(path)); err != nil {
+		return 0, false
+	}
 	delete(m.cache, key)
 	return record.Size, true
 }
@@ -139,30 +153,23 @@ func (m *Manager) ClearCache() (ClearResult, error) {
 }
 
 func (m *Manager) reserve(bytes int64) error {
-	if bytes < 0 || bytes > m.cacheLimit {
+	if bytes < 0 {
 		return errDiskFull
 	}
 	m.mu.Lock()
 	defer m.mu.Unlock()
+	if syncfs.Validate(m.copyIdentity) != nil {
+		return errStorageUnavailable
+	}
 	if len(m.pending) > 0 && m.reserved == 0 {
 		return errUnavailable
 	}
-	keys := make([]string, 0, len(m.cache))
-	for key := range m.cache {
-		keys = append(keys, key)
-	}
-	sort.Slice(keys, func(i, j int) bool { return m.cache[keys[i]].Used.Before(m.cache[keys[j]].Used) })
-	for _, key := range keys {
-		if m.cacheBytesLocked()+m.reserved+bytes <= m.cacheLimit {
-			break
-		}
-		m.removeCacheLocked(key)
-	}
-	if m.cacheBytesLocked()+m.reserved+bytes > m.cacheLimit {
+	free, err := freeBytes(m.copyIdentity.Path)
+	if err != nil || free < m.minFree {
 		return errDiskFull
 	}
-	free, err := freeBytes(m.dir)
-	if err != nil || free < bytes+m.minFree {
+	available := free - m.minFree
+	if m.reserved > available || bytes > available-m.reserved {
 		return errDiskFull
 	}
 	m.reserved += bytes
@@ -202,23 +209,38 @@ func (m *Manager) openCompatible(sid string, src Source) (*os.File, Entry, func(
 func (m *Manager) newOutputDirectory() (string, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	name := "cache/" + randomID()
-	if err := m.storage.Mkdir(name, 0700); err != nil {
-		return "", err
-	}
-	f, err := openAbsolute(filepath.Join(m.dir, name), true)
+	root, err := openStorageRoot(m.copyIdentity)
 	if err != nil {
-		return "", err
+		return "", errStorageUnavailable
+	}
+	defer root.Close()
+	id := randomID()
+	if err := root.Mkdir(id, 0700); err != nil {
+		return "", errStorageUnavailable
+	}
+	path := filepath.Join(m.copyIdentity.Path, id)
+	identity, err := syncfs.Identify(path)
+	if err != nil || syncfs.Validate(m.copyIdentity) != nil {
+		return "", errStorageUnavailable
+	}
+	f, err := openAbsolute(path, true)
+	if err != nil {
+		return "", errStorageUnavailable
 	}
 	key, _, _, err := handleIdentity(f)
 	f.Close()
 	if err != nil {
-		return "", err
+		return "", errStorageUnavailable
 	}
-	m.pending[name] = key
+	name := path
+	if m.copyIdentity.Path == filepath.Join(m.dir, "cache") {
+		name = "cache/" + id
+	}
+	m.pending[name], m.pendingIdentities[name] = key, identity
 	if err = m.saveLocked(); err != nil {
 		delete(m.pending, name)
-		_ = m.storage.Remove(name)
+		delete(m.pendingIdentities, name)
+		_ = root.Remove(id)
 		return "", err
 	}
 	return name, nil
@@ -226,12 +248,17 @@ func (m *Manager) newOutputDirectory() (string, error) {
 
 func (m *Manager) removePendingLocked(name string) bool {
 	key, owned := m.pending[name]
-	if !owned || !validCachePath(name, true) {
+	if !owned {
 		return false
 	}
-	f, err := openAbsolute(filepath.Join(m.dir, name), true)
+	path, ok := m.cacheLocation(name, m.pendingIdentities[name], true)
+	if !ok {
+		return false
+	}
+	f, err := openAbsolute(path, true)
 	if errors.Is(err, os.ErrNotExist) {
 		delete(m.pending, name)
+		delete(m.pendingIdentities, name)
 		return true
 	}
 	if err != nil {
@@ -242,10 +269,25 @@ func (m *Manager) removePendingLocked(name string) bool {
 	if err != nil || actual != key {
 		return false
 	}
-	if err = m.storage.RemoveAll(name); err != nil {
+	root, err := os.OpenRoot(filepath.Dir(path))
+	if err != nil {
+		return false
+	}
+	defer root.Close()
+	anchored, err := root.Open(filepath.Base(path))
+	if err != nil {
+		return false
+	}
+	actual, _, _, err = handleIdentity(anchored)
+	anchored.Close()
+	if err != nil || actual != key {
+		return false
+	}
+	if err = root.RemoveAll(filepath.Base(path)); err != nil {
 		return false
 	}
 	delete(m.pending, name)
+	delete(m.pendingIdentities, name)
 	return true
 }
 
@@ -260,6 +302,7 @@ func (m *Manager) recoverPending() {
 		}
 		if published {
 			delete(m.pending, name)
+			delete(m.pendingIdentities, name)
 		} else {
 			m.removePendingLocked(name)
 		}
@@ -269,7 +312,11 @@ func (m *Manager) recoverPending() {
 func (m *Manager) pendingBytesLocked() int64 {
 	var total int64
 	for name, key := range m.pending {
-		f, err := openAbsolute(filepath.Join(m.dir, name), true)
+		path, ok := m.cacheLocation(name, m.pendingIdentities[name], true)
+		if !ok {
+			continue
+		}
+		f, err := openAbsolute(path, true)
 		if err != nil {
 			continue
 		}
@@ -310,24 +357,25 @@ func (m *Manager) pinCurrentCopy(key string) func() {
 	}
 }
 
-func (m *Manager) outputBudget(headroom, desired int64) int64 {
-	m.mu.Lock()
-	available := m.cacheLimit - m.reserved - headroom
-	unused := available - m.cacheBytesLocked()
-	for _, record := range m.cache {
-		if record.Readers > 0 {
-			available -= record.Size
-		}
-	}
-	// Use unoccupied capacity first; do not evict the entire cache merely to
-	// reserve the largest output the quota could theoretically accommodate.
-	available = min(available, max(unused, desired))
-	m.mu.Unlock()
-	free, err := freeBytes(m.dir)
-	if err != nil {
+func (m *Manager) outputBudget(headroom int64) int64 {
+	if headroom < 0 {
 		return 0
 	}
-	return min(available, free-m.minFree-headroom)
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	free, err := freeBytes(m.copyIdentity.Path)
+	if err != nil || syncfs.Validate(m.copyIdentity) != nil || free < m.minFree {
+		return 0
+	}
+	available := free - m.minFree
+	if m.reserved > available {
+		return 0
+	}
+	available -= m.reserved
+	if headroom > available {
+		return 0
+	}
+	return available - headroom
 }
 
 func validCachePath(name string, directory bool) bool {

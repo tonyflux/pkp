@@ -66,6 +66,10 @@ export function SetPassword(password: string): $CancellablePromise<void> {
     return $Call.ByID(780047831, password);
 }
 
+export function SetStorageDirectory(kind: string, path: string): $CancellablePromise<void> {
+    return $Call.ByID(349866358, kind, path);
+}
+
 export function Start(req: lanshare$0.StartRequest): $CancellablePromise<void> {
     return $Call.ByID(396552130, req);
 }

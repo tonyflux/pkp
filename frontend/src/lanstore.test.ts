@@ -3,7 +3,7 @@ const bridge = vi.hoisted(() => ({ Status: vi.fn(), Tasks: vi.fn(), Interfaces: 
 vi.mock("../bindings/github.com/tonyflux/pkp/internal/services/lanservice", () => bridge);
 import { changeLAN, lan, refreshLAN, refreshLANTasks, type LANStatus, type LANTask } from "./lanstore";
 
-const status = (): LANStatus => ({ running: false, address: "", interfaceId: "", hasPassword: false, spaces: [], tasks: [], cacheBytes: 0, cacheLimit: 1024, originalDir: "/downloads/lan", error: "" });
+const status = (): LANStatus => ({ running: false, address: "", interfaceId: "", hasPassword: false, spaces: [], tasks: [], cacheBytes: 0, originalDir: "/downloads/lan", copyDir: "/cache/lan", storageBusy: false, error: "" });
 beforeEach(() => { vi.clearAllMocks(); lan.status = null; lan.busy = false; lan.error = ""; bridge.Status.mockResolvedValue(status()); });
 describe("LAN desktop state", () => {
   it("serializes management actions and reports bridge failures", async () => {

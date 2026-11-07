@@ -18,6 +18,7 @@ func (m *Manager) visitorEntries(ctx context.Context, s spaceRecord, parent, tok
 				if entries[i].IsDir {
 					continue
 				}
+				entries[i].HasThumbnail = entries[i].HasThumbnail || entries[i].Thumbnail != ""
 				m.decorate(&entries[i], s.ID)
 				if !entries[i].Ready {
 					entries[i].Ready = m.preparedReady(s.ID, entries[i])

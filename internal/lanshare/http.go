@@ -36,7 +36,7 @@ func errorCode(err error) string {
 		return coded.Code()
 	}
 	text := err.Error()
-	for _, code := range []string{"unauthorized", "invalid_password", "rate_limited", "forbidden", "source_unavailable", "not_ready", "prepare_disabled", "invalid_request", "disk_full", "media_unavailable", "unsupported_media"} {
+	for _, code := range []string{"unauthorized", "invalid_password", "rate_limited", "forbidden", "source_unavailable", "storage_unavailable", "storage_busy", "not_ready", "prepare_disabled", "invalid_request", "disk_full", "media_unavailable", "unsupported_media"} {
 		if text == code || strings.HasPrefix(text, code+":") {
 			return code
 		}
@@ -57,7 +57,7 @@ func jsonError(w http.ResponseWriter, err error) {
 		status = http.StatusForbidden
 	case "rate_limited":
 		status = http.StatusTooManyRequests
-	case "source_unavailable", "not_ready":
+	case "source_unavailable", "storage_unavailable", "storage_busy", "not_ready":
 		status = http.StatusConflict
 	case "disk_full":
 		status = http.StatusInsufficientStorage
@@ -108,7 +108,7 @@ func (m *Manager) serveHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Referrer-Policy", "no-referrer")
 	w.Header().Set("X-Frame-Options", "DENY")
 	w.Header().Set("Cache-Control", "no-store")
-	w.Header().Set("Content-Security-Policy", "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; media-src 'self' blob:; connect-src 'self'; font-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'")
+	w.Header().Set("Content-Security-Policy", "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self'; font-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'")
 	m.mu.Lock()
 	host, running := m.host, m.running
 	m.mu.Unlock()
@@ -152,7 +152,7 @@ func (m *Manager) serveHTTP(w http.ResponseWriter, r *http.Request) {
 			name = "index.html"
 		}
 		switch name {
-		case "index.html", "app.js", "player.js", "select.js", "style.css", "locales.js":
+		case "index.html", "app.js", "player.js", "gallery.js", "select.js", "style.css", "locales.js":
 		default:
 			http.NotFound(w, r)
 			return
@@ -442,6 +442,23 @@ func (m *Manager) api(w http.ResponseWriter, r *http.Request, response *activeRe
 			return
 		}
 		jsonResponse(w, map[string]any{})
+	case "/api/thumbnail":
+		version := r.URL.Query().Get("version")
+		if !isGET || sid == "" || fid == "" || version == "" {
+			jsonError(w, errInvalid)
+			return
+		}
+		if err := m.bindResponse(response, sid, fid, version); err != nil {
+			jsonError(w, err)
+			return
+		}
+		data, err := m.thumbnail(ctx, sid, fid, version)
+		if err != nil {
+			jsonError(w, err)
+			return
+		}
+		w.Header().Set("Content-Type", "image/jpeg")
+		_, _ = w.Write(data)
 	case "/api/content":
 		if !isGET && r.Method != http.MethodHead {
 			jsonError(w, errInvalid)
@@ -454,14 +471,6 @@ func (m *Manager) api(w http.ResponseWriter, r *http.Request, response *activeRe
 }
 
 func (m *Manager) probe(ctx context.Context, sid string, source Source, variant string) (lanmedia.Info, error) {
-	select {
-	case m.probeSlot <- struct{}{}:
-		defer func() { <-m.probeSlot }()
-	case <-ctx.Done():
-		return lanmedia.Info{}, ctx.Err()
-	default:
-		return lanmedia.Info{}, errors.New("rate_limited")
-	}
 	var f *os.File
 	var entry Entry
 	var release func()
@@ -556,6 +565,19 @@ func (m *Manager) content(w http.ResponseWriter, r *http.Request, response *acti
 		return
 	}
 	contentType := entry.MIME
+	if r.URL.Query().Get("download") != "1" {
+		mediaVariant := variant
+		if mediaVariant == "" {
+			mediaVariant = "original"
+		}
+		key := resourceKey(sid, fid, entry.Version) + "/" + mediaVariant + "/" + entry.localToken
+		m.mu.Lock()
+		info, proved := m.mediaInfo[key]
+		m.mu.Unlock()
+		if proved && (info.MIME == "video/mp4" || info.MIME == "audio/mp4" || info.MIME == "video/webm" || info.MIME == "audio/webm") {
+			contentType = info.MIME
+		}
+	}
 	if contentType == "" {
 		contentType = "application/octet-stream"
 	}
@@ -626,6 +648,9 @@ func (m *Manager) watchResponse(response *activeResponse) {
 }
 
 func (m *Manager) probeOpened(ctx context.Context, f *os.File, sid, fid, version, variant, expectedToken string) (lanmedia.Info, error) {
+	if err := ctx.Err(); err != nil {
+		return lanmedia.Info{}, err
+	}
 	_, token, _, err := handleIdentity(f)
 	if err != nil || token != expectedToken {
 		return lanmedia.Info{}, errUnavailable
@@ -640,9 +665,27 @@ func (m *Manager) probeOpened(ctx context.Context, f *os.File, sid, fid, version
 	if cached {
 		return info, nil
 	}
-	info, err = m.media.ProbeFile(ctx, f)
-	if err != nil {
-		return info, err
+	select {
+	case m.probeSlot <- struct{}{}:
+		defer func() { <-m.probeSlot }()
+	case <-ctx.Done():
+		return lanmedia.Info{}, ctx.Err()
+	}
+	_, currentToken, _, err := handleIdentity(f)
+	if err != nil || currentToken != token {
+		return lanmedia.Info{}, errUnavailable
+	}
+	if err := ctx.Err(); err != nil {
+		return lanmedia.Info{}, err
+	}
+	m.mu.Lock()
+	info, cached = m.mediaInfo[key]
+	m.mu.Unlock()
+	if !cached {
+		info, err = m.media.ProbeFile(ctx, f)
+		if err != nil {
+			return info, err
+		}
 	}
 	_, after, _, err := handleIdentity(f)
 	if err != nil || after != token {

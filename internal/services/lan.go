@@ -160,6 +160,14 @@ func (s *LANService) ClearCache() (lanshare.ClearResult, error) {
 	return m.ClearCache()
 }
 
+func (s *LANService) SetStorageDirectory(kind, path string) error {
+	m, err := s.get()
+	if err != nil {
+		return err
+	}
+	return m.SetStorageDirectory(kind, path)
+}
+
 // CloudFolders never resolves an empty account to the foreground account.
 func (s *LANService) CloudFolders(accountID, parentID string) ([]lanshare.Entry, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)

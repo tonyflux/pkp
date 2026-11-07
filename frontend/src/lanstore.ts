@@ -4,8 +4,8 @@ import { N_, t } from "./i18n";
 
 export interface LANSpaceRequest { name: string; kind: string; accountId: string; rootId: string; localPath: string; allowPrepare: boolean }
 export interface LANSpace extends LANSpaceRequest { id: string; enabled: boolean; available: boolean; error: string }
-export interface LANTask { id: string; spaceId: string; fileId: string; name: string; kind: string; state: string; done: number; total: number; error: string }
-export interface LANStatus { running: boolean; address: string; interfaceId: string; hasPassword: boolean; spaces: LANSpace[]; tasks: LANTask[]; cacheBytes: number; cacheLimit: number; originalDir: string; error: string }
+export interface LANTask { id: string; spaceId: string; fileId: string; name: string; kind: string; state: string; done: number; total: number; error: string; optimizeStartup?: boolean }
+export interface LANStatus { running: boolean; address: string; interfaceId: string; hasPassword: boolean; spaces: LANSpace[]; tasks: LANTask[]; cacheBytes: number; originalDir: string; copyDir: string; storageBusy: boolean; error: string }
 export interface LANInterface { id: string; name: string; address: string }
 export const lan = reactive({ status: null as LANStatus | null, interfaces: [] as LANInterface[], loading: false, busy: false, error: "" });
 export { LANService };
@@ -16,12 +16,13 @@ const errors: Record<string, string> = {
   prepare_disabled: N_("lan|此空间未允许准备文件。"),
   invalid_request: N_("lan|请检查密码、网卡和共享空间设置。"),
   rate_limited: N_("lan|准备任务已达上限，请等待任务结束后重试。"),
-  disk_full: N_("lan|电脑可用空间或兼容副本容量不足，请清理后重试。"),
+  disk_full: N_("lan|电脑磁盘可用空间不足，请清理后重试。"),
   media_unavailable: N_("lan|媒体工具不可用，请检查应用安装是否完整。"),
   unsupported_media: N_("lan|此媒体暂不支持兼容处理，请下载原件。"),
   invalid_media: N_("lan|媒体损坏或已改变，请重新核对原件。"),
   held: N_("lan|等待电脑处理"),
   storage_unavailable: N_("lan|保存位置不可用，请检查磁盘和目录权限。"),
+  storage_busy: N_("lan|请等待正在准备的任务结束或取消后，再更改保存位置。"),
   service_closed: N_("lan|服务已退出，请重新打开 PKP。"),
 };
 export function lanError(error: unknown): string {

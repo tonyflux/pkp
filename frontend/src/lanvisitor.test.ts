@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-type Entry = { id: string; parentId: string; name: string; mime: string; size: number; ready: boolean; compatibleReady: boolean };
+type Entry = { id: string; parentId: string; name: string; mime: string; size: number; ready: boolean; compatibleReady: boolean; version?: string; hasThumbnail?: boolean };
 type Task = { id: string; fileId: string; name: string; kind: string; state: string; done: number; total: number; spaceId?: string };
 const makeEntry = (id: string, parentId = ""): Entry => ({ id, parentId, name: `${id}.mp4`, mime: "video/mp4", size: 1024, ready: true, compatibleReady: false });
 const info = (codec = "h264") => ({ mime: "video/mp4", container: "mp4", videoCodec: codec, bitDepth: 8, videoMime: `video/mp4; codecs="${codec === "hevc" ? "hvc1.1.6.L120.B0" : "avc1.640028"}"` });
@@ -18,6 +18,8 @@ let playbackHook: ((id: string) => Promise<Response> | undefined) | undefined;
 let filesHook: ((parent: string) => Promise<Response> | undefined) | undefined;
 let pageSize = Infinity;
 let pageHook: ((token: string) => Promise<Response> | undefined) | undefined;
+let thumbnailHook: (() => Promise<Response>) | undefined;
+let resizeCallback: ResizeObserverCallback;
 let documentListeners: [string, EventListenerOrEventListenerObject, boolean | AddEventListenerOptions | undefined][] = [];
 let windowListeners: typeof documentListeners = [];
 
@@ -31,6 +33,13 @@ beforeEach(async () => {
   fileHook = undefined;
   playbackHook = undefined; filesHook = undefined;
   pageSize = Infinity; pageHook = undefined;
+  thumbnailHook = undefined;
+  vi.stubGlobal("ResizeObserver", class {
+    constructor(callback: ResizeObserverCallback) { resizeCallback = callback; }
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  });
   spaces = [{ id: "space", name: "Shared", kind: "local", allowPrepare: true }];
   dismissed = new Set();
   taskHook = undefined;
@@ -123,6 +132,7 @@ beforeEach(async () => {
         tasks = [prepared, ...tasks];
         return json(prepared);
       }
+      case "/api/thumbnail": return thumbnailHook?.() || json({ error: "source_unavailable" }, 409);
       case "/api/logout": return json({});
       default: throw new Error(`Unexpected request: ${url.pathname}`);
     }
@@ -139,6 +149,7 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
+  (document.querySelector('#panel [data-action="close"]') as HTMLButtonElement | null)?.click();
   (document.querySelector(".player-back") as HTMLButtonElement | null)?.click();
   await settle();
   for (const [type, listener, options] of documentListeners) document.removeEventListener(type, listener, options);
@@ -155,6 +166,59 @@ async function open(id: string) {
   await settle();
 }
 const selectedMedia = () => document.querySelector<HTMLVideoElement>(".player-media");
+
+describe("LAN dialog transitions", () => {
+  it("restores the pre-dialog list position after playing from file details", async () => {
+    vi.stubGlobal("scrollY", 235);
+    document.querySelector<HTMLButtonElement>('[data-action="entry-details"][data-file-id="a"]')!.click(); await settle();
+    expect(document.body.style.top).toBe("-235px");
+    vi.stubGlobal("scrollY", 0);
+    document.querySelector<HTMLButtonElement>('#panel [data-action="play"]')!.click(); await settle();
+    document.querySelector<HTMLButtonElement>('.player-back')!.click(); await settle();
+    expect(window.scrollTo).toHaveBeenLastCalledWith(0, 235);
+  });
+});
+
+describe("LAN visitor image gallery", () => {
+  async function images() {
+    entries = ["one", "two", "cloud"].map(id => ({ ...makeEntry(id), name: `${id}.jpg`, mime: "image/jpeg", ready: id !== "cloud" }));
+    document.querySelector<HTMLButtonElement>('[data-action="refresh"]')!.click(); await settle();
+  }
+  it("locks and restores browsing position while navigating only ready siblings", async () => {
+    await images();
+    vi.stubGlobal("scrollY", 235);
+    const origin = document.querySelector<HTMLButtonElement>('[data-file="one"]')!;
+    origin.focus(); await open("one");
+    expect(document.body.style.position).toBe("fixed");
+    expect(document.body.style.top).toBe("-235px");
+    expect(document.querySelector(".gallery-count")?.textContent).toBe("1 / 2");
+    document.querySelector<HTMLButtonElement>('[data-gallery-action="next"]')!.click(); await settle();
+    expect(document.querySelector("#panel img")?.getAttribute("src")).toContain("id=two&");
+    expect(document.querySelector<HTMLButtonElement>('[data-gallery-action="next"]')!.disabled).toBe(true);
+    expect(vi.mocked(fetch).mock.calls.filter(([url]) => String(url).startsWith("/api/file?") && String(url).includes("id=cloud"))).toHaveLength(0);
+    document.querySelector<HTMLButtonElement>('#panel [data-action="close"]')!.click(); await settle();
+    expect(document.body.style.position).toBe("");
+    expect(document.documentElement.style.overflow).toBe("");
+    expect(window.scrollTo).toHaveBeenLastCalledWith(0, 235);
+    expect(document.activeElement).toBe(origin);
+  });
+  it("revalidates a neighboring image and does not display it after access is revoked", async () => {
+    await images(); await open("one");
+    fileHook = id => id === "two" ? Promise.resolve(json({ error: "forbidden" }, 403)) : undefined;
+    document.querySelector<HTMLButtonElement>('[data-gallery-action="next"]')!.click(); await settle();
+    expect(document.querySelector("#panel img")?.getAttribute("src")).toContain("id=one&");
+    expect(document.querySelector(".gallery-status")?.getAttribute("role")).toBe("alert");
+    expect(vi.mocked(fetch).mock.calls.filter(([url]) => url === "/api/prepare")).toHaveLength(0);
+  });
+  it("closes and unlocks when the active image loses authorization", async () => {
+    await images(); await open("one");
+    fileHook = id => id === "one" ? Promise.resolve(json({ error: "forbidden" }, 403)) : undefined;
+    await vi.advanceTimersByTimeAsync(5000); await settle();
+    expect(document.querySelector<HTMLDialogElement>("#panel")?.open).toBe(false);
+    expect(document.querySelector("#panel img")).toBeNull();
+    expect(document.body.style.position).toBe("");
+  });
+});
 
 describe("LAN visitor space navigation", () => {
   it("keeps the current space visible and switches space or returns home", async () => {
@@ -183,7 +247,7 @@ describe("LAN visitor resize anchoring", () => {
     let top = -20;
     const rectangle = (y: number, height: number, width: number) => ({ top: y, bottom: y + height, left: 0, right: width, width, height, x: 0, y, toJSON: () => ({}) });
     vi.spyOn(row, "getBoundingClientRect").mockImplementation(() => rectangle(top, 80, 320));
-    vi.spyOn(list, "getBoundingClientRect").mockImplementation(() => rectangle(-100, 1000, 320));
+    vi.spyOn(list, "getBoundingClientRect").mockImplementation(() => rectangle(top, 1000, 320));
     window.dispatchEvent(new Event("scroll"));
     await vi.advanceTimersByTimeAsync(20);
     face.focus();
@@ -193,6 +257,97 @@ describe("LAN visitor resize anchoring", () => {
     window.dispatchEvent(new Event("resize"));
     expect(top).toBe(-20);
     expect(document.activeElement).toBe(face);
+  });
+});
+describe("LAN visitor native scroll preservation", () => {
+  it("does not pull a native scroll back when only the viewport height changes", async () => {
+    const row = document.querySelector<HTMLElement>('.file-row[data-virtual-id="a"]')!;
+    const list = document.getElementById("file-list")!;
+    let top = -20;
+    const rectangle = (y: number, height: number, width: number) => ({ top: y, bottom: y + height, left: 0, right: width, width, height, x: 0, y, toJSON: () => ({}) });
+    vi.stubGlobal("scrollY", 200);
+    vi.spyOn(row, "getBoundingClientRect").mockImplementation(() => rectangle(top, 80, 320));
+    vi.spyOn(list, "getBoundingClientRect").mockImplementation(() => rectangle(top, 1000, 320));
+    window.dispatchEvent(new Event("scroll")); await vi.advanceTimersByTimeAsync(20);
+    vi.stubGlobal("scrollY", 300); top = -120;
+    vi.stubGlobal("innerHeight", 900);
+    vi.mocked(window.scrollBy).mockImplementation((_x, y) => { top -= Number(y); });
+    window.dispatchEvent(new Event("resize"));
+    expect(window.scrollBy).not.toHaveBeenCalled();
+    expect(top).toBe(-120);
+  });
+  it("does not undo momentum between measuring a row and receiving its size", async () => {
+    const row = document.querySelector<HTMLElement>('.file-row[data-virtual-id="a"]')!;
+    const list = document.getElementById("file-list")!;
+    let top = -20;
+    const rectangle = (y: number, height: number) => ({ top: y, bottom: y + height, left: 0, right: 320, width: 320, height, x: 0, y, toJSON: () => ({}) });
+    vi.stubGlobal("scrollY", 200);
+    vi.spyOn(row, "getBoundingClientRect").mockImplementation(() => rectangle(top, 100));
+    vi.spyOn(list, "getBoundingClientRect").mockImplementation(() => rectangle(top, 1000));
+    window.dispatchEvent(new Event("scroll")); await vi.advanceTimersByTimeAsync(20);
+    vi.stubGlobal("scrollY", 300); top = -120;
+    vi.mocked(window.scrollBy).mockImplementation((_x, y) => { top -= Number(y); });
+    resizeCallback([{ target: row, borderBoxSize: [{ blockSize: 100 }] } as unknown as ResizeObserverEntry], {} as ResizeObserver);
+    expect(window.scrollBy).not.toHaveBeenCalled();
+    expect(top).toBe(-120);
+  });
+});
+
+describe("LAN visitor bounded image previews", () => {
+  it("queues small thumbnails two at a time and keeps original reads explicit", async () => {
+    const finish: ((response: Response) => void)[] = [];
+    thumbnailHook = () => new Promise(resolve => finish.push(resolve));
+    vi.stubGlobal("URL", class extends URL {
+      static createObjectURL = vi.fn(() => "blob:thumbnail");
+      static revokeObjectURL = vi.fn();
+    });
+    entries = ["a", "b", "c"].map(id => ({ ...makeEntry(id), name: `${id}.jpg`, mime: "image/jpeg", version: "v1" }));
+    document.querySelector<HTMLButtonElement>('[data-action="refresh"]')!.click(); await settle();
+    expect(finish).toHaveLength(2);
+    finish[0](new Response(new Blob(["jpeg"], { type: "image/jpeg" }), { headers: { "Content-Type": "image/jpeg" } })); await settle();
+    expect(finish).toHaveLength(3);
+    expect(document.querySelector<HTMLImageElement>('[data-virtual-id="a"] [data-thumbnail]')?.getAttribute("src")).toBe("blob:thumbnail");
+    const urls = vi.mocked(fetch).mock.calls.map(([url]) => String(url));
+    expect(urls.filter(url => url.startsWith("/api/thumbnail"))).toHaveLength(3);
+    expect(urls.some(url => url.startsWith("/api/content"))).toBe(false);
+    document.querySelector<HTMLButtonElement>('[data-action="home"]')!.click(); await settle();
+    expect(URL.revokeObjectURL).toHaveBeenCalledWith("blob:thumbnail");
+    finish[1](new Response(new Blob(["old"], { type: "image/jpeg" }), { headers: { "Content-Type": "image/jpeg" } })); await settle();
+    expect(document.querySelector(".space-cards")).not.toBeNull();
+    expect(document.querySelector('[data-thumbnail]')).toBeNull();
+  });
+
+  it("shows cloud video covers without preparing originals and retains icons on failed image decode", async () => {
+    const createObjectURL = vi.fn(() => "blob:video-cover");
+    vi.stubGlobal("URL", class extends URL { static createObjectURL = createObjectURL; static revokeObjectURL = vi.fn(); });
+    entries = [
+      { ...makeEntry("cover"), ready: false, hasThumbnail: true, version: "v1" },
+      { ...makeEntry("no-cover"), ready: false, version: "v1" }
+    ];
+    thumbnailHook = () => Promise.resolve(new Response(new Blob(["jpeg"], { type: "image/jpeg" }), { headers: { "Content-Type": "image/jpeg" } }));
+    document.querySelector<HTMLButtonElement>('[data-action="refresh"]')!.click(); await settle();
+    const image = document.querySelector<HTMLImageElement>('[data-virtual-id="cover"] [data-thumbnail]')!;
+    expect(image.getAttribute("src")).toBe("blob:video-cover");
+    expect(document.querySelector('[data-virtual-id="no-cover"] [data-thumbnail]')).toBeNull();
+    image.dispatchEvent(new Event("load"));
+    expect(image.hidden).toBe(false);
+    expect(image.nextElementSibling?.hasAttribute("hidden")).toBe(true);
+    image.dispatchEvent(new Event("error"));
+    expect(image.hidden).toBe(true);
+    expect(image.nextElementSibling?.hasAttribute("hidden")).toBe(false);
+    const urls = vi.mocked(fetch).mock.calls.map(([url]) => String(url));
+    expect(urls.filter(url => url.startsWith("/api/thumbnail"))).toEqual([expect.stringContaining("id=cover&")]);
+    expect(urls.some(url => url.startsWith("/api/content") || url === "/api/prepare")).toBe(false);
+  });
+
+  it("loads a newly available cover even if the original thumbnail previously failed", async () => {
+    vi.stubGlobal("URL", class extends URL { static createObjectURL = vi.fn(() => "blob:new-cover"); static revokeObjectURL = vi.fn(); });
+    entries = [{ ...makeEntry("image"), name: "image.jpg", mime: "image/jpeg", version: "v1" }];
+    document.querySelector<HTMLButtonElement>('[data-action="refresh"]')!.click(); await settle();
+    thumbnailHook = () => Promise.resolve(new Response(new Blob(["jpeg"], { type: "image/jpeg" }), { headers: { "Content-Type": "image/jpeg" } }));
+    entries[0].hasThumbnail = true;
+    document.querySelector<HTMLButtonElement>('[data-action="refresh"]')!.click(); await settle();
+    expect(document.querySelector<HTMLImageElement>('[data-virtual-id="image"] [data-thumbnail]')?.getAttribute("src")).toBe("blob:new-cover");
   });
 });
 
@@ -467,6 +622,74 @@ describe("LAN visitor slow operations", () => {
   });
 });
 
+describe("LAN visitor lossless startup preparation", () => {
+
+  it.each([true, false])("plays supported originals immediately when preparation permission is %s", async allowPrepare => {
+    spaces[0].allowPrepare = allowPrepare;
+    await vi.advanceTimersByTimeAsync(5000); await settle();
+    playbackHook = () => Promise.resolve(json({ entry: entries[0], variant: "original", plan: { kind: "direct", canOptimizeStartup: true, info: { ...info(), mp4IndexBytes: 6653294 }, warnings: [] } }));
+    await open("a");
+    expect(document.querySelector<HTMLDialogElement>("#panel")?.open).toBe(false);
+    expect(selectedMedia()?.getAttribute("src")).toContain("variant=original");
+    document.querySelector<HTMLButtonElement>('.player-more')!.click();
+    expect(!!document.querySelector('[data-player-action="optimize-startup"]')).toBe(allowPrepare);
+    expect(vi.mocked(fetch).mock.calls.filter(([url]) => url === "/api/prepare")).toHaveLength(0);
+  });
+
+  it("keeps the original player when optional optimization is dismissed", async () => {
+    const originalFetch = vi.mocked(fetch).getMockImplementation()!;
+    vi.mocked(fetch).mockImplementation(async (path, options = {}) => {
+      if (String(path) !== "/api/playback") return originalFetch(path, options);
+      const request = JSON.parse(String(options.body));
+      return json({ entry: entries[0], variant: "original", plan: { kind: request.optimizeStartup ? "remux" : "direct", reason: request.optimizeStartup ? "startup_index" : "compatible", canOptimizeStartup: !request.optimizeStartup, info: info(), warnings: [] } });
+    });
+    await open("a");
+    const media = selectedMedia();
+    document.querySelector<HTMLButtonElement>('.player-more')!.click();
+    document.querySelector<HTMLButtonElement>('[data-player-action="optimize-startup"]')!.click(); await settle();
+    expect(document.querySelector<HTMLDialogElement>("#panel")?.open).toBe(true);
+    document.querySelector<HTMLButtonElement>('[data-action="close"].secondary')!.click(); await settle();
+    expect(selectedMedia()).toBe(media);
+    expect(selectedMedia()?.getAttribute("src")).toContain("variant=original");
+    expect(vi.mocked(fetch).mock.calls.filter(([url]) => url === "/api/prepare")).toHaveLength(0);
+  });
+
+  it("prepares only on explicit menu choice and confirmation, then manually plays the copy", async () => {
+    const originalFetch = vi.mocked(fetch).getMockImplementation()!;
+    vi.mocked(fetch).mockImplementation(async (path, options = {}) => {
+      if (String(path) !== "/api/playback") return originalFetch(path, options);
+      const request = JSON.parse(String(options.body));
+      const compatible = request.variant === "compatible" && entries[0].compatibleReady;
+      return json({ entry: entries[0], variant: compatible ? "compatible" : "original", plan: { kind: request.optimizeStartup ? "remux" : "direct", reason: request.optimizeStartup ? "startup_index" : "compatible", canOptimizeStartup: !compatible && !request.optimizeStartup, info: info(), warnings: [] } });
+    });
+    await open("a");
+    document.querySelector<HTMLButtonElement>('.player-more')!.click();
+    document.querySelector<HTMLButtonElement>('[data-player-action="optimize-startup"]')!.click(); await settle();
+    expect(vi.mocked(fetch).mock.calls.filter(([url]) => url === "/api/prepare")).toHaveLength(0);
+    document.querySelector<HTMLButtonElement>('[data-action="confirm-prepare"]')!.click(); await settle();
+    const preparation = vi.mocked(fetch).mock.calls.find(([url]) => url === "/api/prepare")!;
+    expect(JSON.parse(String(preparation[1]?.body))).toMatchObject({ spaceId: "space", fileId: "a", kind: "compatible", optimizeStartup: true });
+    expect(document.querySelector<HTMLButtonElement>('[data-action="preparation-play"]')?.disabled).toBe(true);
+    expect(selectedMedia()).toBeNull();
+    tasks[0].state = "ready"; entries[0].compatibleReady = true;
+    await vi.advanceTimersByTimeAsync(5000); await settle();
+    expect(document.querySelector<HTMLButtonElement>('[data-action="preparation-play"]')?.disabled).toBe(false);
+    expect(selectedMedia()).toBeNull();
+    document.querySelector<HTMLButtonElement>('[data-action="preparation-play"]')!.click(); await settle();
+    expect(selectedMedia()?.getAttribute("src")).toContain("variant=compatible");
+    expect(vi.mocked(fetch).mock.calls.filter(([url]) => url === "/api/prepare")).toHaveLength(1);
+  });
+
+  it.each(["video", "audio", "remux"])("still confirms required %s compatibility preparation", async kind => {
+    const reason = kind === "remux" ? "container_unsupported" : `${kind}_unsupported`;
+    playbackHook = () => Promise.resolve(json({ entry: entries[0], variant: "original", plan: { kind, reason, info: info(), warnings: [] } }));
+    await open("a");
+    expect(document.querySelector('[data-action="confirm-prepare"]')).not.toBeNull();
+    expect(selectedMedia()).toBeNull();
+    expect(vi.mocked(fetch).mock.calls.filter(([url]) => url === "/api/prepare")).toHaveLength(0);
+  });
+});
+
 describe("LAN visitor navigation and readiness", () => {
   it("changes and remembers language without losing the current space", async () => {
     document.querySelector<HTMLButtonElement>(".language-select .select-face")!.click();
@@ -480,6 +703,20 @@ describe("LAN visitor navigation and readiness", () => {
     entries[0].compatibleReady = true;
     await open("a");
     expect(document.querySelector<HTMLDialogElement>("#panel")?.open).toBe(true);
+    expect(document.querySelector('[data-action="confirm-prepare"]')).not.toBeNull();
+    expect(selectedMedia()).toBeNull();
+  });
+  it("shows an existing full conversion plan without repeating an irrelevant source check", async () => {
+    playbackHook = () => Promise.resolve(json({ entry: entries[0], variant: "original", plan: { kind: "video", copyAudio: false, info: info("hevc"), warnings: [] } }));
+    await open("a");
+    expect(document.querySelector('[data-action="confirm-prepare"]')).not.toBeNull();
+    expect(vi.mocked(fetch).mock.calls.filter(([url]) => url === "/api/playback")).toHaveLength(1);
+  });
+  it("replans a direct source when its exact codec is rejected", async () => {
+    let calls = 0;
+    playbackHook = () => Promise.resolve(json({ entry: entries[0], variant: "original", plan: { kind: ++calls === 1 ? "direct" : "video", info: info("hevc"), warnings: [] } }));
+    await open("a");
+    expect(calls).toBe(2);
     expect(document.querySelector('[data-action="confirm-prepare"]')).not.toBeNull();
     expect(selectedMedia()).toBeNull();
   });
@@ -561,6 +798,7 @@ describe("LAN visitor navigation and readiness", () => {
     await settle();
     (document.querySelector('[data-action="preparation-play"]') as HTMLButtonElement).click();
     await settle();
+    (document.querySelector('.player-playlist-toggle') as HTMLButtonElement).click();
     expect(Array.from(document.querySelectorAll<HTMLElement>("[data-player-select]"), node => node.dataset.playerSelect)).toEqual(["foreign"]);
   });
 });

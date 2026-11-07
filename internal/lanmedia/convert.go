@@ -87,6 +87,9 @@ func conversionArgs(input, output string, p Plan, options []string) ([]string, e
 	}
 	if p.Container == "mp4" {
 		args = append(args, "-movflags", "+faststart")
+		if p.Reason == "startup_index" {
+			args = append(args, "-chunk_duration", "500000")
+		}
 	}
 	args = append(args, "-progress", "pipe:1", "-nostats", "-f", p.Container, output)
 	return args, nil
@@ -213,6 +216,9 @@ func (p *Processor) convert(ctx context.Context, in *mediaInput, output string, 
 	}
 	if (plan.Kind == "remux" || plan.Kind == "video" && plan.CopyAudio) && result.AudioCodec != actual.AudioCodec {
 		return fmt.Errorf("%w: unexpected copied audio", ErrInvalid)
+	}
+	if plan.Reason == "startup_index" && (result.VideoTracks != 1 || result.AudioTracks != actual.AudioTracks || result.MP4IndexBytes >= actual.MP4IndexBytes) {
+		return fmt.Errorf("%w: startup index was not reduced", ErrInvalid)
 	}
 	// A readable header is not a complete playable output: decode every selected packet.
 	checkArgs := append([]string{"-hide_banner", "-loglevel", "error", "-nostdin", "-xerror"}, inputOptions...)

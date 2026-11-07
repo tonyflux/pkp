@@ -5,7 +5,6 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
-	"errors"
 	"net/http"
 	"sort"
 	"time"
@@ -149,10 +148,11 @@ func (m *Manager) visitorSnapshot(w http.ResponseWriter, r *http.Request, respon
 }
 
 type playbackRequest struct {
-	SpaceID      string                `json:"spaceId"`
-	FileID       string                `json:"fileId"`
-	Variant      string                `json:"variant"`
-	Capabilities lanmedia.Capabilities `json:"capabilities"`
+	SpaceID         string                `json:"spaceId"`
+	FileID          string                `json:"fileId"`
+	Variant         string                `json:"variant"`
+	OptimizeStartup bool                  `json:"optimizeStartup"`
+	Capabilities    lanmedia.Capabilities `json:"capabilities"`
 }
 
 type playbackResult struct {
@@ -167,7 +167,7 @@ func (m *Manager) visitorPlayback(w http.ResponseWriter, r *http.Request, respon
 		jsonError(w, err)
 		return
 	}
-	if request.Variant != "" && request.Variant != "original" && request.Variant != "compatible" {
+	if request.Variant != "" && request.Variant != "original" && request.Variant != "compatible" || request.OptimizeStartup && request.Variant == "compatible" {
 		jsonError(w, errInvalid)
 		return
 	}
@@ -190,45 +190,42 @@ func (m *Manager) visitorPlayback(w http.ResponseWriter, r *http.Request, respon
 		jsonResponse(w, result)
 		return
 	}
-	if request.Variant != "original" && source.Entry.CompatibleReady {
-		info, err := m.probe(r.Context(), request.SpaceID, source, "compatible")
+	variants := [2]string{"original", "compatible"}
+	if request.Variant == "compatible" {
+		variants[0], variants[1] = variants[1], variants[0]
+	}
+	for _, variant := range variants {
+		if variant == "original" && !source.Entry.Ready || variant == "compatible" && (!source.Entry.CompatibleReady || request.Variant == "original" || request.OptimizeStartup) {
+			continue
+		}
+		info, err := m.probe(r.Context(), request.SpaceID, source, variant)
 		if err != nil {
 			jsonError(w, err)
 			return
 		}
-		plan, planErr := lanmedia.MakePlan(info, request.Capabilities)
-		if plan.Kind == "direct" {
-			result.Plan = &plan
-			result.Variant = "compatible"
-			jsonResponse(w, result)
+		var plan lanmedia.Plan
+		if request.OptimizeStartup {
+			plan, err = lanmedia.MakeStartupPlan(info, request.Capabilities)
+		} else {
+			plan, err = lanmedia.MakePlan(info, request.Capabilities)
+		}
+		if err != nil && plan.Kind != "unsupported" {
+			jsonError(w, err)
 			return
 		}
-		if !source.Entry.Ready {
-			if planErr != nil && !errors.Is(planErr, lanmedia.ErrUnsupported) {
-				jsonError(w, planErr)
-				return
-			}
-			result.Plan = &plan
-			result.Variant = "compatible"
-			jsonResponse(w, result)
-			return
+		if variant == "compatible" {
+			plan.CanOptimizeStartup = false
+		}
+		if result.Plan == nil || variant == "original" || plan.Kind == "direct" {
+			result.Plan, result.Variant = &plan, variant
+		}
+		if plan.Kind == "direct" || request.Variant == "original" || request.OptimizeStartup {
+			break
 		}
 	}
-	if !source.Entry.Ready {
+	if result.Plan == nil {
 		jsonError(w, errNotReady)
 		return
 	}
-	info, err := m.probe(r.Context(), request.SpaceID, source, "original")
-	if err != nil {
-		jsonError(w, err)
-		return
-	}
-	plan, err := lanmedia.MakePlan(info, request.Capabilities)
-	if err != nil && plan.Kind != "unsupported" {
-		jsonError(w, err)
-		return
-	}
-	result.Plan = &plan
-	result.Variant = "original"
 	jsonResponse(w, result)
 }

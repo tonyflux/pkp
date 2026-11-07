@@ -1,5 +1,6 @@
 import { languages, detectLanguage, translate } from './locales.js';
 import { mountPlayer } from './player.js';
+import { mountGallery } from './gallery.js';
 import { mountSelect, selectHTML } from './select.js';
 
 export const escapeHTML = value => String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
@@ -14,7 +15,8 @@ export function taskPercent(task) {
 export function contentURL(space, file, variant = 'original', download = false) {
   return '/api/content?' + new URLSearchParams({ space, id: file, variant, download: download ? '1' : '0' });
 }
-export async function probeCapabilities(info = {}, environment = globalThis) {
+export async function probeCapabilities(info = {}, environment = globalThis, signal) {
+  signal?.throwIfAborted();
   const video = environment.document.createElement('video');
   const audio = environment.document.createElement('audio');
   const can = (mime, element = video) => Boolean(element.canPlayType(mime));
@@ -34,15 +36,26 @@ export async function probeCapabilities(info = {}, environment = globalThis) {
   // Codec/profile probes use a browser-friendly target container, not the unsupported source container.
   if (videoKey && info.videoMime) caps.videoSupported = can(info.videoMime);
   if (audioKey && info.audioMime) caps.audioSupported = can(info.audioMime, audio);
-  if (environment.navigator.mediaCapabilities?.decodingInfo && info.videoMime && videoKey && info.frameRate > 0 && info.videoBitrate > 0) {
+  if (caps.videoSupported !== false && environment.navigator.mediaCapabilities?.decodingInfo && info.videoMime && videoKey && info.frameRate > 0 && info.videoBitrate > 0) {
+    let timeout, abort;
     try {
-      const result = await environment.navigator.mediaCapabilities.decodingInfo({ type: 'file', video: {
+      const fallback = new Promise((resolve, reject) => {
+        // Decoder IPC is optional; slow device queries must not delay the first media request.
+        timeout = setTimeout(resolve, 250);
+        if (signal) {
+          abort = () => reject(signal.reason);
+          signal.addEventListener('abort', abort, { once: true });
+        }
+      });
+      const result = await Promise.race([environment.navigator.mediaCapabilities.decodingInfo({ type: 'file', video: {
         contentType: info.videoMime, width: info.width, height: info.height,
-        bitrate: info.videoBitrate,
-        framerate: info.frameRate
-      } });
-      caps.videoSupported = caps.videoSupported && result.supported;
-    } catch { /* canPlayType remains the fallback when MediaCapabilities rejects the configuration. */ }
+        bitrate: info.videoBitrate, framerate: info.frameRate
+      } }), fallback]);
+      if (result) caps.videoSupported = caps.videoSupported && result.supported;
+    } catch (error) {
+      if (signal?.aborted) throw error;
+      // Keep the exact canPlayType result if the optional decoder query rejects.
+    } finally { clearTimeout(timeout); if (abort) signal.removeEventListener('abort', abort); }
   }
   return caps;
 }
@@ -84,6 +97,9 @@ export function startApp() {
   let noticeTimer;
   let pollBusy = false;
   let player = null;
+  let gallery = null;
+  let galleryController = null;
+  let panelScroll = null;
   let libraryFocus = null;
   let libraryScroll = 0;
   let foreground = null;
@@ -100,6 +116,8 @@ export function startApp() {
   let directoryPages = new Map();
   const directories = new Map();
   let directoryEntries = 0;
+  const thumbnails = new Map(), thumbnailJobs = new Map();
+  let thumbnailQueue = [], thumbnailActive = 0, thumbnailEpoch = 0, thumbnailScope = '';
   let localeFormats;
   function formatters() {
     if (localeFormats?.language !== state.language) localeFormats = {
@@ -147,12 +165,22 @@ export function startApp() {
     clearTimeout(noticeTimer); noticeTimer = setTimeout(() => { node.hidden = true; }, 8000);
   };
   function destroyMedia() {
+    galleryController?.abort(); galleryController = null;
+    gallery?.destroy(); gallery = null;
     panel.querySelectorAll('video,audio').forEach(media => { media.pause(); media.removeAttribute('src'); media.load(); });
     panel.querySelectorAll('img').forEach(image => image.removeAttribute('src'));
   }
   function closePanel() {
     destroyMedia(); state.dialog = ''; panel.close(); panel.replaceChildren(); panel.className = '';
-    if (focusBeforeDialog?.isConnected) focusBeforeDialog.focus();
+    if (panelScroll) {
+      const saved = panelScroll; panelScroll = null;
+      document.body.style.cssText = saved.bodyStyle;
+      document.documentElement.style.overflow = saved.overflow;
+      window.scrollTo(saved.x, saved.y);
+      if (virtualList && virtualList.viewportWidth !== window.innerWidth) window.dispatchEvent(new Event('resize'));
+      else drawFiles();
+    }
+    if (focusBeforeDialog?.isConnected) focusBeforeDialog.focus({ preventScroll: true });
     focusBeforeDialog = null;
     updateOperation();
   }
@@ -173,9 +201,11 @@ export function startApp() {
     }
   }
   function focusView(kind, body = '') {
+    const scroll = panelScroll?.y ?? window.scrollY;
+    const active = focusBeforeDialog?.isConnected ? focusBeforeDialog : document.activeElement;
+    closePanel();
     if (!state.view && !history.state?.pkpLANView) {
-      libraryScroll = window.scrollY;
-      const active = document.activeElement;
+      libraryScroll = scroll;
       let origin = foreground?.element;
       const actionable = '[data-file],[data-file-id],[data-task-id]';
       if (!origin?.matches(actionable) || origin.closest('#panel')) origin = active;
@@ -185,7 +215,7 @@ export function startApp() {
     } else {
       history.replaceState({ pkpLANView: true }, '', `${location.pathname}${location.search}#${kind}`);
     }
-    clearFocusView(false); closePanel();
+    clearFocusView(false);
     state.view = kind;
     document.getElementById('library-view').hidden = true;
     document.body.classList.add('focus-view');
@@ -279,6 +309,7 @@ export function startApp() {
   function render() {
     languageMenu?.destroy(); languageMenu = null;
     spaceMenu?.destroy(); spaceMenu = null;
+    if (!state.space) clearThumbnails();
     document.documentElement.lang = state.language;
     document.title = `PKP · ${t('title')}`;
     document.body.classList.toggle('authenticated', state.authenticated);
@@ -318,8 +349,67 @@ export function startApp() {
     return `<section class="space-heading"><p class="eyebrow">${h(sourceName(state.space))}</p><div class="heading-title"><h1 title="${h(folder)}">${h(folder)}</h1><span class="readonly-badge">${h(t('readOnlyShort'))}</span></div></section><div class="toolbar"><nav class="breadcrumbs" aria-label="${h(t('folder'))}"><button type="button" data-path="0" title="${h(state.space.name)}">${h(state.space.name)}</button>${state.path.map((part, index) => `<span aria-hidden="true">/</span><button type="button" data-path="${index + 1}" title="${h(part.name)}">${h(part.name)}</button>`).join('')}</nav><label class="search"><span class="sr-only">${h(t('search'))}</span><input id="search" type="search" placeholder="${h(t('search'))}" value="${h(state.query)}" autocomplete="off"></label>${iconButton('refresh', 'refresh', 'refresh')}</div><div id="preparation-summary">${summaryHTML()}</div><div class="file-table"><div class="file-table-heading" aria-hidden="true"><span>${h(t('file'))}</span><span>${h(t('type'))} · ${h(t('size'))}</span><span>${h(t('readyShort'))}</span><span>${h(t('modified'))}</span><span></span></div><div id="file-list" class="file-list" aria-busy="${state.loading}">${filesHTML()}</div></div>`;
   }
   function errorHTML(code) { return `<p class="note error error-box" role="alert">${h(t(code))}</p>`; }
+  const thumbnailKey = entry => `${state.space.id}/${entry.id}/${entry.version}/${entry.hasThumbnail ? 'cover' : 'original'}`;
+  const hasThumbnail = entry => !entry.isDir && (entry.hasThumbnail || isImage(entry) && entry.ready);
+  function clearThumbnails() {
+    thumbnailEpoch++;
+    for (const job of thumbnailJobs.values()) job.controller.abort();
+    for (const src of thumbnails.values()) if (src) URL.revokeObjectURL(src);
+    thumbnailJobs.clear(); thumbnails.clear(); thumbnailQueue = []; thumbnailScope = '';
+  }
+  function showThumbnail(entry, src) {
+    const row = virtualList?.rows.get(entry.id);
+    const image = row?.querySelector('[data-thumbnail]');
+    if (!image || image.dataset.thumbnail !== entry.version || !src) return;
+    const key = thumbnailKey(entry), epoch = thumbnailEpoch;
+    const current = () => epoch === thumbnailEpoch && image.isConnected && image.getAttribute('src') === src;
+    const reveal = () => { if (current()) { image.hidden = false; image.nextElementSibling?.setAttribute('hidden', ''); } };
+    if (image.getAttribute('src') !== src) {
+      image.onload = reveal;
+      image.onerror = () => { if (!current()) return; image.hidden = true; image.nextElementSibling?.removeAttribute('hidden'); thumbnails.set(key, ''); URL.revokeObjectURL(src); };
+      image.src = src;
+    } else if (image.complete && image.naturalWidth) reveal();
+  }
+  function pumpThumbnails() {
+    while (thumbnailActive < 2 && thumbnailQueue.length) {
+      const job = thumbnailQueue.shift();
+      if (job.epoch !== thumbnailEpoch || !virtualList?.rows.has(job.entry.id) || state.view) { thumbnailJobs.delete(job.key); continue; }
+      thumbnailActive++;
+      void (async () => {
+        const timeout = setTimeout(() => job.controller.abort(), 15000);
+        let src = '';
+        try {
+          const response = await fetch('/api/thumbnail?' + new URLSearchParams({ space: job.space, id: job.entry.id, version: job.entry.version }), { credentials: 'same-origin', cache: 'no-store', signal: job.controller.signal });
+          if (job.epoch !== thumbnailEpoch) return;
+          if (response.status === 401) { forgetSession(); return; }
+          if (response.ok && response.headers.get('Content-Type')?.startsWith('image/jpeg')) {
+            const blob = await response.blob();
+            if (blob.size <= 256 * 1024 && !job.controller.signal.aborted) src = URL.createObjectURL(blob);
+          }
+          if (job.epoch !== thumbnailEpoch || job.controller.signal.aborted) { if (src) URL.revokeObjectURL(src); return; }
+          thumbnails.set(job.key, src);
+          if (thumbnails.size > 64) {
+            const oldest = thumbnails.keys().next().value, previous = thumbnails.get(oldest);
+            if (previous) URL.revokeObjectURL(previous);
+            thumbnails.delete(oldest);
+          }
+          showThumbnail(job.entry, src);
+        } catch { /* Unsupported or interrupted thumbnails retain their file-type icon. */ }
+        finally { clearTimeout(timeout); thumbnailActive--; if (thumbnailJobs.get(job.key) === job) thumbnailJobs.delete(job.key); pumpThumbnails(); }
+      })();
+    }
+  }
+  function loadThumbnail(entry) {
+    if (!hasThumbnail(entry) || !entry.version) return;
+    const key = thumbnailKey(entry);
+    if (thumbnails.has(key)) { showThumbnail(entry, thumbnails.get(key)); return; }
+    if (thumbnailJobs.has(key)) return;
+    const job = { key, entry, space: state.space.id, epoch: thumbnailEpoch, controller: new AbortController() };
+    thumbnailJobs.set(key, job); thumbnailQueue.push(job);
+  }
   function fileArt(entry, detail = false) {
-    if (isImage(entry) && entry.ready) return `<img src="${h(contentURL(state.space.id, entry.id))}" alt="${detail ? h(entry.name) : ''}" loading="lazy" decoding="async">`;
+    if (!detail && hasThumbnail(entry)) return `<img data-thumbnail="${h(entry.version)}" alt="" decoding="async" hidden>${icon(isImage(entry) ? 'image' : isMedia(entry) ? 'video' : 'file')}`;
+    if (detail && isImage(entry) && entry.ready) return `<img src="${h(contentURL(state.space.id, entry.id))}" alt="${h(entry.name)}" decoding="async">`;
     return icon(entry.isDir ? 'folder' : isImage(entry) ? 'image' : isMedia(entry) ? 'video' : 'file');
   }
   function filesHTML() {
@@ -337,7 +427,7 @@ export function startApp() {
       const extension = entry.isDir ? '' : entry.name.split('.').length > 1 ? entry.name.split('.').at(-1).toUpperCase() : t('file');
       return `<article class="file-row"><button type="button" class="file-main" data-file="${h(entry.id)}" title="${h(entry.name)}"><span class="file-cover">${fileArt(entry)}</span><span class="file-copy"><strong>${h(entry.name)}</strong><small class="file-mobile-meta">${h(metadata)}<span class="availability ${ready ? 'ready' : ''}">${h(t(status))}</span></small></span></button><span class="file-meta">${h(extension)}${extension ? ' · ' : ''}${h(metadata)}</span><span class="file-status"><span class="availability ${ready ? 'ready' : ''}">${h(t(status))}</span></span><time class="file-modified">${entry.modified ? h(formatDate(entry.modified)) : '—'}</time><div class="file-actions">${button('entry-primary', label, `file-primary ${ready && isMedia(entry) ? 'primary' : 'secondary'}`, `data-file-id="${h(entry.id)}" ${unavailable ? 'disabled' : ''}`)}${entry.isDir ? '' : iconButton('entry-details', 'more', 'more', `data-file-id="${h(entry.id)}"`)}</div></article>`;
   }
-  const fileDisplayFields = ['id', 'name', 'mime', 'size', 'modified', 'isDir', 'ready', 'compatibleReady', 'needsVerification'];
+  const fileDisplayFields = ['id', 'name', 'version', 'mime', 'size', 'modified', 'isDir', 'ready', 'compatibleReady', 'needsVerification', 'hasThumbnail'];
   function cachedFileHTML(view, entry) {
     const taskState = view.tasks.get(entry.id)?.state;
     let cached = view.html.get(entry.id);
@@ -354,6 +444,8 @@ export function startApp() {
     virtualList = null;
     const list = document.getElementById('file-list');
     if (!list || state.loading || state.error) return;
+    const scope = `${state.space.id}/${state.path.at(-1)?.id || ''}`;
+    if (thumbnailScope !== scope) { clearThumbnails(); thumbnailScope = scope; }
     virtualList = { list, entries: [], heights: new Map(), rows: new Map(), html: new Map(), indices: new Map(), tasks: new Map(), offsets: [0], offsetsDirty: true, estimatedHeight: 80, estimateWidth: null, gap: null, spacers: [], width: 0, viewportWidth: window.innerWidth, observer: null, anchor: null, resizeAnchor: null, pinned: null, adjustedScroll: null };
     if (typeof ResizeObserver !== 'undefined') {
       virtualList.observer = new ResizeObserver(records => {
@@ -372,7 +464,7 @@ export function startApp() {
           if (record.target === list) continue;
           const row = record.target;
           if (!row.isConnected || view.rows.get(row.dataset.virtualId) !== row) continue;
-          const height = row.getBoundingClientRect().height;
+          const height = record.borderBoxSize?.[0]?.blockSize ?? row.getBoundingClientRect().height;
           if (!height) continue;
           if (view.estimateWidth === null) {
             changed ||= Math.abs(view.estimatedHeight - height) > 0.5;
@@ -416,14 +508,16 @@ export function startApp() {
     drawFiles();
   }
   function redrawAnchored(view) {
+    if (panelScroll) return;
     const anchor = view.resizeAnchor || view.anchor;
+    const anchorTop = anchor && anchor.top + (anchor.scrollY ?? window.scrollY) - window.scrollY;
     view.offsetsDirty = true;
     if (view.estimateWidth !== window.innerWidth || view.gap === null) {
       const height = view.rows.values().next().value?.getBoundingClientRect().height;
       if (height) { view.estimatedHeight = height; view.estimateWidth = window.innerWidth; }
     }
     view.pinned = anchor?.id;
-    for (let pass = 0; pass < 10; pass++) {
+    for (let pass = 0; pass < 2; pass++) {
       drawFiles(false);
       let changed = false;
       for (const [id, row] of view.rows) {
@@ -434,7 +528,7 @@ export function startApp() {
       }
       if (changed) { view.offsetsDirty = true; drawFiles(false); }
       const row = anchor && view.rows.get(anchor.id);
-      const delta = row?.isConnected ? row.getBoundingClientRect().top - anchor.top : 0;
+      const delta = row?.isConnected ? row.getBoundingClientRect().top - anchorTop : 0;
       if (Math.abs(delta) > 0.5) {
         window.scrollBy(0, delta);
         view.adjustedScroll = window.scrollY;
@@ -442,11 +536,11 @@ export function startApp() {
       if (!changed && Math.abs(delta) <= 0.5) break;
     }
     view.pinned = null;
-    if (!view.resizeAnchor) view.anchor = anchor;
+    if (!view.resizeAnchor && anchor) view.anchor = { id: anchor.id, top: anchorTop, scrollY: window.scrollY };
   }
   function drawFiles(remember = true) {
     const view = virtualList;
-    if (!view || !view.list.isConnected || state.view) return;
+    if (!view || !view.list.isConnected || state.view || panelScroll) return;
     const { list, entries, heights, rows } = view;
     if (!entries.length) {
       view.observer && rows.forEach(row => view.observer.unobserve(row));
@@ -511,6 +605,7 @@ export function startApp() {
         }
         row = replacement; rows.set(entry.id, row); view.observer?.observe(row);
       }
+      loadThumbnail(entry);
       nodes.push(row); cursor = offsets[index + 1];
     }
     spacer(Math.max(0, offsets.at(-1) - gap - cursor));
@@ -520,13 +615,11 @@ export function startApp() {
       else list.insertBefore(node, position);
     }
     while (position) { const next = position.nextSibling; position.remove(); position = next; }
+    pumpThumbnails();
     if (remember && !view.resizeAnchor) {
-      let first = null;
-      for (const row of rows.values()) {
-        const rect = row.getBoundingClientRect();
-        if (rect.bottom > 0 && rect.top < window.innerHeight && (!first || rect.top < first.top)) first = { id: row.dataset.virtualId, top: rect.top };
-      }
-      view.anchor = first;
+      let index = start;
+      while (index < entries.length - 1 && listTop + offsets[index + 1] <= 0) index++;
+      view.anchor = { id: entries[index].id, top: rows.get(entries[index].id)?.getBoundingClientRect().top ?? listTop + offsets[index], scrollY: window.scrollY };
     }
   }
   function progressHTML(task, percent, label) {
@@ -685,11 +778,16 @@ export function startApp() {
     return `<header class="dialog-heading"><h2 id="panel-title" tabindex="-1">${h(t(title))}</h2>${iconButton('close', 'close', 'close')}</header><div class="dialog-body">${body}</div>`;
   }
   function showPanel(kind, title, body) {
-    if (!panel.open) focusBeforeDialog = foreground?.element?.isConnected ? foreground.element : document.activeElement;
+    if (!panel.open) {
+      focusBeforeDialog = foreground?.element?.isConnected ? foreground.element : document.activeElement;
+      panelScroll = { x: window.scrollX, y: window.scrollY, bodyStyle: document.body.style.cssText, overflow: document.documentElement.style.overflow };
+      Object.assign(document.body.style, { position: 'fixed', top: `${-panelScroll.y}px`, left: `${-panelScroll.x}px`, width: '100%', overflow: 'hidden' });
+      document.documentElement.style.overflow = 'hidden';
+    }
     destroyMedia(); state.dialog = kind; panel.className = kind === 'image' ? 'image-dialog' : '';
     panel.innerHTML = panelHTML(title, body);
     if (!panel.open) panel.showModal();
-    panel.querySelector('#panel-title').focus();
+    panel.querySelector('#panel-title').focus({ preventScroll: true });
     updateOperation();
   }
   function updateDetails() {
@@ -714,6 +812,7 @@ export function startApp() {
     const request = ++state.request;
     state.intent++; closePanel();
     const space = state.space.id, parent = state.path.at(-1)?.id || '', key = `${space}/${parent}`;
+    if (refresh || thumbnailScope !== key) { clearThumbnails(); thumbnailScope = key; }
     const cached = refresh ? null : directories.get(key);
     pageController?.abort(); pageController = null;
     nextPage = cached?.nextPage || ''; pageError = ''; pageTokens.clear();
@@ -790,7 +889,7 @@ export function startApp() {
       : `${button('load-more', 'loadMore')}${state.query ? `<span class="muted">${h(t('searchPartial'))}</span>` : ''}`;
   }
   async function loadMore(manual = false) {
-    if (!nextPage || pageController || state.loading || !state.space || state.view || !manual && (state.busy || pageError)) return;
+    if (!nextPage || pageController || state.loading || !state.space || state.view || panel.open || !manual && (state.busy || pageError)) return;
     background?.abort();
     const controller = new AbortController(); pageController = controller; pageError = ''; updatePaging();
     if (manual) updateOperation('loadingMore', true);
@@ -833,7 +932,7 @@ export function startApp() {
       directoryEntries -= directories.get(oldest).entries.length; directories.delete(oldest);
     }
   }
-  function clearDirectories() { directories.clear(); directoryPages.clear(); directoryEntries = 0; filesRevision = ''; nextPage = ''; pageError = ''; pageController?.abort(); pageController = null; }
+  function clearDirectories() { clearThumbnails(); directories.clear(); directoryPages.clear(); directoryEntries = 0; filesRevision = ''; nextPage = ''; pageError = ''; pageController?.abort(); pageController = null; }
   async function openSpace(id) {
     const space = state.spaces.find(item => item.id === id);
     if (!space) return;
@@ -860,7 +959,7 @@ export function startApp() {
     if (state.view) clearFocusView();
     if (entry.isDir) { rememberDirectory(); state.path.push({ id: entry.id, name: entry.name }); state.query = ''; await loadFiles(); return; }
     state.selected = entry; state.detailError = ''; state.plan = null;
-    if (!details && isMedia(entry) && !state.tasks.some(item => item.fileId === id && activeTask(item))) {
+    if (!details && isMedia(entry) && (entry.ready || entry.compatibleReady || !state.tasks.some(item => item.fileId === id && activeTask(item)))) {
       await planPlayback(); refreshLibrary(); return;
     }
     const current = await freshEntry();
@@ -883,6 +982,7 @@ export function startApp() {
       state.detailError = error.code || 'internal';
       if (['forbidden', 'source_unavailable', 'offline'].includes(error.code)) {
         destroyMedia();
+        if (state.dialog === 'image') closePanel();
         if (state.view) backToLibrary();
       } else updateDetails();
     }
@@ -921,7 +1021,7 @@ export function startApp() {
     if (!entry) return;
     if (entry.compatibleReady) { updateDetails(); updatePreparation(); return; }
     if (!state.space.allowPrepare) throw { code: 'prepare_disabled' };
-    if (entry.ready) { await planPlayback(); return; }
+    if (entry.ready) { await planPlayback(task.optimizeStartup ? 'original' : '', Boolean(task.optimizeStartup)); return; }
     const epoch = state.epoch, intent = state.intent, spaceID = state.space.id, fileID = entry.id;
     const capabilities = await probeCapabilities();
     if (!state.authenticated || epoch !== state.epoch || intent !== state.intent || state.space?.id !== spaceID || state.selected?.id !== fileID) return;
@@ -932,9 +1032,10 @@ export function startApp() {
   function showConfirmation() {
     const entry = state.selected;
     const compatible = state.prepareKind === 'compatible';
-    showPanel('confirm', 'confirmTitle', `<h3 class="detail-title">${h(entry.name)}</h3>${factsHTML(entry)}<p class="note warning">${h(t(compatible ? 'costCompatible' : 'costOriginal'))}</p>${compatible && state.plan ? `<p class="note">${h(t(state.plan.kind))}</p>${warningsHTML(state.plan)}` : ''}<p class="note">${h(t('twoStages'))}</p><div class="dialog-actions">${button('back', 'notNow')}${button('confirm-prepare', compatible ? 'confirmCompatible' : 'confirmOriginal', 'primary')}</div>`);
+    const lossless = compatible && state.plan?.kind === 'remux' && state.plan.reason === 'startup_index';
+    showPanel('confirm', 'confirmTitle', `<h3 class="detail-title">${h(entry.name)}</h3>${factsHTML(entry)}<p class="note warning">${h(t(lossless ? 'costLossless' : compatible ? 'costCompatible' : 'costOriginal'))}</p>${compatible && state.plan ? `<p class="note">${h(t(state.plan.kind))}</p>${warningsHTML(state.plan)}` : ''}<p class="note">${h(t('twoStages'))}</p><div class="dialog-actions">${button(lossless && state.view === 'player' ? 'close' : 'back', 'notNow')}${button('confirm-prepare', lossless ? 'confirmLossless' : compatible ? 'confirmCompatible' : 'confirmOriginal', 'primary', !state.space.allowPrepare ? 'disabled' : '')}</div>`);
   }
-  async function planPlayback(variant = '') {
+  async function planPlayback(variant = '', optimizeStartup = false) {
     if (!state.selected || !state.space) return;
     updateOperation('checkingPlayback', true);
     const spaceId = state.space.id, fileId = state.selected.id, epoch = state.epoch, intent = state.intent;
@@ -942,13 +1043,16 @@ export function startApp() {
     let capabilities = await probeCapabilities();
     let result;
     for (let attempt = 0; attempt < 2; attempt++) {
-      result = await api('/api/playback', { spaceId, fileId, variant, capabilities });
+      result = await api('/api/playback', { spaceId, fileId, variant, capabilities, ...(optimizeStartup ? { optimizeStartup: true } : {}) });
       if (!current()) return;
-      if (!result.plan) break;
-      const exact = await probeCapabilities(result.plan.info);
+      if (!result.plan || attempt) break;
+      const checkVideo = ['direct', 'remux', 'audio'].includes(result.plan.kind);
+      const checkAudio = ['direct', 'remux'].includes(result.plan.kind) || result.plan.kind === 'video' && result.plan.copyAudio;
+      if (!checkVideo && !checkAudio) break;
+      const exact = await probeCapabilities(result.plan.info, globalThis, foreground?.controller.signal);
       if (!current()) return;
-      if (attempt || (exact.videoSupported !== false && exact.audioSupported !== false)) { capabilities = exact; break; }
       capabilities = exact;
+      if (!(checkVideo && exact.videoSupported === false || checkAudio && exact.audioSupported === false)) break;
     }
     acceptEntry(result.entry); state.plan = result.plan; state.capabilities = capabilities;
     if (!result.plan) {
@@ -966,7 +1070,7 @@ export function startApp() {
   async function prepareConfirmed() {
     if (!state.selected || state.dialog !== 'confirm') return;
     const spaceId = state.space.id, fileId = state.selected.id, intent = state.intent;
-    const task = await api('/api/prepare', { spaceId, fileId, kind: state.prepareKind, ...(state.prepareKind === 'compatible' ? { capabilities: state.capabilities } : {}) });
+    const task = await api('/api/prepare', { spaceId, fileId, kind: state.prepareKind, ...(state.prepareKind === 'compatible' ? { capabilities: state.capabilities, ...(state.plan?.reason === 'startup_index' ? { optimizeStartup: true } : {}) } : {}) });
     if (!state.authenticated || state.space?.id !== spaceId || state.selected?.id !== fileId || intent !== state.intent) return;
     state.tasks = [task, ...state.tasks.filter(item => item.id !== task.id)];
     refreshLibrary(); showPreparation(task);
@@ -987,6 +1091,7 @@ export function startApp() {
       onSelect: id => runOperation(() => selectEntry(id)),
       onDetails: () => { showPanel('detail', 'playbackInfo', detailHTML()); },
       onDownload: () => runOperation(download),
+      onOptimizeStartup: variant === 'original' && state.plan?.canOptimizeStartup && state.space.allowPrepare ? () => runOperation(() => planPlayback('original', true)) : undefined,
       onError: async () => {
         const currentView = () => view.isConnected && state.authenticated && state.epoch === epoch && state.space?.id === space && state.selected?.id === current;
         try { if (currentView()) await freshEntry(null); }
@@ -998,23 +1103,55 @@ export function startApp() {
     entry ??= await freshEntry();
     if (!entry) return;
     if (!entry.ready) throw { code: 'not_ready' };
-    showPanel('image', 'preview', `<h3 class="detail-title">${h(entry.name)}</h3><div class="image-stage"><img src="${h(contentURL(state.space.id, entry.id))}" alt="${h(entry.name)}"></div><div id="image-error" role="alert"></div><div class="dialog-actions">${button('download', 'download')}</div>`);
-    panel.querySelector('img').addEventListener('error', () => {
-      const error = document.getElementById('image-error');
-      if (error) error.innerHTML = errorHTML('source_unavailable');
-    }, { once: true });
+    const spaceId = state.space.id, epoch = state.epoch, intent = state.intent;
+    const entries = state.entries.filter(item => item.ready && !item.isDir && isImage(item) && item.parentId === entry.parentId);
+    if (!entries.some(item => item.id === entry.id)) entries.unshift(entry);
+    showPanel('image', 'preview', '');
+    const controller = new AbortController(); galleryController = controller;
+    let selection = 0;
+    const current = () => state.dialog === 'image' && state.authenticated && epoch === state.epoch && intent === state.intent && state.space?.id === spaceId;
+    gallery = mountGallery({
+      container: panel, entry: { ...entry, source: contentURL(spaceId, entry.id) }, entries, language: state.language,
+      onSelect: async id => {
+        const request = ++selection;
+        background?.abort();
+        try {
+          const selected = await api('/api/file?' + new URLSearchParams({ space: spaceId, id }), undefined, controller.signal);
+          if (!current() || request !== selection) return null;
+          if (!selected.ready || selected.isDir || !isImage(selected)) throw { code: 'not_ready' };
+          if (selected.parentId !== entry.parentId) throw { code: 'forbidden' };
+          acceptEntry(selected);
+          return { ...selected, source: contentURL(spaceId, selected.id) };
+        } catch (error) {
+          if (!current() || request !== selection) return null;
+          throw error;
+        }
+      },
+      onDownload: selected => {
+        if (!current()) return;
+        acceptEntry(selected);
+        return runOperation(download);
+      }
+    });
+    if (nextPage) {
+      const hint = document.createElement('p'); hint.className = 'muted gallery-loaded-note'; hint.textContent = t('galleryLoadedOnly');
+      panel.querySelector('.gallery-footer')?.append(hint);
+    }
+    panel.querySelector('#panel-title')?.focus({ preventScroll: true });
+    updateOperation();
   }
   async function poll() {
     if (pollBusy || state.busy || document.hidden || !state.authenticated || state.loading) return;
     pollBusy = true;
     const controller = new AbortController(); background = controller;
     const epoch = state.epoch, intent = state.intent, spaceID = state.space?.id, request = state.request, revision = state.taskRevision;
+    const selectedId = state.selected?.id;
     const current = () => state.authenticated && epoch === state.epoch && intent === state.intent && request === state.request && revision === state.taskRevision && !controller.signal.aborted;
     const query = new URLSearchParams();
     if (spaceID) {
       query.set('space', spaceID);
       query.set('tasks', state.tab === 'tasks' || state.view === 'preparation' ? 'all' : 'active');
-      if (!state.view && !pageController && state.tab === 'files' && Date.now() - filesChecked >= 30000) {
+      if (!state.view && !panel.open && !pageController && state.tab === 'files' && Date.now() - filesChecked >= 30000) {
         const token = visiblePage();
         query.set('files', '1'); query.set('parent', state.path.at(-1)?.id || '');
         if (token) query.set('page', token);
@@ -1043,9 +1180,10 @@ export function startApp() {
       }
       const snapshot = JSON.stringify(result.tasks || []), changed = snapshot !== state.taskSnapshot;
       if (result.tasks) { state.tasks = result.tasks; state.taskSnapshot = snapshot; }
-      if (result.selectedError) { clearDirectories(); handleError({ code: result.selectedError }, true); }
-      else if (result.selected) {
+      if (result.selectedError && state.selected?.id === selectedId) { clearDirectories(); handleError({ code: result.selectedError }, true); }
+      else if (result.selected && result.selected.id === state.selected?.id) {
         acceptEntry(result.selected);
+        if (state.dialog === 'image' && (!result.selected.ready || !isImage(result.selected))) { closePanel(); notice('not_ready'); }
         updateDetails(); updatePreparation();
       }
       if (filesChanged || changed || permissionChanged || result.selected) refreshLibrary();
@@ -1059,7 +1197,10 @@ export function startApp() {
           else if (focused) nav.querySelector('.select-face')?.focus({ preventScroll: true });
         }
       }
-      if (permissionChanged && !state.space.allowPrepare && state.dialog === 'confirm') showPanel('detail', 'details', detailHTML());
+      if (permissionChanged && state.dialog === 'confirm') {
+        if (state.plan?.reason === 'startup_index' && !state.space.allowPrepare && state.view === 'player') closePanel();
+        else if (!state.space.allowPrepare) showPanel('detail', 'details', detailHTML());
+      }
       if (changed) refreshTaskList();
       if (!spaceID && result.spaces) render();
       updateConnection();
@@ -1090,7 +1231,10 @@ export function startApp() {
       case 'play-compatible': await planPlayback('compatible'); return;
       case 'preparation-play': {
         if (!state.selected) return;
-        if (isMedia(state.selected)) await planPlayback();
+        if (isMedia(state.selected)) {
+          const task = state.tasks.find(item => item.id === state.prepareTask);
+          await planPlayback(task?.kind === 'compatible' ? 'compatible' : '');
+        }
         else await download();
         return;
       }
@@ -1188,7 +1332,8 @@ export function startApp() {
     refreshFiles();
     if (state.query) void loadMore();
   });
-  window.addEventListener('scroll', () => {
+  function scheduleScroll() {
+    if (panelScroll) return;
     if (scrollFrame) return;
     scrollFrame = requestAnimationFrame(() => {
       scrollFrame = 0;
@@ -1200,10 +1345,13 @@ export function startApp() {
       view.adjustedScroll = null; view.resizeAnchor = null; drawFiles();
       loadNearEnd();
     });
-  }, { passive: true });
+  }
+  window.addEventListener('scroll', scheduleScroll, { passive: true });
   window.addEventListener('resize', () => {
     const view = virtualList;
-    if (!view || state.view || !view.list.isConnected) return;
+    if (!view || state.view || panelScroll || !view.list.isConnected) return;
+    // Mobile browser chrome and keyboards resize height without changing row geometry.
+    if (window.innerWidth === view.viewportWidth) { scheduleScroll(); return; }
     view.resizeAnchor ||= view.anchor;
     view.viewportWidth = window.innerWidth;
     const width = view.list.getBoundingClientRect().width;
