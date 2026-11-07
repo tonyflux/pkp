@@ -5,6 +5,7 @@ import qrcode from "qrcode-generator";
 import Icon from "./Icon.vue";
 import Orbit from "./Orbit.vue";
 import SelectMenu from "./SelectMenu.vue";
+import Toggle from "./Toggle.vue";
 import LANPreparationPicker from "./LANPreparationPicker.vue";
 import { inSelectMenu } from "../dom";
 import * as DriveService from "../../bindings/github.com/tonyflux/pkp/internal/services/driveservice";
@@ -359,6 +360,13 @@ async function saveName() { const item = space.value; if (!item || !rename.value
         <div v-if="lan.status?.running && !lan.error" class="address"><code data-lan-address>{{ lan.status.address }}</code><button data-lan-copy @click="copy">{{ t('lan|复制地址') }}</button></div>
         <div class="actions"><button class="primary" data-lan-start-stop :disabled="lan.busy || !lan.status || (!lan.status.running && !canStart)" @click="open(lan.status?.running ? 'stop' : 'start')">{{ lan.status?.running ? t('lan|停止共享') : t('lan|开始共享') }}</button><button data-lan-password :disabled="lan.busy || !lan.status" @click="open('password')">{{ lan.status?.hasPassword ? t('lan|重置共享密码') : t('lan|设置共享密码') }}</button></div>
         <p v-if="!lan.status?.running">{{ t('lan|开启前：选择网卡、设置密码，并启用至少一个可用空间。') }}</p>
+        <section class="sleep-prevention" data-lan-sleep-prevention>
+          <div class="sleep-prevention-heading"><strong>{{ t('lan|共享期间防止电脑自动休眠') }}</strong><Toggle :model-value="!!lan.status?.preventSleep" :label="t('lan|共享期间防止电脑自动休眠')" :disabled="lan.busy || !lan.status || !lan.status.preventSleepSupported" aria-describedby="lan-sleep-description lan-sleep-limits" data-lan-prevent-sleep @update:model-value="changeLAN(() => LANService.SetPreventSleep($event))" /></div>
+          <p v-if="lan.status?.preventSleep || lan.status?.preventSleepActive" class="sleep-prevention-state" role="status" data-lan-prevent-sleep-status>{{ lan.status.preventSleepActive ? t('lan|自动休眠保护已生效') : lan.status.running ? t('lan|自动休眠保护未生效') : t('lan|已开启，将在下次开始共享时生效') }}</p>
+          <p v-if="lan.status && !lan.status.preventSleepSupported" role="status">{{ t('lan|此系统或构建不支持防止自动休眠。') }}</p>
+          <p id="lan-sleep-description">{{ t('lan|默认关闭。开启后仅在共享服务运行时阻止系统因空闲自动休眠，屏幕仍可熄灭；关闭此选项、停止共享或退出 PKP 会释放保护。') }}</p>
+          <p id="lan-sleep-limits">{{ t('lan|不能阻止手动休眠、合盖、关机、系统强制休眠或网络中断。建议连接电源；开启会增加耗电。') }}</p>
+        </section>
       </div><div class="qr-panel"><svg v-if="qr" data-lan-qr :viewBox="`0 0 ${qr.size} ${qr.size}`" role="img" :aria-label="t('lan|访问地址二维码')" shape-rendering="crispEdges"><rect width="100%" height="100%" fill="white"/><path :d="qr.path" fill="black"/></svg><div v-else class="qr-placeholder" aria-hidden="true"><Icon name="qrCode" :size="54"/></div><strong>{{ t('lan|扫码访问') }}</strong><small>{{ qr ? t('lan|二维码不含密码') : t('lan|开启后显示二维码') }}</small></div>
     </section>
     <div class="content-grid"><section class="spaces"><h2>{{ t('lan|共享空间') }} <span class="space-count tnum">{{ lan.status?.spaces.length ?? 0 }}</span></h2><p v-if="!lan.status?.spaces.length" class="empty">{{ t('lan|还没有共享空间，添加目录不会自动开始共享。') }}</p>
@@ -559,6 +567,11 @@ async function saveName() { const item = space.value; if (!item || !rename.value
 .spaces h2 { justify-content: flex-start; align-items: center; gap: 8px; }
 .space-count { min-width: 22px; padding: 1px 7px; border-radius: 999px; background: color-mix(in srgb, var(--fg) 9%, transparent); color: var(--fg-dim); font-size: 12px; font-weight: 600; line-height: 1.5; text-align: center; }
 .service .actions { margin-top: 16px; }
+.sleep-prevention { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--line); }
+.sleep-prevention-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.sleep-prevention-heading > strong { min-width: 0; }
+.sleep-prevention > p { margin: 8px 0 0; font-size: 13px; }
+.sleep-prevention > .sleep-prevention-state { color: var(--fg); font-weight: 500; }
 .read-note .icon { flex: none; margin-top: 2px; }
 .content-grid { grid-template-columns: minmax(220px, .7fr) minmax(0, 2.3fr); }
 .spaces { min-width: 0; }

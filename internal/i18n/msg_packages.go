@@ -4,6 +4,7 @@ package i18n
 
 func init() {
 	add(map[string]Msg{
+		"局域网共享": {Hant: "區域網路共享", En: "LAN sharing", Ja: "LAN 共有", Ko: "LAN 공유"},
 		// applock
 		"这台 Mac 没有设置登录密码，无法使用系统身份验证": {Hant: "這台 Mac 沒有設定登入密碼，無法使用系統驗證", En: "This Mac has no login password, so system authentication can't be used", Ja: "この Mac にはログインパスワードが設定されていないため、システム認証を使用できません", Ko: "이 Mac에 로그인 암호가 설정되어 있지 않아 시스템 인증을 사용할 수 없습니다"},
 		"已取消验证":                             {Hant: "已取消驗證", En: "Authentication cancelled", Ja: "認証がキャンセルされました", Ko: "인증이 취소되었습니다"},

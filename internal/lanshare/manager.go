@@ -60,6 +60,7 @@ type persisted struct {
 	Pending           map[string]string          `json:"pending"`
 	CopyIdentity      syncfs.Identity            `json:"copyIdentity"`
 	PendingIdentities map[string]syncfs.Identity `json:"pendingIdentities"`
+	PreventSleep      bool                       `json:"preventSleep"`
 }
 
 type session struct {
@@ -114,6 +115,10 @@ type Manager struct {
 	allowLoopback                         bool
 	generation                            uint64
 	running                               bool
+	preventSleep                          bool
+	sleepBlock                            io.Closer
+	sleepBlockActive                      bool
+	acquireSleep                          func() (io.Closer, error)
 	address, interfaceID, host, lastError string
 	server                                *http.Server
 	listener                              net.Listener
@@ -166,6 +171,7 @@ func New(opts Options) (*Manager, error) {
 		sessions: make(map[string]*session), responses: make(map[*activeResponse]struct{}), rates: make(map[string]loginRate),
 		loginSlot: make(chan struct{}, 1), transferSlots: make(chan struct{}, 4), probeSlot: make(chan struct{}, 1),
 		minFree: opts.MinFreeBytes, allowLoopback: opts.AllowLoopback, wake: make(chan struct{}, 1), ctx: ctx, cancel: cancel}
+	m.acquireSleep = acquireSleepBlock
 	m.originalsDir = filepath.Join(dir, "originals")
 	if opts.OriginalDir != "" {
 		base, e := filepath.Abs(opts.OriginalDir)
@@ -213,6 +219,7 @@ func New(opts Options) (*Manager, error) {
 			return nil, errUnavailable
 		}
 		m.secret, m.password = saved.Secret, saved.Password
+		m.preventSleep = saved.PreventSleep
 		if saved.Spaces != nil {
 			m.spaces = saved.Spaces
 		}
@@ -301,7 +308,7 @@ func New(opts Options) (*Manager, error) {
 }
 
 func (m *Manager) saveLocked() error {
-	saved := persisted{Version: 1, Secret: m.secret, Password: m.password, Spaces: m.spaces, Tasks: m.tasks, Originals: m.originals, Cache: m.cache, OriginalIdentity: m.originalIdentity, Pending: m.pending, CopyIdentity: m.copyIdentity, PendingIdentities: m.pendingIdentities}
+	saved := persisted{Version: 1, Secret: m.secret, Password: m.password, Spaces: m.spaces, Tasks: m.tasks, Originals: m.originals, Cache: m.cache, OriginalIdentity: m.originalIdentity, Pending: m.pending, CopyIdentity: m.copyIdentity, PendingIdentities: m.pendingIdentities, PreventSleep: m.preventSleep}
 	data, err := json.Marshal(saved)
 	if err != nil {
 		return err
@@ -437,6 +444,19 @@ func (m *Manager) Start(req StartRequest) error {
 			return context.WithValue(ctx, connectionKey{}, c)
 		}}
 	m.mu.Lock()
+	if !m.preventSleep {
+		if err = m.releaseSleepLocked(); err != nil {
+			m.mu.Unlock()
+			_ = listener.Close()
+			return err
+		}
+	} else if !m.sleepBlockActive {
+		if err = m.acquireSleepLocked(); err != nil {
+			m.mu.Unlock()
+			_ = listener.Close()
+			return err
+		}
+	}
 	m.running, m.address, m.host, m.interfaceID, m.lastError = true, "http://"+host, host, req.InterfaceID, ""
 	m.server, m.listener = server, listener
 	m.generation++
@@ -453,6 +473,7 @@ func (m *Manager) Start(req StartRequest) error {
 				m.lastError = "network_unavailable"
 				m.revokeLocked("", "")
 				m.holdLocked("", true)
+				_ = m.releaseSleepLocked()
 			}
 			m.mu.Unlock()
 		}
@@ -473,7 +494,7 @@ func (m *Manager) stop() error {
 	m.running, m.address, m.host = false, "", ""
 	m.revokeLocked("", "")
 	m.holdLocked("", true)
-	err := m.saveLocked()
+	err := errors.Join(m.saveLocked(), m.releaseSleepLocked())
 	m.mu.Unlock()
 	if server != nil {
 		if closeErr := server.Close(); err == nil {
@@ -487,9 +508,10 @@ func (m *Manager) Close() error {
 	m.lifecycle.Lock()
 	m.mu.Lock()
 	if m.closed {
+		err := m.releaseSleepLocked()
 		m.mu.Unlock()
 		m.lifecycle.Unlock()
-		return nil
+		return err
 	}
 	m.closed = true
 	m.mu.Unlock()
@@ -667,6 +689,7 @@ func (m *Manager) Status() Status {
 	m.mu.Lock()
 	result := Status{Running: m.running, Address: m.address, InterfaceID: m.interfaceID, HasPassword: len(m.password.Hash) > 0, CacheBytes: m.cacheBytesLocked() + m.pendingBytesLocked(), OriginalDir: m.originalsDir, Error: m.lastError, Spaces: []Space{}}
 	result.CopyDir, result.StorageBusy = m.copyIdentity.Path, m.storageBusyLocked()
+	result.PreventSleep, result.PreventSleepActive, result.PreventSleepSupported = m.preventSleep, m.sleepBlockActive, sleepPreventionSupported
 	snapshots := make([]spaceRecord, 0, len(m.spaces))
 	for _, s := range m.spaces {
 		copy := *s

@@ -5,7 +5,7 @@ import { N_, t } from "./i18n";
 export interface LANSpaceRequest { name: string; kind: string; accountId: string; rootId: string; localPath: string; allowPrepare: boolean }
 export interface LANSpace extends LANSpaceRequest { id: string; enabled: boolean; available: boolean; error: string }
 export interface LANTask { id: string; spaceId: string; fileId: string; name: string; kind: string; state: string; done: number; total: number; error: string; optimizeStartup?: boolean }
-export interface LANStatus { running: boolean; address: string; interfaceId: string; hasPassword: boolean; spaces: LANSpace[]; tasks: LANTask[]; cacheBytes: number; originalDir: string; copyDir: string; storageBusy: boolean; error: string }
+export interface LANStatus { running: boolean; address: string; interfaceId: string; hasPassword: boolean; preventSleep: boolean; preventSleepActive: boolean; preventSleepSupported: boolean; spaces: LANSpace[]; tasks: LANTask[]; cacheBytes: number; originalDir: string; copyDir: string; storageBusy: boolean; error: string }
 export interface LANInterface { id: string; name: string; address: string }
 export const lan = reactive({ status: null as LANStatus | null, interfaces: [] as LANInterface[], loading: false, busy: false, error: "" });
 export { LANService };
@@ -24,6 +24,8 @@ const errors: Record<string, string> = {
   storage_unavailable: N_("lan|保存位置不可用，请检查磁盘和目录权限。"),
   storage_busy: N_("lan|请等待正在准备的任务结束或取消后，再更改保存位置。"),
   service_closed: N_("lan|服务已退出，请重新打开 PKP。"),
+  sleep_prevention_failed: N_("lan|无法更改自动休眠保护，请刷新状态后重试。"),
+  sleep_prevention_unsupported: N_("lan|此系统或构建不支持防止自动休眠。"),
 };
 export function lanError(error: unknown): string {
   const text = error instanceof Error ? error.message : String(error);

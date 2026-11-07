@@ -18,15 +18,17 @@ const defaultMinFree int64 = 512 << 20
 const sourceRecheckTimeout = 45 * time.Second
 
 var (
-	errUnavailable        = errors.New("source_unavailable")
-	errForbidden          = errors.New("forbidden")
-	errNotReady           = errors.New("not_ready")
-	errPrepareDisabled    = errors.New("prepare_disabled")
-	errInvalid            = errors.New("invalid_request")
-	errDiskFull           = errors.New("disk_full")
-	errStorageUnavailable = errors.New("storage_unavailable")
-	errStorageBusy        = errors.New("storage_busy")
-	errHeld               = errors.New("held")
+	errUnavailable                = errors.New("source_unavailable")
+	errForbidden                  = errors.New("forbidden")
+	errNotReady                   = errors.New("not_ready")
+	errPrepareDisabled            = errors.New("prepare_disabled")
+	errInvalid                    = errors.New("invalid_request")
+	errDiskFull                   = errors.New("disk_full")
+	errStorageUnavailable         = errors.New("storage_unavailable")
+	errStorageBusy                = errors.New("storage_busy")
+	errHeld                       = errors.New("held")
+	errSleepPreventionFailed      = errors.New("sleep_prevention_failed")
+	errSleepPreventionUnsupported = errors.New("sleep_prevention_unsupported")
 )
 
 type Options struct {
@@ -128,17 +130,20 @@ type Task struct {
 }
 
 type Status struct {
-	Running     bool    `json:"running"`
-	Address     string  `json:"address"`
-	InterfaceID string  `json:"interfaceId"`
-	HasPassword bool    `json:"hasPassword"`
-	Spaces      []Space `json:"spaces"`
-	Tasks       []Task  `json:"tasks"`
-	CacheBytes  int64   `json:"cacheBytes"`
-	OriginalDir string  `json:"originalDir"`
-	CopyDir     string  `json:"copyDir"`
-	StorageBusy bool    `json:"storageBusy"`
-	Error       string  `json:"error"`
+	Running               bool    `json:"running"`
+	Address               string  `json:"address"`
+	InterfaceID           string  `json:"interfaceId"`
+	HasPassword           bool    `json:"hasPassword"`
+	PreventSleep          bool    `json:"preventSleep"`
+	PreventSleepActive    bool    `json:"preventSleepActive"`
+	PreventSleepSupported bool    `json:"preventSleepSupported"`
+	Spaces                []Space `json:"spaces"`
+	Tasks                 []Task  `json:"tasks"`
+	CacheBytes            int64   `json:"cacheBytes"`
+	OriginalDir           string  `json:"originalDir"`
+	CopyDir               string  `json:"copyDir"`
+	StorageBusy           bool    `json:"storageBusy"`
+	Error                 string  `json:"error"`
 }
 
 type ClearResult struct {

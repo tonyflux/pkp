@@ -66,6 +66,10 @@ export function SetPassword(password: string): $CancellablePromise<void> {
     return $Call.ByID(780047831, password);
 }
 
+export function SetPreventSleep(enabled: boolean): $CancellablePromise<void> {
+    return $Call.ByID(825126303, enabled);
+}
+
 export function SetStorageDirectory(kind: string, path: string): $CancellablePromise<void> {
     return $Call.ByID(349866358, kind, path);
 }

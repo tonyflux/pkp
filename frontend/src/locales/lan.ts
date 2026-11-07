@@ -1,6 +1,14 @@
 import type { Messages } from "./types";
 
 export default {
+  "lan|共享期间防止电脑自动休眠": { tw: "共享期間防止電腦自動休眠", en: "Prevent automatic sleep while sharing", ja: "共有中の自動スリープを防ぐ", ko: "공유 중 컴퓨터 자동 절전 방지" },
+  "lan|自动休眠保护已生效": { tw: "自動休眠保護已生效", en: "Automatic sleep prevention is active", ja: "自動スリープ防止が有効です", ko: "자동 절전 방지가 적용 중입니다" },
+  "lan|自动休眠保护未生效": { tw: "自動休眠保護未生效", en: "Automatic sleep prevention is not active", ja: "自動スリープ防止が適用されていません", ko: "자동 절전 방지가 적용되지 않았습니다" },
+  "lan|已开启，将在下次开始共享时生效": { tw: "已開啟，將在下次開始共享時生效", en: "Enabled; takes effect next time sharing starts", ja: "オンです。次回の共有開始時に適用されます", ko: "켜짐 · 다음 공유 시작 시 적용됩니다" },
+  "lan|默认关闭。开启后仅在共享服务运行时阻止系统因空闲自动休眠，屏幕仍可熄灭；关闭此选项、停止共享或退出 PKP 会释放保护。": { tw: "預設關閉。開啟後僅在共享服務執行時阻止系統因閒置自動休眠，螢幕仍可熄滅；關閉此選項、停止共享或結束 PKP 會釋放保護。", en: "Off by default. When enabled, it prevents automatic idle system sleep only while the sharing service is running. The screen can still turn off. Turning this option off, stopping sharing or quitting PKP releases the protection.", ja: "初期設定はオフです。オンにすると共有サービスの実行中だけ、アイドル状態によるシステムの自動スリープを防ぎます。画面は消灯できます。この設定をオフにするか、共有を停止するか、PKP を終了すると保護は解除されます。", ko: "기본값은 꺼짐입니다. 켜면 공유 서비스가 실행되는 동안에만 유휴 상태로 인한 시스템 자동 절전을 방지합니다. 화면은 꺼질 수 있습니다. 이 옵션을 끄거나 공유를 중지하거나 PKP를 종료하면 보호가 해제됩니다." },
+  "lan|不能阻止手动休眠、合盖、关机、系统强制休眠或网络中断。建议连接电源；开启会增加耗电。": { tw: "不能阻止手動休眠、闔蓋、關機、系統強制休眠或網路中斷。建議連接電源；開啟會增加耗電。", en: "This does not prevent manual sleep, lid-close sleep, shutdown, system-forced sleep or network interruptions. Connecting to power is recommended; enabling this uses more energy.", ja: "手動スリープ、蓋を閉じたときのスリープ、シャットダウン、システムによる強制スリープ、ネットワーク切断は防げません。電源への接続を推奨します。有効にすると消費電力が増えます。", ko: "수동 절전, 덮개 닫기, 종료, 시스템 강제 절전 또는 네트워크 중단은 방지하지 못합니다. 전원 연결을 권장합니다. 켜면 전력 소비가 증가합니다." },
+  "lan|无法更改自动休眠保护，请刷新状态后重试。": { tw: "無法變更自動休眠保護，請重新整理狀態後再試。", en: "Could not change automatic sleep protection. Refresh the status and try again.", ja: "自動スリープ防止を変更できませんでした。状態を更新して再試行してください。", ko: "자동 절전 보호를 변경하지 못했습니다. 상태를 새로 고친 후 다시 시도하세요." },
+  "lan|此系统或构建不支持防止自动休眠。": { tw: "此系統或版本不支援防止自動休眠。", en: "This system or build does not support automatic sleep prevention.", ja: "このシステムまたはビルドでは自動スリープ防止を利用できません。", ko: "이 시스템 또는 빌드에서는 자동 절전 방지를 지원하지 않습니다." },
   "lan|存储与副本": { tw: "儲存與副本", en: "Storage & copies", ja: "保存先とコピー", ko: "저장 위치 및 사본" },
   "lan|准备原件保存目录": { tw: "準備原件儲存目錄", en: "Prepared originals folder", ja: "準備した原本の保存先", ko: "준비된 원본 저장 폴더" },
   "lan|兼容与无损副本保存目录": { tw: "相容與無損副本儲存目錄", en: "Compatible and lossless copies folder", ja: "互換・無劣化コピーの保存先", ko: "호환 및 무손실 사본 저장 폴더" },

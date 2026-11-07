@@ -76,6 +76,13 @@ func (s *LANService) Stop() error {
 	}
 	return m.Stop()
 }
+func (s *LANService) SetPreventSleep(enabled bool) error {
+	m, err := s.get()
+	if err != nil {
+		return err
+	}
+	return m.SetPreventSleep(enabled)
+}
 func (s *LANService) SetPassword(password string) error {
 	m, err := s.get()
 	if err != nil {

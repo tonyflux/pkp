@@ -85,6 +85,9 @@ export interface Status {
     "address": string;
     "interfaceId": string;
     "hasPassword": boolean;
+    "preventSleep": boolean;
+    "preventSleepActive": boolean;
+    "preventSleepSupported": boolean;
     "spaces": Space[] | null;
     "tasks": Task[] | null;
     "cacheBytes": number;

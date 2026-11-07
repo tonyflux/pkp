@@ -76,7 +76,7 @@ beforeEach(() => {
   accounts.list = initialAccounts;
   sync.pairs = []; sync.scope = "current"; sync.query = ""; sync.selected = ""; sync.detail = false;
   bridge.SyncFolderTrail.mockResolvedValue([{ id: "parent", name: "Archive" }, { id: "root", name: "Movies" }]);
-  bridge.Status.mockResolvedValue({ running: false, address: "", interfaceId: "", hasPassword: false, spaces: [], tasks: [], cacheBytes: 0, originalDir: "", copyDir: "", storageBusy: false, error: "" });
+  bridge.Status.mockResolvedValue({ running: false, address: "", interfaceId: "", hasPassword: false, preventSleep: false, preventSleepActive: false, preventSleepSupported: true, spaces: [], tasks: [], cacheBytes: 0, originalDir: "", copyDir: "", storageBusy: false, error: "" });
   bridge.Interfaces.mockResolvedValue([]);
   bridge.CloudFolders.mockResolvedValue([{ id: "existing", name: "Existing" }]);
   bridge.AddSpace.mockResolvedValue({ id: "created" });
@@ -84,7 +84,7 @@ beforeEach(() => {
 afterEach(() => { app?.unmount(); app = undefined; document.body.replaceChildren(); Reflect.deleteProperty(HTMLElement.prototype, "scrollIntoView"); vi.clearAllTimers(); vi.useRealTimers(); });
 
 describe("LAN storage locations", () => {
-  const initial = (): LANStatus => ({ running: false, address: "", interfaceId: "", hasPassword: false, spaces: [], tasks: [], cacheBytes: 0, originalDir: "/old-originals", copyDir: "/old-copies", storageBusy: false, error: "" });
+  const initial = (): LANStatus => ({ running: false, address: "", interfaceId: "", hasPassword: false, preventSleep: false, preventSleepActive: false, preventSleepSupported: true, spaces: [], tasks: [], cacheBytes: 0, originalDir: "/old-originals", copyDir: "/old-copies", storageBusy: false, error: "" });
   async function mountStorage(status: LANStatus) {
     bridge.Status.mockImplementation(async () => structuredClone(status));
     const host = document.createElement("div"); document.body.append(host);
@@ -150,7 +150,7 @@ describe("LAN network selection", () => {
   const wifi = { id: "wifi@192.168.1.5", name: "Wi-Fi", address: "192.168.1.5" };
   const ethernet = { id: "ethernet@192.168.1.6", name: "Ethernet", address: "192.168.1.6" };
   const shared: LANSpace = { id: "local", name: "Shared", kind: "local", accountId: "", rootId: "", localPath: "/safe", enabled: true, available: true, allowPrepare: false, error: "" };
-  const stopped: LANStatus = { running: false, address: "", interfaceId: "", hasPassword: true, spaces: [shared], tasks: [], cacheBytes: 0, originalDir: "", copyDir: "", storageBusy: false, error: "" };
+  const stopped: LANStatus = { running: false, address: "", interfaceId: "", hasPassword: true, preventSleep: false, preventSleepActive: false, preventSleepSupported: true, spaces: [shared], tasks: [], cacheBytes: 0, originalDir: "", copyDir: "", storageBusy: false, error: "" };
   async function mountNetwork() {
     const host = document.createElement("div"); document.body.append(host);
     app = createApp(LANView); app.mount(host); await settle();
@@ -208,7 +208,7 @@ describe("LAN network selection", () => {
 
 describe("LAN address copy", () => {
   it("shows current results without changing the service layout, restarts the success timer, and ignores stale results", async () => {
-    bridge.Status.mockResolvedValue({ running: true, address: "http://192.168.1.5:17891", interfaceId: "wifi", hasPassword: true, spaces: [], tasks: [], cacheBytes: 0, originalDir: "", copyDir: "", storageBusy: false, error: "" });
+    bridge.Status.mockResolvedValue({ running: true, address: "http://192.168.1.5:17891", interfaceId: "wifi", hasPassword: true, preventSleep: false, preventSleepActive: false, preventSleepSupported: true, spaces: [], tasks: [], cacheBytes: 0, originalDir: "", copyDir: "", storageBusy: false, error: "" });
     const older = deferred<void>();
     bridge.copy.mockReturnValueOnce(older.promise).mockRejectedValueOnce(new Error("clipboard"));
     const showLAN = ref(true);
@@ -287,7 +287,7 @@ describe("LAN one-time confirmations", () => {
     field.value = value; field.dispatchEvent(new Event("input", { bubbles: true })); await settle();
   }
   beforeEach(() => {
-    status = { running: true, address: "", interfaceId: "en0", hasPassword: true, spaces: ["first", "second"].map(id => ({ id, name: id, kind: "local", accountId: "", rootId: "", localPath: `/${id}`, enabled: true, available: true, allowPrepare: false, error: "" })), tasks: [], cacheBytes: 0, originalDir: "", copyDir: "", storageBusy: false, error: "" };
+    status = { running: true, address: "", interfaceId: "en0", hasPassword: true, preventSleep: false, preventSleepActive: false, preventSleepSupported: true, spaces: ["first", "second"].map(id => ({ id, name: id, kind: "local", accountId: "", rootId: "", localPath: `/${id}`, enabled: true, available: true, allowPrepare: false, error: "" })), tasks: [], cacheBytes: 0, originalDir: "", copyDir: "", storageBusy: false, error: "" };
     bridge.Status.mockImplementation(async () => structuredClone(status));
     bridge.UpdateSpace.mockImplementation(async (request: Partial<LANSpace> & { id: string }) => { Object.assign(status.spaces.find(item => item.id === request.id)!, request); });
     bridge.SetPassword.mockResolvedValue(undefined);
@@ -647,7 +647,7 @@ describe("LAN preparation history", () => {
   beforeEach(async () => {
     const spaces = ["first", "second"].map(id => ({ id, name: id, kind: "local", accountId: "", rootId: "", localPath: `/${id}`, enabled: true, available: true, allowPrepare: true, error: "" }));
     const task = (id: string, spaceId: string, state: string) => ({ id, spaceId, state, name: id, fileId: id, kind: "local", done: 0, total: 0, error: "" });
-    status = { running: false, address: "", interfaceId: "", hasPassword: true, spaces, tasks: [task("ready", "first", "ready"), task("failed", "first", "failed"), task("cancelled", "second", "cancelled"), task("orphan", "removed", "ready"), ...["queued", "downloading", "converting", "held"].map(state => task(state, "first", state))], cacheBytes: 0, originalDir: "", copyDir: "", storageBusy: false, error: "" };
+    status = { running: false, address: "", interfaceId: "", hasPassword: true, preventSleep: false, preventSleepActive: false, preventSleepSupported: true, spaces, tasks: [task("ready", "first", "ready"), task("failed", "first", "failed"), task("cancelled", "second", "cancelled"), task("orphan", "removed", "ready"), ...["queued", "downloading", "converting", "held"].map(state => task(state, "first", state))], cacheBytes: 0, originalDir: "", copyDir: "", storageBusy: false, error: "" };
     bridge.Status.mockImplementation(async () => structuredClone(status));
     bridge.Tasks.mockImplementation(async () => structuredClone(status.tasks));
     bridge.DismissTaskHistory.mockImplementation(async (scope: string, id: string) => { status.tasks = status.tasks.filter(item => !finished.includes(item.state) || (scope && item.spaceId !== scope) || (id && item.id !== id)); });
