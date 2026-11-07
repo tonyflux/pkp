@@ -3568,6 +3568,93 @@ export async function confirmRelocate() {
   }
 }
 
+/* ---------------- clipboard (copy / cut / paste) ---------------- */
+
+export const clipboard = reactive({
+  mode: "" as "" | "move" | "copy",
+  account: "",
+  items: [] as Entry[],
+  working: false,
+});
+
+/** copyToClipboard records entries in the drive clipboard for pasting into a folder. */
+export function copyToClipboard(mode: "move" | "copy", entries: Entry[]) {
+  if (!entries.length || !currentId.value) return;
+  clipboard.mode = mode;
+  clipboard.account = currentId.value;
+  clipboard.items = [...entries];
+  notify(
+    mode === "move"
+      ? (entries.length === 1
+          ? t("已剪切「{name}」，可在目标文件夹粘贴", { name: entries[0].name })
+          : t("已剪切 {n} 项，可在目标文件夹粘贴", { n: entries.length }))
+      : (entries.length === 1
+          ? t("已复制「{name}」，可在目标文件夹粘贴", { name: entries[0].name })
+          : t("已复制 {n} 项，可在目标文件夹粘贴", { n: entries.length })),
+    "info",
+  );
+}
+
+/** Whether the current view is a browsable folder that accepts pasting from the drive clipboard. */
+export const canPasteHere = computed(
+  () =>
+    !!clipboard.mode &&
+    clipboard.account === currentId.value &&
+    clipboard.items.length > 0 &&
+    ui.route === "files" &&
+    ui.view === "all" &&
+    !wholeDrive.value &&
+    !ui.query.trim(),
+);
+
+/** pasteClipboard copies or moves the clipboard's entries into the current folder. */
+export async function pasteClipboard(modeOverride?: "move" | "copy") {
+  if (!canPasteHere.value || clipboard.working) return;
+  const mode = modeOverride ?? clipboard.mode;
+  const items = [...clipboard.items];
+  const targetId = currentFolderId.value;
+  const where = currentFolderName.value;
+  const pickedIds = new Set(items.map((e) => e.id));
+  if (pickedIds.has(targetId) || drive.trail.some((c) => pickedIds.has(c.id))) {
+    notify(mode === "move" ? t("不能移动到所选文件夹自身") : t("不能复制到所选文件夹自身"), "error");
+    return;
+  }
+  if (items.some((e) => e.parentId === targetId)) {
+    notify(t("所选项目已在这个文件夹里，请选择其他位置"), "info");
+    return;
+  }
+  clipboard.working = true;
+  try {
+    const ok = await run(mode === "move" ? t("移动") : t("复制"), async () => {
+      if (mode === "move") await DriveService.MoveFiles(ids(items), targetId);
+      else await DriveService.CopyFiles(ids(items), targetId);
+      return true;
+    });
+    if (!ok) return;
+    if (mode === "move") {
+      clipboard.mode = "";
+      clipboard.items = [];
+      void reload(false);
+      notify(
+        items.length === 1
+          ? t("已把「{name}」移动到「{where}」", { name: items[0].name, where })
+          : t("已把 {n} 项移动到「{where}」", { n: items.length, where }),
+        "success",
+      );
+    } else {
+      void reload(false);
+      notify(
+        items.length === 1
+          ? t("已开始把「{name}」复制到「{where}」，完成后会出现在目标文件夹", { name: items[0].name, where })
+          : t("已开始把 {n} 项复制到「{where}」，完成后会出现在目标文件夹", { n: items.length, where }),
+        "success",
+      );
+    }
+  } finally {
+    clipboard.working = false;
+  }
+}
+
 /* ---------------- Extract Online ---------------- */
 
 /**

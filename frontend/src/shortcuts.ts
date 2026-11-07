@@ -72,7 +72,9 @@ export function commandFor(e: KeyLike, onMac: boolean, typing: boolean): Command
   if (!mod) {
     if (onMac || e.metaKey || e.ctrlKey || e.shiftKey) return null;
     if (e.key === "F5" && !e.altKey) return "refresh";
-    if (e.key === "ArrowLeft" && e.altKey && !typing) return "back";
+    if (!typing && e.altKey && (e.key === "ArrowLeft" || e.key === "ArrowUp")) return "back";
+    if (!typing && e.altKey && e.key === "Enter") return "info";
+    if (!typing && !e.altKey && e.key === "Backspace") return "back";
     return null;
   }
   if (e.altKey) return null;
@@ -258,7 +260,7 @@ export function shortcutGroups(): { title: string; rows: ShortcutRow[] }[] {
     {
       title: t("前往"),
       rows: [
-        { label: t("返回上一级"), keys: mac ? [m("["), m("↑")] : [m("["), m("↑"), [alt, "←"]] },
+        { label: t("返回上一级"), keys: mac ? [m("["), m("↑")] : [m("["), m("↑"), [alt, "←"], [alt, "↑"], ["Backspace"]] },
         ...NAV_KEYS.map((key, i) => ({ label: navLabels[key], keys: [m(String(i + 1))] })),
       ],
     },
@@ -274,14 +276,19 @@ export function shortcutGroups(): { title: string; rows: ShortcutRow[] }[] {
     {
       title: t("文件列表"),
       rows: [
-        { label: t("打开所选项"), keys: [[mac ? "↩" : "Enter"]] },
+        { label: t("打开所选项"), keys: mac ? [["↩"], m("↓")] : [["Enter"]] },
         { label: t("预览所选文件"), keys: [[space]] },
+        { label: t("移动选中项"), keys: [["↑"], ["↓"], ["←"], ["→"]] },
         { label: t("加选或取消一项"), keys: [m(t("点按"))] },
-        { label: t("连续选择"), keys: [[shift, t("点按")]] },
+        { label: t("连续选择"), keys: [[shift, t("点按")], [shift, "↑/↓/←/→"]] },
         { label: t("全选"), keys: [m("A")] },
         { label: t("取消选择"), keys: [["Esc"]] },
+        { label: t("重命名"), keys: [["F2"]] },
+        { label: t("复制 / 剪切 / 粘贴"), keys: [m("C"), m("X"), m("V")] },
+        { label: t("打开快捷菜单"), keys: [[t("右键点按")], [shift, "F10"]] },
         { label: t("移到回收站"), keys: mac ? [m("⌫")] : [["Delete"], m("Backspace")] },
-        { label: t("查看信息"), keys: [m("I")] },
+        { label: t("彻底删除"), keys: mac ? [[alt, modKey, "⌫"]] : [[shift, "Delete"]] },
+        { label: t("查看信息"), keys: mac ? [m("I")] : [m("I"), [alt, "Enter"]] },
       ],
     },
     {

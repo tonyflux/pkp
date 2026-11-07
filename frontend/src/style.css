@@ -571,6 +571,12 @@ button.icon {
   gap: 2px;
   padding: 6px;
   border-radius: 14px;
+  scrollbar-width: none;
+}
+
+.menu::-webkit-scrollbar {
+  width: 0;
+  height: 0;
 }
 
 .menu > button {

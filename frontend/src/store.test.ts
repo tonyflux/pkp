@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { holePath, matchesCategory, pickShuffle, proxyDraftError, shareStatus, sortEntries } from "./store";
-import type { Entry, ShareSummary } from "../bindings/github.com/tonyflux/pkp/internal/services";
+import { canPasteHere, clipboard, copyToClipboard, drive, holePath, matchesCategory, pickShuffle, proxyDraftError, shareStatus, sortEntries, ui } from "./store";
+import type { DriveStatus, Entry, ShareSummary } from "../bindings/github.com/tonyflux/pkp/internal/services";
 
 const entry = (p: Partial<Entry>): Entry => ({ id: "", name: "", size: 0, modifiedTime: "", category: "other", ...p } as Entry);
 
@@ -74,5 +74,33 @@ describe("proxyDraftError", () => {
     // An empty Port field reads as NaN, which is not a port either.
     expect(proxyDraftError("custom", "127.0.0.1", Number.NaN)).toBe("端口需要是 1 到 65535 之间的整数");
     expect(proxyDraftError("custom", "127.0.0.1", 65535)).toBe("");
+  });
+});
+
+describe("clipboard", () => {
+  it("tracks copied and cut entries for the active account and checks folder paste eligibility", () => {
+    drive.status = { accountId: "acc1", configured: true } as DriveStatus;
+    ui.route = "files";
+    ui.view = "all";
+    ui.scope = "folder";
+    ui.query = "";
+    const item = entry({ id: "f1", name: "report.pdf", parentId: "p0" });
+    copyToClipboard("copy", [item]);
+    expect(clipboard.mode).toBe("copy");
+    expect(clipboard.account).toBe("acc1");
+    expect(clipboard.items.map((e) => e.id)).toEqual(["f1"]);
+    expect(canPasteHere.value).toBe(true);
+    // Not eligible in whole-drive view, trash, or another account.
+    ui.scope = "drive";
+    expect(canPasteHere.value).toBe(false);
+    ui.scope = "folder";
+    ui.view = "trash";
+    expect(canPasteHere.value).toBe(false);
+    ui.view = "all";
+    drive.status = { accountId: "acc2", configured: true } as DriveStatus;
+    expect(canPasteHere.value).toBe(false);
+    clipboard.mode = "";
+    clipboard.items = [];
+    drive.status = null;
   });
 });

@@ -160,6 +160,43 @@ export default {
     ko: "휴지통에서 복원할 수 있습니다. 저장 공간은 영구 삭제해야 확보됩니다({key})",
   },
   移到回收站: { tw: "移至垃圾桶", en: "Move to Trash", ja: "ゴミ箱に移動", ko: "휴지통으로 이동" },
+  剪切: { tw: "剪下", en: "Cut", ja: "切り取り", ko: "잘라내기" },
+  "粘贴 {n} 项到这里": {
+    tw: "貼上 {n} 項到這裡",
+    en: (p) => `Paste ${items(p.n)} here`,
+    ja: "ここに {n} 項目を貼り付け",
+    ko: "여기에 {n}개 항목 붙여넣기",
+  },
+  "移动 {n} 项到这里": {
+    tw: "移動 {n} 項到這裡",
+    en: (p) => `Move ${items(p.n)} here`,
+    ja: "ここに {n} 項目を移動",
+    ko: "여기에 {n}개 항목 이동",
+  },
+  "已复制「{name}」，可在目标文件夹粘贴": {
+    tw: "已複製「{name}」，可在目標資料夾貼上",
+    en: "Copied “{name}”; paste it inside the destination folder",
+    ja: "「{name}」をコピーしました。移動先のフォルダで貼り付けられます",
+    ko: "“{name}”을(를) 복사했습니다. 대상 폴더에서 붙여넣을 수 있습니다",
+  },
+  "已复制 {n} 项，可在目标文件夹粘贴": {
+    tw: "已複製 {n} 項，可在目標資料夾貼上",
+    en: (p) => `Copied ${items(p.n)}; paste them inside the destination folder`,
+    ja: "{n} 項目をコピーしました。移動先のフォルダで貼り付けられます",
+    ko: "{n}개 항목을 복사했습니다. 대상 폴더에서 붙여넣을 수 있습니다",
+  },
+  "已剪切「{name}」，可在目标文件夹粘贴": {
+    tw: "已剪下「{name}」，可在目標資料夾貼上",
+    en: "Cut “{name}”; paste it inside the destination folder to move",
+    ja: "「{name}」を切り取りました。移動先のフォルダで貼り付けられます",
+    ko: "“{name}”을(를) 잘라냈습니다. 대상 폴더에서 붙여넣을 수 있습니다",
+  },
+  "已剪切 {n} 项，可在目标文件夹粘贴": {
+    tw: "已剪下 {n} 項，可在目標資料夾貼上",
+    en: (p) => `Cut ${items(p.n)}; paste them inside the destination folder to move`,
+    ja: "{n} 項目を切り取りました。移動先のフォルダで貼り付けられます",
+    ko: "{n}개 항목을 잘라냈습니다. 대상 폴더에서 붙여넣을 수 있습니다",
+  },
 
   // SelectionBar / BatchBar
   "按文件名整理成影视文件夹结构，执行前可逐项检查": {
