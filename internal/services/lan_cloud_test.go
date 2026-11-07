@@ -44,7 +44,7 @@ func TestLANCloudScopeAndCompletedOriginal(t *testing.T) {
 		"root":    {ID: "root", Kind: drive.KindFolder, Name: "Shared", UserID: "u"},
 		"inside":  {ID: "inside", ParentID: "root", Kind: drive.KindFolder, Name: "Folder", UserID: "u"},
 		"outside": {ID: "outside", Kind: drive.KindFolder, Name: "Private", UserID: "u"},
-		"clip":    {ID: "clip", ParentID: "inside", Kind: drive.KindFile, Name: "clip.bin", UserID: "u", Size: drive.Int64(len(body)), Phase: drive.PhaseComplete, ModifiedTime: "2026-11-01T00:00:00Z", MD5Checksum: hex.EncodeToString(digest[:])},
+		"clip":    {ID: "clip", ParentID: "inside", Kind: drive.KindFile, Name: "clip.bin", UserID: "u", Size: drive.Int64(len(body)), Phase: drive.PhaseComplete, ModifiedTime: "2026-11-01T00:00:00Z", MD5Checksum: hex.EncodeToString(digest[:]), ThumbnailLink: "https://private.example/cover"},
 	}
 	svc := newDriveService(t, func(w http.ResponseWriter, r *http.Request) {
 		if authAndTokenRoutes(w, r) {
@@ -53,6 +53,9 @@ func TestLANCloudScopeAndCompletedOriginal(t *testing.T) {
 		mu.Lock()
 		defer mu.Unlock()
 		if r.URL.Path == "/drive/v1/files" {
+			if r.URL.Query().Get("thumbnail_size") != string(drive.ThumbnailMedium) {
+				t.Errorf("thumbnail size: %q", r.URL.Query().Get("thumbnail_size"))
+			}
 			out := []drive.File{}
 			for _, f := range files {
 				if f.ID == "clip" {
@@ -83,6 +86,10 @@ func TestLANCloudScopeAndCompletedOriginal(t *testing.T) {
 	ctx := context.Background()
 	if err := c.ValidateRoot(ctx, s.key, "root", "u"); err != nil {
 		t.Fatal(err)
+	}
+	listed, err := c.List(ctx, s.key, "root", "inside", "u")
+	if err != nil || len(listed) != 1 || listed[0].Thumbnail != "https://private.example/cover" {
+		t.Fatalf("cloud thumbnail listing: %+v %v", listed, err)
 	}
 	if _, err := c.Resolve(ctx, "", "root", "clip", "u"); !errors.Is(err, errLANSource) {
 		t.Fatalf("empty account borrowed foreground: %v", err)

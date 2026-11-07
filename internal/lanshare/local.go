@@ -111,7 +111,7 @@ func (m *Manager) space(id string, prepare bool) (spaceRecord, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	s := m.spaces[id]
-	if s == nil || !s.Enabled {
+	if m.closed || s == nil || !s.Enabled {
 		return spaceRecord{}, errForbidden
 	}
 	if prepare && !s.AllowPrepare {
@@ -137,6 +137,9 @@ func (m *Manager) validateSpace(ctx context.Context, s spaceRecord) error {
 		return errUnavailable
 	}
 	identity, err := m.cloud.AccountIdentity(ctx, s.AccountID)
+	if ctx.Err() != nil {
+		return ctx.Err()
+	}
 	if err != nil || identity == "" || identity != s.AccountIdentity {
 		return errUnavailable
 	}
@@ -194,6 +197,19 @@ func (m *Manager) localOpen(s spaceRecord, id string, directory bool) (*os.File,
 	entry := Entry{ID: id, Name: filepath.Base(rel), ParentID: parent, Version: sourceVersion(version), MIME: mime.TypeByExtension(filepath.Ext(rel)), IsDir: info.IsDir(), Size: info.Size(), Modified: info.ModTime().UTC().Format(time.RFC3339Nano), Ready: !info.IsDir()}
 	entry.localToken = version
 	return f, entry, nil
+}
+
+func (m *Manager) ListPreparationEntries(ctx context.Context, spaceID, parentID string) ([]PreparationEntry, error) {
+	ctx = m.sourceProofContext(ctx)
+	entries, err := m.list(ctx, spaceID, parentID)
+	if err != nil {
+		return nil, err
+	}
+	result := make([]PreparationEntry, len(entries))
+	for i, entry := range entries {
+		result[i] = PreparationEntry{Entry: entry, Thumbnail: entry.Thumbnail, DesktopCompatibleReady: m.desktopCompatibleReady(spaceID, entry)}
+	}
+	return result, nil
 }
 
 func (m *Manager) list(ctx context.Context, sid, parent string) ([]Entry, error) {
@@ -308,6 +324,9 @@ func (m *Manager) list(ctx context.Context, sid, parent string) ([]Entry, error)
 			return nil, err
 		}
 	}
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
 	if _, err := m.space(sid, false); err != nil {
 		return nil, err
 	}
@@ -391,12 +410,20 @@ func (m *Manager) original(ctx context.Context, sid, id, version string) (*os.Fi
 	if version != "" && src.Entry.Version != version {
 		return nil, Entry{}, errUnavailable
 	}
+	return m.openOriginal(sid, src)
+}
+
+// openOriginal reuses a source proof only within the operation that obtained it.
+func (m *Manager) openOriginal(sid string, src Source) (*os.File, Entry, error) {
+	if src.Entry.IsDir || !src.Entry.Ready {
+		return nil, src.Entry, errNotReady
+	}
 	s, err := m.space(sid, false)
 	if err != nil {
 		return nil, Entry{}, err
 	}
 	if s.Kind == "local" {
-		f, entry, err := m.localOpen(s, id, false)
+		f, entry, err := m.localOpen(s, src.Entry.ID, false)
 		if err != nil {
 			return nil, Entry{}, err
 		}

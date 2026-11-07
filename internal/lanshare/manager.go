@@ -246,7 +246,6 @@ func New(opts Options) (*Manager, error) {
 		}
 		for _, t := range m.tasks {
 			t.Sessions = make(map[string]bool)
-			t.Desktop = false
 			if t.State == "queued" || t.State == "downloading" || t.State == "converting" {
 				t.State, t.Error, t.Hold = "held", "interrupted", true
 			}
@@ -433,7 +432,7 @@ func (m *Manager) Start(req StartRequest) error {
 				m.address = ""
 				m.lastError = "network_unavailable"
 				m.revokeLocked("", "")
-				m.holdLocked("")
+				m.holdLocked("", true)
 			}
 			m.mu.Unlock()
 		}
@@ -453,7 +452,7 @@ func (m *Manager) stop() error {
 	m.server, m.listener = nil, nil
 	m.running, m.address, m.host = false, "", ""
 	m.revokeLocked("", "")
-	m.holdLocked("")
+	m.holdLocked("", true)
 	err := m.saveLocked()
 	m.mu.Unlock()
 	if server != nil {
@@ -507,7 +506,7 @@ func (m *Manager) SetPassword(password string) error {
 		return err
 	}
 	m.revokeLocked("", "")
-	m.holdLocked("")
+	m.holdLocked("", true)
 	return m.saveLocked()
 }
 
@@ -595,9 +594,12 @@ func (m *Manager) UpdateSpace(req SpaceUpdate) error {
 		m.revokeLocked("", s.ID)
 	}
 	if !s.Enabled || !s.AllowPrepare {
-		m.holdLocked(s.ID)
+		m.holdLocked(s.ID, s.Enabled)
 		for _, t := range m.tasks {
-			if t.SpaceID == s.ID && t.cancel != nil {
+			if t.SpaceID == s.ID && !s.AllowPrepare {
+				clear(t.Sessions)
+			}
+			if t.SpaceID == s.ID && (!s.Enabled || !t.Desktop) && t.cancel != nil {
 				t.cancel()
 			}
 		}
@@ -618,7 +620,7 @@ func (m *Manager) RemoveSpace(id string) error {
 		return err
 	}
 	m.revokeLocked("", id)
-	m.holdLocked(id)
+	m.holdLocked(id, false)
 	for _, t := range m.tasks {
 		if t.SpaceID == id && t.cancel != nil {
 			t.cancel()
@@ -627,17 +629,28 @@ func (m *Manager) RemoveSpace(id string) error {
 	return m.saveLocked()
 }
 
+// Tasks returns the desktop task snapshot without revalidating every source.
+func (m *Manager) Tasks() []Task {
+	m.mu.Lock()
+	result := make([]Task, 0, len(m.tasks))
+	for _, t := range m.tasks {
+		if !t.DesktopHidden || !terminalTask(t.State) {
+			result = append(result, t.Task)
+		}
+	}
+	m.mu.Unlock()
+	sort.Slice(result, func(i, j int) bool { return result[i].ID < result[j].ID })
+	return result
+}
+
 func (m *Manager) Status() Status {
 	m.mu.Lock()
-	result := Status{Running: m.running, Address: m.address, InterfaceID: m.interfaceID, HasPassword: len(m.password.Hash) > 0, CacheLimit: m.cacheLimit, CacheBytes: m.cacheBytesLocked() + m.pendingBytesLocked(), OriginalDir: m.originalsDir, Error: m.lastError, Spaces: []Space{}, Tasks: []Task{}}
+	result := Status{Running: m.running, Address: m.address, InterfaceID: m.interfaceID, HasPassword: len(m.password.Hash) > 0, CacheLimit: m.cacheLimit, CacheBytes: m.cacheBytesLocked() + m.pendingBytesLocked(), OriginalDir: m.originalsDir, Error: m.lastError, Spaces: []Space{}}
 	snapshots := make([]spaceRecord, 0, len(m.spaces))
 	for _, s := range m.spaces {
 		copy := *s
 		copy.References = nil
 		snapshots = append(snapshots, copy)
-	}
-	for _, t := range m.tasks {
-		result.Tasks = append(result.Tasks, t.Task)
 	}
 	m.mu.Unlock()
 	for _, s := range snapshots {
@@ -654,7 +667,7 @@ func (m *Manager) Status() Status {
 		result.Spaces = append(result.Spaces, s.Space)
 	}
 	sort.Slice(result.Spaces, func(i, j int) bool { return result.Spaces[i].Name < result.Spaces[j].Name })
-	sort.Slice(result.Tasks, func(i, j int) bool { return result.Tasks[i].ID < result.Tasks[j].ID })
+	result.Tasks = m.Tasks()
 	return result
 }
 

@@ -134,6 +134,10 @@ func TestAuthenticationCSRFAndPublicMetadata(t *testing.T) {
 	m := newTestManager(t, nil)
 	s, _ := localSpace(t, m, false)
 	sessionID := authenticated(t, m)
+	asset := apiRequest(t, m, "GET", "/select.js", "", nil)
+	if asset.Code != http.StatusOK || !strings.Contains(asset.Body.String(), "mountSelect") {
+		t.Fatalf("visitor menu module unavailable: %d %s", asset.Code, asset.Body.String())
+	}
 	for _, path := range []string{"/api/spaces", "/api/files?space=" + s.ID, "/api/file?space=" + s.ID + "&id=forged", "/api/tasks?space=" + s.ID, "/api/content?space=" + s.ID + "&id=forged"} {
 		w := apiRequest(t, m, "GET", path, "", nil)
 		if w.Code != http.StatusUnauthorized || strings.Contains(w.Body.String(), s.Name) {
@@ -562,7 +566,11 @@ func TestCacheOwnershipQuotaAndActiveReaderPin(t *testing.T) {
 	delete(m.pending, dir)
 	m.cache[key] = &cacheFile{Path: rel, Token: token, Size: 5, MIME: "video/mp4", Kind: "remux", Used: time.Now()}
 	m.mu.Unlock()
-	_, _, release, err := m.openCompatible(context.Background(), s.ID, entry.ID)
+	src, err := m.resolve(context.Background(), s.ID, entry.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, _, release, err := m.openCompatible(s.ID, src)
 	if err != nil {
 		t.Fatal(err)
 	}

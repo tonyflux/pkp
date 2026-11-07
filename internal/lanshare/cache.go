@@ -1,7 +1,6 @@
 package lanshare
 
 import (
-	"context"
 	"encoding/hex"
 	"errors"
 	"os"
@@ -9,6 +8,8 @@ import (
 	"sort"
 	"strings"
 	"time"
+
+	"github.com/tonyflux/pkp/internal/lanmedia"
 )
 
 func resourceKey(space, file, version string) string { return space + "/" + file + "/" + version }
@@ -49,6 +50,45 @@ func (m *Manager) decorate(entry *Entry, sid string) {
 		f.Close()
 		entry.CompatibleReady, entry.CompatibleKind = true, record.Kind
 	}
+}
+
+// desktopCompatibleReady only reports results proved by the current task and object.
+func (m *Manager) desktopCompatibleReady(sid string, entry Entry) bool {
+	if entry.IsDir || entry.Version == "" {
+		return false
+	}
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	space := m.spaces[sid]
+	if space == nil || !space.Enabled {
+		return false
+	}
+	key := resourceKey(sid, entry.ID, entry.Version)
+	caps := lanmedia.Capabilities{H264: true, AAC: true, MP4: true}
+	for _, task := range m.tasks {
+		if task.SpaceID != sid || task.FileID != entry.ID || task.Version != entry.Version || task.Kind != "compatible" || task.State != "ready" || task.Capabilities != caps {
+			continue
+		}
+		if task.RequestKey == key+"/compatible/"+planKey(lanmedia.Plan{Kind: "direct", Container: "mp4"}) && task.OutputToken == "" {
+			// Cloud versions do not bind the local original's token across restarts.
+			if space.Kind == "local" && entry.Ready && !entry.NeedsVerification {
+				return true
+			}
+			continue
+		}
+		if task.OutputToken == "" {
+			continue
+		}
+		cached, f := m.cachedLocked(key)
+		if f == nil {
+			continue
+		}
+		f.Close()
+		if cached.Token == task.OutputToken && task.RequestKey == key+"/compatible/"+cached.PlanKey {
+			return true
+		}
+	}
+	return false
 }
 
 // Only manifest-owned, unchanged, unopened compatibility objects can be removed.
@@ -139,13 +179,12 @@ func (m *Manager) release(bytes int64) {
 	m.mu.Unlock()
 }
 
-func (m *Manager) openCompatible(ctx context.Context, sid, id string) (*os.File, Entry, func(), error) {
-	src, err := m.resolve(ctx, sid, id)
-	if err != nil {
+func (m *Manager) openCompatible(sid string, src Source) (*os.File, Entry, func(), error) {
+	if _, err := m.space(sid, false); err != nil {
 		return nil, Entry{}, nil, err
 	}
 	m.mu.Lock()
-	key := resourceKey(sid, id, src.Entry.Version)
+	key := resourceKey(sid, src.Entry.ID, src.Entry.Version)
 	record, f := m.cachedLocked(key)
 	if f == nil {
 		m.mu.Unlock()

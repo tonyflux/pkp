@@ -141,6 +141,7 @@ onMounted(() => {
   <div v-else-if="!signedIn && ui.route === 'lan'" class="signedout-lan">
     <button class="pill" @click="ui.route = 'files'">{{ t("返回登录") }}</button>
     <LANView />
+    <Teleport to="body"><StatusPill style="position: fixed" /></Teleport>
   </div>
   <LoginView v-else-if="!signedIn" />
 

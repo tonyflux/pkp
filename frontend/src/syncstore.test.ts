@@ -11,14 +11,16 @@ import { closeSyncDraft, openSyncCreate, previewSyncDraft, startSyncDraft, sync,
 
 afterEach(async () => { await closeSyncDraft(); vi.clearAllMocks(); });
 
-describe("prefilled sync creation", () => {
-  it("only opens a download draft and retains local choice, preview and explicit-start gates", async () => {
-    openSyncCreate("source-account", { name: "Shared movies", cloudId: "movies", cloudPath: "全部文件 / Movies", mode: "download" });
+describe("sync creation", () => {
+  it("retains local choice, preview and explicit-start gates", async () => {
+    openSyncCreate("source-account");
     await previewSyncDraft();
     await startSyncDraft();
     expect(service.SyncPreview).not.toHaveBeenCalled();
     expect(service.SyncStart).not.toHaveBeenCalled();
     syncDraft.config!.localPath = "/chosen-by-owner";
+    syncDraft.config!.name = "Shared movies";
+    syncDraft.config!.cloudPath = "全部文件 / Movies";
     service.SyncPreview.mockResolvedValue({ id: "preview", blocked: false, error: "", changes: [] });
     await previewSyncDraft();
     expect(syncDraft.view).toBe("preview");

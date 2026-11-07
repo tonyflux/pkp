@@ -68,7 +68,14 @@ type Entry struct {
 	NeedsVerification bool   `json:"needsVerification,omitempty"`
 	CompatibleReady   bool   `json:"compatibleReady"`
 	CompatibleKind    string `json:"compatibleKind,omitempty"`
+	Thumbnail         string `json:"-"`
 	localToken        string
+}
+
+type PreparationEntry struct {
+	Entry
+	Thumbnail              string `json:"thumbnail"`
+	DesktopCompatibleReady bool   `json:"desktopCompatibleReady"`
 }
 
 type SpaceRequest struct {

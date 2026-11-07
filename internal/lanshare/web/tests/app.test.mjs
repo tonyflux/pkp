@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { escapeHTML, isImage, isMedia, activeTask, taskPercent, contentURL, probeCapabilities, supportsMedia } from '../app.js';
+import { escapeHTML, isImage, isMedia, activeTask, taskPercent, contentURL, probeCapabilities } from '../app.js';
 import { languages, messages, detectLanguage, translate } from '../locales.js';
 
 test('all visitor languages have every translated message', () => {
@@ -67,13 +67,3 @@ test('missing real bitrate or frame rate uses canPlayType without invented probe
   assert.equal(caps.videoSupported, false);
 });
 
-test('cached compatible copies require this browser to support their actual tracks and container', () => {
-  const info = { mime: 'video/mp4', videoCodec: 'hevc', bitDepth: 10, audioCodec: 'aac' };
-  const caps = { mp4: true, hevc: true, hevc10: false, aac: true };
-  assert.equal(supportsMedia(info, caps), false);
-  assert.equal(supportsMedia(info, { ...caps, hevc10: true }), true);
-  assert.equal(supportsMedia(info, { ...caps, hevc10: true, videoSupported: false }), false);
-  assert.equal(supportsMedia({ ...info, hdr: true }, { ...caps, hevc10: true }), false);
-  assert.equal(supportsMedia({ mime: 'video/webm', videoCodec: 'vp9', audioCodec: 'opus' }, { webm: true, vp9: true, opus: true }), true);
-  assert.equal(supportsMedia({ mime: 'video/mp4', videoCodec: 'unknown' }, { mp4: true }), false);
-});

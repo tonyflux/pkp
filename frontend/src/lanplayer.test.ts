@@ -71,10 +71,15 @@ describe("LAN player consumer boundaries", () => {
     seek.dispatchEvent(key);
     expect(key.defaultPrevented).toBe(false);
     expect(media.currentTime).toBe(20);
-    const speed = document.querySelector(".player-speed select") as HTMLSelectElement;
-    speed.value = "1.5";
-    speed.dispatchEvent(new Event("change", { bubbles: true }));
+    const speed = document.querySelector<HTMLButtonElement>(".player-speed .select-face")!;
+    speed.click();
+    document.querySelector<HTMLButtonElement>('.player-speed [data-select-option="1.5"]')!.click();
     expect(media.playbackRate).toBe(1.5);
+    expect(speed.getAttribute("aria-expanded")).toBe("false");
+    expect(speed.textContent).toContain("1.5×");
+    media.playbackRate = 0.75;
+    media.dispatchEvent(new Event("ratechange"));
+    expect(speed.textContent).toContain("0.75×");
   });
 
   it("lets users start playback after the browser rejects autoplay", async () => {

@@ -1,4 +1,5 @@
 import { translate } from './locales.js';
+import { mountSelect, selectHTML } from './select.js';
 
 const escapeHTML = value => String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
 const paths = {
@@ -73,7 +74,7 @@ export function mountPlayer({ container, entry, source, variant = 'original', la
           <div class="player-bottom">
             <div class="player-transport">${transport()}<div class="player-volume">${button('mute', 'mute', 'volume', 'player-mute')}<input class="player-volume-range" type="range" min="0" max="1" step="0.05" value="1" aria-label="${h(t('volume'))}"></div></div>
             <div class="player-options">
-              <label class="player-speed"><span class="sr-only">${h(t('speed'))}</span><select aria-label="${h(t('speed'))}">${[0.5, 0.75, 1, 1.25, 1.5, 1.75, 2].map(rate => `<option value="${rate}"${rate === 1 ? ' selected' : ''}>${rate === 1 ? '1.0' : rate}×</option>`).join('')}</select></label>
+              ${selectHTML({ id: 'player-speed', label: t('speed'), value: 1, className: 'player-speed', options: [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2].map(rate => ({ value: rate, label: `${rate === 1 ? '1.0' : rate}×` })) })}
               ${button('pip', 'pictureInPicture', 'pip', 'player-pip', 'hidden')}
               ${button('fullscreen', 'fullscreen', 'fullscreen', 'player-fullscreen', 'hidden')}
             </div>
@@ -99,7 +100,7 @@ export function mountPlayer({ container, entry, source, variant = 'original', la
   const duration = container.querySelector('.player-duration');
   const remaining = container.querySelector('.player-remaining');
   const volume = container.querySelector('.player-volume-range');
-  const speed = container.querySelector('.player-speed select');
+  const speed = container.querySelector('.player-speed');
   const menu = container.querySelector('.player-menu');
   const more = container.querySelector('.player-more');
   const list = container.querySelector('.player-playlist');
@@ -112,6 +113,7 @@ export function mountPlayer({ container, entry, source, variant = 'original', la
   const portrait = window.matchMedia('(max-width: 760px) and (orientation: portrait)');
   let destroyed = false, idleTimer, scrubbing = false, waiting = false, needsGesture = false;
   let failure = '', revealOnly = false, selecting = false, playRequest = 0;
+  const speedMenu = mountSelect(speed, { signal: controller.signal, onChange: value => { media.playbackRate = Number(value); }, onOpenChange: showControls });
   const listen = (target, event, handler, options = {}) => target.addEventListener(event, handler, { ...options, signal: controller.signal });
   const finiteDuration = () => Number.isFinite(media.duration) && media.duration > 0 ? media.duration : 0;
   const fullscreenActive = () => document.fullscreenElement === container || document.webkitFullscreenElement === container || Boolean(media.webkitDisplayingFullscreen);
@@ -124,7 +126,7 @@ export function mountPlayer({ container, entry, source, variant = 'original', la
     if (!media.paused && !media.ended) idleTimer = setTimeout(hideControls, 3000);
   }
   function hideControls() {
-    if (destroyed || media.paused || media.ended || scrubbing || media.seeking || waiting || needsGesture || failure || !menu.hidden || !list.hidden && !portrait.matches) return;
+    if (destroyed || media.paused || media.ended || scrubbing || media.seeking || waiting || needsGesture || failure || !menu.hidden || speedMenu.open || !list.hidden && !portrait.matches) return;
     const focus = document.activeElement;
     if (focus && container.contains(focus) && focus.closest('button,input,select,.player-menu')) return;
     container.classList.add('controls-hidden');
@@ -342,9 +344,8 @@ export function mountPlayer({ container, entry, source, variant = 'original', la
   listen(seek, 'input', () => seekTo(Number(seek.value)));
   listen(seek, 'change', () => { scrubbing = false; renderTimeline(); showControls(); });
   listen(volume, 'input', () => { media.volume = Number(volume.value); media.muted = media.volume === 0; renderVolume(); });
-  listen(speed, 'change', () => { media.playbackRate = Number(speed.value); });
   listen(media, 'volumechange', renderVolume);
-  listen(media, 'ratechange', () => { speed.value = String(media.playbackRate); });
+  listen(media, 'ratechange', () => { speedMenu.setValue(media.playbackRate); });
   listen(media, 'timeupdate', renderTimeline);
   listen(media, 'progress', renderBuffered);
   for (const event of ['loadedmetadata', 'durationchange', 'loadeddata', 'canplay']) listen(media, event, () => {
@@ -369,7 +370,7 @@ export function mountPlayer({ container, entry, source, variant = 'original', la
       else if (!list.hidden && !fullscreenActive()) { event.preventDefault(); togglePlaylist(false); listToggle.focus(); }
       return;
     }
-    if (event.target.closest('input,select,textarea,[contenteditable="true"],[role="textbox"]')) return;
+    if (event.target.closest('input,select,textarea,[contenteditable="true"],[role="textbox"],[data-select-menu]')) return;
     if (event.key === ' ' && event.target.closest('button,a')) return;
     const key = event.key.toLowerCase();
     const action = { ' ': 'play', k: 'play', arrowleft: 'backward', arrowright: 'forward', m: 'mute', f: 'fullscreen' }[key];

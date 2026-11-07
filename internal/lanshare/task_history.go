@@ -6,6 +6,35 @@ func terminalTask(state string) bool {
 	return state == "ready" || state == "failed" || state == "cancelled"
 }
 
+// DismissTaskHistory hides finished records from desktop status without changing shared tasks.
+func (m *Manager) DismissTaskHistory(spaceID, taskID string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if taskID != "" {
+		t := m.tasks[taskID]
+		if t == nil || (spaceID != "" && t.SpaceID != spaceID) || !terminalTask(t.State) {
+			return errInvalid
+		}
+	}
+	var changed []*taskRecord
+	for id, t := range m.tasks {
+		if (spaceID == "" || t.SpaceID == spaceID) && (taskID == "" || id == taskID) && terminalTask(t.State) && !t.DesktopHidden {
+			t.DesktopHidden = true
+			changed = append(changed, t)
+		}
+	}
+	if len(changed) == 0 {
+		return nil
+	}
+	if err := m.saveLocked(); err != nil {
+		for _, t := range changed {
+			t.DesktopHidden = false
+		}
+		return err
+	}
+	return nil
+}
+
 // Dismissal belongs to the visitor session, never to the shared task or its files.
 func (m *Manager) dismissTasks(ctx context.Context, sid, taskID, sessionID string) ([]string, error) {
 	s, err := m.space(sid, false)

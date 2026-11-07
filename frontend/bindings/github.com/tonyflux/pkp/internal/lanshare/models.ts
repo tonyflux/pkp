@@ -27,6 +27,23 @@ export interface NetworkInterface {
     "address": string;
 }
 
+export interface PreparationEntry {
+    "id": string;
+    "name": string;
+    "parentId": string;
+    "version": string;
+    "mime": string;
+    "isDir": boolean;
+    "size": number;
+    "modified": string;
+    "ready": boolean;
+    "needsVerification"?: boolean;
+    "compatibleReady": boolean;
+    "compatibleKind"?: string;
+    "thumbnail": string;
+    "desktopCompatibleReady": boolean;
+}
+
 export interface Space {
     "name": string;
     "kind": string;

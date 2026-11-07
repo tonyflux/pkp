@@ -54,6 +54,13 @@ func (s *LANService) Status() (lanshare.Status, error) {
 	}
 	return m.Status(), nil
 }
+func (s *LANService) Tasks() ([]lanshare.Task, error) {
+	m, err := s.get()
+	if err != nil {
+		return nil, err
+	}
+	return m.Tasks(), nil
+}
 func (s *LANService) Interfaces() ([]lanshare.NetworkInterface, error) { return lanshare.Interfaces() }
 func (s *LANService) Start(req lanshare.StartRequest) error {
 	m, err := s.get()
@@ -97,6 +104,33 @@ func (s *LANService) RemoveSpace(id string) error {
 	}
 	return m.RemoveSpace(id)
 }
+func (s *LANService) ListPreparationEntries(spaceID, parentID string) ([]lanshare.PreparationEntry, error) {
+	m, err := s.get()
+	if err != nil {
+		return nil, err
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+	return m.ListPreparationEntries(ctx, spaceID, parentID)
+}
+func (s *LANService) PreparationThumbnail(spaceID, fileID string) (string, error) {
+	m, err := s.get()
+	if err != nil {
+		return "", err
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+	return m.PreparationThumbnail(ctx, spaceID, fileID)
+}
+func (s *LANService) PrepareDesktop(spaceID, fileID, kind string) (lanshare.Task, error) {
+	m, err := s.get()
+	if err != nil {
+		return lanshare.Task{}, err
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+	return m.PrepareDesktop(ctx, spaceID, fileID, kind)
+}
 func (s *LANService) CancelTask(id string) error {
 	m, err := s.get()
 	if err != nil {
@@ -110,6 +144,13 @@ func (s *LANService) ResumeTask(id string) error {
 		return err
 	}
 	return m.ResumeTask(id)
+}
+func (s *LANService) DismissTaskHistory(spaceID, taskID string) error {
+	m, err := s.get()
+	if err != nil {
+		return err
+	}
+	return m.DismissTaskHistory(spaceID, taskID)
 }
 func (s *LANService) ClearCache() (lanshare.ClearResult, error) {
 	m, err := s.get()

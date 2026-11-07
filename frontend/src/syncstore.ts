@@ -77,10 +77,10 @@ export function watchSync(): void {
   Events.On("sync:state", (event) => { stateGeneration++; setPairs(event.data); });
   void loadSync();
 }
-export function openSyncCreate(account: string, preset?: Pick<SyncConfig, "name" | "cloudId" | "cloudPath" | "mode">): void {
+export function openSyncCreate(account: string): void {
   if (!account || syncDraftGuard.busy || sync.draftOpen || syncDialog.kind) return;
   draftGeneration++;
-  syncDraft.config = { id: "", account, name: preset?.name ?? "", localPath: "", cloudId: preset?.cloudId ?? "", cloudPath: preset?.cloudPath ?? "", mode: preset?.mode ?? "bidirectional", deletes: { bidirectional: true, backup: false, download: false } };
+  syncDraft.config = { id: "", account, name: "", localPath: "", cloudId: "", cloudPath: "", mode: "bidirectional", deletes: { bidirectional: true, backup: false, download: false } };
   resetDraft();
 }
 export async function openSyncEdit(pair: SyncPair): Promise<void> {

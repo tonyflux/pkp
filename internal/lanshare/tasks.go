@@ -15,17 +15,18 @@ import (
 
 type taskRecord struct {
 	Task
-	Version      string                `json:"version"`
-	RequestKey   string                `json:"requestKey"`
-	Capabilities lanmedia.Capabilities `json:"capabilities"`
-	Created      time.Time             `json:"created"`
-	Original     string                `json:"original"`
-	Checkpoint   string                `json:"checkpoint"`
-	OutputToken  string                `json:"outputToken"`
-	Hold         bool                  `json:"hold"`
-	Sessions     map[string]bool       `json:"-"`
-	Desktop      bool                  `json:"-"`
-	cancel       context.CancelFunc
+	Version       string                `json:"version"`
+	RequestKey    string                `json:"requestKey"`
+	Capabilities  lanmedia.Capabilities `json:"capabilities"`
+	Created       time.Time             `json:"created"`
+	Original      string                `json:"original"`
+	Checkpoint    string                `json:"checkpoint"`
+	OutputToken   string                `json:"outputToken"`
+	Hold          bool                  `json:"hold"`
+	DesktopHidden bool                  `json:"desktopHidden,omitempty"`
+	Sessions      map[string]bool       `json:"-"`
+	Desktop       bool                  `json:"desktop,omitempty"`
+	cancel        context.CancelFunc
 }
 
 func (m *Manager) signal() {
@@ -35,9 +36,9 @@ func (m *Manager) signal() {
 	}
 }
 
-func (m *Manager) holdLocked(sid string) {
+func (m *Manager) holdLocked(sid string, visitorsOnly bool) {
 	for _, t := range m.tasks {
-		if sid != "" && t.SpaceID != sid {
+		if (sid != "" && t.SpaceID != sid) || (visitorsOnly && t.Desktop) {
 			continue
 		}
 		switch t.State {
@@ -50,11 +51,15 @@ func (m *Manager) holdLocked(sid string) {
 	}
 }
 
+func (m *Manager) PrepareDesktop(ctx context.Context, spaceID, fileID, kind string) (Task, error) {
+	return m.prepare(ctx, prepareRequest{SpaceID: spaceID, FileID: fileID, Kind: kind, Capabilities: lanmedia.Capabilities{H264: true, AAC: true, MP4: true}}, "")
+}
+
 func (m *Manager) prepare(ctx context.Context, request prepareRequest, sessionID string) (Task, error) {
 	if request.Kind != "original" && request.Kind != "compatible" {
 		return Task{}, errInvalid
 	}
-	if _, err := m.space(request.SpaceID, true); err != nil {
+	if _, err := m.space(request.SpaceID, sessionID != ""); err != nil {
 		return Task{}, err
 	}
 	source, err := m.resolve(ctx, request.SpaceID, request.FileID)
@@ -68,7 +73,7 @@ func (m *Manager) prepare(ctx context.Context, request prepareRequest, sessionID
 	direct := false
 	if request.Kind == "compatible" {
 		if source.Entry.Ready {
-			info, err := m.probe(ctx, request.SpaceID, request.FileID, source.Entry.Version, "original")
+			info, err := m.probe(ctx, request.SpaceID, source, "original")
 			if err != nil {
 				return Task{}, err
 			}
@@ -85,14 +90,20 @@ func (m *Manager) prepare(ctx context.Context, request prepareRequest, sessionID
 	}
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	if !m.running || m.sessions[sessionID] == nil {
+	if m.closed || ctx.Err() != nil {
+		if ctx.Err() != nil {
+			return Task{}, ctx.Err()
+		}
+		return Task{}, errForbidden
+	}
+	if sessionID != "" && (!m.running || m.sessions[sessionID] == nil) {
 		return Task{}, errForbidden
 	}
 	s := m.spaces[request.SpaceID]
 	if s == nil || !s.Enabled {
 		return Task{}, errForbidden
 	}
-	if !s.AllowPrepare {
+	if sessionID != "" && !s.AllowPrepare {
 		return Task{}, errPrepareDisabled
 	}
 	active := 0
@@ -100,7 +111,8 @@ func (m *Manager) prepare(ctx context.Context, request prepareRequest, sessionID
 		if t.State == "queued" || t.State == "downloading" || t.State == "converting" {
 			active++
 		}
-		if t.RequestKey != key {
+		pendingMatch := request.Kind == "compatible" && (t.State == "queued" || t.State == "downloading" || t.State == "converting") && t.SpaceID == request.SpaceID && t.FileID == request.FileID && t.Version == source.Entry.Version && t.Kind == request.Kind && strings.HasPrefix(t.RequestKey, key+"/pending/")
+		if t.RequestKey != key && !pendingMatch {
 			continue
 		}
 		switch t.State {
@@ -108,20 +120,26 @@ func (m *Manager) prepare(ctx context.Context, request prepareRequest, sessionID
 			if t.Hold {
 				continue
 			}
-			t.Sessions[sessionID] = true
+			if sessionID == "" && !t.Desktop {
+				t.Desktop = true
+				if err := m.saveLocked(); err != nil {
+					t.Desktop = false
+					return Task{}, err
+				}
+			} else if sessionID != "" {
+				t.Sessions[sessionID] = true
+			}
 			return t.Task, nil
 		case "ready":
 			if (request.Kind == "original" || direct) && source.Entry.Ready {
-				delete(m.sessions[sessionID].DismissedTasks, t.ID)
-				return t.Task, nil
+				return m.reuseReadyLocked(t, sessionID)
 			}
 			if request.Kind == "compatible" {
 				cached, f := m.cachedLocked(resourceKey(request.SpaceID, request.FileID, source.Entry.Version))
 				if f != nil {
 					f.Close()
 					if cached.Token == t.OutputToken {
-						delete(m.sessions[sessionID].DismissedTasks, t.ID)
-						return t.Task, nil
+						return m.reuseReadyLocked(t, sessionID)
 					}
 				}
 			}
@@ -131,8 +149,8 @@ func (m *Manager) prepare(ctx context.Context, request prepareRequest, sessionID
 		return Task{}, errors.New("rate_limited")
 	}
 	// Bound persisted history while preserving held work and all retained original objects.
+	var oldest *taskRecord
 	if len(m.tasks) >= 256 {
-		var oldest *taskRecord
 		for _, t := range m.tasks {
 			if t.State == "ready" || t.State == "cancelled" || t.State == "failed" {
 				if oldest == nil || t.Created.Before(oldest.Created) {
@@ -145,16 +163,40 @@ func (m *Manager) prepare(ctx context.Context, request prepareRequest, sessionID
 		}
 		delete(m.tasks, oldest.ID)
 	}
-	t := &taskRecord{Task: Task{ID: randomID(), SpaceID: request.SpaceID, FileID: request.FileID, Name: source.Entry.Name, Kind: request.Kind, State: "queued", Total: source.Entry.Size}, Version: source.Entry.Version, RequestKey: key, Capabilities: request.Capabilities, Created: time.Now(), Sessions: map[string]bool{sessionID: true}}
+	t := &taskRecord{Task: Task{ID: randomID(), SpaceID: request.SpaceID, FileID: request.FileID, Name: source.Entry.Name, Kind: request.Kind, State: "queued", Total: source.Entry.Size}, Version: source.Entry.Version, RequestKey: key, Capabilities: request.Capabilities, Created: time.Now(), Sessions: make(map[string]bool), Desktop: sessionID == ""}
+	if sessionID != "" {
+		t.Sessions[sessionID] = true
+	}
 	if (request.Kind == "original" || direct) && source.Entry.Ready {
 		t.State, t.Done = "ready", t.Total
 	}
 	m.tasks[t.ID] = t
 	if err := m.saveLocked(); err != nil {
 		delete(m.tasks, t.ID)
+		if oldest != nil {
+			m.tasks[oldest.ID] = oldest
+		}
 		return Task{}, err
 	}
 	m.signal()
+	return t.Task, nil
+}
+
+func (m *Manager) reuseReadyLocked(t *taskRecord, sessionID string) (Task, error) {
+	if t.DesktopHidden || (sessionID == "" && !t.Desktop) {
+		hidden, desktop := t.DesktopHidden, t.Desktop
+		t.DesktopHidden = false
+		if sessionID == "" {
+			t.Desktop = true
+		}
+		if err := m.saveLocked(); err != nil {
+			t.DesktopHidden, t.Desktop = hidden, desktop
+			return Task{}, err
+		}
+	}
+	if sessionID != "" {
+		delete(m.sessions[sessionID].DismissedTasks, t.ID)
+	}
 	return t.Task, nil
 }
 
@@ -174,6 +216,7 @@ func (m *Manager) cancelTaskLocked(t *taskRecord) {
 		return
 	}
 	t.State, t.Error, t.Hold = "cancelled", "", false
+	t.DesktopHidden = false
 	clear(t.Sessions)
 	if t.cancel != nil {
 		t.cancel()
@@ -214,9 +257,9 @@ func (m *Manager) ResumeTask(id string) error {
 		m.mu.Unlock()
 		return errInvalid
 	}
-	sid, fid, version := t.SpaceID, t.FileID, t.Version
+	sid, fid, version, state, desktop := t.SpaceID, t.FileID, t.Version, t.State, t.Desktop
 	m.mu.Unlock()
-	if _, err := m.space(sid, true); err != nil {
+	if _, err := m.space(sid, !desktop); err != nil {
 		return err
 	}
 	ctx, cancel := context.WithTimeout(m.ctx, 15*time.Second)
@@ -231,13 +274,25 @@ func (m *Manager) ResumeTask(id string) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	s := m.spaces[sid]
-	if s == nil || !s.Enabled || !s.AllowPrepare || t.cancel != nil {
+	if m.closed || ctx.Err() != nil || s == nil || !s.Enabled || (!desktop && !s.AllowPrepare) {
 		return errForbidden
 	}
-	previous, desktop, hold := t.Task, t.Desktop, t.Hold
-	t.Desktop, t.Hold, t.State, t.Error = true, false, "queued", ""
+	if m.tasks[id] != t || t.State != state || t.Desktop != desktop || t.cancel != nil {
+		return errInvalid
+	}
+	active := 0
+	for _, other := range m.tasks {
+		if other.State == "queued" || other.State == "downloading" || other.State == "converting" {
+			active++
+		}
+	}
+	if active >= 32 {
+		return errors.New("rate_limited")
+	}
+	previous, wasDesktop, hold, hidden := t.Task, t.Desktop, t.Hold, t.DesktopHidden
+	t.Desktop, t.Hold, t.DesktopHidden, t.State, t.Error = true, false, false, "queued", ""
 	if err = m.saveLocked(); err != nil {
-		t.Task, t.Desktop, t.Hold = previous, desktop, hold
+		t.Task, t.Desktop, t.Hold, t.DesktopHidden = previous, wasDesktop, hold, hidden
 		return err
 	}
 	m.signal()
@@ -257,7 +312,7 @@ func (m *Manager) stageAllowed(t *taskRecord) error {
 	if s == nil || !s.Enabled {
 		return errForbidden
 	}
-	if !s.AllowPrepare {
+	if !t.Desktop && !s.AllowPrepare {
 		return errPrepareDisabled
 	}
 	if !t.Desktop {
@@ -339,8 +394,20 @@ func (m *Manager) setStage(t *taskRecord, state string, total int64) error {
 	defer m.mu.Unlock()
 	// Recheck under the transition lock so revocation cannot dispatch a later stage.
 	s := m.spaces[t.SpaceID]
-	if t.Hold || t.State == "cancelled" || s == nil || !s.Enabled || !s.AllowPrepare {
+	if t.Hold || m.closed || t.State == "cancelled" || s == nil || !s.Enabled || (!t.Desktop && !s.AllowPrepare) || (!t.Desktop && !m.running) {
 		return errHeld
+	}
+	if !t.Desktop {
+		live := false
+		for id := range t.Sessions {
+			if m.sessions[id] != nil {
+				live = true
+				break
+			}
+		}
+		if !live {
+			return errHeld
+		}
 	}
 	t.State, t.Done, t.Total, t.Error = state, 0, total, ""
 	return m.saveLocked()
@@ -426,7 +493,7 @@ func (m *Manager) runTask(parent context.Context, t *taskRecord) error {
 		return errUnavailable
 	}
 	if !source.Entry.Ready {
-		s, err := m.space(t.SpaceID, true)
+		s, err := m.space(t.SpaceID, false)
 		if err != nil {
 			return err
 		}
@@ -659,7 +726,7 @@ func safeName(name string) string {
 	return name
 }
 
-func (m *Manager) taskList(ctx context.Context, sid, sessionID string) ([]Task, error) {
+func (m *Manager) taskList(ctx context.Context, sid, sessionID string, activeOnly bool) ([]Task, error) {
 	s, err := m.space(sid, false)
 	if err != nil {
 		return nil, err
@@ -675,15 +742,28 @@ func (m *Manager) taskList(ctx context.Context, sid, sessionID string) ([]Task, 
 	}
 	records := make([]taskRecord, 0)
 	for _, t := range m.tasks {
-		if t.SpaceID == sid && !(terminalTask(t.State) && visitor.DismissedTasks[t.ID]) {
+		if t.SpaceID == sid && (!activeOnly || !terminalTask(t.State)) && !(terminalTask(t.State) && visitor.DismissedTasks[t.ID]) {
 			records = append(records, *t)
 		}
 	}
 	m.mu.Unlock()
 	result := []Task{}
+	type proof struct {
+		source Source
+		err    error
+	}
+	proofs := make(map[string]proof)
 	for _, t := range records {
-		source, err := m.resolve(ctx, sid, t.FileID)
-		if err != nil || source.Entry.Version != t.Version {
+		if err := ctx.Err(); err != nil {
+			return nil, err
+		}
+		p, ok := proofs[t.FileID]
+		if !ok {
+			p.source, p.err = m.resolve(ctx, sid, t.FileID)
+			proofs[t.FileID] = p
+		}
+		source := p.source
+		if p.err != nil || source.Entry.Version != t.Version {
 			continue
 		}
 		if t.State == "ready" {

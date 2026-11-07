@@ -15,6 +15,7 @@ const errors: Record<string, string> = {
   not_ready: N_("lan|文件尚未完整准备到电脑。"),
   prepare_disabled: N_("lan|此空间未允许准备文件。"),
   invalid_request: N_("lan|请检查密码、网卡和共享空间设置。"),
+  rate_limited: N_("lan|准备任务已达上限，请等待任务结束后重试。"),
   disk_full: N_("lan|电脑可用空间或兼容副本容量不足，请清理后重试。"),
   media_unavailable: N_("lan|媒体工具不可用，请检查应用安装是否完整。"),
   unsupported_media: N_("lan|此媒体暂不支持兼容处理，请下载原件。"),
@@ -29,17 +30,21 @@ export function lanError(error: unknown): string {
   return t(errors[code] ?? N_("lan|操作未完成，请检查网络、保存位置与访问权限后重试。"));
 }
 let refreshing: Promise<void> | null = null;
+let refreshingTasks: Promise<void> | null = null;
+let taskRevision = 0;
 export function refreshLAN(): Promise<void> {
   if (refreshing) return refreshing;
+  const revision = ++taskRevision;
   lan.loading = true;
   refreshing = (async () => {
     try {
       const status = await LANService.Status();
+      const tasks = revision === taskRevision || !lan.status ? (status.tasks ?? []).map(item => ({ ...item, error: item.error ? lanError(item.error) : "" })) : lan.status.tasks;
       lan.status = {
         ...status,
         error: status.error ? lanError(status.error) : "",
         spaces: (status.spaces ?? []).map(item => ({ ...item, error: item.error ? lanError(item.error) : "" })),
-        tasks: (status.tasks ?? []).map(item => ({ ...item, error: item.error ? lanError(item.error) : "" })),
+        tasks,
       };
       lan.error = "";
     } catch (error) { lan.error = lanError(error); }
@@ -47,10 +52,26 @@ export function refreshLAN(): Promise<void> {
   })();
   return refreshing;
 }
+export function refreshLANTasks(): Promise<void> {
+  if (refreshingTasks) return refreshingTasks;
+  if (lan.busy || !lan.status) return Promise.resolve();
+  const revision = taskRevision;
+  refreshingTasks = (async () => {
+    try {
+      const tasks = await LANService.Tasks();
+      if (revision === taskRevision && !lan.busy && lan.status) {
+        taskRevision++;
+        lan.status.tasks = (tasks ?? []).map(item => ({ ...item, error: item.error ? lanError(item.error) : "" }));
+      }
+    } catch (error) { if (revision === taskRevision && !lan.busy) lan.error = lanError(error); }
+    finally { refreshingTasks = null; }
+  })();
+  return refreshingTasks;
+}
 export async function loadLANInterfaces(): Promise<void> { lan.interfaces = (await LANService.Interfaces()) ?? []; }
 export async function changeLAN(action: () => Promise<unknown>): Promise<boolean> {
   if (lan.busy) return false;
-  lan.busy = true; lan.error = "";
+  lan.busy = true; lan.error = ""; taskRevision++;
   try { await refreshing; await action(); await refreshLAN(); return true; }
   catch (error) { lan.error = lanError(error); return false; }
   finally { lan.busy = false; }

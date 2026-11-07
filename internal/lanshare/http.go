@@ -152,7 +152,7 @@ func (m *Manager) serveHTTP(w http.ResponseWriter, r *http.Request) {
 			name = "index.html"
 		}
 		switch name {
-		case "index.html", "app.js", "player.js", "style.css", "locales.js":
+		case "index.html", "app.js", "player.js", "select.js", "style.css", "locales.js":
 		default:
 			http.NotFound(w, r)
 			return
@@ -175,12 +175,13 @@ func (m *Manager) serveHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path != "/api/content" {
 		cancel()
 		timeout := 60 * time.Second
-		if r.URL.Path == "/api/file" {
+		if r.URL.Path == "/api/file" || r.URL.Path == "/api/playback" {
 			timeout = 10 * time.Minute
 		}
 		ctx, cancel = context.WithTimeout(r.Context(), timeout)
 	}
 	defer cancel()
+	ctx = m.sourceProofContext(ctx)
 	r = r.WithContext(ctx)
 	connection, _ := ctx.Value(connectionKey{}).(net.Conn)
 	response := &activeResponse{Session: sessionID, Conn: connection, Cancel: cancel, Context: ctx}
@@ -316,26 +317,19 @@ func (m *Manager) api(w http.ResponseWriter, r *http.Request, response *activeRe
 			jsonError(w, errInvalid)
 			return
 		}
-		m.mu.Lock()
-		spaces := make([]spaceRecord, 0, len(m.spaces))
-		for _, s := range m.spaces {
-			if s.Enabled {
-				copy := *s
-				copy.References = nil
-				spaces = append(spaces, copy)
-			}
+		jsonResponse(w, m.visitorSpaces(ctx))
+	case "/api/state":
+		if !isGET {
+			jsonError(w, errInvalid)
+			return
 		}
-		m.mu.Unlock()
-		result := []map[string]any{}
-		for _, s := range spaces {
-			check, cancel := context.WithTimeout(ctx, 5*time.Second)
-			err := m.validateSpace(check, s)
-			cancel()
-			if err == nil {
-				result = append(result, map[string]any{"id": s.ID, "name": s.Name, "kind": s.Kind, "allowPrepare": s.AllowPrepare})
-			}
+		m.visitorSnapshot(w, r, response)
+	case "/api/playback":
+		if r.Method != http.MethodPost {
+			jsonError(w, errInvalid)
+			return
 		}
-		jsonResponse(w, result)
+		m.visitorPlayback(w, r, response)
 	case "/api/files":
 		if !isGET {
 			jsonError(w, errInvalid)
@@ -368,60 +362,6 @@ func (m *Manager) api(w http.ResponseWriter, r *http.Request, response *activeRe
 		}
 		m.decorate(&source.Entry, sid)
 		jsonResponse(w, source.Entry)
-	case "/api/media":
-		if !isGET {
-			jsonError(w, errInvalid)
-			return
-		}
-		source, err := m.resolve(ctx, sid, fid)
-		if err != nil {
-			jsonError(w, err)
-			return
-		}
-		if err = m.bindResponse(response, sid, fid, source.Entry.Version); err != nil {
-			jsonError(w, err)
-			return
-		}
-		info, err := m.probe(ctx, sid, fid, source.Entry.Version, r.URL.Query().Get("variant"))
-		if err != nil {
-			jsonError(w, err)
-			return
-		}
-		jsonResponse(w, info)
-	case "/api/plan":
-		if r.Method != http.MethodPost {
-			jsonError(w, errInvalid)
-			return
-		}
-		var request struct {
-			SpaceID      string                `json:"spaceId"`
-			FileID       string                `json:"fileId"`
-			Capabilities lanmedia.Capabilities `json:"capabilities"`
-		}
-		if err := readJSON(w, r, &request); err != nil {
-			jsonError(w, err)
-			return
-		}
-		source, err := m.resolve(ctx, request.SpaceID, request.FileID)
-		if err != nil {
-			jsonError(w, err)
-			return
-		}
-		if err = m.bindResponse(response, request.SpaceID, request.FileID, source.Entry.Version); err != nil {
-			jsonError(w, err)
-			return
-		}
-		info, err := m.probe(ctx, request.SpaceID, request.FileID, source.Entry.Version, "")
-		if err != nil {
-			jsonError(w, err)
-			return
-		}
-		plan, err := lanmedia.MakePlan(info, request.Capabilities)
-		if err != nil && plan.Kind != "unsupported" {
-			jsonError(w, err)
-			return
-		}
-		jsonResponse(w, plan)
 	case "/api/prepare":
 		if r.Method != http.MethodPost {
 			jsonError(w, errInvalid)
@@ -451,7 +391,7 @@ func (m *Manager) api(w http.ResponseWriter, r *http.Request, response *activeRe
 			jsonError(w, err)
 			return
 		}
-		tasks, err := m.taskList(ctx, sid, response.Session)
+		tasks, err := m.taskList(ctx, sid, response.Session, false)
 		if err != nil {
 			jsonError(w, err)
 			return
@@ -513,7 +453,7 @@ func (m *Manager) api(w http.ResponseWriter, r *http.Request, response *activeRe
 	}
 }
 
-func (m *Manager) probe(ctx context.Context, sid, fid, version, variant string) (lanmedia.Info, error) {
+func (m *Manager) probe(ctx context.Context, sid string, source Source, variant string) (lanmedia.Info, error) {
 	select {
 	case m.probeSlot <- struct{}{}:
 		defer func() { <-m.probeSlot }()
@@ -527,9 +467,9 @@ func (m *Manager) probe(ctx context.Context, sid, fid, version, variant string) 
 	var release func()
 	var err error
 	if variant == "compatible" {
-		f, entry, release, err = m.openCompatible(ctx, sid, fid)
+		f, entry, release, err = m.openCompatible(sid, source)
 	} else if variant == "" || variant == "original" {
-		f, entry, err = m.original(ctx, sid, fid, version)
+		f, entry, err = m.openOriginal(sid, source)
 		if f != nil {
 			release = func() { f.Close() }
 		}
@@ -540,7 +480,7 @@ func (m *Manager) probe(ctx context.Context, sid, fid, version, variant string) 
 		return lanmedia.Info{}, err
 	}
 	defer release()
-	return m.probeOpened(ctx, f, sid, fid, version, variant, entry.localToken)
+	return m.probeOpened(ctx, f, sid, source.Entry.ID, source.Entry.Version, variant, entry.localToken)
 }
 
 func safeInline(mimeType string) bool {
@@ -582,15 +522,19 @@ func (m *Manager) content(w http.ResponseWriter, r *http.Request, response *acti
 		jsonError(w, errors.New("rate_limited"))
 		return
 	}
+	source, err := m.resolve(r.Context(), sid, fid)
+	if err != nil {
+		jsonError(w, err)
+		return
+	}
 	var file *os.File
 	var entry Entry
 	var release func()
-	var err error
 	variant := r.URL.Query().Get("variant")
 	if variant == "compatible" {
-		file, entry, release, err = m.openCompatible(r.Context(), sid, fid)
+		file, entry, release, err = m.openCompatible(sid, source)
 	} else if variant == "" || variant == "original" {
-		file, entry, err = m.original(r.Context(), sid, fid, "")
+		file, entry, err = m.openOriginal(sid, source)
 		if file != nil {
 			release = func() { file.Close() }
 		}
@@ -650,6 +594,7 @@ func (m *Manager) watchResponse(response *activeResponse) {
 		sid, fid, version := response.Space, response.File, response.Version
 		m.mu.Unlock()
 		ctx, cancel := context.WithTimeout(response.Context, sourceRecheckTimeout)
+		ctx = m.sourceProofContext(ctx)
 		var err error
 		if fid != "" {
 			var src Source
@@ -665,6 +610,9 @@ func (m *Manager) watchResponse(response *activeResponse) {
 			}
 		}
 		cancel()
+		if response.Context.Err() != nil {
+			return
+		}
 		if err != nil {
 			m.mu.Lock()
 			response.Cancel()
@@ -700,7 +648,7 @@ func (m *Manager) probeOpened(ctx context.Context, f *os.File, sid, fid, version
 	if err != nil || after != token {
 		return lanmedia.Info{}, errUnavailable
 	}
-	current, err := m.resolve(ctx, sid, fid)
+	current, err := m.resolve(m.sourceProofContext(ctx), sid, fid)
 	if err != nil || current.Entry.Version != version {
 		return lanmedia.Info{}, errUnavailable
 	}

@@ -5,6 +5,7 @@ export type {
     ClearResult,
     Entry,
     NetworkInterface,
+    PreparationEntry,
     Space,
     SpaceRequest,
     SpaceUpdate,

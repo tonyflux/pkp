@@ -34,8 +34,24 @@ export function CloudFolders(accountID: string, parentID: string): $CancellableP
     return $Call.ByID(3284465160, accountID, parentID);
 }
 
+export function DismissTaskHistory(spaceID: string, taskID: string): $CancellablePromise<void> {
+    return $Call.ByID(2177551709, spaceID, taskID);
+}
+
 export function Interfaces(): $CancellablePromise<lanshare$0.NetworkInterface[] | null> {
     return $Call.ByID(1610523286);
+}
+
+export function ListPreparationEntries(spaceID: string, parentID: string): $CancellablePromise<lanshare$0.PreparationEntry[] | null> {
+    return $Call.ByID(38452753, spaceID, parentID);
+}
+
+export function PreparationThumbnail(spaceID: string, fileID: string): $CancellablePromise<string> {
+    return $Call.ByID(3644933429, spaceID, fileID);
+}
+
+export function PrepareDesktop(spaceID: string, fileID: string, kind: string): $CancellablePromise<lanshare$0.Task> {
+    return $Call.ByID(190865783, spaceID, fileID, kind);
 }
 
 export function RemoveSpace(id: string): $CancellablePromise<void> {
@@ -60,6 +76,10 @@ export function Status(): $CancellablePromise<lanshare$0.Status> {
 
 export function Stop(): $CancellablePromise<void> {
     return $Call.ByID(4216444994);
+}
+
+export function Tasks(): $CancellablePromise<lanshare$0.Task[] | null> {
+    return $Call.ByID(3489800396);
 }
 
 export function UpdateSpace(req: lanshare$0.SpaceUpdate): $CancellablePromise<void> {
