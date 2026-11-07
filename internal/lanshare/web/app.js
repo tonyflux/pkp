@@ -307,6 +307,7 @@ export function startApp() {
     } });
   }
   function render() {
+    const activeView = state.view ? root.querySelector('#playback-view,#preparation-view') : null;
     languageMenu?.destroy(); languageMenu = null;
     spaceMenu?.destroy(); spaceMenu = null;
     if (!state.space) clearThumbnails();
@@ -333,7 +334,13 @@ export function startApp() {
       mountLanguage();
       return;
     }
-    root.innerHTML = `<div id="library-view" class="portal"><header class="header"><div class="header-brand">${brand()}<span data-connection>${connectionHTML()}</span></div><div class="header-actions">${languageSelect()}${button('tasks', 'computerTasks', 'secondary desktop-tasks', `${state.space ? '' : 'disabled'} aria-current="${state.tab === 'tasks' ? 'page' : 'false'}"`)}<span class="task-count" data-task-count></span>${iconButton('logout', 'logout', 'logout')}</div></header><div class="layout"><nav class="sidebar" aria-label="${h(t('spaces'))}"><h2>${h(t('spaces'))}</h2><div class="mobile-space-nav">${spaceSelect()}</div><div class="sidebar-list">${button('home', 'spaces', 'space-button')}${state.spaces.map(spaceButton).join('')}</div><p class="sidebar-foot">${icon('lock')}${h(t('readOnlyShort'))}</p></nav><main class="library ${state.space ? '' : 'space-home'}">${state.tab === 'tasks' && state.space ? tasksPageHTML() : libraryHTML()}</main></div><nav class="bottom-nav" aria-label="${h(t('title'))}">${button('files', 'sharedFiles', '', `aria-current="${state.tab === 'files' ? 'page' : 'false'}"`)}${button('tasks', 'computerTasks', '', `${state.space ? '' : 'disabled'} aria-current="${state.tab === 'tasks' ? 'page' : 'false'}"`)}</nav></div>`;
+    const libraryMarkup = `<div id="library-view" class="portal"><header class="header"><div class="header-brand">${brand()}<span data-connection>${connectionHTML()}</span></div><div class="header-actions">${languageSelect()}${button('tasks', 'computerTasks', 'secondary desktop-tasks', `${state.space ? '' : 'disabled'} aria-current="${state.tab === 'tasks' ? 'page' : 'false'}"`)}<span class="task-count" data-task-count></span>${iconButton('logout', 'logout', 'logout')}</div></header><div class="layout"><nav class="sidebar" aria-label="${h(t('spaces'))}"><h2>${h(t('spaces'))}</h2><div class="mobile-space-nav">${spaceSelect()}</div><div class="sidebar-list">${button('home', 'spaces', 'space-button')}${state.spaces.map(spaceButton).join('')}</div><p class="sidebar-foot">${icon('lock')}${h(t('readOnlyShort'))}</p></nav><main class="library ${state.space ? '' : 'space-home'}">${state.tab === 'tasks' && state.space ? tasksPageHTML() : libraryHTML()}</main></div><nav class="bottom-nav" aria-label="${h(t('title'))}">${button('files', 'sharedFiles', '', `aria-current="${state.tab === 'files' ? 'page' : 'false'}"`)}${button('tasks', 'computerTasks', '', `${state.space ? '' : 'disabled'} aria-current="${state.tab === 'tasks' ? 'page' : 'false'}"`)}</nav></div>`;
+    if (activeView) {
+      root.querySelector('#library-view')?.remove();
+      const template = document.createElement('template'); template.innerHTML = libraryMarkup;
+      const library = template.content.firstElementChild; library.hidden = true;
+      root.prepend(library);
+    } else root.innerHTML = libraryMarkup;
     mountFiles();
     mountLanguage();
     mountSpaces();
@@ -1387,6 +1394,11 @@ export function startApp() {
   panel.addEventListener('cancel', event => { event.preventDefault(); dismissPanel(); });
   panel.addEventListener('click', event => { if (event.target === panel) { const rect = panel.getBoundingClientRect(); if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) dismissPanel(); } });
   window.addEventListener('popstate', () => {
+    if (state.view === 'player' && player?.fullscreen) {
+      void player.exitFullscreen();
+      history.pushState({ pkpLANView: true }, '', `${location.pathname}${location.search}#player`);
+      return;
+    }
     state.intent++; abandonOperation(); closePanel(); if (state.view) clearFocusView(); state.selected = null; state.plan = null;
   });
   window.addEventListener('online', () => { void poll(); });

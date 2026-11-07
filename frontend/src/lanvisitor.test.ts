@@ -755,6 +755,18 @@ describe("LAN visitor navigation and readiness", () => {
     expect(selectedMedia()?.getAttribute("src")).toContain("id=c&");
   });
 
+
+  it("exits custom fullscreen on browser back without replacing the active media", async () => {
+    await open("a");
+    const media = selectedMedia();
+    document.querySelector<HTMLButtonElement>('.player-fullscreen')!.click(); await settle();
+    expect(document.querySelector('.player-page')?.classList.contains('is-fullscreen')).toBe(true);
+    window.dispatchEvent(new PopStateEvent('popstate')); await settle();
+    expect(selectedMedia()).toBe(media);
+    expect(document.querySelector('.player-page')?.classList.contains('is-fullscreen')).toBe(false);
+    expect(document.body.style.overflow).toBe('');
+  });
+
   it("still revokes playback after opening and closing playback information", async () => {
     await open("a");
     (document.querySelector(".player-more") as HTMLButtonElement).click();

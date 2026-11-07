@@ -134,7 +134,7 @@ func TestAuthenticationCSRFAndPublicMetadata(t *testing.T) {
 	m := newTestManager(t, nil)
 	s, _ := localSpace(t, m, false)
 	sessionID := authenticated(t, m)
-	for _, path := range []string{"/app.js", "/player.js", "/gallery.js", "/select.js", "/locales.js"} {
+	for _, path := range []string{"/app.js", "/player.js", "/gestures.js", "/gallery.js", "/select.js", "/locales.js"} {
 		asset := apiRequest(t, m, "GET", path, "", nil)
 		if asset.Code != http.StatusOK || !strings.Contains(asset.Header().Get("Content-Type"), "javascript") {
 			t.Fatalf("visitor module unavailable at %s: %d %s", path, asset.Code, asset.Header().Get("Content-Type"))

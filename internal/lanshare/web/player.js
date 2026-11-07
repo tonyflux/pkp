@@ -1,5 +1,6 @@
 import { translate } from './locales.js';
 import { mountSelect, selectHTML } from './select.js';
+import { mountPlayerGestures } from './gestures.js';
 
 const escapeHTML = value => String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
 const paths = {
@@ -17,6 +18,7 @@ const paths = {
   more: '<circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/>',
   audio: '<path d="M9 18V5l11-2v13M9 7l11-2"/><ellipse cx="6" cy="18" rx="3" ry="3"/><ellipse cx="17" cy="16" rx="3" ry="3"/>',
   video: '<rect x="3" y="4" width="18" height="16" rx="3"/><path d="m10 8 6 4-6 4z"/>',
+  brightness: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5 19 19M5 19l1.5-1.5M17.5 6.5 19 5"/>',
   close: '<path d="m6 6 12 12M18 6 6 18"/>'
 };
 const icon = name => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths[name]}</svg>`;
@@ -40,55 +42,69 @@ export function mountPlayer({ container, entry, source, variant = 'original', la
   const isAudio = /^audio\//i.test(entry.mime || '') || (!/^video\//i.test(entry.mime || '') && /\.(mp3|m4a|aac|flac|ogg|opus|wav)$/i.test(entry.name || ''));
   const badge = t(variant === 'compatible' ? 'compatibleShort' : 'original');
   const button = (action, label, image, className = '', extra = '') => `<button type="button" class="icon-button ${className}" data-player-action="${action}" aria-label="${h(t(label))}" title="${h(t(label))}" ${extra}>${icon(image)}</button>`;
-  const transport = () => `${button('backward', 'skipBack', 'backward', 'player-skip-back')}${button('play', 'play', 'play', 'player-play')}${button('forward', 'skipForward', 'forward', 'player-skip-forward')}`;
+  const transport = () => `${button('play', 'play', 'play', 'player-play')}${button('backward', 'skipBack', 'backward', 'player-skip-back')}${button('forward', 'skipForward', 'forward', 'player-skip-forward')}`;
   const mediaTag = isAudio ? 'audio' : 'video';
   container.className = `player-page${isAudio ? ' is-audio' : ''}`;
   container.tabIndex = -1;
   container.setAttribute('aria-label', entry.name);
   container.innerHTML = `
+    <div class="player-surface">
     <header class="player-header">
       <button type="button" class="player-back" data-player-action="back" aria-label="${h(t('backToFolder'))}">${icon('back')}<span>${h(t('backToFolder'))}</span></button>
       <div class="player-heading"><strong title="${h(entry.name)}">${h(entry.name)}</strong><span class="variant-badge">${h(badge)}</span></div>
       <div class="player-header-actions">
         <span data-connection><span class="connection${connected ? '' : ' offline'}" role="status">${h(t(connected ? 'connected' : 'offline'))}</span></span>
+        ${button('pip', 'pictureInPicture', 'pip', 'player-pip player-header-pip', 'hidden')}
         <button type="button" class="player-playlist-toggle" data-player-action="playlist" aria-label="${h(t('sameFolder'))} (${playlist.length})" aria-expanded="false" aria-controls="player-playlist">${icon('playlist')}<span>${h(t('sameFolder'))} (${playlist.length})</span></button>
         ${button('menu', 'more', 'more', 'player-more', 'aria-haspopup="menu" aria-expanded="false" aria-controls="player-menu"')}
         <div id="player-menu" class="player-menu" role="menu" hidden>
-          <button type="button" role="menuitem" data-player-action="details">${h(t('playbackInfo'))}</button>
-          <button type="button" role="menuitem" data-player-action="download">${h(t('download'))}</button>
-          ${onOptimizeStartup ? `<button type="button" role="menuitem" data-player-action="optimize-startup">${h(t('optimizeStartup'))}</button>` : ''}
+          <button type="button" role="menuitem" data-player-action="details"><span>${h(t('playbackInfo'))}</span></button>
+          <button type="button" role="menuitem" data-player-action="download"><span>${h(t('download'))}</span></button>
+          ${isAudio ? '' : `<button type="button" role="menuitem" class="player-compact-action" data-player-action="brightness" aria-expanded="false" aria-controls="player-brightness-panel">${icon('brightness')}<span>${h(t('pictureBrightness'))}</span></button>`}
+          <button type="button" role="menuitem" class="player-compact-action" data-player-action="mute">${icon('volume')}<span>${h(t('mute'))}</span></button>
+          <button type="button" role="menuitem" class="player-compact-action player-pip" data-player-action="pip" hidden>${icon('pip')}<span>${h(t('pictureInPicture'))}</span></button>
+          <button type="button" role="menuitem" data-player-action="system-fullscreen" hidden><span>${h(t('systemFullscreen'))}</span></button>
+          ${isAudio ? '' : `<button type="button" role="menuitem" data-player-action="gestures"><span>${h(t('playerGestures'))}</span></button>`}
+          ${onOptimizeStartup ? `<button type="button" role="menuitem" data-player-action="optimize-startup"><span>${h(t('optimizeStartup'))}</span></button>` : ''}
         </div>
       </div>
     </header>
     <div class="player-layout">
       <div class="player-main">
+        <div class="player-frame">
         <div class="player-stage" aria-busy="true">
           <${mediaTag} class="player-media" playsinline preload="metadata" aria-label="${h(entry.name)}"></${mediaTag}>
+          <div class="player-brightness-shade" aria-hidden="true"></div>
+          <div class="player-gesture-feedback" role="status" aria-live="polite" hidden><span class="player-gesture-icon" aria-hidden="true"></span><strong></strong><small></small></div>
           ${isAudio ? `<div class="audio-art" aria-hidden="true">${icon('audio')}</div>` : ''}
-          <div class="player-central">${transport()}</div>
           <div class="player-status" data-state="loading"><span class="player-status-spinner" aria-hidden="true"><span></span></span><span class="player-status-text" role="status" aria-live="polite" aria-atomic="true">${h(t('loadingMedia'))}</span></div>
         </div>
-        <div class="player-caption"><strong>${h(entry.name)}</strong><small>${h(size(entry.size))}</small><span class="variant-badge">${h(badge)}</span></div>
         <div class="player-controlbar">
           <div class="player-timeline">
-            <div class="player-time"><span class="player-elapsed">00:00</span><span aria-hidden="true"> / </span><span class="player-duration">--:--</span><span class="player-remaining">${h(t('remaining'))} --:--</span></div>
+            <span class="player-elapsed">00:00</span>
             <div class="seek-track"><div class="seek-buffer" aria-hidden="true"></div><span class="seek-played" aria-hidden="true"></span><input class="player-seek" type="range" min="0" max="0" value="0" step="0.1" aria-label="${h(t('seek'))}" disabled></div>
+            <span class="player-duration">--:--</span>
           </div>
           <div class="player-bottom">
             <div class="player-transport">${transport()}<div class="player-volume">${button('mute', 'mute', 'volume', 'player-mute')}<input class="player-volume-range" type="range" min="0" max="1" step="0.05" value="1" aria-label="${h(t('volume'))}"></div></div>
             <div class="player-options">
+              ${isAudio ? '' : button('brightness', 'pictureBrightness', 'brightness', 'player-brightness-toggle', 'aria-expanded="false" aria-controls="player-brightness-panel"')}
               ${selectHTML({ id: 'player-speed', label: t('speed'), value: 1, className: 'player-speed', options: [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2].map(rate => ({ value: rate, label: `${rate === 1 ? '1.0' : rate}×` })) })}
               ${button('pip', 'pictureInPicture', 'pip', 'player-pip', 'hidden')}
               ${button('fullscreen', 'fullscreen', 'fullscreen', 'player-fullscreen', 'hidden')}
             </div>
           </div>
+          ${isAudio ? '' : `<div id="player-brightness-panel" class="player-brightness" role="group" aria-label="${h(t('pictureBrightness'))}" hidden><label for="player-brightness-range">${icon('brightness')}<span>${h(t('pictureBrightness'))}</span><output>100%</output></label><input id="player-brightness-range" class="player-brightness-range" type="range" min="0.2" max="1" step="0.05" value="1" aria-label="${h(t('pictureBrightness'))}"><p>${h(t('pictureBrightnessNote'))}</p></div>`}
+          <div class="player-help" hidden><strong>${h(t('playerGestures'))}</strong><p>${h(t('playerGestureHelp'))}</p><p>${h(t('pictureBrightnessNote'))}</p><p>${h(t('pageFullscreenNote'))}</p></div>
         </div>
+        </div>
+        <div class="player-caption"><strong>${h(entry.name)}</strong><small>${h(size(entry.size))}</small><span class="variant-badge">${h(badge)}</span></div>
       </div>
       <aside id="player-playlist" class="player-playlist" aria-label="${h(t('sameFolder'))}" hidden>
         <div class="playlist-heading"><h2>${h(t('sameFolder'))} <span>${playlist.length}</span></h2>${button('playlist', 'close', 'close')}</div>
         <div class="playlist-list"><button type="button" class="playlist-load-more secondary" data-player-action="playlist-more" hidden>${h(t('loadMore'))}</button></div>
       </aside>
-    </div>`;
+    </div></div>`;
 
   const media = container.querySelector('.player-media');
   const stage = container.querySelector('.player-stage');
@@ -99,7 +115,6 @@ export function mountPlayer({ container, entry, source, variant = 'original', la
   const buffered = container.querySelector('.seek-buffer');
   const elapsed = container.querySelector('.player-elapsed');
   const duration = container.querySelector('.player-duration');
-  const remaining = container.querySelector('.player-remaining');
   const volume = container.querySelector('.player-volume-range');
   const speed = container.querySelector('.player-speed');
   const menu = container.querySelector('.player-menu');
@@ -108,20 +123,74 @@ export function mountPlayer({ container, entry, source, variant = 'original', la
   const listToggle = container.querySelector('.player-playlist-toggle');
   const listMore = container.querySelector('.playlist-load-more');
   const fullscreenButton = container.querySelector('.player-fullscreen');
-  const pipButton = container.querySelector('.player-pip');
+  const pipButtons = [...container.querySelectorAll('.player-pip')];
+  const brightnessPanel = container.querySelector('.player-brightness');
+  const brightnessRange = container.querySelector('.player-brightness-range');
+  const brightnessButtons = [...container.querySelectorAll('[data-player-action="brightness"]')];
+  const shade = container.querySelector('.player-brightness-shade');
+  const feedback = container.querySelector('.player-gesture-feedback');
+  const help = container.querySelector('.player-help');
   const playButtons = [...container.querySelectorAll('.player-play')];
   const skipButtons = [...container.querySelectorAll('.player-skip-back,.player-skip-forward')];
   const controller = new AbortController();
   const portrait = window.matchMedia('(max-width: 760px) and (orientation: portrait)');
   let destroyed = false, idleTimer, scrubbing = false, waiting = false, needsGesture = false;
   let initialLoading = true, explicitlyPaused = false;
+  let progressTime = null, frameTime = null, frameRequest = null, progressGeneration = 0;
   let failure = '', revealOnly = false, selecting = false, playRequest = 0;
   let playlistStarted = false, playlistOffset = 0;
+  let gestureActive = false, feedbackTimer, brightness = 1, volumeSupported = true;
+  let pageFullscreen = false, fullscreenScroll = null, presentationRequest = 0;
+  let previewPosition = null, nativeWasFullscreen = false;
+  let resumeAfterScrub = false, pendingSeek = null;
+  const touch = window.matchMedia('(any-pointer: coarse)');
+  let orientationLocked = false;
+  let fullscreenPlaylist = null, nativeVideoFullscreen = false;
+  let dismissPopoverClick = false;
   const speedMenu = mountSelect(speed, { signal: controller.signal, onChange: value => { media.playbackRate = Number(value); }, onOpenChange: showControls });
   const listen = (target, event, handler, options = {}) => target.addEventListener(event, handler, { ...options, signal: controller.signal });
   const finiteDuration = () => Number.isFinite(media.duration) && media.duration > 0 ? media.duration : 0;
-  const fullscreenActive = () => document.fullscreenElement === container || document.webkitFullscreenElement === container || Boolean(media.webkitDisplayingFullscreen);
-  const pipActive = () => document.pictureInPictureElement === media || media.webkitPresentationMode === 'picture-in-picture';
+  const nativeFullscreenActive = () => document.fullscreenElement === container || document.webkitFullscreenElement === container;
+  const systemVideoFullscreen = () => nativeVideoFullscreen || Boolean(media.webkitDisplayingFullscreen);
+  const fullscreenActive = () => pageFullscreen || nativeFullscreenActive() || systemVideoFullscreen();
+  const standardPiP = () => typeof media.requestPictureInPicture === 'function' && 'pictureInPictureElement' in document;
+  const pipActive = () => standardPiP() ? document.pictureInPictureElement === media : media.webkitPresentationMode === 'picture-in-picture';
+  function updateRotation() {
+    const full = !destroyed && fullscreenActive();
+    const width = Math.round(window.visualViewport?.width ?? window.innerWidth), height = Math.round(window.visualViewport?.height ?? window.innerHeight);
+    const rotated = !isAudio && full && !systemVideoFullscreen() && touch.matches && height > width;
+    const changed = container.classList.contains('is-rotated') !== rotated;
+    if (full) {
+      container.style.setProperty('--player-viewport-width', `${width}px`);
+      container.style.setProperty('--player-viewport-height', `${height}px`);
+    } else {
+      container.style.removeProperty('--player-viewport-width');
+      container.style.removeProperty('--player-viewport-height');
+    }
+    container.classList.toggle('is-rotated', rotated);
+    if (changed) {
+      speedMenu.hide();
+      window.dispatchEvent(new Event('playerrotationchange'));
+    }
+    placeControlPanel(brightnessPanel); placeControlPanel(help);
+  }
+  function releaseOrientation() {
+    if (!orientationLocked) return;
+    orientationLocked = false;
+    try { screen.orientation?.unlock?.(); } catch { /* Browser owns the physical direction. */ }
+  }
+  async function requestLandscape(request) {
+    if (isAudio || !touch.matches || !screen.orientation?.lock) return;
+    try {
+      await screen.orientation.lock('landscape');
+      if (destroyed || request !== presentationRequest || !fullscreenActive()) {
+        screen.orientation.unlock?.();
+        return;
+      }
+      orientationLocked = true;
+    } catch { /* Portrait browsers use the rotated player surface instead. */ }
+    if (!destroyed && request === presentationRequest) updateRotation();
+  }
 
   function showControls() {
     if (destroyed) return;
@@ -130,14 +199,18 @@ export function mountPlayer({ container, entry, source, variant = 'original', la
     if (!media.paused && !media.ended) idleTimer = setTimeout(hideControls, 3000);
   }
   function hideControls() {
-    if (destroyed || media.paused || media.ended || scrubbing || media.seeking || initialLoading || waiting || needsGesture || failure || !menu.hidden || speedMenu.open || !list.hidden && !portrait.matches) return;
+    if (destroyed || media.paused || media.ended || scrubbing || gestureActive || media.seeking || initialLoading || waiting || needsGesture || failure || !menu.hidden || speedMenu.open || !help.hidden || brightnessPanel && !brightnessPanel.hidden || !list.hidden && (!portrait.matches || fullscreenActive())) return;
     const focus = document.activeElement;
-    if (focus && container.contains(focus) && focus.closest('button,input,select,.player-menu')) return;
+    if (focus && container.contains(focus) && focus.matches(':focus-visible') && focus.closest('button,input,select,.player-menu')) return;
     container.classList.add('controls-hidden');
   }
   function setStatus(text, state) {
     if (statusText.textContent !== text) statusText.textContent = text;
-    status.hidden = !text;
+    if (state === 'error' || state === 'gesture') {
+      clearTimeout(feedbackTimer); feedback.hidden = true; previewPosition = null;
+      renderTimeline();
+    }
+    status.hidden = !text || !feedback.hidden;
     status.dataset.state = state;
     const role = state === 'error' ? 'alert' : 'status';
     if (statusText.getAttribute('role') !== role) {
@@ -146,10 +219,48 @@ export function mountPlayer({ container, entry, source, variant = 'original', la
     }
     stage.setAttribute('aria-busy', String(state === 'loading' || state === 'buffering'));
   }
+  function stopPlaybackProgress() {
+    progressGeneration++;
+    if (frameRequest !== null) media.cancelVideoFrameCallback?.(frameRequest);
+    frameRequest = progressTime = frameTime = null;
+  }
+  function canWatchPlaybackProgress() {
+    return !destroyed && (initialLoading || waiting) && !media.paused && !media.ended && !media.error && !media.seeking && !failure && !needsGesture;
+  }
+  function recoverPlaybackProgress() {
+    initialLoading = waiting = false;
+    renderState();
+  }
+  function watchPlaybackProgress() {
+    if (!canWatchPlaybackProgress()) { stopPlaybackProgress(); return; }
+    if (progressTime === null) progressTime = media.currentTime;
+    if (isAudio || !media.requestVideoFrameCallback || frameRequest !== null) return;
+    const generation = progressGeneration;
+    frameRequest = media.requestVideoFrameCallback((now, metadata) => {
+      if (destroyed || generation !== progressGeneration) return;
+      frameRequest = null;
+      if (!canWatchPlaybackProgress()) { stopPlaybackProgress(); return; }
+      const time = metadata.mediaTime;
+      // The first submitted frame may be cached or the result of a seek.
+      if (media.readyState >= 2 && Number.isFinite(time) && frameTime !== null && time > frameTime) {
+        recoverPlaybackProgress();
+        return;
+      }
+      frameTime = media.readyState >= 2 && Number.isFinite(time) ? time : null;
+      watchPlaybackProgress();
+    });
+  }
+  function observePlaybackTime() {
+    if (!canWatchPlaybackProgress() || !isAudio && media.requestVideoFrameCallback) return;
+    const time = media.currentTime;
+    const advanced = progressTime !== null && Number.isFinite(time) && time > progressTime;
+    progressTime = time;
+    if (advanced && media.readyState >= 3) recoverPlaybackProgress();
+  }
   function renderState() {
     if (destroyed) return;
-    const paused = media.paused || media.ended;
-    if (media.readyState >= 2) initialLoading = false;
+    const paused = !(scrubbing ? resumeAfterScrub : pendingSeek?.resume) && (media.paused || media.ended);
+    watchPlaybackProgress();
     const loading = initialLoading;
     for (const control of playButtons) {
       const label = t(paused ? 'play' : 'pause');
@@ -163,6 +274,8 @@ export function mountPlayer({ container, entry, source, variant = 'original', la
     if (failure) setStatus(failure, 'error');
     else if (needsGesture) setStatus(t('tapToPlay'), 'gesture');
     else if (media.ended) setStatus(t('playbackEnded'), 'ended');
+    else if (scrubbing) setStatus('', 'seeking');
+    else if (pendingSeek) setStatus(t(loading ? 'loadingMedia' : 'buffering'), loading ? 'loading' : 'buffering');
     else if (explicitlyPaused || paused && !loading) setStatus(t('playbackPaused'), 'paused');
     else if (loading) setStatus(t('loadingMedia'), 'loading');
     else if (waiting && !paused) setStatus(t('buffering'), 'buffering');
@@ -172,13 +285,12 @@ export function mountPlayer({ container, entry, source, variant = 'original', la
   function renderTimeline() {
     if (destroyed) return;
     const total = finiteDuration();
-    const position = Number.isFinite(media.currentTime) ? Math.max(0, media.currentTime) : 0;
+    const position = previewPosition ?? (Number.isFinite(media.currentTime) ? Math.max(0, media.currentTime) : 0);
     elapsed.textContent = clock(position);
     duration.textContent = clock(total || NaN);
-    remaining.textContent = `${t('remaining')} ${clock(total ? Math.max(0, total - position) : NaN)}`;
     seek.disabled = !total || Boolean(media.error);
     seek.max = String(total);
-    if (!scrubbing) seek.value = String(Math.min(total, position));
+    seek.value = String(Math.min(total, position));
     seek.setAttribute('aria-valuetext', `${clock(position)} / ${clock(total || NaN)}`);
     const percent = total ? Math.min(100, position / total * 100) : 0;
     played.style.width = `${percent}%`;
@@ -201,38 +313,54 @@ export function mountPlayer({ container, entry, source, variant = 'original', la
     buffered.replaceChildren(ranges);
   }
   function renderVolume() {
+    volume.disabled = !volumeSupported;
+    volume.title = t(volumeSupported ? 'volume' : 'systemVolume');
     volume.value = String(media.muted ? 0 : media.volume);
     volume.style.setProperty('--volume', `${Number(volume.value) * 100}%`);
-    const control = container.querySelector('.player-mute');
     const muted = media.muted || media.volume === 0;
-    control.innerHTML = icon(muted ? 'muted' : 'volume');
-    control.setAttribute('aria-label', t(muted ? 'unmute' : 'mute'));
-    control.title = t(muted ? 'unmute' : 'mute');
-    control.setAttribute('aria-pressed', String(muted));
+    for (const control of container.querySelectorAll('[data-player-action="mute"]')) {
+      const label = t(muted ? 'unmute' : 'mute');
+      control.innerHTML = icon(muted ? 'muted' : 'volume') + (control.classList.contains('player-compact-action') ? `<span>${h(label)}</span>` : '');
+      control.setAttribute('aria-label', label); control.title = label;
+      control.setAttribute('aria-pressed', String(muted));
+    }
   }
   function renderPresentation() {
     if (destroyed) return;
     const full = fullscreenActive();
     container.classList.toggle('is-fullscreen', full);
-    fullscreenButton.hidden = !(document.fullscreenEnabled && container.requestFullscreen || container.webkitRequestFullscreen || !isAudio && media.webkitEnterFullscreen && media.webkitSupportsFullscreen !== false);
+    updateRotation();
+    fullscreenButton.hidden = isAudio;
     fullscreenButton.innerHTML = icon(full ? 'exitFullscreen' : 'fullscreen');
     fullscreenButton.setAttribute('aria-label', t(full ? 'exitFullscreen' : 'fullscreen'));
     fullscreenButton.title = t(full ? 'exitFullscreen' : 'fullscreen');
     fullscreenButton.setAttribute('aria-pressed', String(full));
-    const supportsWebkitPiP = !isAudio && media.webkitSupportsPresentationMode?.('picture-in-picture');
-    pipButton.hidden = isAudio || !(document.pictureInPictureEnabled && media.requestPictureInPicture || supportsWebkitPiP);
-    pipButton.disabled = media.readyState === 0 || Boolean(media.error);
-    pipButton.setAttribute('aria-label', t(pipActive() ? 'exitPictureInPicture' : 'pictureInPicture'));
-    pipButton.title = t(pipActive() ? 'exitPictureInPicture' : 'pictureInPicture');
-    pipButton.setAttribute('aria-pressed', String(pipActive()));
+    const back = container.querySelector('.player-back');
+    back.setAttribute('aria-label', t(full ? 'exitFullscreen' : 'backToFolder'));
+    back.title = t(full ? 'exitFullscreen' : 'backToFolder');
+    back.querySelector('span').textContent = t(full ? 'exitFullscreen' : 'backToFolder');
+    const supportsWebkitPiP = !isAudio && media.webkitSetPresentationMode && media.webkitSupportsPresentationMode?.('picture-in-picture');
+    for (const control of pipButtons) {
+      control.hidden = isAudio || media.disablePictureInPicture || !(standardPiP() ? document.pictureInPictureEnabled : supportsWebkitPiP);
+      control.disabled = media.readyState === 0 || Boolean(media.error);
+      const label = t(pipActive() ? 'exitPictureInPicture' : 'pictureInPicture');
+      control.setAttribute('aria-label', label); control.title = label;
+      control.setAttribute('aria-pressed', String(pipActive()));
+      if (control.classList.contains('player-compact-action')) control.querySelector('span').textContent = label;
+    }
+    const nativeControl = container.querySelector('[data-player-action="system-fullscreen"]');
+    nativeControl.hidden = isAudio || !media.webkitEnterFullscreen || media.webkitSupportsFullscreen === false;
+    nativeControl.disabled = media.readyState === 0 || Boolean(media.error);
   }
   function showOperationError(error) {
     if (destroyed) return;
+    pendingSeek = null; scrubbing = false;
     failure = t(typeof error?.code === 'string' ? error.code : 'internal');
     renderState();
   }
   async function reportMediaError(error) {
     if (destroyed) return;
+    pendingSeek = null; scrubbing = false;
     failure = t('playbackFailed');
     renderState();
     try { await onError?.(error); } catch (callbackError) { showOperationError(callbackError); }
@@ -253,19 +381,54 @@ export function mountPlayer({ container, entry, source, variant = 'original', la
     }
   }
   function togglePlay() {
+    if (scrubbing) { resumeAfterScrub = !resumeAfterScrub; renderState(); return; }
+    if (pendingSeek) { pendingSeek.resume = !pendingSeek.resume; renderState(); return; }
     if (media.paused || media.ended) {
       if (media.ended && finiteDuration()) media.currentTime = 0;
       void play();
     } else { playRequest++; media.pause(); }
   }
-  function seekTo(value) {
+  function finishSeek() {
+    if (!pendingSeek?.settled || scrubbing || media.seeking || media.readyState < 2 || media.error || failure) return;
+    const resume = pendingSeek.resume; pendingSeek = null;
+    initialLoading = waiting = false; explicitlyPaused = !resume;
+    renderState();
+    if (resume) void play();
+  }
+  function seekTo(value, resume = pendingSeek?.resume ?? (!media.paused && !media.ended)) {
     const total = finiteDuration();
     if (!total || media.error || !Number.isFinite(value)) return;
-    media.currentTime = Math.min(total, Math.max(0, value));
-    renderTimeline();
-    showControls();
+    const target = Math.min(total, Math.max(0, value));
+    const unchanged = target === media.currentTime && !media.seeking;
+    pendingSeek = { target, resume, settled: unchanged };
+    playRequest++; stopPlaybackProgress(); waiting = true;
+    if (!media.paused) media.pause();
+    if (!unchanged) media.currentTime = target;
+    renderTimeline(); renderState(); showControls();
+    if (unchanged) finishSeek();
+  }
+  function beginScrub() {
+    if (scrubbing || seek.disabled) return;
+    resumeAfterScrub = pendingSeek?.resume ?? (!media.paused && !media.ended);
+    hideFeedback(); scrubbing = true;
+    previewPosition = media.currentTime;
+    playRequest++;
+    if (!media.paused) media.pause();
+    renderState(); showControls();
+  }
+  function finishScrub(commit) {
+    if (!scrubbing) return;
+    const target = previewPosition, resume = resumeAfterScrub;
+    scrubbing = false; previewPosition = null;
+    if (commit && target !== null) seekTo(target, resume);
+    else {
+      if (pendingSeek) { pendingSeek.resume = resume; finishSeek(); }
+      else if (resume) void play();
+      renderTimeline(); renderState(); showControls();
+    }
   }
   function toggleMenu(open = menu.hidden, focus = false) {
+    if (open) renderPresentation();
     menu.hidden = !open;
     more.setAttribute('aria-expanded', String(open));
     container.classList.toggle('menu-open', open);
@@ -301,27 +464,173 @@ export function mountPlayer({ container, entry, source, variant = 'original', la
     container.classList.toggle('playlist-open', open);
     showControls();
   }
+  function restoreFullscreenView() {
+    if (!fullscreenScroll || !destroyed && fullscreenActive()) return;
+    const saved = fullscreenScroll; fullscreenScroll = null;
+    document.body.style.cssText = saved.bodyStyle;
+    document.documentElement.style.overflow = saved.root;
+    if (!destroyed && fullscreenPlaylist) {
+      togglePlaylist(fullscreenPlaylist.open);
+      list.scrollTop = fullscreenPlaylist.scroll;
+    }
+    fullscreenPlaylist = null;
+    window.scrollTo(saved.x, saved.y);
+  }
+  function setPageFullscreen(active) {
+    if (pageFullscreen === active) { if (!active) restoreFullscreenView(); return; }
+    if (active && !fullscreenScroll) {
+      fullscreenScroll = { x: window.scrollX, y: window.scrollY, bodyStyle: document.body.style.cssText, root: document.documentElement.style.overflow };
+      fullscreenPlaylist = { open: !list.hidden, scroll: list.scrollTop };
+      Object.assign(document.body.style, { position: 'fixed', top: `${-fullscreenScroll.y}px`, left: `${-fullscreenScroll.x}px`, width: '100%', overflow: 'hidden' });
+      document.documentElement.style.overflow = 'hidden';
+    }
+    pageFullscreen = active;
+    container.classList.toggle('is-fullscreen', active || nativeFullscreenActive() || systemVideoFullscreen());
+    if (!active) releaseOrientation();
+    updateRotation();
+    if (!active) restoreFullscreenView();
+  }
+  async function exitFullscreen() {
+    presentationRequest++;
+    setPageFullscreen(false);
+    if (systemVideoFullscreen()) media.webkitExitFullscreen?.();
+    if (nativeFullscreenActive()) {
+      if (document.exitFullscreen) await document.exitFullscreen();
+      else await document.webkitExitFullscreen?.();
+    }
+    restoreFullscreenView();
+    if (!destroyed) { renderPresentation(); showControls(); }
+  }
   async function toggleFullscreen() {
-    if (fullscreenActive()) {
-      if (media.webkitDisplayingFullscreen) media.webkitExitFullscreen();
-      else if (document.exitFullscreen) await document.exitFullscreen();
-      else document.webkitExitFullscreen?.();
-    } else if (document.fullscreenEnabled && container.requestFullscreen) await container.requestFullscreen();
-    else if (container.webkitRequestFullscreen) await container.webkitRequestFullscreen();
-    else if (!isAudio && media.webkitEnterFullscreen) media.webkitEnterFullscreen();
+    if (fullscreenActive()) { await exitFullscreen(); return; }
+    const request = ++presentationRequest;
+    setPageFullscreen(true);
+    togglePlaylist(false); toggleMenu(false); toggleBrightness(false); help.hidden = true; container.classList.remove('help-open'); speedMenu.hide();
+    renderPresentation(); showControls();
+    try {
+      if (document.fullscreenEnabled && container.requestFullscreen) await container.requestFullscreen();
+      else if (container.webkitRequestFullscreen) await container.webkitRequestFullscreen();
+    } catch { /* Page fullscreen keeps custom controls when the browser denies container fullscreen. */ }
+    if (destroyed || request !== presentationRequest) {
+      if (nativeFullscreenActive()) {
+        if (document.exitFullscreen) await document.exitFullscreen().catch(() => {});
+        else document.webkitExitFullscreen?.();
+      }
+      return;
+    }
+    nativeWasFullscreen = nativeFullscreenActive();
+    void requestLandscape(request);
     renderPresentation();
   }
+  function enterSystemFullscreen() {
+    if (isAudio || !media.webkitEnterFullscreen || media.readyState === 0 || media.error) return;
+    toggleMenu(false); speedMenu.hide();
+    media.webkitEnterFullscreen();
+  }
+  function setBrightness(value) {
+    brightness = Math.min(1, Math.max(0.2, value));
+    shade.style.opacity = String(1 - brightness);
+    if (brightnessRange) {
+      brightnessRange.value = String(brightness);
+      const label = `${Math.round(brightness * 100)}%`;
+      brightnessRange.setAttribute('aria-valuetext', label);
+      brightnessPanel.querySelector('output').textContent = label;
+    }
+  }
+  function setVolume(value) {
+    const next = Math.max(0, Math.min(1, value));
+    try { media.volume = next; } catch { volumeSupported = false; }
+    if (Math.abs(media.volume - next) > 0.01) volumeSupported = false;
+    if (volumeSupported) media.muted = next === 0;
+    renderVolume();
+    return volumeSupported;
+  }
+  function hideFeedback() {
+    clearTimeout(feedbackTimer);
+    previewPosition = null; feedback.hidden = true;
+    renderTimeline();
+    setStatus(statusText.textContent, status.dataset.state);
+  }
+  function showFeedback(data) {
+    if (destroyed) return;
+    clearTimeout(feedbackTimer);
+    if (!data) { hideFeedback(); return; }
+    if (failure || media.error || needsGesture) return;
+    const kind = data.kind;
+    const seekPreview = kind === 'seek';
+    previewPosition = seekPreview && !data.committed ? data.value : null;
+    feedback.querySelector('.player-gesture-icon').innerHTML = icon(seekPreview ? data.delta < 0 ? 'backward' : 'forward' : kind === 'brightness' ? 'brightness' : 'volume');
+    feedback.querySelector('strong').textContent = seekPreview ? clock(data.value) : kind === 'system-volume' ? t('systemVolume') : `${t(kind === 'brightness' ? 'pictureBrightness' : 'volume')} ${Math.round(data.value * 100)}%`;
+    feedback.querySelector('small').textContent = seekPreview ? `${data.delta < 0 ? '−' : '+'}${clock(Math.abs(data.delta))}${data.committed ? '' : ` · ${t('releaseToSeek')}`}` : kind === 'brightness' ? t('pictureBrightnessNote') : '';
+    feedback.dataset.kind = kind; feedback.hidden = false;
+    renderTimeline();
+    setStatus(statusText.textContent, status.dataset.state);
+    if (!gestureActive) feedbackTimer = setTimeout(hideFeedback, 1200);
+  }
+  function placeControlPanel(panel) {
+    if (!panel || panel.hidden) return;
+    const viewport = window.visualViewport;
+    const dock = container.querySelector('.player-controlbar').getBoundingClientRect();
+    const rotated = container.classList.contains('is-rotated');
+    const surface = container.querySelector('.player-surface').getBoundingClientRect();
+    const top = rotated ? surface.right - dock.right : dock.top - (viewport?.offsetTop ?? 0);
+    const bottom = rotated ? surface.right - dock.left : dock.bottom - (viewport?.offsetTop ?? 0);
+    const height = rotated ? viewport?.width ?? window.innerWidth : viewport?.height ?? window.innerHeight;
+    const above = Math.max(0, top - 18), below = Math.max(0, height - bottom - 18);
+    const openAbove = above >= Math.min(300, panel.scrollHeight + 2) || above >= below;
+    panel.style.maxHeight = `${Math.max(0, Math.min(300, openAbove ? above : below))}px`;
+    panel.style.top = openAbove ? 'auto' : 'calc(100% + 10px)';
+    panel.style.bottom = openAbove ? 'calc(100% + 10px)' : 'auto';
+    panel.dataset.placement = openAbove ? 'above' : 'below';
+  }
+  function toggleBrightness(open = brightnessPanel?.hidden) {
+    if (!brightnessPanel) return;
+    brightnessPanel.hidden = !open;
+    container.classList.toggle('brightness-open', Boolean(open));
+    for (const control of brightnessButtons) control.setAttribute('aria-expanded', String(Boolean(open)));
+    if (open) { help.hidden = true; container.classList.remove('help-open'); }
+    placeControlPanel(brightnessPanel);
+    showControls();
+  }
+  const gestures = isAudio ? null : mountPlayerGestures({
+    stage, media, signal: controller.signal,
+    getBrightness: () => brightness, onBrightness: setBrightness, onVolume: setVolume,
+    onPreview: showFeedback,
+    onCommitSeek: value => { previewPosition = null; seekTo(value); feedback.querySelector('small').textContent = ''; },
+    onActiveChange: active => {
+      if (destroyed) return;
+      gestureActive = active;
+      container.classList.toggle('gesture-active', active);
+      showControls();
+      if (!active) { previewPosition = null; renderTimeline(); clearTimeout(feedbackTimer); feedbackTimer = setTimeout(hideFeedback, 1000); }
+    },
+    onTap: ({ x, double }) => {
+      if (destroyed) return;
+      if (double) {
+        if (x < 1 / 3 || x > 2 / 3) {
+          const delta = x < 1 / 3 ? -10 : 10;
+          seekTo(media.currentTime + delta);
+          showFeedback({ kind: 'seek', value: media.currentTime, delta, committed: true });
+        } else togglePlay();
+      } else if (container.classList.contains('controls-hidden') || media.paused || media.ended || failure || initialLoading) showControls();
+      else { clearTimeout(idleTimer); container.classList.add('controls-hidden'); }
+    }
+  });
   async function togglePiP() {
-    if (document.pictureInPictureElement === media) await document.exitPictureInPicture();
-    else if (media.webkitPresentationMode === 'picture-in-picture') media.webkitSetPresentationMode('inline');
-    else if (document.pictureInPictureEnabled && media.requestPictureInPicture) await media.requestPictureInPicture();
-    else if (media.webkitSupportsPresentationMode?.('picture-in-picture')) media.webkitSetPresentationMode('picture-in-picture');
+    toggleMenu(false); speedMenu.hide();
+    if (standardPiP()) {
+      if (pipActive()) await document.exitPictureInPicture();
+      else if (document.pictureInPictureEnabled) await media.requestPictureInPicture();
+    } else if (media.webkitSetPresentationMode && media.webkitSupportsPresentationMode?.('picture-in-picture')) {
+      media.webkitSetPresentationMode(pipActive() ? 'inline' : 'picture-in-picture');
+    }
+    if (pipActive()) { presentationRequest++; setPageFullscreen(false); }
     renderPresentation();
   }
   async function activate(action) {
     showControls();
     switch (action) {
-      case 'back': await onBack?.(); break;
+      case 'back': if (fullscreenActive()) await exitFullscreen(); else await onBack?.(); break;
       case 'play': togglePlay(); break;
       case 'backward': seekTo(media.currentTime - 10); break;
       case 'forward': seekTo(media.currentTime + 10); break;
@@ -330,6 +639,8 @@ export function mountPlayer({ container, entry, source, variant = 'original', la
         media.muted = !media.muted && Number(volume.value) !== 0;
         renderVolume();
         break;
+      case 'brightness': toggleMenu(false); toggleBrightness(); if (brightnessPanel && !brightnessPanel.hidden) brightnessRange.focus({ preventScroll: true }); break;
+      case 'gestures': toggleMenu(false); toggleBrightness(false); help.hidden = !help.hidden; container.classList.toggle('help-open', !help.hidden); placeControlPanel(help); more.focus(); break;
       case 'menu': toggleMenu(undefined, true); break;
       case 'playlist': togglePlaylist(); break;
       case 'playlist-more': revealPlaylist(); break;
@@ -337,6 +648,7 @@ export function mountPlayer({ container, entry, source, variant = 'original', la
       case 'download': toggleMenu(false); more.focus(); await onDownload?.(); break;
       case 'optimize-startup': toggleMenu(false); more.focus(); await onOptimizeStartup?.(); break;
       case 'fullscreen': await toggleFullscreen(); break;
+      case 'system-fullscreen': enterSystemFullscreen(); break;
       case 'pip': await togglePiP(); break;
     }
   }
@@ -361,54 +673,103 @@ export function mountPlayer({ container, entry, source, variant = 'original', la
     } else void activate(action.dataset.playerAction).catch(showOperationError);
   });
   listen(stage, 'pointerdown', event => {
-    if (event.target.closest('button')) return;
+    if (event.target.closest('button,input,select') || event.pointerType === 'touch' || event.pointerType === 'pen') return;
     revealOnly = container.classList.contains('controls-hidden');
     showControls();
   });
   listen(stage, 'click', event => {
-    if (event.target.closest('button')) return;
+    if (event.target.closest('button,input,select') || event.pointerType === 'touch' || event.pointerType === 'pen') return;
     if (revealOnly) { revealOnly = false; return; }
     togglePlay();
   });
-  listen(container, 'pointermove', showControls);
-  listen(container, 'pointerdown', showControls);
+  const pointerActivity = event => { if ((event.pointerType === 'touch' || event.pointerType === 'pen') && stage.contains(event.target) && !event.target.closest('button,input,select')) return; showControls(); };
+  listen(container, 'pointermove', pointerActivity);
+  listen(container, 'pointerdown', pointerActivity);
   listen(container, 'focusin', showControls);
   listen(container, 'focusout', () => { if (!destroyed) showControls(); });
-  listen(document, 'pointerdown', event => { if (!menu.hidden && !more.contains(event.target) && !menu.contains(event.target)) toggleMenu(false); });
-  listen(seek, 'pointerdown', () => { scrubbing = true; showControls(); });
-  listen(document, 'pointerup', () => { if (scrubbing) { scrubbing = false; renderTimeline(); showControls(); } });
-  listen(document, 'pointercancel', () => { scrubbing = false; renderTimeline(); showControls(); });
-  listen(seek, 'input', () => seekTo(Number(seek.value)));
-  listen(seek, 'change', () => { scrubbing = false; renderTimeline(); showControls(); });
-  listen(volume, 'input', () => { media.volume = Number(volume.value); media.muted = media.volume === 0; renderVolume(); });
+  listen(document, 'pointerdown', event => {
+    dismissPopoverClick = false;
+    const target = event.target;
+    let closed = false;
+    if (!menu.hidden && !menu.contains(target) && !more.contains(target)) { toggleMenu(false); closed = true; }
+    if (brightnessPanel && !brightnessPanel.hidden && !brightnessPanel.contains(target) && !target.closest('[data-player-action="brightness"]')) { toggleBrightness(false); closed = true; }
+    if (!help.hidden && !help.contains(target) && !target.closest('[data-player-action="gestures"]')) { help.hidden = true; container.classList.remove('help-open'); closed = true; }
+    if (speedMenu.open && !speed.contains(target)) { speedMenu.hide(); closed = true; }
+    if (closed) showControls();
+    if (closed && !target.closest('button,input,select,textarea,a,label,[contenteditable],[role="button"],[role="slider"]')) {
+      dismissPopoverClick = true;
+      event.preventDefault(); event.stopPropagation();
+    }
+  }, { capture: true });
+  listen(document, 'click', event => {
+    if (!dismissPopoverClick) return;
+    dismissPopoverClick = false;
+    event.preventDefault(); event.stopPropagation();
+  }, { capture: true });
+  listen(seek, 'pointerdown', beginScrub);
+  listen(document, 'pointerup', () => finishScrub(true));
+  listen(document, 'pointercancel', () => finishScrub(false));
+  listen(seek, 'input', () => {
+    const value = Number(seek.value); beginScrub();
+    if (!scrubbing) return;
+    previewPosition = Math.min(finiteDuration(), Math.max(0, value)); renderTimeline();
+  });
+  listen(seek, 'change', () => finishScrub(true));
+  listen(volume, 'input', () => { if (!setVolume(Number(volume.value))) showFeedback({ kind: 'system-volume' }); });
   listen(media, 'volumechange', renderVolume);
+  if (brightnessRange) listen(brightnessRange, 'input', () => { setBrightness(Number(brightnessRange.value)); showControls(); });
   listen(media, 'ratechange', () => { speedMenu.setValue(media.playbackRate); });
-  listen(media, 'timeupdate', renderTimeline);
+  listen(media, 'timeupdate', () => { renderTimeline(); observePlaybackTime(); });
   listen(media, 'progress', renderBuffered);
   for (const event of ['loadedmetadata', 'durationchange']) listen(media, event, () => {
     renderTimeline(); renderBuffered(); renderState(); renderPresentation();
   });
   for (const event of ['loadeddata', 'canplay']) listen(media, event, () => {
-    if (media.readyState >= 2) waiting = false;
+    if (media.readyState >= 2 && !media.seeking) initialLoading = waiting = false;
     renderTimeline(); renderBuffered(); renderState(); renderPresentation();
+    finishSeek();
   });
-  for (const event of ['loadstart', 'emptied']) listen(media, event, () => { initialLoading = true; waiting = true; renderState(); });
-  for (const event of ['waiting', 'stalled']) listen(media, event, () => { waiting = true; renderState(); });
-  listen(media, 'seeking', () => { waiting = true; renderState(); showControls(); });
-  listen(media, 'seeked', () => { if (media.readyState >= 2) waiting = false; renderTimeline(); renderState(); showControls(); });
+  for (const event of ['loadstart', 'emptied']) listen(media, event, () => { pendingSeek = null; scrubbing = false; previewPosition = null; stopPlaybackProgress(); initialLoading = true; waiting = true; renderState(); });
+  for (const event of ['waiting', 'stalled']) listen(media, event, () => { stopPlaybackProgress(); waiting = true; renderState(); });
+  listen(media, 'seeking', () => { stopPlaybackProgress(); waiting = true; renderState(); showControls(); });
+  listen(media, 'seeked', () => {
+    stopPlaybackProgress();
+    if (pendingSeek && !media.seeking && Math.abs(media.currentTime - pendingSeek.target) <= 0.25) pendingSeek.settled = true;
+    finishSeek(); renderTimeline(); renderState(); showControls();
+  });
   listen(media, 'play', () => { explicitlyPaused = false; needsGesture = false; renderState(); showControls(); });
   listen(media, 'playing', () => { initialLoading = false; explicitlyPaused = false; waiting = false; needsGesture = false; renderState(); showControls(); });
-  listen(media, 'pause', () => { explicitlyPaused = true; renderState(); showControls(); });
+  listen(media, 'pause', () => { if (!scrubbing && !pendingSeek) explicitlyPaused = true; renderState(); showControls(); });
   listen(media, 'ended', () => { renderState(); showControls(); });
   listen(media, 'error', () => { if (media.error) { renderTimeline(); renderPresentation(); void reportMediaError(media.error); } });
-  for (const event of ['fullscreenchange', 'webkitfullscreenchange']) listen(document, event, () => { renderPresentation(); showControls(); });
-  for (const event of ['webkitbeginfullscreen', 'webkitendfullscreen', 'enterpictureinpicture', 'leavepictureinpicture', 'webkitpresentationmodechanged']) listen(media, event, renderPresentation);
-  listen(portrait, 'change', () => togglePlaylist(portrait.matches));
+  for (const event of ['fullscreenchange', 'webkitfullscreenchange']) listen(document, event, () => {
+    const native = nativeFullscreenActive();
+    if (nativeWasFullscreen && !native) { setPageFullscreen(false); restoreFullscreenView(); }
+    nativeWasFullscreen = native;
+    renderPresentation(); showControls();
+  });
+  listen(media, 'webkitbeginfullscreen', () => { nativeVideoFullscreen = true; presentationRequest++; releaseOrientation(); renderPresentation(); });
+  listen(media, 'webkitendfullscreen', () => { nativeVideoFullscreen = false; setPageFullscreen(false); restoreFullscreenView(); renderPresentation(); showControls(); });
+  for (const event of ['enterpictureinpicture', 'leavepictureinpicture', 'webkitpresentationmodechanged']) listen(media, event, () => {
+    if (pipActive()) { presentationRequest++; setPageFullscreen(false); }
+    renderPresentation();
+  });
+  listen(window, 'focus', renderPresentation);
+  listen(document, 'visibilitychange', () => { if (!document.hidden) renderPresentation(); });
+  listen(portrait, 'change', () => { if (!fullscreenActive()) togglePlaylist(portrait.matches); });
+  listen(window, 'resize', () => { updateRotation(); if (fullscreenActive()) showControls(); });
+  listen(window, 'orientationchange', updateRotation);
+  if (window.visualViewport) listen(window.visualViewport, 'resize', updateRotation);
+  if (screen.orientation?.addEventListener) listen(screen.orientation, 'change', updateRotation);
+  listen(touch, 'change', updateRotation);
   listen(document, 'keydown', event => {
     if (event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey || document.querySelector('dialog[open]')) return;
     if (event.key === 'Escape') {
       if (!menu.hidden) { event.preventDefault(); toggleMenu(false); more.focus(); }
       else if (!list.hidden && !fullscreenActive()) { event.preventDefault(); togglePlaylist(false); listToggle.focus(); }
+      else if (brightnessPanel && !brightnessPanel.hidden) { event.preventDefault(); toggleBrightness(false); const direct = container.querySelector('.player-brightness-toggle'); (direct?.getBoundingClientRect().width ? direct : more).focus(); }
+      else if (!help.hidden) { event.preventDefault(); help.hidden = true; container.classList.remove('help-open'); more.focus(); }
+      else if (fullscreenActive()) { event.preventDefault(); void exitFullscreen().catch(showOperationError); }
       return;
     }
     if (event.target.closest('input,select,textarea,[contenteditable="true"],[role="textbox"],[data-select-menu]')) return;
@@ -421,13 +782,12 @@ export function mountPlayer({ container, entry, source, variant = 'original', la
       void activate(action).catch(showOperationError);
     } else if (key === 'arrowup' || key === 'arrowdown') {
       event.preventDefault();
-      media.volume = Math.max(0, Math.min(1, media.volume + (key === 'arrowup' ? 0.05 : -0.05)));
-      media.muted = media.volume === 0;
+      if (!setVolume(media.volume + (key === 'arrowup' ? 0.05 : -0.05))) showFeedback({ kind: 'system-volume' });
       showControls();
     }
   });
   listen(menu, 'keydown', event => {
-    const items = [...menu.querySelectorAll('button')];
+    const items = [...menu.querySelectorAll('button:not([hidden]):not(:disabled)')].filter(item => getComputedStyle(item).display !== 'none');
     const index = items.indexOf(document.activeElement);
     if (['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) {
       event.preventDefault(); event.stopPropagation();
@@ -437,19 +797,30 @@ export function mountPlayer({ container, entry, source, variant = 'original', la
   });
   container.querySelector('.player-controlbar').title = t('playerShortcuts');
   togglePlaylist(portrait.matches);
+  setBrightness(1);
   renderTimeline(); renderVolume(); renderPresentation(); renderState();
   media.src = source;
   void play();
 
   return {
+    get fullscreen() { return fullscreenActive(); },
+    exitFullscreen,
     destroy() {
       if (destroyed) return;
       destroyed = true;
       playRequest++;
       clearTimeout(idleTimer);
+      clearTimeout(feedbackTimer);
+      presentationRequest++;
+      gestures?.destroy();
+      setPageFullscreen(false);
+      releaseOrientation();
+      stopPlaybackProgress();
       controller.abort();
-      if (document.pictureInPictureElement === media) void document.exitPictureInPicture().catch(() => {});
-      if (media.webkitPresentationMode === 'picture-in-picture') media.webkitSetPresentationMode('inline');
+      if (pipActive()) {
+        if (standardPiP()) void document.exitPictureInPicture().catch(() => {});
+        else media.webkitSetPresentationMode?.('inline');
+      }
       if (media.webkitDisplayingFullscreen) media.webkitExitFullscreen();
       if (document.fullscreenElement === container) void document.exitFullscreen().catch(() => {});
       else if (document.webkitFullscreenElement === container) document.webkitExitFullscreen?.();

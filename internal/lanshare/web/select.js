@@ -33,10 +33,22 @@ export function mountSelect(root, { onChange, signal, onOpenChange } = {}) {
   function place() {
     if (list.hidden) return;
     if (!face.isConnected) { destroy(); return; }
-    const margin = 8, gap = 6, box = face.getBoundingClientRect();
+    const margin = 8, gap = 6;
+    let box = face.getBoundingClientRect();
+    const surface = root.closest('.player-page.is-rotated .player-surface');
     const viewport = window.visualViewport;
-    const leftEdge = viewport?.offsetLeft ?? 0, topEdge = viewport?.offsetTop ?? 0;
-    const width = viewport?.width ?? window.innerWidth, height = viewport?.height ?? window.innerHeight;
+    let leftEdge = viewport?.offsetLeft ?? 0, topEdge = viewport?.offsetTop ?? 0;
+    let width = viewport?.width ?? window.innerWidth, height = viewport?.height ?? window.innerHeight;
+    // A transformed surface is the fixed list's containing block, in logical landscape coordinates.
+    if (surface) {
+      const bounds = surface.getBoundingClientRect();
+      const physicalRight = leftEdge + width, physicalBottom = topEdge + height;
+      box = { left: box.top - bounds.top, top: bounds.right - box.right, bottom: bounds.right - box.left, width: box.height };
+      leftEdge = Math.max(0, topEdge - bounds.top);
+      topEdge = Math.max(0, bounds.right - physicalRight);
+      width = Math.max(0, Math.min(bounds.bottom, physicalBottom) - bounds.top - leftEdge);
+      height = Math.max(0, bounds.right - Math.max(bounds.left, viewport?.offsetLeft ?? 0) - topEdge);
+    }
     const bottomEdge = topEdge + height, rightEdge = leftEdge + width;
     const availableAbove = Math.max(0, box.top - topEdge - margin - gap);
     const availableBelow = Math.max(0, bottomEdge - box.bottom - margin - gap);

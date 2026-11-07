@@ -152,7 +152,7 @@ func (m *Manager) serveHTTP(w http.ResponseWriter, r *http.Request) {
 			name = "index.html"
 		}
 		switch name {
-		case "index.html", "app.js", "player.js", "gallery.js", "select.js", "style.css", "locales.js":
+		case "index.html", "app.js", "player.js", "gestures.js", "gallery.js", "select.js", "style.css", "locales.js":
 		default:
 			http.NotFound(w, r)
 			return
