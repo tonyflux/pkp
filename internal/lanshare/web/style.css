@@ -85,7 +85,7 @@ svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width:
 .player-speed .select-list button[aria-selected=true] { color: #c8f3ff; background: rgba(112,187,255,.2); }
 
 /* The gate keeps its existing palette and geometry in either system appearance. */
-.gate { max-width: 1200px; margin: auto; padding: 0 32px 32px; }
+.gate { max-width: 1200px; margin: auto; padding: env(safe-area-inset-top) max(32px,env(safe-area-inset-right)) max(32px,env(safe-area-inset-bottom)) max(32px,env(safe-area-inset-left)); }
 .gate-header { display: flex; align-items: center; justify-content: space-between; padding: 28px 0; }
 .gate-layout { display: grid; grid-template-columns: 1.1fr 1fr; min-height: 580px; border-radius: 26px; overflow: hidden; border: 1px solid var(--rim); background: var(--canvas); box-shadow: 0 25px 70px #010a1433; }
 .gate-art { position: relative; display: flex; flex-direction: column; justify-content: flex-end; padding: 44px; background: radial-gradient(ellipse at 30% 20%,#83c7ff36,transparent 65%),linear-gradient(145deg,#234662,#0d1928); overflow: hidden; }
@@ -104,6 +104,23 @@ svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width:
 .gate-form .muted { font-size: 13px; }
 .gate-form .note { margin-top: 25px; }
 .form-error { margin-top: 12px; font-size: 13px; }
+.install-entry { margin-top: 20px; }
+.install-card { display: flex; align-items: flex-start; gap: 12px; max-width: 680px; padding: 16px; border: 1px solid var(--line); border-radius: 16px; background: var(--soft); }
+.install-card > img { flex: none; border-radius: 10px; }
+.install-card > div { flex: 1; min-width: 0; }
+.install-card strong { display: block; font-size: 14px; }
+.install-card p { margin-top: 4px; color: var(--muted); font-size: 12px; overflow-wrap: anywhere; }
+.install-link { padding: 6px 0; text-align: left; color: var(--accent); font-size: 12px; overflow-wrap: anywhere; }
+.install-card > .icon-button { flex: none; margin: -6px -6px 0 0; }
+.install-steps { margin: 20px 0; padding-left: 24px; }
+.install-steps li { padding-left: 4px; line-height: 1.7; }
+.install-steps li + li { margin-top: 16px; }
+.connection-status { position: fixed; z-index: 40; right: max(16px,env(safe-area-inset-right)); bottom: calc(86px + env(safe-area-inset-bottom)); left: max(16px,env(safe-area-inset-left)); display: flex; align-items: center; gap: 12px; width: max-content; max-width: min(620px,calc(100% - 32px)); margin: auto; padding: 12px 16px; border: 1px solid var(--rim); border-radius: 16px; background: var(--panel); box-shadow: 0 8px 30px #0005; }
+.connection-status > div { flex: 1; min-width: 0; }
+.connection-status strong { font-size: 13px; }
+.connection-status p { margin-top: 3px; color: var(--muted); font-size: 12px; overflow-wrap: anywhere; }
+.connection-status button { flex: none; max-width: 38%; padding: 8px; border-color: var(--line); color: var(--accent); font-size: 12px; overflow-wrap: anywhere; }
+.focus-view .connection-status { bottom: calc(16px + env(safe-area-inset-bottom)); }
 
 /* Signed-in surfaces are always dark; login still follows system appearance. */
 body.authenticated {
@@ -432,7 +449,7 @@ dialog > .operation-status { position: sticky; left: auto; bottom: 0; transform:
   .player-playlist { width: 280px; }
 }
 @media (max-width: 780px) {
-  .gate { padding: 0 20px 20px; }
+  .gate { padding: env(safe-area-inset-top) max(20px,env(safe-area-inset-right)) max(20px,env(safe-area-inset-bottom)) max(20px,env(safe-area-inset-left)); }
   .gate-layout { grid-template-columns: 1fr; min-height: 0; }
   .gate-art { min-height: 210px; padding: 28px; }
   .gate-art:before { inset: 20px 20px 50px 60%; border-radius: 16px; }
@@ -511,7 +528,7 @@ dialog > .operation-status { position: sticky; left: auto; bottom: 0; transform:
   .wordmark strong { font-size: 20px; }
   .brand-icon { width: 32px; height: 32px; }
   .gate-header { padding: 20px 0; }
-  .gate { padding: 0 16px 20px; }
+  .gate { padding: env(safe-area-inset-top) max(16px,env(safe-area-inset-right)) max(20px,env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left)); }
   .gate-art { min-height: 190px; padding: 25px; }
   .gate-art h1 { font-size: 27px; }
   .gate-form { padding: 26px 24px; }

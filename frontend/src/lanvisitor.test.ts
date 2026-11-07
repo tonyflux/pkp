@@ -47,6 +47,7 @@ beforeEach(async () => {
   document.body.className = "";
   document.body.innerHTML = '<div id="app"></div><dialog id="panel"></dialog><div id="notice" hidden></div>';
   localStorage.setItem("pkp-lan-language", "en");
+  localStorage.removeItem('pkp-lan-install-dismissed');
   vi.stubGlobal("innerWidth", 390);
   history.replaceState(null, "", "/");
   vi.stubGlobal("CSS", { escape: (value: string) => value });
@@ -939,5 +940,51 @@ describe("LAN visitor held preparation recovery", () => {
     expect(document.querySelector('[data-action="retry-preparation"]')).toBeNull();
     expect(document.querySelector<HTMLButtonElement>('[data-action="preparation-play"]')?.disabled).toBe(false);
     expect(vi.mocked(fetch).mock.calls.filter(([url]) => url === "/api/prepare")).toHaveLength(0);
+  });
+});
+
+describe('LAN home screen web app', () => {
+  it('dismisses installation guidance without removing its entry or changing the selected space', async () => {
+    document.querySelector<HTMLButtonElement>('[data-action="home"]')!.click(); await settle();
+    expect(document.querySelector('.install-card')).not.toBeNull();
+    document.querySelector<HTMLButtonElement>('[data-action="dismiss-install"]')!.click();
+    expect(document.querySelector('.install-card')).toBeNull();
+    expect(localStorage.getItem('pkp-lan-install-dismissed')).toBe('1');
+    document.querySelector<HTMLButtonElement>('[data-action="install"]')!.click();
+    expect(document.querySelector<HTMLDialogElement>('#panel')!.open).toBe(true);
+    document.querySelector<HTMLButtonElement>('#panel [data-action="close"]')!.click();
+    document.querySelector<HTMLButtonElement>('.space-cards [data-space]')!.click(); await settle();
+    expect(document.querySelector('[data-file="a"]')).not.toBeNull();
+    document.querySelector<HTMLButtonElement>('[data-action="home"]')!.click(); await settle();
+    expect(document.querySelector('.install-card')).toBeNull();
+    expect(document.querySelector('[data-action="install"]')).not.toBeNull();
+  });
+  it('requires a live session again when reconnecting after a password reset', async () => {
+    const boundary = vi.mocked(fetch).getMockImplementation()!;
+    let live = false;
+    vi.mocked(fetch).mockImplementation((path, options) => {
+      if (!live) return Promise.reject(new TypeError('Network unavailable'));
+      if (new URL(String(path), location.href).pathname === '/api/session') return Promise.resolve(json({ authenticated: false }));
+      return boundary(path, options);
+    });
+    window.dispatchEvent(new Event('offline'));
+    const banner = document.querySelector<HTMLElement>('#connection-status')!;
+    expect(banner.hidden).toBe(false);
+    document.querySelector<HTMLButtonElement>('[data-action="reconnect"]')!.click(); await settle();
+    expect(banner.hidden).toBe(false);
+    live = true;
+    document.querySelector<HTMLButtonElement>('[data-action="reconnect"]')!.click(); await settle();
+    expect(document.querySelector('#login-form')).not.toBeNull();
+    expect(document.querySelector('[data-file="a"]')).toBeNull();
+    expect(banner.hidden).toBe(true);
+  });
+  it('clears the connection banner only after a live request succeeds without replacing the active player', async () => {
+    await open('a');
+    const media = selectedMedia();
+    window.dispatchEvent(new Event('offline'));
+    expect(document.querySelector<HTMLElement>('#connection-status')!.hidden).toBe(false);
+    document.querySelector<HTMLButtonElement>('[data-action="reconnect"]')!.click(); await settle();
+    expect(document.querySelector<HTMLElement>('#connection-status')!.hidden).toBe(true);
+    expect(selectedMedia()).toBe(media);
   });
 });

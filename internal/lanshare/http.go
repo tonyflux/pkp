@@ -16,7 +16,7 @@ import (
 	"github.com/tonyflux/pkp/internal/lanmedia"
 )
 
-//go:embed web/*.html web/*.js web/*.css
+//go:embed web/*.html web/*.js web/*.css web/*.webmanifest web/*.png
 var embeddedWeb embed.FS
 
 type connectionKey struct{}
@@ -108,7 +108,7 @@ func (m *Manager) serveHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Referrer-Policy", "no-referrer")
 	w.Header().Set("X-Frame-Options", "DENY")
 	w.Header().Set("Cache-Control", "no-store")
-	w.Header().Set("Content-Security-Policy", "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self'; font-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'")
+	w.Header().Set("Content-Security-Policy", "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self'; font-src 'self'; manifest-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'")
 	m.mu.Lock()
 	host, running := m.host, m.running
 	m.mu.Unlock()
@@ -152,10 +152,13 @@ func (m *Manager) serveHTTP(w http.ResponseWriter, r *http.Request) {
 			name = "index.html"
 		}
 		switch name {
-		case "index.html", "app.js", "player.js", "gestures.js", "gallery.js", "select.js", "style.css", "locales.js":
+		case "index.html", "app.js", "player.js", "gestures.js", "gallery.js", "select.js", "style.css", "locales.js", "manifest.webmanifest", "icon-192.png", "icon-512.png", "apple-touch-icon.png":
 		default:
 			http.NotFound(w, r)
 			return
+		}
+		if name == "manifest.webmanifest" {
+			w.Header().Set("Content-Type", "application/manifest+json")
 		}
 		http.ServeFileFS(w, r, m.web, name)
 		return

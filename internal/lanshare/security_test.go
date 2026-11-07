@@ -7,7 +7,9 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"image/png"
 	"io"
+	"mime"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -171,6 +173,95 @@ func TestAuthenticationCSRFAndPublicMetadata(t *testing.T) {
 	for _, secret := range []string{"localPath", "accountId", "rootId", s.LocalPath} {
 		if strings.Contains(w.Body.String(), secret) {
 			t.Fatalf("source secret exposed: %s", secret)
+		}
+	}
+}
+
+func TestHomeScreenAssetsBeforeLogin(t *testing.T) {
+	m := newTestManager(t, nil)
+	s, _ := localSpace(t, m, false)
+	entries, err := m.list(context.Background(), s.ID, "")
+	if err != nil || len(entries) != 1 {
+		t.Fatalf("local test file: %+v %v", entries, err)
+	}
+	m.mu.Lock()
+	m.running, m.host = true, "127.0.0.1:17891"
+	m.mu.Unlock()
+	assets := []struct {
+		path     string
+		typeName string
+		size     int
+	}{
+		{"/manifest.webmanifest", "application/manifest+json", 0},
+		{"/icon-192.png", "image/png", 192},
+		{"/icon-512.png", "image/png", 512},
+		{"/apple-touch-icon.png", "image/png", 180},
+	}
+	for _, asset := range assets {
+		t.Run(asset.path, func(t *testing.T) {
+			w := apiRequest(t, m, http.MethodGet, asset.path, "", nil)
+			typ, _, err := mime.ParseMediaType(w.Header().Get("Content-Type"))
+			if w.Code != http.StatusOK || err != nil || typ != asset.typeName || w.Header().Get("Cache-Control") != "no-store" {
+				t.Fatalf("public asset: status=%d headers=%v error=%v", w.Code, w.Header(), err)
+			}
+			if !strings.Contains(w.Header().Get("Content-Security-Policy"), "manifest-src 'self'") {
+				t.Fatal("manifest blocked by CSP")
+			}
+			if asset.size != 0 {
+				icon, err := png.Decode(w.Body)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if icon.Bounds().Dx() != asset.size || icon.Bounds().Dy() != asset.size {
+					t.Fatalf("unexpected icon dimensions: %v", icon.Bounds())
+				}
+			} else {
+				var manifest map[string]json.RawMessage
+				if err := json.Unmarshal(w.Body.Bytes(), &manifest); err != nil {
+					t.Fatal(err)
+				}
+				for key, want := range map[string]string{
+					"id": "/", "scope": "/", "start_url": "/", "display": "standalone",
+				} {
+					var got string
+					if err := json.Unmarshal(manifest[key], &got); err != nil || got != want {
+						t.Fatalf("manifest %s: %q, expected %q (%v)", key, got, want, err)
+					}
+				}
+				var icons []map[string]string
+				if err := json.Unmarshal(manifest["icons"], &icons); err != nil || len(icons) != 2 {
+					t.Fatalf("manifest icons: %+v %v", icons, err)
+				}
+				for i, icon := range icons {
+					wantSize := []string{"192x192", "512x512"}[i]
+					if icon["src"] != assets[i+1].path || icon["sizes"] != wantSize || icon["type"] != "image/png" {
+						t.Fatalf("unexpected manifest icon: %+v", icon)
+					}
+				}
+			}
+			for _, header := range []string{"Host", "Origin"} {
+				r := httptest.NewRequest(http.MethodGet, "http://127.0.0.1:17891"+asset.path, nil)
+				if header == "Host" {
+					r.Host = "attacker.example"
+				} else {
+					r.Header.Set(header, "http://attacker.example")
+				}
+				blocked := httptest.NewRecorder()
+				m.serveHTTP(blocked, r)
+				if blocked.Code != http.StatusForbidden || blocked.Header().Get("Cache-Control") != "no-store" {
+					t.Fatalf("foreign %s accepted: status=%d headers=%v", header, blocked.Code, blocked.Header())
+				}
+			}
+		})
+	}
+	for _, path := range []string{
+		"/api/files?space=" + s.ID,
+		"/api/file?space=" + s.ID + "&id=" + entries[0].ID,
+		"/api/content?space=" + s.ID + "&id=" + entries[0].ID,
+	} {
+		w := apiRequest(t, m, http.MethodGet, path, "", nil)
+		if w.Code != http.StatusUnauthorized || w.Header().Get("Cache-Control") != "no-store" || strings.Contains(w.Body.String(), "authorized bytes") {
+			t.Fatalf("private file exposed at %s: status=%d headers=%v body=%s", path, w.Code, w.Header(), w.Body.String())
 		}
 	}
 }

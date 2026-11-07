@@ -67,3 +67,18 @@ describe("LAN visitor password visibility", () => {
     expect(vi.mocked(fetch)).not.toHaveBeenCalledWith("/api/login", expect.anything());
   });
 });
+
+describe('LAN installed window guidance', () => {
+  it('does not prompt installation inside a standalone display', async () => {
+    vi.spyOn(window, 'matchMedia').mockImplementation(query => ({ matches: query === '(display-mode: standalone)', addEventListener() {}, removeEventListener() {} }) as unknown as MediaQueryList);
+    await launch();
+    expect(document.querySelector<HTMLElement>('[data-install-entry]')!.hidden).toBe(true);
+  });
+  it('honors the iOS standalone flag even when the display media query is unavailable', async () => {
+    Object.defineProperty(navigator, 'standalone', { configurable: true, value: true });
+    try {
+      await launch();
+      expect(document.querySelector<HTMLElement>('[data-install-entry]')!.hidden).toBe(true);
+    } finally { Reflect.deleteProperty(navigator, 'standalone'); }
+  });
+});

@@ -93,6 +93,10 @@ export function startApp() {
     dialog: '', plan: null, capabilities: null, prepareKind: '', prepareTask: '', intent: 0,
     epoch: 0, request: 0, taskRevision: 0, taskSnapshot: '', busy: false
   };
+  const standalone = window.matchMedia('(display-mode: standalone)');
+  const standaloneActive = () => standalone.matches || navigator.standalone === true;
+  let installDismissed = false;
+  try { installDismissed = localStorage.getItem('pkp-lan-install-dismissed') === '1'; } catch { /* Guidance remains optional without storage. */ }
   let focusBeforeDialog = null;
   let noticeTimer;
   let pollBusy = false;
@@ -143,11 +147,16 @@ export function startApp() {
   };
   const button = (action, label, className = 'secondary', attrs = '') => `<button type="button" class="${className}" data-action="${action}" ${attrs}>${label === 'play' || label === 'playWhenReady' ? icon('play') : ''}${h(t(label))}</button>`;
   const iconButton = (action, label, name, attrs = '') => `<button type="button" class="icon-button" data-action="${action}" aria-label="${h(t(label))}" title="${h(t(label))}" ${attrs}>${icon(name)}</button>`;
+  const connectionStatus = document.createElement('aside');
+  connectionStatus.id = 'connection-status'; connectionStatus.className = 'connection-status'; connectionStatus.hidden = true;
+  connectionStatus.setAttribute('aria-live', 'polite');
+  document.body.append(connectionStatus);
   const operationStatus = document.createElement('div');
   operationStatus.id = 'operation-status'; operationStatus.className = 'operation-status'; operationStatus.hidden = true;
   operationStatus.innerHTML = `<span class="operation-spinner" aria-hidden="true"></span><span class="operation-message" role="status" aria-live="polite"></span>${button('cancel-operation', 'cancelWait')}`;
   document.body.append(operationStatus);
   function updateOperation(message = foreground?.message || 'loading', cancellable = foreground?.cancellable || false) {
+    updateConnection();
     operationStatus.hidden = !foreground;
     if (!foreground) return;
     foreground.message = message; foreground.cancellable = cancellable;
@@ -159,6 +168,18 @@ export function startApp() {
   const languageSelect = () => selectHTML({ id: 'language', label: t('language'), value: state.language, className: 'language-select', options: Object.entries(languages).map(([value, label]) => ({ value, label })) });
   const spaceSelect = () => selectHTML({ id: 'mobile-space', label: t('spaces'), value: state.space?.id || '', className: 'mobile-space-select', options: [{ value: '', label: t('spaces') }, ...state.spaces.map(space => ({ value: space.id, label: space.name }))] });
   const brand = () => `<div class="wordmark"><span class="brand-icon">${icon('folder')}</span><strong>PKP</strong><span>${h(t('title'))}</span></div>`;
+  function installContent() {
+    if (installDismissed) return button('install', 'installTitle', 'install-link');
+    return `<div class="install-card"><img src="/icon-192.png" width="44" height="44" alt=""><div><strong>${h(t('installTitle'))}</strong><p>${h(t('installIntro'))}</p>${button('install', 'installHow', 'install-link')}</div>${iconButton('dismiss-install', 'installDismiss', 'close')}</div>`;
+  }
+  const installEntry = () => `<aside class="install-entry" data-install-entry${standaloneActive() ? ' hidden' : ''}>${installContent()}</aside>`;
+  function updateInstallEntry() {
+    for (const node of root.querySelectorAll('[data-install-entry]')) { node.hidden = standaloneActive(); node.innerHTML = installContent(); }
+  }
+  function showInstallGuide() {
+    try { localStorage.setItem('pkp-lan-language', state.language); } catch { /* Installation does not require persistent preferences. */ }
+    showPanel('install', 'installTitle', `<p>${h(t('installIntro'))}</p><ol class="install-steps"><li>${h(t('installApple'))}</li><li>${h(t('installOther'))}</li></ol><p class="note">${h(t('installAddress'))}</p><p class="note">${h(t('installNetwork'))}</p>`);
+  }
   const notice = key => {
     const node = document.getElementById('notice');
     node.textContent = t(key); node.hidden = false;
@@ -269,7 +290,7 @@ export function startApp() {
         body: body === undefined ? undefined : JSON.stringify(body), signal: controller.signal });
       const data = await response.json();
       if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
-      if (epoch === state.epoch && intent === state.intent) state.connected = true;
+      if (epoch === state.epoch && intent === state.intent && !state.connected) { state.connected = true; updateConnection(); }
       if (!response.ok) {
         const code = data.error || 'internal';
         if (code === 'unauthorized' && state.authenticated && epoch === state.epoch) forgetSession();
@@ -278,12 +299,12 @@ export function startApp() {
       return data;
     } catch (error) {
       if (error.code || signal?.aborted) throw error;
-      if (epoch === state.epoch && intent === state.intent) state.connected = false;
+      if (epoch === state.epoch && intent === state.intent) { state.connected = false; updateConnection(); }
       throw Object.assign(new Error('offline'), { code: 'offline' });
     } finally { clearTimeout(timer); signal?.removeEventListener('abort', abort); }
   }
   function connectionHTML() {
-    return `<span class="connection ${state.connected ? '' : 'offline'}" role="status">${h(t(state.connected ? 'connected' : 'offline'))}</span>`;
+    return `<span class="connection ${state.connected ? '' : 'offline'}" role="status">${h(t(state.connected ? 'connected' : 'connectionLost'))}</span>`;
   }
   function mountLanguage() {
     languageMenu = mountSelect(root.querySelector('.language-select'), { onChange(value) {
@@ -293,6 +314,7 @@ export function startApp() {
       render();
       if (dialog === 'detail') showPanel('detail', 'details', detailHTML());
       else if (dialog === 'confirm') showConfirmation();
+      else if (dialog === 'install') showInstallGuide();
       else if (panel.open) closePanel();
       root.querySelector('.language-select .select-face')?.focus({ preventScroll: true });
     } });
@@ -317,6 +339,7 @@ export function startApp() {
     updateOperation();
     if (!state.authenticated) {
       root.innerHTML = `<main class="gate"><header class="gate-header">${brand()}${languageSelect()}</header><div class="gate-layout"><section class="gate-art"><h1>${h(t('welcome'))}</h1><p class="muted">${h(t('gateIntro'))}</p></section><section class="gate-form"><p class="eyebrow">${h(t('title'))}</p><h2>${h(t('loginTitle'))}</h2><p class="muted">${h(t('passwordHint'))}</p><form id="login-form"><label for="password">${h(t('password'))}</label><input id="password" name="password" type="password" autocomplete="current-password" required maxlength="1024" autocapitalize="none" enterkeyhint="go" aria-describedby="login-error"><p id="login-error" class="form-error error" role="alert">${h(state.loginError ? t(state.loginError) : '')}</p><button class="primary" type="submit" ${state.loading ? 'disabled' : ''}>${h(t(state.loading ? 'loading' : 'enter'))}</button></form><p class="note warning">${h(t('http'))}</p></section></div></main>`;
+      root.querySelector('.gate').insertAdjacentHTML('beforeend', installEntry());
       const password = document.getElementById('password');
       const field = document.createElement('div'); field.className = 'password-field';
       const visibility = document.createElement('button');
@@ -341,6 +364,7 @@ export function startApp() {
       const library = template.content.firstElementChild; library.hidden = true;
       root.prepend(library);
     } else root.innerHTML = libraryMarkup;
+    if (!state.space) root.querySelector('.library').insertAdjacentHTML('beforeend', installEntry());
     mountFiles();
     mountLanguage();
     mountSpaces();
@@ -993,11 +1017,13 @@ export function startApp() {
         if (state.view) backToLibrary();
       } else updateDetails();
     }
-    notice(error.code || 'internal');
+    if (error.code !== 'offline') notice(error.code || 'internal');
     updateConnection();
   }
   function updateConnection() {
     document.querySelectorAll('[data-connection]').forEach(node => { node.innerHTML = connectionHTML(); });
+    connectionStatus.hidden = state.connected || state.busy;
+    connectionStatus.innerHTML = `<div><strong>${h(t('connectionLost'))}</strong><p>${h(t('reconnectHint'))}</p></div>${button('reconnect', 'reconnect')}`;
   }
   async function download(entry) {
     entry ??= await freshEntry();
@@ -1222,6 +1248,13 @@ export function startApp() {
   async function action(name, element) {
     switch (name) {
       case 'back': dismissPanel(); if (state.view) backToLibrary(); return;
+      case 'reconnect': {
+        const session = await api('/api/session');
+        if (!session.authenticated) { forgetSession(); return; }
+        if (!state.authenticated) { state.authenticated = true; state.loginError = ''; state.loading = false; await loadSpaces(); }
+        else if (!state.view) { if (state.space) await loadFiles(); else await loadSpaces(); }
+        return;
+      }
       case 'logout': await api('/api/logout', {}); forgetSession(''); return;
       case 'home': rememberDirectory(); closePanel(); state.intent++; state.request++; state.tab = 'files'; state.space = null; state.selected = null; state.entries = []; state.tasks = []; state.error = ''; state.loading = true; render(); await loadSpaces(); return;
       case 'refresh': if (state.space) await loadFiles(true); else await loadSpaces(); return;
@@ -1304,6 +1337,12 @@ export function startApp() {
     if (element.dataset.action === 'close') { dismissPanel(); return; }
     if (element.dataset.action === 'return-library') { backToLibrary(); return; }
     if (element.dataset.action === 'cancel-operation') { state.intent++; abandonOperation(); return; }
+    if (element.dataset.action === 'install') { showInstallGuide(); return; }
+    if (element.dataset.action === 'dismiss-install') {
+      installDismissed = true;
+      try { localStorage.setItem('pkp-lan-install-dismissed', '1'); } catch { /* Remember only within this page if storage is unavailable. */ }
+      updateInstallEntry(); return;
+    }
     void runOperation(async () => {
       if (element.dataset.space) await openSpace(element.dataset.space);
       else if (element.dataset.file) await selectEntry(element.dataset.file);
@@ -1401,7 +1440,16 @@ export function startApp() {
     }
     state.intent++; abandonOperation(); closePanel(); if (state.view) clearFocusView(); state.selected = null; state.plan = null;
   });
-  window.addEventListener('online', () => { void poll(); });
+  standalone.addEventListener('change', updateInstallEntry);
+  window.addEventListener('appinstalled', () => {
+    installDismissed = true;
+    try { localStorage.setItem('pkp-lan-install-dismissed', '1'); } catch { /* Keep the hint dismissed within this page. */ }
+    updateInstallEntry();
+  });
+  window.addEventListener('online', () => {
+    if (state.authenticated) void poll();
+    else if (!state.connected && !state.busy) void runOperation(() => action('reconnect'));
+  });
   window.addEventListener('offline', () => { state.connected = false; updateConnection(); });
   document.addEventListener('visibilitychange', () => { if (!document.hidden) void poll(); });
   setInterval(() => { void poll(); }, 5000);
