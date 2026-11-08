@@ -29,6 +29,7 @@ import {
 import { presentSearchGroups } from "./assistantresults";
 import { bytes } from "./format";
 import { N_, t } from "./i18n";
+import catalog from "./locales";
 import type { FileClass } from "./media";
 import { nameError, PLAN_LIMIT } from "./organizer";
 import { emptyQuery, localDay, type AIAggregate, type AIQuery, type Played } from "./searchquery";
@@ -326,12 +327,20 @@ export interface Turn {
   modeNote: string;
 }
 
+const INDEX_NOT_READY = N_("本地索引还在建立，完成后才能查找");
+const INDEX_NOT_READY_DETAILS = new Set([INDEX_NOT_READY, ...Object.values(catalog[INDEX_NOT_READY])]);
+
+/** A saved failed tool trace keeps its original language, even after the UI switches. */
+export function indexBlocked(turn: Pick<Turn, "traces">): boolean {
+  return turn.traces.some((trace) => trace.state === "failed" && INDEX_NOT_READY_DETAILS.has(trace.detail));
+}
+
 /**
- * retryable: the turn ended on an error and left nothing the user acted on
- * (every plan-like card still a draft), so Retry may ask again in its place.
+ * retryable: the turn errored or ended waiting for the index, and left nothing
+ * the user acted on (every plan-like card still a draft).
  */
 export function retryable(t: Turn): boolean {
-  return t.stop === "error" && t.cards.every((c) => c.state === "draft" || c.kind === "files" || c.kind === "stats");
+  return (t.stop === "error" || (t.stop === "end" && indexBlocked(t))) && t.cards.every((c) => c.state === "draft" || c.kind === "files" || c.kind === "stats");
 }
 
 /* ---------------- tools ---------------- */

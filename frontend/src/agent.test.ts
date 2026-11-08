@@ -6,12 +6,14 @@ import {
   folderSummaryForModel,
   foldersForModel,
   Handles,
+  indexBlocked,
   MAX_CALLS,
   mediaSummaryForModel,
   modelPath,
   NO_TOOLS_MESSAGE,
   parseToolCall,
   planForModel,
+  retryable,
   rowsForModel,
   runTurn,
   searchForModel,
@@ -22,12 +24,14 @@ import {
   type AIJsonReply,
   type FilesCard,
   type ModelRow,
+  type PlanCard,
   type ToolImpls,
   type Turn,
   type TurnOptions,
 } from "./agent";
 import { ModelOutputError, type ModelRequest } from "./aiprompt";
 import { conversationBody, readConversation } from "./assistantcore";
+import { applyLanguage, i18n, LOCALES, t } from "./i18n";
 import { emptyQuery } from "./searchquery";
 
 const NOW = new Date(2026, 9, 16, 10, 0); // a Friday
@@ -428,6 +432,67 @@ describe("runTurn · validation", () => {
   });
 });
 
+describe("indexBlocked and retryable", () => {
+  async function blockedTurn() {
+    const tools = makeTools();
+    tools.search_files = vi.fn(async () => {
+      throw new Error(t("本地索引还在建立，完成后才能查找"));
+    });
+    const chat = fakeChat([reply("", [["search_files", {}]]), reply("请等索引完成后再试。")]);
+    return runTurn(makeDeps({ chat: chat.fn, tools }), fresh(), "找山海纪行", opts());
+  }
+
+  it("retries saved normally ended index failures in every trace language after the UI language changes", async () => {
+    const { pref, locale } = i18n;
+    try {
+      for (const { value } of LOCALES) {
+        applyLanguage(value, value);
+        const saved = JSON.parse(JSON.stringify(await blockedTurn())) as Turn;
+        const next = value === "en" ? "ja" : "en";
+        applyLanguage(next, next);
+        expect(saved.stop).toBe("end");
+        expect(indexBlocked(saved)).toBe(true);
+        expect(retryable(saved)).toBe(true);
+      }
+    } finally {
+      applyLanguage(pref, locale);
+    }
+  });
+
+  it("requires the exact canonical error in a failed tool trace, not model prose or an unrelated failure", async () => {
+    const turn = await blockedTurn();
+    const trace = turn.traces[0];
+    turn.text = trace.detail;
+    turn.traces = [{ ...trace, detail: "search permission denied" }];
+    expect(indexBlocked(turn)).toBe(false);
+    expect(retryable(turn)).toBe(false);
+    expect(indexBlocked({ traces: [{ ...trace, detail: `Error: ${trace.detail}` }] })).toBe(false);
+    expect(indexBlocked({ traces: [{ ...trace, state: "done" }] })).toBe(false);
+    expect(indexBlocked({ traces: [{ ...trace, state: "running" }] })).toBe(false);
+  });
+
+  it("does not turn cancellation, denial, budget or other early stops into retryable index waits", async () => {
+    const turn = await blockedTurn();
+    for (const stop of ["cancel", "denied", "budget", "length", "limit"] as const) {
+      expect(retryable({ ...turn, stop })).toBe(false);
+    }
+  });
+
+  it("keeps acted-on operation cards nonretryable for index waits and ordinary errors", async () => {
+    const turn = await blockedTurn();
+    const plan: PlanCard = {
+      kind: "plan", id: "plan", title: "Plan", state: "draft", note: "", tool: "propose_changes",
+      planId: "local-plan", scopeId: "", scopePath: "", counts: { changes: 1, kept: 0, trash: 0, conflicts: 0 },
+      sample: null, source: "model", recordId: "",
+    };
+    turn.cards = [filesCard([hit]), plan];
+    expect(retryable(turn)).toBe(true);
+    plan.state = "done";
+    expect(retryable(turn)).toBe(false);
+    expect(retryable({ ...turn, stop: "error" })).toBe(false);
+  });
+});
+
 describe("runTurn · limits", () => {
   it(`stops after ${MAX_CALLS} model calls`, async () => {
     const chat = fakeChat([reply("", [["recent_plays", {}]])]);
@@ -495,6 +560,7 @@ describe("runTurn · limits", () => {
     const chat = fakeChat([new Error("401 unauthorized")]);
     const turn = await runTurn(makeDeps({ chat: chat.fn, describe: (e) => `模型服务拒绝：${(e as Error).message}` }), fresh(), "找", opts());
     expect(turn).toMatchObject({ stop: "error", error: "模型服务拒绝：401 unauthorized" });
+    expect(retryable(turn)).toBe(true);
   });
 });
 

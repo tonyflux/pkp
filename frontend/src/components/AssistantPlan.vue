@@ -24,7 +24,10 @@ import {
   aiReady,
   aiSettings,
   assistant,
+  cleanupAssistantResults,
+  planCleanupEntries,
   identifyRemaining,
+  reviewPlan,
   openAISettings,
   openPlanConfirm,
   pickPlanItems,
@@ -68,6 +71,8 @@ type Row =
   | { kind: "more"; key: string; card: string; hidden: number; open: boolean; label: string };
 
 const plan = computed(() => assistant.plan);
+const cleanup = computed(() => !!plan.value?.changes.length && !plan.value.base.kept.length && plan.value.changes.every((c) => c.op === "trash"));
+const hasTrashFolders = computed(() => plan.value?.changes.some((c) => c.op === "trash" && c.item.folder));
 const summary = computed(() => planSummary.value);
 const view = ref<"target" | "source">("target");
 const media = computed(() => plan.value?.kind === "media");
@@ -230,7 +235,7 @@ const rows = computed<Row[]>(() => {
         { tone: "kept", title: t("保持原样"), meta: t("{n} 项 · 不会改动，逐项说明原因", { n: kept.length }), pill: "", ids: [], reviewIds: kept.map((c) => c.item.id), on: 0, series: null, movie: false },
         kept,
         (c) => ({ kind: "change", key: `k:${c.item.id}`, change: c, error: "", detail: `${sourcePath(c) || t("全部文件")} · ${c.locked}`, op: t("保持原样"), last: false }),
-        0,
+        FOLD,
         (hidden) => t("查看这 {n} 项 ↓", { n: hidden }),
       );
     }
@@ -370,7 +375,7 @@ function refine() {
 
 const account = computed(() => accountName(assistant.account));
 const runningPlan = computed(() => assistant.running && !assistant.undoing);
-const emptyReason = computed(() => summary.value?.selected ? "" : t("本次仅记录决定，不会改动云盘文件。"));
+const emptyReason = computed(() => summary.value?.selected ? "" : cleanup.value ? t("默认不选择任何项；勾选需要清理的文件后，再检查并确认。") : t("本次仅记录决定，不会改动云盘文件。"));
 const dockNote = computed(() => {
   const s = summary.value;
   if (!s) return "";
@@ -419,19 +424,36 @@ async function keepAllAndConfirm() {
         <template v-else-if="summary">
           <div class="plan-heading">
             <div class="heading-text">
-              <span class="eyebrow">{{ t("整理计划 · {account}", { account }) }} <span class="slash">/</span> {{ scopeLabel }}</span>
-              <h1>{{ t("先看清去向，再决定执行。") }}</h1>
+              <span class="eyebrow">{{ cleanup ? t("清理计划 · {account}", { account }) : t("整理计划 · {account}", { account }) }} <span class="slash">/</span> {{ scopeLabel }}</span>
+              <h1>{{ cleanup ? t("先确认要清理的文件，再移到回收站。") : t("先看清去向，再决定执行。") }}</h1>
               <p>{{ plan.basis }}</p>
+              <p v-if="hasTrashFolders">{{ t("文件夹移到回收站时会包含其中的全部内容。") }}</p>
             </div>
             <span class="plan-count"><strong class="tnum">{{ num(summary.selected) }}</strong> {{ t("项可执行") }}</span>
           </div>
+
+          <section v-if="(media && plan.groups.length) || (!cleanup && planCleanupEntries.length)" class="plan-actions" :aria-label="t('计划预览')">
+            <div class="action-buttons">
+              <button v-if="media && plan.groups.length" class="review-plan" type="button" :disabled="busy" @click="reviewPlan()">
+                {{ t("AI 复核整份计划") }}
+              </button>
+              <button v-if="media && plan.lowGroups && plan.base.kept.some((c) => !isPlanReviewed(c))" class="quiet unresolved-action" type="button" :disabled="busy" @click="identifyRemaining()">
+                {{ aiReady ? t("问 AI 识别剩下的 {n} 组", { n: plan.lowGroups }) : t("配置模型后可识别剩下的 {n} 组", { n: plan.lowGroups }) }}
+              </button>
+              <button v-if="!cleanup && planCleanupEntries.length" class="cleanup-action" type="button" :disabled="busy" @click="cleanupAssistantResults(planCleanupEntries)">
+                <Icon name="trash" :size="14" />
+                {{ t("清理预览 · {n} 项", { n: planCleanupEntries.length }) }}
+              </button>
+            </div>
+            <p>{{ t("只更新预览，不会执行文件操作。") }}</p>
+          </section>
 
           <div class="plan-tools">
             <div v-slide class="seg" role="group" :aria-label="t('查看方式')">
               <button type="button" :aria-pressed="view === 'target'" @click="view = 'target'">{{ t("按目标") }}</button>
               <button type="button" :aria-pressed="view === 'source'" @click="view = 'source'">{{ t("按来源") }}</button>
             </div>
-            <div v-if="media" class="tools-right">
+            <div v-if="media && !cleanup" class="tools-right">
               <button class="quiet link" type="button" :aria-expanded="refining" :disabled="assistant.running" @click="openRefine()">{{ t("补充要求") }}</button>
               <span class="naming-label">{{ t("命名模板") }}</span>
               <SelectMenu
@@ -450,7 +472,7 @@ async function keepAllAndConfirm() {
             </div>
           </div>
 
-          <form v-if="media && refining" class="refine" @submit.prevent="refine">
+          <form v-if="media && !cleanup && refining" class="refine" @submit.prevent="refine">
             <input
               id="ai-refine"
               v-model="assistant.prompt"
@@ -572,14 +594,6 @@ async function keepAllAndConfirm() {
 
           <p v-if="view === 'source'" class="source-help"><button class="quiet link" type="button" @click="view = 'target'">{{ t("查看未决定的项、修改勾选或确认保留，请切换到按目标。") }}</button></p>
 
-          <div v-if="plan.lowGroups && plan.base.kept.some((c) => !isPlanReviewed(c))" class="low">
-            <Icon name="info" :size="16" />
-            <p>{{ t("还有 {n} 组规则无法确定作品，先保持原样。", { n: plan.lowGroups }) }}</p>
-            <button type="button" :disabled="busy" @click="identifyRemaining()">
-              {{ aiReady ? t("问 AI 识别剩下的 {n} 组", { n: plan.lowGroups }) : t("配置模型后可识别剩下的 {n} 组", { n: plan.lowGroups }) }}
-            </button>
-          </div>
-
           <div class="plan-caution">
             <Icon name="shield" :size="17" />
             <p>{{ t("这次不会永久删除任何文件。执行前还会重新读取云盘状态；重名或位置变化的项将跳过并在回执中说明。") }}</p>
@@ -622,7 +636,7 @@ async function keepAllAndConfirm() {
 .source-line strong,
 .source-line small,
 .refine > small,
-.low p,
+.plan-actions p,
 .plan-caution p,
 .dock-note,
 .none {
@@ -675,7 +689,7 @@ async function keepAllAndConfirm() {
   align-items: flex-end;
   justify-content: space-between;
   gap: 18px;
-  margin: 16px 0 25px;
+  margin: 16px 0 20px;
 }
 
 .heading-text {
@@ -722,6 +736,53 @@ async function keepAllAndConfirm() {
 .plan-count strong {
   font-size: 27px;
   color: var(--accent);
+}
+
+.plan-actions {
+  margin-bottom: 18px;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--fg) 3%, transparent);
+}
+
+.action-buttons {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.action-buttons button {
+  min-height: 34px;
+  max-width: 100%;
+  padding: 6px 12px;
+  border-radius: 9px;
+  font-size: 12px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.review-plan {
+  border-color: color-mix(in srgb, var(--accent) 28%, transparent);
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.action-buttons .unresolved-action {
+  font-size: 11px;
+  color: var(--fg-dim);
+}
+
+.cleanup-action {
+  margin-left: auto;
+}
+
+.plan-actions p {
+  margin: 9px 0 0;
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--fg-dim);
 }
 
 .plan-tools {
@@ -872,7 +933,7 @@ async function keepAllAndConfirm() {
   align-items: center;
   gap: 17px;
   min-width: 0;
-  padding: 22px 23px;
+  padding: 18px 20px;
   border-top: 1px solid var(--line-strong);
   border-radius: 15px 15px 0 0;
 }
@@ -989,7 +1050,7 @@ async function keepAllAndConfirm() {
   align-items: center;
   gap: 13px;
   min-height: 64px;
-  padding: 10px 23px;
+  padding: 12px 20px;
 }
 
 .tree-row:not(.last) {
@@ -1020,13 +1081,19 @@ async function keepAllAndConfirm() {
   color: var(--fg-dim);
 }
 
+.tree-row.kept .row-text small {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  line-height: 1.6;
+}
+
 .row-text small.error {
   white-space: normal;
   overflow-wrap: anywhere;
   color: var(--danger);
 }
 
-.tree-row.off .row-text {
+.tree-row.off:not(.kept) .row-text {
   opacity: 0.6;
 }
 
@@ -1109,37 +1176,6 @@ async function keepAllAndConfirm() {
   margin: 10px 4px 0;
   font-size: 11px;
   color: var(--fg-dim);
-}
-
-.low {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin-top: 16px;
-  padding: 12px 16px;
-  border: 1px solid color-mix(in srgb, var(--warning) 35%, transparent);
-  border-radius: 12px;
-  background: color-mix(in srgb, var(--warning) 8%, transparent);
-  font-size: 12px;
-}
-
-.low > svg {
-  flex: none;
-  color: var(--warning);
-}
-
-.low p {
-  flex: 1;
-  min-width: 12em;
-  margin: 0;
-}
-
-.low button {
-  flex: none;
-  min-height: 34px;
-  border-radius: 11px;
-  font-size: 12px;
 }
 
 .plan-caution {
@@ -1228,6 +1264,10 @@ async function keepAllAndConfirm() {
     padding: 26px 20px;
   }
 
+  .cleanup-action {
+    margin-left: 0;
+  }
+
   .plan-dock {
     padding: 10px 20px;
   }
@@ -1257,6 +1297,7 @@ async function keepAllAndConfirm() {
 
   .dock-note {
     font-size: 11px;
+    flex-basis: 100%;
   }
 
   .plan-heading {
@@ -1290,6 +1331,14 @@ async function keepAllAndConfirm() {
     gap: 8px;
     padding: 12px;
     flex-wrap: wrap;
+  }
+
+  .tree-row .row-text {
+    flex-basis: calc(100% - 28px);
+  }
+
+  .tree-row .review-action {
+    margin-left: auto;
   }
 
   .tree-row em {

@@ -105,6 +105,7 @@ import {
   folderSummaryForModel,
   foldersForModel,
   Handles,
+  indexBlocked,
   isContentRefused,
   mediaSummaryForModel,
   modelPath,
@@ -4111,9 +4112,10 @@ export function openProxySettings(): void {
  *     drive before Confirm Execution.
  *   - consent by data level: one sheet per task (a turn, an identify run, a
  *     follow-up), never per request, unless the account says Always Allow.
- * TMDB answers never reach a model request: identify sends only the groups
- * the rules could not name, followUp sends matched groups as 「Matched」, and
- * tool results describe plans without titles. A run goes on in its own
+ * TMDB answers never reach a model request: identify sends only unresolved
+ * groups; follow-ups and explicit whole-plan reviews send filename patterns
+ * and prior rule/model identities, TMDB groups as 「Matched」. Tool results
+ * describe plans without titles. A run goes on in its own
  * account whatever comes on screen.
  */
 
@@ -4248,7 +4250,7 @@ const drafts = new Map<string, AssistantPlan>();
 /** What the connect sheet holds back until a model is connected. */
 type Held =
   | { kind: "turn"; text: string; scope?: AskScope; plan: AssistantPlan | null; card: FilesCard | null }
-  | { kind: "refine"; text: string }
+  | { kind: "refine"; text: string; review: boolean }
   | { kind: "identify" };
 let held: Held | null = null;
 
@@ -4691,17 +4693,18 @@ async function startTurn(text: string, range: AskScope = assistant.scope) {
   await saveConversation(conv);
 }
 
-/** The turn Retry is offered on: the conversation's last, when it failed and nothing else is going on. */
+/** Retry stays offered on the idle conversation's last failed or index-blocked turn, even while the index builds. */
 export const retryTurnId = computed(() => {
   const last = assistant.conversation?.turns.at(-1);
   return last && retryable(last) && idle() && assistant.account === currentId.value ? last.id : "";
 });
 
-/** retryTurn is Retry on a failed turn: the same words asked again, the new turn in its place. */
+/** retryTurn asks the same words and scope again in place, waiting for a blocked index to become ready. */
 export async function retryTurn(turnId: string) {
   const conv = assistant.conversation;
   const last = conv?.turns.at(-1);
   if (!conv || !last || retryTurnId.value !== turnId) return;
+  if (indexBlocked(last) && !indexReady.value) return;
   const scope = last.scope ?? {};
   conv.turns.pop();
   await startTurn(last.user, scope);
@@ -5035,6 +5038,19 @@ export async function organizeAssistantResults(rows: readonly CardRow[]): Promis
     : selectionPlan(account, unique.map((row) => row.id), {}));
 }
 
+/** Displayed folders stay single candidates; only explicitly selected items can reach execution. */
+export async function cleanupAssistantResults(rows: readonly Pick<CardRow, "id" | "folder">[]): Promise<void> {
+  if (!idle() || assistant.account !== currentId.value || !rows.length) return;
+  const items: ProposedItem[] = [...new Map(rows.map((row) => [row.id, row])).values()]
+    .map((row) => ({ id: row.id, folder: row.folder, toPath: null, name: "", trash: true }));
+  await openPlan(t("正在读取所选文件…"), async (account) => {
+    const plan = await changesPlan(account, t("清理展示的 {n} 项", { n: items.length }), items);
+    plan.basis = t("根据展示结果生成清理预览；仅勾选并确认的项目会移到回收站，不会永久删除。");
+    plan.base.changes = plan.base.changes.map((change) => ({ ...change, note: t("来自展示结果，确认后再勾选移到回收站") }));
+    return rebuilt(plan, {});
+  });
+}
+
 /**
  * runCard is Confirm on an offline, download or share card: only now the
  * existing transfer or share call is made, for the conversation's account.
@@ -5268,7 +5284,7 @@ export async function connectModel(presetId: string, key: string, baseUrl?: stri
   const h = held;
   closeConnect();
   if (h?.kind === "turn") await startTurn(h.text, h.scope);
-  else if (h?.kind === "refine") await refinePlan(h.text);
+  else if (h?.kind === "refine") await refinePlan(h.text, h.review);
   else if (h?.kind === "identify") await identifyRemaining();
   return true;
 }
@@ -5304,6 +5320,13 @@ function rebuilt(p: AssistantPlan, patch: Partial<AssistantPlan>): AssistantPlan
       years: new Set(next.years),
       missing: next.missing || undefined,
     });
+    // A selected move is not consent to a newly proposed deletion.
+    const previous = new Map(p.base.changes.map((c) => [c.item.id, c.op]));
+    const newTrash = next.base.changes.filter((c) => c.op === "trash" && previous.get(c.item.id) !== "trash" && next.picks[c.item.id] === true);
+    if (newTrash.length) {
+      next.picks = { ...next.picks };
+      for (const c of newTrash) next.picks[c.item.id] = false;
+    }
     next.origin = originOf(next.identities);
     next.basis = basisOf(next.origin);
     next.lowGroups = next.low.length;
@@ -5381,8 +5404,8 @@ interface MediaSource {
 /**
  * localMediaPlan is the L0 media organization plan: the index's tree, the code's
  * groups, the rules' identities, TMDB's exact matches, then buildPlan. No
- * model request anywhere: the groups the rules cannot name stay, and
- * identifyRemaining may ask the model about them.
+ * model request anywhere: unresolved groups stay. Explicit identify or
+ * whole-plan review actions may then ask the model.
  */
 async function localMediaPlan(src: MediaSource): Promise<AssistantPlan> {
   const scopeId = src.scope.at(-1)?.id ?? "";
@@ -5513,6 +5536,7 @@ async function changesPlan(account: string, title: string, items: ProposedItem[]
 function backFrom(): typeof assistant.planBack {
   if (ui.route === "files") return "files";
   if (ui.route === "transfers") return "transfers";
+  if (ui.route === "assistant" && assistant.screen === "plan") return assistant.planBack;
   if (ui.route === "assistant" && assistant.screen === "chat") return "chat";
   return "home";
 }
@@ -5776,16 +5800,24 @@ function setPlan(p: AssistantPlan) {
   if (p.conversation && drafts.has(p.id)) drafts.set(p.id, p);
 }
 
-/** refinePlan is a sentence on a media plan: the model re-identifies, the user's edits stay. */
-async function refinePlan(text: string) {
+/** reviewPlan explicitly reviews every candidate, including rule-matched groups. */
+export async function reviewPlan(): Promise<void> {
+  await refinePlan("", true);
+}
+
+/** refinePlan shares consent, connection and request handling for sentences and whole-plan review. */
+async function refinePlan(text: string, review = false) {
   const p = assistant.plan;
-  if (!p || p.kind !== "media") return;
+  if (!p || p.kind !== "media" || !idle() || assistant.account !== currentId.value) return;
   if (!aiReady.value) {
-    needModel({ kind: "refine", text }, text);
+    needModel({ kind: "refine", text, review }, review ? t("AI 复核整份计划") : text);
     return;
   }
   const serial = taskSerial;
-  const prepared = followUp(p.identities, p.groups, text);
+  const instruction = review
+    ? "Review every candidate filename pattern and its previous recognition, including rule-matched groups. Correct any mistaken identity, media type, episode mapping or destination folder. Return only groups needing changes; leave correct proposals unchanged."
+    : text;
+  const prepared = followUp(p.identities, p.groups, instruction);
   const estimate = prepared.disclosure.estimate;
   const { left, limit } = planRoom(p);
   if (estimate.low > left) {
@@ -5793,20 +5825,36 @@ async function refinePlan(text: string) {
     return;
   }
   if (!alwaysAllowed()) {
-    const go = await askConsent({ title: t("要按这句话重新识别吗？"), lede: t("只询问这一次。"), sends: prepared.disclosure.sends, estimate, limit });
+    const go = await askConsent({
+      title: review ? t("要让 AI 复核整份计划吗？") : t("要按这句话重新识别吗？"),
+      lede: review ? t("将复核全部候选组，包括已命中规则的项目；只更新预览，不会执行文件操作。") : t("只询问这一次。"),
+      sends: review
+        ? t("{groups} 个候选组的文件名模式和规则或 AI 的识别结果。不发送路径、样本或 TMDB 返回的标题和年份。", { groups: p.groups.length })
+        : prepared.disclosure.sends,
+      estimate,
+      limit,
+    });
     if (serial !== taskSerial) return;
     if (!go) {
       say(t("未发送：保留本地结果。"));
       return;
     }
   }
-  let updates: Identity[];
+  let next: AssistantPlan;
+  let changed = false;
   let cost = 0;
   try {
-    const reply = await complete(prepared.request, t("正在按补充要求重新识别…"));
+    const reply = await complete(prepared.request, review ? t("正在让 AI 复核整份计划…") : t("正在按补充要求重新识别…"));
     if (serial !== taskSerial) return;
     cost = reply.input + reply.outputTokens;
-    updates = parseIdentities(reply.output, p.groups);
+    const updates = parseIdentities(reply.output, p.groups);
+    const now = assistant.plan;
+    if (!now || now.id !== p.id) {
+      assistant.busy = "";
+      return;
+    }
+    next = await withFollowUp(now, updates, text, cost);
+    changed = review ? JSON.stringify(next.changes) !== JSON.stringify(now.changes) : updates.length > 0;
   } catch (err) {
     if (serial !== taskSerial) return;
     assistant.busy = "";
@@ -5816,18 +5864,21 @@ async function refinePlan(text: string) {
     chargePlan(p, cost);
   }
   if (serial !== taskSerial) return;
-  const now = assistant.plan;
-  if (!now || now.id !== p.id) {
-    assistant.busy = "";
-    return;
-  }
-  const next = await withFollowUp(now, updates, text, cost);
-  if (serial !== taskSerial) return;
   assistant.busy = "";
   if (assistant.plan?.id !== p.id) return;
   setPlan(next);
   assistant.prompt = "";
-  say(updates.length ? t("已按「{text}」重新生成计划，尚未修改云盘。", { text }) : t("模型没有改动识别结果，计划保持不变。"), updates.length ? "success" : "info");
+  say(
+    review
+      ? changed ? t("AI 已更新建议，请检查计划后再执行。") : t("AI 未提出调整，当前计划保持不变。")
+      : changed ? t("已按「{text}」重新生成计划，尚未修改云盘。", { text }) : t("模型没有改动识别结果，计划保持不变。"),
+    changed ? "success" : "info",
+  );
+  const conv = assistant.conversation;
+  if (next.conversation && conv?.id === next.conversation) {
+    conv.plans[next.id] = { kind: "media", scope: next.scope, ids: next.ids ?? [], instructions: next.instructions, identities: next.modelIdentities };
+    await saveConversation(conv);
+  }
 }
 
 /**
@@ -5837,21 +5888,32 @@ async function refinePlan(text: string) {
  * model never saw cannot be replaced by one it guessed.
  */
 async function withFollowUp(plan: AssistantPlan, updates: Identity[], text: string, cost: number): Promise<AssistantPlan> {
+  const account = assistant.account;
+  const serial = taskSerial;
   const fromModel = updates.filter((u) => {
     const before = plan.identities.find((i) => i.id === u.id);
     return !before || before.source !== "tmdb";
   });
   const matched = await matchTitles(fromModel);
+  if (serial !== taskSerial) throw new Error(t("已取消"));
   const changed = new Set(updates.map((u) => u.id));
   const byModel = new Map(fromModel.map((u) => [u.id, u]));
+  // Persist only pre-TMDB inputs, carrying permitted folder edits into reopened plans.
+  const seeds = new Map(parseGroups(plan.groups, plan.scopeName).flatMap((p) => p.identity ? [[p.id, p.identity] as const] : []));
+  for (const i of plan.modelIdentities) seeds.set(i.id, i);
+  const remembered = updates.flatMap((u) => {
+    if (byModel.has(u.id)) return [u];
+    const seed = seeds.get(u.id);
+    return seed ? [{ ...seed, folder: u.folder }] : [];
+  });
   const next = rebuilt(plan, {
     identities: mergeIdentities(plan.identities, [...matched.identities, ...updates.filter((u) => !byModel.has(u.id))]),
-    modelIdentities: [...plan.modelIdentities.filter((i) => !byModel.has(i.id)), ...fromModel],
+    modelIdentities: [...plan.modelIdentities.filter((i) => !changed.has(i.id)), ...remembered],
     low: plan.low.filter((id) => !changed.has(id)),
     instructions: [plan.instructions, text].filter(Boolean).join("；"),
     tokens: plan.tokens + cost,
   });
-  return finishPlan(assistant.account, next);
+  return finishPlan(account, next);
 }
 
 /* ---------- editing the plan ---------- */
@@ -5880,6 +5942,11 @@ export function planReviewKey(c: Change, p = assistant.plan): string {
 function planItems(p: AssistantPlan): Change[] {
   return [...p.changes, ...p.base.kept];
 }
+
+/** Only explicit plan candidates, never ancestor folders inferred to become empty. */
+export const planCleanupEntries = computed(() => assistant.plan
+  ? planItems(assistant.plan).filter((c) => c.op !== "trashIfEmpty").map((c) => c.item)
+  : []);
 
 async function loadPlanReviews(account: string, p: AssistantPlan): Promise<AssistantPlan> {
   const reviews = ((await DriveService.SuggestionReviews(account)) ?? []).map((r) => r.key);

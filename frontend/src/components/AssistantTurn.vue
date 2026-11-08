@@ -12,9 +12,9 @@ import AssistantCopyButton from "./AssistantCopyButton.vue";
 import MarkdownDoc from "./MarkdownDoc";
 import Icon from "./Icon.vue";
 import Orbit from "./Orbit.vue";
-import type { AssistantScope, Card, SearchResultGroup, Trace, Turn } from "../agent";
+import { indexBlocked, type AssistantScope, type Card, type SearchResultGroup, type Trace, type Turn } from "../agent";
 import { t } from "../i18n";
-import { assistantScopeLabel, notify, retryTurn } from "../store";
+import { assistantScopeLabel, drive, indexReady, indexText, notify, retryTurn } from "../store";
 import { linkTarget, parseMarkdown } from "../markdown";
 
 const props = defineProps<{
@@ -31,11 +31,12 @@ const props = defineProps<{
   initial: string;
   /** Plan card numbers across the conversation (Plan draft / 01). */
   numbers: Record<string, number>;
-  /** The turn failed and may be asked again (store retryTurnId). */
+  /** The latest safe retry, including a turn blocked by an unfinished index. */
   retry?: boolean;
 }>();
 
 const live = computed(() => !props.turn);
+const indexRetry = computed(() => !!props.retry && !!props.turn && indexBlocked(props.turn));
 
 // Only move a complete top-level closing paragraph after the cards. Parsing
 // first keeps fenced code and loose/nested lists intact, including while live.
@@ -141,9 +142,19 @@ const shown = computed(() => {
         <AssistantCard v-for="c in shown" :key="c.id" :card="c" :turn-id="turnId" :number="numbers[c.id] ?? 1" :live="live" />
 
         <MarkdownDoc v-if="trailing.length" class="answer after" :blocks="trailing" @link="followLink" />
+        <div v-if="indexRetry" class="index-retry" role="status" aria-live="polite">
+          <Icon v-if="indexReady" name="check" :size="17" />
+          <Orbit v-else :size="17" />
+          <div class="index-copy">
+            <strong>{{ indexReady ? t("索引已就绪") : t("正在建立索引") }}</strong>
+            <span>{{ indexReady ? t("现在可以使用原来的问题和范围重新查询。") : t("当前暂时无法搜索文件。请等待索引完成后点击“重试原问题”，无需重新输入。") }}</span>
+            <small v-if="drive.indexProgress">{{ indexText(drive.indexProgress) }}</small>
+          </div>
+          <button class="primary" type="button" :disabled="!indexReady" @click="retryTurn(turnId)">{{ t("重试原问题") }}</button>
+        </div>
         <p v-if="ending" class="ending" :class="ending.tone">
           {{ ending.text }}
-          <button v-if="retry" type="button" class="quiet retry" @click="retryTurn(turnId)"><Icon name="restore" :size="13" />{{ t("重试") }}</button>
+          <button v-if="retry && !indexRetry" type="button" class="quiet retry" @click="retryTurn(turnId)"><Icon name="restore" :size="13" />{{ t("重试") }}</button>
         </p>
         <p v-if="turn?.modeNote" class="ending info">{{ turn.modeNote }}</p>
         <footer v-if="!live && text.trim()" class="answer-footer"><AssistantCopyButton :text="text" :label="t('复制回答')" /></footer>
@@ -376,6 +387,26 @@ const shown = computed(() => {
 .ending.error {
   color: var(--danger);
 }
+
+.index-retry {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 14px 0;
+  padding: 14px;
+  border: 1px solid var(--line-strong);
+  border-radius: 12px;
+  background: var(--accent-soft);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.index-copy { flex: 1 1 230px; min-width: 0; }
+.index-copy strong, .index-copy span, .index-copy small { display: block; }
+.index-copy span, .index-copy small { color: var(--fg-dim); }
+.index-copy small { margin-top: 4px; font-size: 11px; }
+.index-retry button { flex: none; min-height: 36px; padding: 7px 12px; border-radius: 9px; font-size: 12px; }
 
 .retry {
   display: inline-flex;

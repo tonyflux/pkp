@@ -3,7 +3,7 @@ import { computed, ref } from "vue";
 import type { Card, SearchResultGroup } from "../agent";
 import { hasSearchResults, presentSearchGroups, querySummary, searchSources } from "../assistantresults";
 import { t } from "../i18n";
-import { assistant, openAssistantSearch, organizeAssistantResults } from "../store";
+import { assistant, cleanupAssistantResults, openAssistantSearch, organizeAssistantResults } from "../store";
 import AssistantCard from "./AssistantCard.vue";
 
 const props = defineProps<{
@@ -41,7 +41,14 @@ function toggleSource(id: string, event: Event) {
           <button v-if="source.query" class="quiet query-action" type="button" :disabled="locked" @click="openAssistantSearch(source.query)">{{ t('在文件页查看匹配结果') }}</button>
           <details v-if="hasSearchResults(source)" class="source-files" @toggle="toggleSource(source.id, $event)">
             <summary>{{ t('查看本次结果') }}</summary>
-            <AssistantCard v-if="openedSources.has(source.id)" :card="source" :turn-id="turnId" :number="1" :live="live" />
+            <AssistantCard v-if="openedSources.has(source.id)" :card="source" :turn-id="turnId" :number="1" :live="live">
+              <template v-if="!live && source.rows.length" #actions>
+                <div class="result-actions">
+                  <p class="result-note">{{ t('清理仅生成预览，不会立即删除文件。') }}</p>
+                  <button class="danger" type="button" :disabled="locked" @click="cleanupAssistantResults(source.rows)">{{ t('清理展示的 {n} 项', { n: source.rows.length }) }}</button>
+                </div>
+              </template>
+            </AssistantCard>
           </details>
         </li>
       </ol>
@@ -61,7 +68,9 @@ function toggleSource(id: string, event: Event) {
         </template>
         <template v-if="!live && group.card.rows.length" #actions>
           <div class="result-actions">
-            <button class="primary" type="button" :disabled="locked" @click="organizeAssistantResults(group.card.rows)">{{ t('整理展示的 {n} 项', { n: group.card.rows.length }) }}</button>
+            <p class="result-note">{{ t('清理仅生成预览，不会立即删除文件。') }}</p>
+            <button class="primary" type="button" :disabled="locked" @click="organizeAssistantResults(group.card.rows)">{{ t('整理命名 {n} 项', { n: group.card.rows.length }) }}</button>
+            <button class="danger" type="button" :disabled="locked" @click="cleanupAssistantResults(group.card.rows)">{{ t('清理展示的 {n} 项', { n: group.card.rows.length }) }}</button>
           </div>
         </template>
       </AssistantCard>
@@ -87,6 +96,7 @@ summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; 
 .group-sources strong { font-weight: 500; }
 .query-action { max-width: 100%; margin-top: 8px; text-align: start; white-space: normal; overflow-wrap: anywhere; }
 .result-actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 8px; padding: 12px 20px; }
+.result-note { flex-basis: 100%; margin: 0; color: var(--fg-dim); font-size: 11px; line-height: 1.6; }
 .result-actions button { min-height: 39px; max-width: 100%; padding: 8px 15px; border-radius: 12px; font-size: 12px; white-space: normal; overflow-wrap: anywhere; }
 .query-action:focus-visible, .result-actions button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .attempt-heading, .conditions, .source-note, .selection-note, .group-sources { -webkit-user-select: text; user-select: text; --default-contextmenu: show; }

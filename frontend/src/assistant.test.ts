@@ -8,6 +8,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { watch } from "vue";
 import type {
   Account,
+  AIReply,
   AIRequest,
   AISettings,
   Arrival,
@@ -58,12 +59,21 @@ import {
   askAssistant,
   setAssistantScope,
   organizeAssistantResults,
+  cleanupAssistantResults,
+  planCleanupEntries,
+  planBackTo,
+  openConversation,
+  openPlanCard,
   openAssistantSearch,
   localSearch,
   ui,
   assistantHome,
   drive,
   identifyRemaining,
+  reviewPlan,
+  renamePlanItem,
+  connectModel,
+  cancelAssistantTask,
   inbox,
   loadAccounts,
   loadInbox,
@@ -85,9 +95,11 @@ import {
   retryTurn,
   retryTurnId,
   submitComposer,
+  type AskScope,
 } from "./store";
 import { emptyQuery } from "./searchquery";
 import type { CardRow } from "./agent";
+import { conversationBody, type ConversationView } from "./assistantcore";
 
 /* ---------------- the drive ---------------- */
 
@@ -455,6 +467,96 @@ describe("AI assistant · Scope and execution set", () => {
     expect(callsOf("Organize")).toHaveLength(0);
   });
 
+  it.each([
+    { label: "files", entries: [series[0], clips[0], series[0]], ids: ["s1", "c1"] },
+    { label: "a folder without expanding its children", entries: [inbox0, inbox0], ids: ["dl"] },
+  ])("previews exact deduplicated displayed $label as unchecked trash without model or writes", async ({ entries, ids }) => {
+    const rows: CardRow[] = entries.map((e) => ({
+      id: e.id, name: e.name, folder: e.folder, path: "待分类", size: e.size, modified: e.modifiedTime, played: "",
+    }));
+    await cleanupAssistantResults(rows);
+    await settle();
+    const plan = assistant.plan!;
+    expect(plan).toMatchObject({
+      kind: "changes",
+      ids,
+    });
+    expect(callsOf("PlanTree").map((call) => call.args)).toEqual([["a", "", ids, []]]);
+    expect(plan.changes.map((change) => change.item.id)).toEqual(ids);
+    expect(plan.changes.every((change) => change.op === "trash" && !change.selected
+      && change.name === change.item.name)).toBe(true);
+    expect(planSummary.value).toMatchObject({ selected: 0, moves: 0, renames: 0, trash: { count: 0 } });
+    expect(modelCalls()).toBe(0);
+    expect(backend.calls.every((call) => ["PlanTree", "SuggestionReviews"].includes(call.name))).toBe(true);
+  });
+
+  it("executes only selected cleanup candidates after final confirmation without moves or renames", async () => {
+    const rows: CardRow[] = [series[0], series[1], clips[0]].map((e) => ({
+      id: e.id, name: e.name, folder: e.folder, path: "待分类", size: e.size, modified: e.modifiedTime, played: "",
+    }));
+    await cleanupAssistantResults(rows);
+    await runPlan(false);
+    expect(callsOf("Organize")).toHaveLength(0);
+    pickPlanItems(["s1"], true);
+    await runPlan(false);
+    expect(callsOf("Organize")).toHaveLength(0);
+    expect(planSummary.value).toMatchObject({ selected: 1, moves: 0, renames: 0, trash: { count: 1 } });
+    openPlanConfirm();
+    await runPlan(false);
+    await settle();
+    expect(callsOf("Organize")).toHaveLength(1);
+    const [account, request] = callsOf("Organize")[0].args as [string, OrganizeRequest];
+    expect(account).toBe("a");
+    expect(request.changes).toEqual([{
+      fileId: "s1", folder: false, name: series[0].name, parentId: "dl",
+      op: "trash", newName: "", toPath: ["待分类"], toParentId: "",
+    }]);
+    expect(callsOf("SetSuggestionReviews")).toHaveLength(0);
+    expect(modelCalls()).toBe(0);
+  });
+
+  it("switches a reopened legacy media plan to exact unchecked cleanup candidates, excluding empty-folder helpers", async () => {
+    const release = entry("release", "下载目录", "dl", true);
+    const movies = series.map((file) => ({ ...file, parentId: release.id }));
+    const candidates = [...movies, clips[0]];
+    answer("FolderTree", () => [release, ...candidates]);
+    answer("PlanTree", () => [inbox0, release, ...candidates, clips[1]]);
+    const saved: ConversationView = {
+      id: "legacy", title: "清理广告", createdAt: "", updatedAt: "",
+      usage: { used: 0, limit: 50000 }, handles: { records: [] },
+      turns: [{
+        id: "old-turn", at: "", user: "清理广告", text: "", traces: [],
+        cards: [{
+          kind: "plan", id: "old-card", title: "旧整理计划", state: "draft", note: "",
+          tool: "organize_media", planId: "old-plan", scopeId: "dl", scopePath: "待分类",
+          counts: { changes: 0, kept: 4, trash: 0, conflicts: 0 }, sample: null, source: "rules", recordId: "",
+        }],
+        usage: { input: 0, output: 0, calls: 0 }, stop: "end", error: "", denied: false, notice: "", mode: "tools", modeNote: "",
+      }],
+      plans: { "old-plan": { kind: "media", scope: [{ id: "dl", name: "待分类" }], ids: [], instructions: "", identities: [] } },
+    };
+    answer("Conversation", () => conversationBody(saved));
+    await openConversation(saved.id);
+    await openPlanCard("old-card");
+    expect(assistant.plan!.base.kept.map((c) => c.item.id)).toContain("c1");
+    expect(assistant.plan!.changes.some((c) => c.op === "trashIfEmpty" && c.item.id === "release")).toBe(true);
+    const expected = ["c1", "s1", "s2", "s3"];
+    expect(planCleanupEntries.value.map((e) => e.id).sort()).toEqual(expected);
+    backend.calls.length = 0;
+    await cleanupAssistantResults(planCleanupEntries.value);
+    expect(assistant.plan!.changes.map((c) => c.item.id).sort()).toEqual(expected);
+    expect(assistant.plan!.changes.every((c) => c.op === "trash" && !c.selected && !c.locked)).toBe(true);
+    expect(planSummary.value).toMatchObject({ selected: 0, trash: { count: 0 }, moves: 0 });
+    expect(modelCalls()).toBe(0);
+    expect(callsOf("FolderTree")).toHaveLength(0);
+    expect(callsOf("Organize")).toHaveLength(0);
+    expect(assistant.planBack).toBe("chat");
+    planBackTo();
+    expect(assistant.screen).toBe("chat");
+    expect(assistant.conversation!.turns[0].cards[0]).toMatchObject({ id: "old-card", state: "draft" });
+    expect(callsOf("SaveConversation")).toHaveLength(0);
+  });
+
   it("opens the original query including excluded stars, dates, sorting and local ids at limit 200", async () => {
     drive.indexProgress = { ready: true } as NonNullable<typeof drive.indexProgress>;
     const query = {
@@ -582,6 +684,97 @@ describe("AI assistant · Retry", () => {
     expect(callsOf("AIChat").length).toBe(2);
     expect(retryTurnId.value).toBe("");
   });
+
+  it.each(["folder", "selection"] as const)("waits for the index before manually retrying the original %s scope", async (kind) => {
+    const scope: AskScope = kind === "folder"
+      ? { folder: [{ id: "exact-folder", name: "待分类" }] }
+      : { entries: clips.slice(0, 2).map(({ id, name, folder }) => ({ id, name, folder })) };
+    const expectedQuery = kind === "folder" ? { folderId: "exact-folder", under: "待分类" } : { ids: ["c1", "c2"] };
+    const question = "查找原范围里的视频";
+    const waitingText = "本地索引尚未完成，请等建立完毕后再查找。";
+    drive.indexProgress = { account: "a", ready: false } as NonNullable<typeof drive.indexProgress>;
+    answer("SearchIndex", () => {
+      throw new Error("本地索引还在建立，完成后才能查找");
+    });
+    chatScript = [
+      () => reply("", [{ name: "search_files", arguments: {} }]),
+      () => reply(waitingText),
+      () => reply("", [{ name: "search_files", arguments: {} }]),
+      () => reply("现在找到了原范围的视频。"),
+    ];
+    void askAssistant(question, scope);
+    await settle();
+    answerConsent(true, false);
+    await settle();
+    const conv = assistant.conversation!;
+    const blocked = conv.turns.at(-1)!;
+    expect(blocked.stop).toBe("end");
+    expect(blocked.error).toBe("");
+    expect(blocked.text).toBe(waitingText);
+    expect(blocked.traces).toEqual([
+      expect.objectContaining({ tool: "search_files", state: "failed", detail: "本地索引还在建立，完成后才能查找" }),
+    ]);
+    expect(retryTurnId.value).toBe(blocked.id);
+    expect(modelCalls()).toBe(2);
+    expect(consentSheets).toBe(1);
+
+    drive.trail = [{ id: "changed-folder", name: "现在的文件夹" }];
+    setAssistantScope("folder");
+    const changedScope = assistant.scope;
+    await retryTurn(blocked.id);
+    await retryTurn(blocked.id);
+    expect(conv.turns).toEqual([blocked]);
+    expect(assistant.scope).toEqual(changedScope);
+    expect(retryTurnId.value).toBe(blocked.id);
+    expect(modelCalls()).toBe(2);
+    expect(callsOf("SearchIndex")).toHaveLength(1);
+    expect(callsOf("SaveConversation")).toHaveLength(1);
+    expect(consentSheets).toBe(1);
+
+    answer("SearchIndex", () => ({ hits: [clips[0]], total: 1, aggregate: [], under: "", underMissing: false }));
+    drive.indexProgress = { ...drive.indexProgress!, ready: true };
+    await settle();
+    expect(conv.turns).toEqual([blocked]);
+    expect(retryTurnId.value).toBe(blocked.id);
+    expect(modelCalls()).toBe(2);
+    expect(callsOf("SearchIndex")).toHaveLength(1);
+    expect(consentSheets).toBe(1);
+
+    drive.status = statusOf("b");
+    expect(retryTurnId.value).toBe("");
+    await retryTurn(blocked.id);
+    drive.status = statusOf("a");
+    assistant.running = true;
+    expect(retryTurnId.value).toBe("");
+    await retryTurn(blocked.id);
+    assistant.running = false;
+    await retryTurn("not-the-last-turn");
+    expect(conv.turns).toEqual([blocked]);
+    expect(modelCalls()).toBe(2);
+
+    void retryTurn(blocked.id);
+    await settle();
+    expect(consentSheets).toBe(2);
+    expect(modelCalls()).toBe(2);
+    expect(retryTurnId.value).toBe("");
+    answerConsent(true, false);
+    await settle();
+    expect(modelCalls()).toBe(4);
+    const retriedRequest = callsOf("AIChat")[2].args[1] as AIRequest;
+    expect(retriedRequest.messages!.filter((message) => message.role === "user").map((message) => message.content)).toEqual([question]);
+    expect(callsOf("SearchIndex").map((call) => call.args)).toEqual([
+      ["a", expect.objectContaining(expectedQuery)],
+      ["a", expect.objectContaining(expectedQuery)],
+    ]);
+    expect(callsOf("FindFolders")).toHaveLength(0);
+    expect(conv.turns).toHaveLength(1);
+    expect(conv.turns[0]).toMatchObject({ user: question, scope, stop: "end", text: "现在找到了原范围的视频。" });
+    expect(conv.turns[0].cards).toEqual([
+      expect.objectContaining({ kind: "files", total: 1, rows: [expect.objectContaining({ id: "c1" })] }),
+    ]);
+    expect(assistant.scope).toEqual(scope);
+    expect(retryTurnId.value).toBe("");
+  });
 });
 
 describe("AI assistant · L0 plans", () => {
@@ -652,6 +845,195 @@ describe("AI assistant · L0 plans", () => {
     const bodies = modelBodies();
     expect(bodies).not.toContain(TMDB_TITLE);
     expect(bodies).not.toContain(TMDB_ORIGINAL);
+  });
+});
+
+describe("AI assistant · Explicit whole-plan review", () => {
+  beforeEach(() => {
+    answer("MatchTitles", () => []);
+    answer("FolderTree", () => series);
+  });
+
+  function propose(groups: unknown[]) {
+    answer("AIComplete", () => ({ output: JSON.stringify({ groups }), input: 400, outputTokens: 60 }));
+  }
+
+  async function approveReview() {
+    const pending = reviewPlan();
+    await settle();
+    answerConsent(true, false);
+    await pending;
+  }
+
+  it("reviews fully rule-matched groups only after consent and changes the preview without drive writes", async () => {
+    await organizeFolder([{ id: "dl", name: "待分类" }]);
+    const before = assistant.plan!;
+    expect(before.low).toEqual([]);
+    expect(before.identities.every((i) => i.source === "rules")).toBe(true);
+    propose(before.groups.map((g) => ({ id: g.id, type: "series", title: "Corrected Series", season: 2, numbers: ["episode"] })));
+
+    const denied = reviewPlan();
+    await settle();
+    expect(assistant.consent).not.toBeNull();
+    expect(modelCalls()).toBe(0);
+    answerConsent(false, false);
+    await denied;
+    expect(assistant.plan).toBe(before);
+    expect(modelCalls()).toBe(0);
+
+    const pending = reviewPlan();
+    await settle();
+    expect(modelCalls()).toBe(0);
+    answerConsent(true, false);
+    await pending;
+    expect(callsOf("AIComplete")).toHaveLength(1);
+    for (const group of before.groups) expect(modelBodies()).toContain(group.pattern);
+    expect(assistant.plan!.identities.every((i) => i.title === "Corrected Series" && i.season === 2)).toBe(true);
+    expect(assistant.plan!.changes.some((c) => c.name.includes("Corrected Series - S02"))).toBe(true);
+    expect(assistant.plan!.tokens).toBe(460);
+    expect(callsOf("Organize")).toHaveLength(0);
+    expect(callsOf("RemoveFiles")).toHaveLength(0);
+  });
+
+  it("keeps unresolved-only identification separate from already named rules", async () => {
+    answer("FolderTree", () => below);
+    await organizeFolder([{ id: "dl", name: "待分类" }]);
+    const before = assistant.plan!;
+    const pending = identifyRemaining();
+    await settle();
+    expect(modelCalls()).toBe(0);
+    answerConsent(true, false);
+    await pending;
+    const sent = callsOf("AIComplete").map((c) => (c.args[1] as AIRequest).messages!.map((m) => m.content).join("\n")).join("\n");
+    const ids = [...sent.matchAll(/^(g\d+) · /gm)].map((m) => m[1]);
+    expect(ids.sort()).toEqual([...before.low].sort());
+    for (const group of before.groups.filter((g) => !before.low.includes(g.id))) expect(sent).not.toContain(group.pattern);
+    expect(assistant.plan!.identities.find((i) => i.source === "rules")).toEqual(before.identities.find((i) => i.source === "rules"));
+  });
+
+  it("preserves manual names and move picks but clears an explicitly selected move when AI proposes trash", async () => {
+    const movies = ["Alpha", "Bravo", "Charlie"].map((name, i) => entry(`movie${i}`, `${name}.2021.1080p.mkv`, "dl"));
+    answer("FolderTree", () => movies);
+    await organizeFolder([{ id: "dl", name: "待分类" }]);
+    renamePlanItem("movie0", "My chosen name.mkv");
+    pickPlanItems(["movie0"], false);
+    pickPlanItems(["movie1", "movie2"], true);
+    const plan = assistant.plan!;
+    propose(plan.groups.map((g) => ({
+      id: g.id, type: g.files.some((f) => f.id === "movie2") ? "junk" : "movie",
+      title: "Revised title", year: 2021, yearSource: "filename", folder: "Reviewed", numbers: ["other"],
+    })));
+    await approveReview();
+    expect(assistant.plan!.changes.find((c) => c.item.id === "movie0")).toMatchObject({ op: "move", name: "My chosen name.mkv", selected: false });
+    expect(assistant.plan!.changes.find((c) => c.item.id === "movie1")).toMatchObject({ op: "move", selected: true });
+    expect(assistant.plan!.changes.find((c) => c.item.id === "movie2")).toMatchObject({ op: "trash", selected: false });
+    expect(assistant.plan!.picks.movie2).toBe(false);
+    expect(callsOf("Organize")).toHaveLength(0);
+  });
+
+  it.each([false, true])("retains reviewed proposals after saved conversation reopen without exposing or overwriting TMDB data (matched: %s)", async (matched) => {
+    if (matched) backend.answers.set("MatchTitles", defaultAnswers.get("MatchTitles")!);
+    chatScript = [() => reply("", [{ name: "organize_media", arguments: { folder: "待分类" } }]), () => reply("请检查。")];
+    await say("整理待分类");
+    answerConsent(true, false);
+    await settle();
+    const conv = assistant.conversation!;
+    const card = conv.turns.at(-1)!.cards.find((c) => c.kind === "plan")!;
+    await openPlanCard(card.id);
+    const before = assistant.plan!;
+    propose(before.groups.map((g) => ({
+      id: g.id, type: "movie", title: "AI replacement", year: 2037, yearSource: "guess", folder: "Reviewed",
+    })));
+    backend.calls.length = 0;
+    await approveReview();
+    const reviewed = assistant.plan!;
+    expect(reviewed.identities.every((i) => i.folder === "Reviewed")).toBe(true);
+    if (matched) {
+      expect(reviewed.identities).toEqual(before.identities.map((i) => ({ ...i, folder: "Reviewed" })));
+      expect(modelBodies()).not.toContain(TMDB_TITLE);
+      expect(modelBodies()).not.toContain(TMDB_ORIGINAL);
+      expect(modelBodies()).not.toContain("2023");
+    } else expect(reviewed.identities.every((i) => i.title === "AI replacement")).toBe(true);
+    const saved = callsOf("SaveConversation").at(-1)!;
+    expect(saved).toBeDefined();
+    const body = saved.args[2] as string;
+    expect(reviewed.modelIdentities.every((i) => i.source !== "tmdb" && i.title !== TMDB_TITLE)).toBe(true);
+    answer("Conversation", () => body);
+    assistantHome();
+    await openConversation(conv.id);
+    await openPlanCard(card.id);
+    expect(assistant.plan!.identities).toEqual(reviewed.identities);
+    expect(assistant.plan!.changes).toEqual(reviewed.changes);
+    expect(callsOf("AIComplete")).toHaveLength(1);
+    expect(callsOf("Organize")).toHaveLength(0);
+  });
+
+  it("resumes whole-plan review after connecting a missing model and still waits for consent", async () => {
+    aiSettings.value = { ...settings, configured: false };
+    await organizeFolder([{ id: "dl", name: "待分类" }]);
+    const before = assistant.plan!;
+    propose(before.groups.map((g) => ({ id: g.id, type: "series", title: "Connected review", season: 1, numbers: ["episode"] })));
+    await reviewPlan();
+    expect(assistant.connect).not.toBeNull();
+    expect(modelCalls()).toBe(0);
+    answer("SetAIConnection", () => settings);
+    answer("TestAIConnection", () => ({ ok: true, tools: "yes", stream: "yes" }));
+    const connecting = connectModel("deepseek", "");
+    await settle();
+    expect(assistant.connect).toBeNull();
+    expect(assistant.consent).not.toBeNull();
+    expect(modelCalls()).toBe(0);
+    answerConsent(true, false);
+    expect(await connecting).toBe(true);
+    expect(assistant.plan!.identities.every((i) => i.title === "Connected review")).toBe(true);
+    expect(callsOf("AIComplete")).toHaveLength(1);
+  });
+
+  it("keeps the preview unchanged for empty replies, budget limits and content refusals", async () => {
+    await organizeFolder([{ id: "dl", name: "待分类" }]);
+    const before = assistant.plan!;
+    aiSettings.value = { ...settings, tokenLimit: 1 };
+    await reviewPlan();
+    expect(assistant.consent).toBeNull();
+    expect(modelCalls()).toBe(0);
+    expect(assistant.plan).toBe(before);
+    aiSettings.value = { ...settings };
+    answer("AIComplete", () => { throw new Error("input new_sensitive (1026)"); });
+    await approveReview();
+    expect(assistant.plan).toBe(before);
+    expect(assistant.busy).toBe("");
+    expect(assistant.noticeTone).toBe("error");
+    propose([]);
+    await approveReview();
+    expect(assistant.plan!.changes).toEqual(before.changes);
+    expect(assistant.plan!.tokens).toBe(460);
+    expect(callsOf("Organize")).toHaveLength(0);
+  });
+
+  it.each(["cancel", "account"] as const)("ignores a late whole-plan reply after %s", async (action) => {
+    await organizeFolder([{ id: "dl", name: "待分类" }]);
+    const before = assistant.plan!;
+    let resolve!: (reply: AIReply) => void;
+    const promise = new Promise<AIReply>((done) => { resolve = done; });
+    answer("AIComplete", () => promise);
+    const pending = reviewPlan();
+    await settle();
+    answerConsent(true, false);
+    await settle();
+    const response = identifyAnswer(callsOf("AIComplete")[0].args[1] as AIRequest);
+    if (action === "cancel") cancelAssistantTask();
+    else {
+      // External account changes enter through refresh, which drops the old task.
+      answer("Status", () => statusOf("b"));
+      await loadAccounts();
+      expect(drive.status?.accountId).toBe("b");
+    }
+    resolve(response);
+    await pending;
+    if (action === "cancel") expect(assistant.plan).toBe(before);
+    else expect(assistant.plan).toBeNull();
+    expect(callsOf("AICancel")).toHaveLength(1);
+    expect(callsOf("Organize")).toHaveLength(0);
   });
 });
 

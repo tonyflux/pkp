@@ -9,10 +9,14 @@ import Icon from "./Icon.vue";
 import Orbit from "./Orbit.vue";
 import { bytes } from "../format";
 import { t } from "../i18n";
+import { active } from "../organizer";
 import { accountName, assistant, closePlanConfirm, planSummary, planReviewed, planUndecided, runPlan, stopPlanRun } from "../store";
 
 const plan = computed(() => assistant.plan);
 const summary = computed(() => planSummary.value);
+const selected = computed(() => active(plan.value?.changes ?? []));
+const trashOnly = computed(() => selected.value.length > 0 && selected.value.every((c) => c.op === "trash"));
+const hasSelectedTrashFolders = computed(() => selected.value.some((c) => c.op === "trash" && c.item.folder));
 const running = computed(() => assistant.running && !assistant.undoing);
 const open = computed(() => !!plan.value && !!summary.value && (assistant.confirming || (running.value && assistant.screen === "plan")));
 
@@ -33,8 +37,10 @@ const description = computed(() => {
   // scopeName is data (All Files in Chinese for the root): the root is named in the page's language.
   const from = p.scope.length ? p.scopeName : t("全部文件");
   if (!s.selected) return t("本次仅记录决定，不会改动云盘文件。");
+  if (trashOnly.value) return t("把「{from}」中选中的 {n} 项移到回收站，不会永久删除。", { from, n: s.selected });
+  if (selected.value.some((c) => c.op !== "move")) return t("已选 {n} 项", { n: s.selected });
   if (p.kind === "media") {
-    const moving = p.changes.filter((c) => c.selected && c.op === "move");
+    const moving = selected.value;
     const full = [...new Set(moving.map((c) => c.toPath.join(" / ")))];
     const tops = [...new Set(moving.map((c) => c.toPath[0] ?? ""))];
     const target = full.length === 1 ? full[0] : tops.length === 1 ? tops[0] : "";
@@ -53,8 +59,13 @@ const percent = computed(() => {
 <template>
   <AssistantSheet v-if="open && plan && summary" labelledby="ai-confirm-title" :dismissable="!busy" @close="closePlanConfirm">
     <span class="sheet-eyebrow">{{ t("最后确认") }} / {{ accountName(assistant.account) }}</span>
-    <h2 id="ai-confirm-title">{{ running ? t("正在执行整理计划") : t("完成这份整理计划？") }}</h2>
+    <h2 id="ai-confirm-title">
+      {{ running
+        ? (trashOnly ? t("正在移到回收站") : t("正在执行整理计划"))
+        : (trashOnly ? t("把 {n} 项移到回收站？", { n: summary.selected }) : t("完成这份整理计划？")) }}
+    </h2>
     <p class="sheet-lede">{{ description }}</p>
+    <p v-if="hasSelectedTrashFolders" class="sheet-small">{{ t("文件夹移到回收站时会包含其中的全部内容。") }}</p>
     <div class="lines">
       <div><span>{{ t("移动与改名") }}</span><strong class="tnum">{{ t("{n} 项", { n: summary.moves }) }}</strong></div>
       <div><span>{{ t("已确认保留") }}</span><strong class="tnum">{{ t("{n} 项", { n: planReviewed.length }) }}</strong></div>
@@ -98,7 +109,7 @@ const percent = computed(() => {
       <template v-else>
         <button class="sheet-btn" type="button" :disabled="busy" data-autofocus @click="closePlanConfirm()">{{ t("继续检查") }}</button>
         <button class="sheet-btn primary ai-confirm-run" type="button" :disabled="busy || (!!planUndecided.length && !choice)" @click="runPlan(choice === 'keep')">
-          {{ t("确认完成") }}
+          {{ trashOnly ? t("确认移到回收站") : t("确认完成") }}
           <Icon name="arrowRight" :size="15" />
         </button>
       </template>
