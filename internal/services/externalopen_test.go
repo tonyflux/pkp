@@ -8,6 +8,8 @@ import (
 	"strings"
 	"sync"
 	"testing"
+
+	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
 const externalTestMagnet = "magnet:?xt=urn:btih:0123456789abcdef0123456789abcdef01234567"
@@ -147,6 +149,45 @@ func TestExternalOpenRejectsWithoutRaising(t *testing.T) {
 	}
 }
 
+func TestExternalShareURLsStageOnlyTrustedShareLinks(t *testing.T) {
+	const link = "https://mypikpak.com/s/Share_123-abc?pass_code=Ab12"
+	s := NewExternalOpenService()
+	if !s.OpenURL("pkp://share?url=" + url.QueryEscape(link)) {
+		t.Fatal("explicit share deeplink was rejected")
+	}
+	s.OpenURL("https://www.mypikpak.com/s/Share_123-abc/nested?password=Ab12")
+	pending := s.Pending()
+	if len(pending) != 1 || pending[0].Kind != "share" || pending[0].Value != link {
+		t.Fatalf("share identity or access code was lost: %+v", pending)
+	}
+	for _, bad := range []string{
+		"pkp://share?url=" + url.QueryEscape(link) + "&file=/tmp/a.torrent",
+		"pkp://share?url=" + url.QueryEscape(link) + "&url=" + url.QueryEscape(link),
+		"pkp://share?url=file%3A%2F%2F%2Ftmp%2Fa.torrent",
+		"pkp://share?url=" + url.QueryEscape(link) + "#",
+		"pkp://share/open?url=" + url.QueryEscape(link),
+		"pkp://user@share?url=" + url.QueryEscape(link),
+		"pkp://share?url=" + url.QueryEscape("https://mypikpak.com.evil.example/s/a"),
+		"https://mypikpak.com/s/a%2fb",
+		"https://mypikpak.com/s/a?pass_code=%E2%80%A8",
+		"pkp://share?url=" + url.QueryEscape("https://mypikpak.com/s/a?password=%E2%80%A9"),
+		"https://mypikpak.com/s/a?pass_code=%FF",
+	} {
+		if s.OpenURL(bad) {
+			t.Errorf("unsafe URL accepted: %q", bad)
+		}
+	}
+	if len(s.Pending()) != 1 {
+		t.Fatal("rejected URLs changed the retained share")
+	}
+	s.Ack(pending[0].ID)
+	s.OpenArgs([]string{"pkp", link, externalTestMagnet}, t.TempDir())
+	again := s.Pending()
+	if len(again) != 2 || again[0].Kind != "share" || again[0].ID <= pending[0].ID || again[1].Kind != "magnet" {
+		t.Fatalf("share reopen or existing magnet route was lost: %+v", again)
+	}
+}
+
 func TestExternalOpenCoalescesPendingDuplicatesButAllowsReopening(t *testing.T) {
 	s := NewExternalOpenService()
 	cwd := t.TempDir()
@@ -197,5 +238,47 @@ func TestExternalOpenAckDoesNotLoseConcurrentArrivals(t *testing.T) {
 		}
 		last = item.ID
 		seen[item.Value] = true
+	}
+}
+
+func TestClipboardShareFiltersPrivateTextWithoutEnqueuing(t *testing.T) {
+	if application.System.IsServer() {
+		t.Skip("desktop clipboard filtering")
+	}
+	const link = "https://mypikpak.com/s/Clipboard_123?pass_code=Ab12"
+	for _, tc := range []struct{ text, want string }{
+		{" \n" + link + "\n ", link},
+		{"pkp://share?url=" + url.QueryEscape(link), link},
+		{"private password 123456", ""},
+		{"https://foreign.example/s/Clipboard_123", ""},
+		{link + "\nhttps://example.com", ""},
+	} {
+		s := NewExternalOpenService()
+		s.clipboard = func() (string, bool) { return tc.text, true }
+		if got := s.ClipboardShare(); got != tc.want {
+			t.Errorf("clipboard %q = %q, want %q", tc.text, got, tc.want)
+		}
+		if len(s.Pending()) != 0 {
+			t.Fatal("sampling the clipboard enqueued an external launch")
+		}
+	}
+	s := NewExternalOpenService()
+	s.clipboard = func() (string, bool) { return link, false }
+	if got := s.ClipboardShare(); got != "" {
+		t.Fatalf("failed clipboard read returned %q", got)
+	}
+}
+
+func TestClipboardShareNeverReadsServerClipboard(t *testing.T) {
+	if !application.System.IsServer() {
+		t.Skip("server clipboard boundary")
+	}
+	s := NewExternalOpenService()
+	s.clipboard = func() (string, bool) {
+		t.Fatal("server client accessed the host clipboard")
+		return "", false
+	}
+	if got := s.ClipboardShare(); got != "" {
+		t.Fatalf("server returned clipboard share %q", got)
 	}
 }

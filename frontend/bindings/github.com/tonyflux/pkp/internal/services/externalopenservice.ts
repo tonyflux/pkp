@@ -23,6 +23,14 @@ export function Ack(id: number): $CancellablePromise<void> {
 }
 
 /**
+ * ClipboardShare returns only a validated share, never arbitrary clipboard text.
+ * Server clients must not read the host machine's clipboard.
+ */
+export function ClipboardShare(): $CancellablePromise<string> {
+    return $Call.ByID(1588817503);
+}
+
+/**
  * Pending is a snapshot, not a drain: a page that is not ready loses nothing.
  */
 export function Pending(): $CancellablePromise<$models.ExternalOpen[] | null> {

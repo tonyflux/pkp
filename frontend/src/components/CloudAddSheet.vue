@@ -15,6 +15,7 @@ import {
   drive,
   externalOpen,
   pickCloudAddFolder,
+  openPikPakShare,
   pickTorrent,
   relocate,
   ui,
@@ -22,6 +23,7 @@ import {
 import { bytes } from "../format";
 import type { OfflineResult, TorrentFile } from "../../bindings/github.com/tonyflux/pkp/internal/services";
 import { t } from "../i18n";
+import { shareLink } from "../sharelink";
 
 // Draft text survives closing and reopening the sheet: losing a pasted batch
 // to a stray click is the most annoying failure this panel can have. It lives
@@ -52,6 +54,7 @@ const lines = computed<Line[]>(() => {
       if (seen.has(text)) return { index: i + 1, text, valid: false, reason: t("重复") };
       seen.add(text);
       const ok =
+        !!shareLink(text) ||
         text.startsWith("magnet:?") ||
         text.startsWith("http://") ||
         text.startsWith("https://") ||
@@ -62,6 +65,7 @@ const lines = computed<Line[]>(() => {
 });
 
 const valid = computed(() => lines.value.filter((l) => l.valid));
+const incomingShare = computed(() => valid.value.find((line) => shareLink(line.text)));
 // [] is the server's own download folder: no parent goes out (drive.CreateOfflineTask).
 const destId = computed(() => cloudAdd.dest.at(-1)?.id ?? "");
 const folder = computed(() => cloudAdd.dest.at(-1)?.name ?? t("我的文件"));
@@ -109,7 +113,21 @@ function cancel() {
   close();
 }
 
+function pasteShare(event: ClipboardEvent) {
+  const text = event.clipboardData?.getData("text/plain") ?? "";
+  if (!shareLink(text)) return;
+  const field = event.target as HTMLTextAreaElement;
+  if (draft.value.trim() && (field.selectionStart !== 0 || field.selectionEnd !== draft.value.length)) return;
+  event.preventDefault();
+  if (openPikPakShare(text)) clearLinks();
+}
+
 async function submit() {
+  if (incomingShare.value) {
+    const text = incomingShare.value.text;
+    if (openPikPakShare(text)) draft.value = draft.value.split("\n").filter((line) => line.trim() !== text).join("\n");
+    return;
+  }
   cloudAdd.submitting = true;
   try {
     results.value = (await addOffline(valid.value.map((l) => l.text), destId.value)) ?? [];
@@ -252,6 +270,7 @@ async function submitTorrent() {
               spellcheck="false"
               :aria-label="t('每行一个链接')"
               placeholder="magnet:?xt=urn:btih:…&#10;https://example.com/clip.mp4"
+              @paste="pasteShare"
             />
             <div class="states">
               <span v-for="g in gutter" :key="g.key" class="state">
@@ -266,7 +285,7 @@ async function submitTorrent() {
           </div>
 
           <div class="hint">
-            <span>{{ t("每行一个链接，支持批量添加") }}</span>
+            <span>{{ incomingShare ? t("PikPak 分享将先预览，确认后再转存") : t("每行一个链接，支持批量添加") }}</span>
             <span class="picks">
               <button v-if="draft" class="quiet" :disabled="submitting || cloudAdd.reading" @click="clearLinks">{{ t("清空链接") }}</button>
               <span class="tally">{{ t("已识别 {n} 条链接", { n: valid.length }) }}</span>
@@ -339,7 +358,7 @@ async function submitTorrent() {
           </button>
           <button v-else class="primary" :class="{ working: submitting }" :disabled="!valid.length || submitting" @click="submit">
             <Orbit v-if="submitting" :size="15" :label="t('提交中')" />
-            {{ submitting ? t("提交中…") : t("添加 {n} 项", { n: valid.length }) }}
+            {{ submitting ? t("提交中…") : incomingShare ? t("预览分享") : t("添加 {n} 项", { n: valid.length }) }}
           </button>
         </footer>
       </section>

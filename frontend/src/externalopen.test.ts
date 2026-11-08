@@ -1,11 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { createApp, nextTick } from "vue";
-import type { AppLockState, DriveStatus, ExternalOpen, TorrentMeta } from "../bindings/github.com/tonyflux/pkp/internal/services";
+import { createApp, nextTick, type Component } from "vue";
+import type { AppLockState, DriveStatus, ExternalOpen, SignInResult, TorrentMeta } from "../bindings/github.com/tonyflux/pkp/internal/services";
 
 const backend = vi.hoisted(() => ({
   pending: [] as ExternalOpen[],
+  pendingRead: null as null | (() => Promise<ExternalOpen[]>),
   account: "a",
   open: vi.fn<() => Promise<string | null>>(),
+  clipboard: vi.fn<() => Promise<string>>(),
   calls: [] as string[],
   listeners: new Map<string, () => void>(),
   read: null as null | ((path: string) => Promise<TorrentMeta>),
@@ -18,9 +20,11 @@ vi.mock("@wailsio/runtime", () => ({
 vi.mock("../bindings/github.com/tonyflux/pkp/internal/services", () => {
   const service = new Proxy({}, { get: (_target, name: string) => async (...args: unknown[]) => {
     backend.calls.push(name);
-    if (name === "Pending") return backend.pending.map((p) => ({ ...p }));
+    if (name === "Pending") return backend.pendingRead ? backend.pendingRead() : backend.pending.map((p) => ({ ...p }));
     if (name === "Ack") backend.pending = backend.pending.filter((p) => p.id !== args[0]);
     if (name === "ReadTorrent") return backend.read!(args[0] as string);
+    if (name === "ClipboardShare") return backend.clipboard();
+    if (name === "InspectShare") return { shareId: "Share_123", url: args[1], title: "Travel collection", owner: "Sample owner", status: "OK", statusText: "", fileCount: 1, entries: [], nextPageToken: "", passCodeToken: "share-capability" };
     if (name === "SwitchAccount") backend.account = args[0] as string;
     if (name === "SwitchAccount" || name === "Status") return { configured: true, accountId: backend.account };
     if (name === "Accounts") return [{ id: "a", label: "Account A" }, { id: "b", label: "Account B" }];
@@ -29,8 +33,10 @@ vi.mock("../bindings/github.com/tonyflux/pkp/internal/services", () => {
   return { DriveService: service, ExternalOpenService: service, PlayerService: service, AppearanceService: service, AppLockService: service, MenuBarService: service, NotifyService: service, TelemetryService: service };
 });
 
-import { accounts, appLock, clearTorrent, cloudAdd, drive, externalOpen, pickTorrent, switchAccount, ui, watchExternalOpen } from "./store";
+import { accounts, appLock, clearTorrent, closeRelocate, cloudAdd, completeQRSignIn, createRelocateFolder, drive, externalOpen, loadAccounts, openPikPakShare, openShareFolderPicker, openSignIn, pickTorrent, switchAccount, ui, watchExternalOpen } from "./store";
+import { closeShareImport, shareImport } from "./shareimport";
 import CloudAddSheet from "./components/CloudAddSheet.vue";
+import RelocateSheet from "./components/RelocateSheet.vue";
 
 const magnet = "magnet:?xt=urn:btih:0123456789012345678901234567890123456789&dn=Example";
 const status = (id = "a") => ({ configured: true, accountId: id } as DriveStatus);
@@ -49,10 +55,10 @@ function deferred<T>() {
 }
 
 const unmounts = new Set<() => void>();
-async function mountSheet() {
+async function mountSheet(component: Component = CloudAddSheet) {
   const host = document.createElement("div");
   document.body.append(host);
-  const app = createApp(CloudAddSheet);
+  const app = createApp(component);
   app.mount(host);
   unmounts.add(() => { app.unmount(); host.remove(); });
   await nextTick();
@@ -66,15 +72,22 @@ function sheetButton(label: string) {
 afterEach(() => {
   for (const unmount of unmounts) unmount();
   unmounts.clear();
+  vi.restoreAllMocks();
 });
 
 beforeEach(async () => {
   backend.pending = [];
+  backend.pendingRead = null;
   backend.account = "a";
   backend.open.mockReset().mockResolvedValue(null);
+  backend.clipboard.mockReset().mockResolvedValue("");
+  vi.spyOn(document, "hasFocus").mockReturnValue(false);
   backend.read = async (path) => meta(path);
   drive.status = null;
+  closeShareImport();
+  closeRelocate();
   accounts.switching = "";
+  accounts.list = [{ id: "a", label: "Account A" }, { id: "b", label: "Account B" }] as typeof accounts.list;
   accounts.dialog = null;
   appLock.state = null;
   cloudAdd.draft = "";
@@ -377,6 +390,364 @@ describe("external cloud-add consumption", () => {
     expect(ui.message).toContain("种子文件已被删除");
     expect(cloudAdd.torrent).toBe(null);
     await vi.waitFor(() => expect(backend.pending).toEqual([]));
+    expect(backend.calls).not.toContain("AddOfflineTasks");
+  });
+});
+
+describe("foreground clipboard share detection", () => {
+  async function activate() {
+    vi.mocked(document.hasFocus).mockReturnValue(true);
+    window.dispatchEvent(new Event("focus"));
+    await idle();
+  }
+  function leave() {
+    vi.mocked(document.hasFocus).mockReturnValue(false);
+    window.dispatchEvent(new Event("blur"));
+  }
+
+  it("waits for the cold-start receiving account before opening without a paste", async () => {
+    const link = "https://mypikpak.com/s/Clipboard_start";
+    accounts.list = [];
+    drive.status = status();
+    backend.clipboard.mockResolvedValue(link);
+    await activate();
+    expect(backend.clipboard).not.toHaveBeenCalled();
+    await loadAccounts();
+    await vi.waitFor(() => expect(shareImport.url).toBe(link));
+    expect(shareImport.account).toBe("a");
+    expect(backend.calls).not.toContain("RestoreShare");
+    expect(backend.calls).not.toContain("AddOfflineTasks");
+  });
+
+  it("does not reopen a canceled clipboard share, but permits an explicit reopen", async () => {
+    const link = "https://mypikpak.com/s/Clipboard_cancel";
+    drive.status = status();
+    backend.clipboard.mockResolvedValue(link);
+    await activate();
+    await vi.waitFor(() => expect(shareImport.url).toBe(link));
+    closeShareImport();
+    leave();
+    await activate();
+    document.dispatchEvent(new Event("visibilitychange"));
+    await idle();
+    expect(shareImport.open).toBe(false);
+    expect(shareImport.url).toBe("");
+    expect(openPikPakShare(link)).toBe(true);
+    expect(shareImport.url).toBe(link);
+  });
+
+  it("keeps unchanged clipboard content dismissed after opening a different explicit share", async () => {
+    const link = "https://mypikpak.com/s/Clipboard_unchanged";
+    drive.status = status();
+    backend.clipboard.mockResolvedValue(link);
+    await activate();
+    await vi.waitFor(() => expect(shareImport.url).toBe(link));
+    closeShareImport();
+    expect(openPikPakShare("https://mypikpak.com/s/Explicit_other")).toBe(true);
+    closeShareImport();
+    leave();
+    await activate();
+    expect(shareImport.open).toBe(false);
+  });
+
+  it("waits for the pending-request snapshot before checking clipboard after accounts become ready", async () => {
+    const ready = deferred<void>();
+    accounts.list = [];
+    backend.pending = [{ id: 90, kind: "share", value: "https://mypikpak.com/s/Explicit_first" }];
+    backend.pendingRead = async () => { await ready.promise; return backend.pending.map(p => ({ ...p })); };
+    backend.clipboard.mockResolvedValue("https://mypikpak.com/s/Clipboard_later");
+    drive.status = status();
+    await activate();
+    await loadAccounts();
+    await idle();
+    expect(shareImport.open).toBe(false);
+    expect(backend.clipboard).not.toHaveBeenCalled();
+    ready.resolve(undefined);
+    await vi.waitFor(() => expect(shareImport.url).toBe("https://mypikpak.com/s/Explicit_first"));
+    expect(backend.clipboard).not.toHaveBeenCalled();
+  });
+
+  it("remembers manually opened shares and detects a different copied share without clearing torrent input", async () => {
+    const link = "https://mypikpak.com/s/Clipboard_manual";
+    drive.status = status();
+    cloudAdd.torrent = meta("/tmp/kept.torrent");
+    cloudAdd.picked = new Set([0]);
+    cloudAdd.draft = magnet;
+    expect(openPikPakShare(link)).toBe(true);
+    closeShareImport();
+    backend.clipboard.mockResolvedValue(link);
+    await activate();
+    expect(shareImport.open).toBe(false);
+    backend.clipboard.mockResolvedValue("https://mypikpak.com/s/Clipboard_next");
+    leave();
+    await activate();
+    await vi.waitFor(() => expect(shareImport.url).toBe("https://mypikpak.com/s/Clipboard_next"));
+    expect(cloudAdd.torrent?.path).toBe("/tmp/kept.torrent");
+    expect([...cloudAdd.picked]).toEqual([0]);
+    expect(cloudAdd.draft).toBe(magnet);
+  });
+
+  it.each(["locked", "signedout", "signin", "cloud-add", "other-sheet", "hidden"])("does not read the clipboard while %s", async kind => {
+    drive.status = status();
+    backend.clipboard.mockResolvedValue(`https://mypikpak.com/s/Clipboard_${kind}`);
+    const scrim = document.createElement("div");
+    if (kind === "locked") appLock.state = { locked: true } as AppLockState;
+    if (kind === "signedout") drive.status = null;
+    if (kind === "signin") accounts.dialog = { kind: "signin", account: "" };
+    if (kind === "cloud-add") { ui.cloudAddOpen = true; cloudAdd.draft = magnet; }
+    if (kind === "other-sheet") { scrim.className = "scrim"; document.body.append(scrim); }
+    if (kind === "hidden") vi.spyOn(document, "visibilityState", "get").mockReturnValue("hidden");
+    try {
+      await activate();
+      expect(backend.clipboard).not.toHaveBeenCalled();
+      expect(shareImport.open).toBe(false);
+    } finally { scrim.remove(); }
+  });
+
+  it("drops a clipboard reply after blur and reads the current value on the next activation", async () => {
+    drive.status = status();
+    const late = deferred<string>();
+    backend.clipboard.mockReturnValueOnce(late.promise);
+    await activate();
+    await vi.waitFor(() => expect(backend.clipboard).toHaveBeenCalled());
+    leave();
+    late.resolve("https://mypikpak.com/s/Clipboard_stale");
+    await idle();
+    expect(shareImport.open).toBe(false);
+    backend.clipboard.mockResolvedValue("https://mypikpak.com/s/Clipboard_current");
+    await activate();
+    await vi.waitFor(() => expect(shareImport.url).toBe("https://mypikpak.com/s/Clipboard_current"));
+  });
+
+  it("does not replace an occupied share with a clipboard reply", async () => {
+    drive.status = status();
+    const late = deferred<string>();
+    backend.clipboard.mockReturnValueOnce(late.promise);
+    await activate();
+    expect(openPikPakShare("https://mypikpak.com/s/Clipboard_keep")).toBe(true);
+    late.resolve("https://mypikpak.com/s/Clipboard_replace");
+    await idle();
+    expect(shareImport.url).toBe("https://mypikpak.com/s/Clipboard_keep");
+  });
+
+  it("ignores clipboard failures and non-share content without surfacing an error", async () => {
+    drive.status = status();
+    backend.clipboard.mockRejectedValueOnce(new Error("clipboard unavailable"));
+    await activate();
+    expect(shareImport.open).toBe(false);
+    expect(ui.message).toBe("");
+    backend.clipboard.mockResolvedValue("https://foreign.example/s/not-a-share");
+    leave();
+    await activate();
+    expect(shareImport.open).toBe(false);
+    expect(backend.calls).not.toContain("InspectShare");
+  });
+});
+
+describe("share intake alongside cloud add", () => {
+  const link = "https://mypikpak.com/s/Share_123";
+
+  it("stages the next share in the new account after accepting discard", async () => {
+    drive.status = status();
+    expect(openPikPakShare("https://mypikpak.com/s/Before_switch")).toBe(true);
+    add({ id: 91, kind: "share", value: "https://mypikpak.com/s/After_switch" });
+    await idle();
+    const switching = switchAccount("b");
+    await vi.waitFor(() => expect(accounts.dialog?.kind).toBe("leave"));
+    const question = accounts.dialog;
+    if (question?.kind !== "leave") throw new Error("Missing discard confirmation");
+    question.resolve(true);
+    expect(await switching).toBe(true);
+    await vi.waitFor(() => expect(shareImport.url).toBe("https://mypikpak.com/s/After_switch"));
+    expect(shareImport.account).toBe("b");
+    expect(backend.calls).not.toContain("RestoreShare");
+  });
+
+  it("does not acknowledge the queued share while Add Account is being installed", async () => {
+    drive.status = status();
+    expect(openPikPakShare("https://mypikpak.com/s/Before_signin")).toBe(true);
+    add({ id: 92, kind: "share", value: "https://mypikpak.com/s/After_signin" });
+    await idle();
+    const signing = openSignIn();
+    await vi.waitFor(() => expect(accounts.dialog?.kind).toBe("leave"));
+    const question = accounts.dialog;
+    if (question?.kind !== "leave") throw new Error("Missing discard confirmation");
+    question.resolve(true);
+    await signing;
+    await idle();
+    expect(accounts.dialog?.kind).toBe("signin");
+    expect(shareImport.open).toBe(false);
+    expect(backend.pending.map(p => p.id)).toEqual([92]);
+    backend.account = "b";
+    await completeQRSignIn({ status: status("b"), account: { id: "b", label: "Account B" }, existed: false } as SignInResult);
+    await vi.waitFor(() => expect(shareImport.url).toBe("https://mypikpak.com/s/After_signin"));
+    expect(shareImport.account).toBe("b");
+  });
+
+  it("does not resume an earlier cancellation when discarding another draft during account switching", async () => {
+    drive.status = status();
+    backend.pending = [
+      { id: 93, kind: "share", value: "https://mypikpak.com/s/Cancel_first" },
+      { id: 94, kind: "share", value: "https://mypikpak.com/s/Still_paused" },
+    ];
+    await watchExternalOpen();
+    await vi.waitFor(() => expect(shareImport.url).toBe("https://mypikpak.com/s/Cancel_first"));
+    closeShareImport();
+    expect(openPikPakShare("https://mypikpak.com/s/Unrelated_draft")).toBe(true);
+    const switching = switchAccount("b");
+    await vi.waitFor(() => expect(accounts.dialog?.kind).toBe("leave"));
+    const question = accounts.dialog;
+    if (question?.kind !== "leave") throw new Error("Missing discard confirmation");
+    question.resolve(true);
+    expect(await switching).toBe(true);
+    await idle();
+    expect(externalOpen.paused).toBe(true);
+    expect(shareImport.open).toBe(false);
+    expect(backend.pending.map(p => p.id)).toEqual([94]);
+  });
+
+  it("resumes queued shares after account cleanup closes a completed receipt", async () => {
+    drive.status = status();
+    expect(openPikPakShare("https://mypikpak.com/s/Receipt_finished")).toBe(true);
+    shareImport.attempted = true;
+    shareImport.result = { status: "complete", parentId: "dest", fileIds: ["saved"], taskId: "", message: "" };
+    add({ id: 95, kind: "share", value: "https://mypikpak.com/s/After_receipt" });
+    await idle();
+    expect(await switchAccount("b")).toBe(true);
+    await vi.waitFor(() => expect(shareImport.url).toBe("https://mypikpak.com/s/After_receipt"));
+    expect(shareImport.account).toBe("b");
+    expect(backend.pending).toEqual([]);
+  });
+
+  it("retains a cold-start share until the receiving account list is ready", async () => {
+    accounts.list = [];
+    backend.pending = [{ id: 44, kind: "share", value: link }];
+    drive.status = status();
+    await watchExternalOpen();
+    await idle();
+    expect(shareImport.open).toBe(false);
+    expect(backend.pending.map(p => p.id)).toEqual([44]);
+    expect(backend.calls).not.toContain("InspectShare");
+
+    await loadAccounts();
+    await vi.waitFor(() => expect(backend.pending).toEqual([]));
+    expect(shareImport.account).toBe("a");
+    expect(shareImport.info?.title).toBe("Travel collection");
+    expect(shareImport.error).toBe("");
+    expect(backend.calls).not.toContain("RestoreShare");
+  });
+
+  it.each(["complete", "cancel"])("retains incoming shares until an account sign-in dialog settles (%s)", async (outcome) => {
+    drive.status = status();
+    accounts.dialog = { kind: "signin", account: "" };
+    add({ id: 43, kind: "share", value: link });
+    await idle();
+    expect(shareImport.open).toBe(false);
+    expect(backend.pending.map(p => p.id)).toEqual([43]);
+    if (outcome === "complete") {
+      backend.account = "b";
+      await completeQRSignIn({ status: status("b"), account: { id: "b", label: "Account B" }, existed: false } as SignInResult);
+    } else accounts.dialog = null;
+    await vi.waitFor(() => expect(shareImport.url).toBe(link));
+    await vi.waitFor(() => expect(backend.pending).toEqual([]));
+    expect(shareImport.account).toBe(outcome === "complete" ? "b" : "a");
+    expect(backend.calls).not.toContain("RestoreShare");
+  });
+
+  it("hands keyboard focus to the read-only destination picker and restores it on close", async () => {
+    drive.status = status();
+    await mountSheet(RelocateSheet);
+    const trigger = document.createElement("button");
+    document.body.append(trigger);
+    unmounts.add(() => trigger.remove());
+    trigger.focus();
+    openShareFolderPicker("b", [], () => undefined);
+    await idle();
+    const dialog = document.querySelector<HTMLElement>('[role="dialog"]')!;
+    expect(document.activeElement).toBe(dialog.querySelector('input[type="search"]'));
+    const first = dialog.querySelector<HTMLButtonElement>("button")!;
+    first.focus();
+    first.dispatchEvent(new KeyboardEvent("keydown", { key: "Tab", shiftKey: true, bubbles: true, cancelable: true }));
+    const buttons = Array.from(dialog.querySelectorAll<HTMLButtonElement>("button:not(:disabled)"));
+    expect(document.activeElement).toBe(buttons.at(-1));
+    expect(await createRelocateFolder("Unconfirmed folder")).toBe(false);
+    const lockField = document.createElement("input");
+    lockField.setAttribute("data-lock-screen", "");
+    document.body.append(lockField);
+    unmounts.add(() => lockField.remove());
+    appLock.state = { locked: true } as AppLockState;
+    lockField.focus();
+    const tab = new KeyboardEvent("keydown", { key: "Tab", bubbles: true, cancelable: true });
+    lockField.dispatchEvent(tab);
+    expect(tab.defaultPrevented).toBe(false);
+    expect(document.activeElement).toBe(lockField);
+    appLock.state.locked = false;
+    expect(backend.calls).not.toContain("CreateFolder");
+    closeRelocate();
+    await nextTick();
+    expect(document.activeElement).toBe(trigger);
+  });
+
+  it("opens the share preview instead of the retained torrent without submitting either", async () => {
+    drive.status = status();
+    cloudAdd.torrent = meta("/tmp/retained.torrent");
+    cloudAdd.picked = new Set([0]);
+    add({ id: 40, kind: "share", value: link });
+    await vi.waitFor(() => expect(shareImport.open).toBe(true));
+    await vi.waitFor(() => expect(backend.pending).toEqual([]));
+    expect(shareImport.url).toBe(link);
+    expect(ui.cloudAddOpen).toBe(false);
+    expect(cloudAdd.torrent?.path).toBe("/tmp/retained.torrent");
+    expect([...cloudAdd.picked]).toEqual([0]);
+    expect(backend.calls).not.toContain("RestoreShare");
+    expect(backend.calls).not.toContain("AddOfflineTasks");
+  });
+
+  it("discards a share without reopening it or immediately presenting its queued successor", async () => {
+    drive.status = status();
+    backend.pending = [{ id: 41, kind: "share", value: link }, { id: 42, kind: "share", value: `${link}_next` }];
+    await watchExternalOpen();
+    await vi.waitFor(() => expect(backend.pending.map((p) => p.id)).toEqual([42]));
+    closeShareImport();
+    await idle();
+    expect(shareImport.url).toBe("");
+    expect(shareImport.open).toBe(false);
+    expect(ui.cloudAddOpen).toBe(false);
+    expect(backend.pending.map((p) => p.id)).toEqual([42]);
+    emit();
+    await vi.waitFor(() => expect(shareImport.url).toBe(`${link}_next`));
+  });
+
+  it("routes a pasted share from the link field before it can become an offline task", async () => {
+    drive.status = status();
+    await mountSheet();
+    cloudAdd.tab = "link";
+    ui.cloudAddOpen = true;
+    await nextTick();
+    const input = document.querySelector<HTMLTextAreaElement>("textarea")!;
+    const paste = new Event("paste", { bubbles: true, cancelable: true });
+    Object.defineProperty(paste, "clipboardData", { value: { getData: () => link } });
+    input.dispatchEvent(paste);
+    await idle();
+    expect(paste.defaultPrevented).toBe(true);
+    expect(shareImport.url).toBe(link);
+    expect(shareImport.open).toBe(true);
+    expect(cloudAdd.draft).toBe("");
+    expect(ui.cloudAddOpen).toBe(false);
+    expect(backend.calls).not.toContain("AddOfflineTasks");
+  });
+
+  it("keeps a mixed link batch for later while previewing its share", async () => {
+    drive.status = status();
+    await mountSheet();
+    cloudAdd.tab = "link";
+    cloudAdd.draft = `${magnet}\n${link}`;
+    ui.cloudAddOpen = true;
+    await nextTick();
+    sheetButton("预览分享").click();
+    await idle();
+    expect(shareImport.url).toBe(link);
+    expect(cloudAdd.draft).toBe(magnet);
     expect(backend.calls).not.toContain("AddOfflineTasks");
   });
 });

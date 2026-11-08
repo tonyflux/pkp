@@ -21,6 +21,7 @@ import MusicPlayer from "./components/MusicPlayer.vue";
 import ContextPanel from "./components/ContextPanel.vue";
 import CompactPlaybackBar from "./components/CompactPlaybackBar.vue";
 import CloudAddSheet from "./components/CloudAddSheet.vue";
+import ShareImportSheet from "./components/ShareImportSheet.vue";
 import NewFolderSheet from "./components/NewFolderSheet.vue";
 import CreateShareSheet from "./components/CreateShareSheet.vue";
 import RelocateSheet from "./components/RelocateSheet.vue";
@@ -188,6 +189,7 @@ onMounted(() => {
     <StatusPill v-if="!immersive" :above-bar="bar" />
     <ConnectivityNotice v-if="!immersive && ui.route !== 'settings'" />
     <CloudAddSheet />
+    <ShareImportSheet />
     <NewFolderSheet />
     <CreateShareSheet />
     <RenameRulesSheet />

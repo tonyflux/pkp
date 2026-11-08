@@ -13,6 +13,7 @@ import Icon from "./Icon.vue";
 import Orbit from "./Orbit.vue";
 import {
   accountName,
+  appLocked,
   closeRelocate,
   confirmRelocate,
   createRelocateFolder,
@@ -25,16 +26,25 @@ import {
 import { t } from "../i18n";
 import type { Entry } from "../../bindings/github.com/tonyflux/pkp/internal/services";
 
+const sheet = ref<HTMLElement>();
+let sharePickerFocus: HTMLElement | null = null;
+watch(() => relocate.mode === "shareImport", async open => {
+  if (!open) { if (!appLocked.value && sharePickerFocus?.isConnected) sharePickerFocus.focus(); sharePickerFocus = null; return; }
+  sharePickerFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+  await nextTick();
+  if (relocate.mode === "shareImport" && !appLocked.value) sheet.value?.querySelector<HTMLInputElement>('input[type="search"]')?.focus();
+});
 const open = computed(() => relocate.mode !== "");
 // Cleanup picks a folder to scan, with everything below it.
 const scoping = computed(() => relocate.mode === "cleanup");
 // The Cloud Add sheet's Save to: a folder to save into, nothing to move.
-const saving = computed(() => relocate.mode === "cloudAdd");
+const saving = computed(() => relocate.mode === "cloudAdd" || relocate.mode === "shareImport");
 // Whole sentences per mode: the verb sits differently in every language.
 const words = computed(() => {
   const name = targetName.value;
   switch (relocate.mode) {
     case "sync":
+    case "shareImport":
       return { empty: t("这里没有子文件夹，可以选择这里。"), note: trailPath(relocate.trail), working: t("正在加载"), go: t("选择这个文件夹") };
     case "cleanup":
       return { empty: t("这里没有子文件夹，可以直接扫描这里"), note: t("将扫描「{name}」及子文件夹", { name }), working: t("扫描中…"), go: t("扫描这里") };
@@ -53,7 +63,7 @@ const title = computed(() => {
   return relocate.mode === "copy" ? t("复制到") : t("移动到");
 });
 const subject = computed(() => {
-  if (relocate.mode === "sync") return `${t("所属账号")} · ${accountName(relocate.account)}`;
+  if (relocate.mode === "sync" || relocate.mode === "shareImport") return `${t("所属账号")} · ${accountName(relocate.account)}`;
   if (scoping.value) return t("包含所有子文件夹");
   if (relocate.mode === "cloudAdd") return t("云添加的任务保存在这里");
   if (saving.value) return t("云添加的任务保存在这里；确认时还可以在其中按作品新建文件夹");
@@ -77,7 +87,7 @@ const targetId = computed(() => relocate.trail.at(-1)?.id ?? "");
 const targetName = computed(() => relocate.trail.at(-1)?.name ?? t("全部文件"));
 const alreadyHere = computed(() => relocate.items.some((e) => e.parentId === targetId.value));
 const searching = computed(() => !!relocate.query.trim());
-const canCreate = computed(() => !scoping.value && !searching.value);
+const canCreate = computed(() => !scoping.value && relocate.mode !== "shareImport" && !searching.value);
 
 function enter(folder: Entry) {
   if (pickedIds.value.has(folder.id)) return;
@@ -106,7 +116,15 @@ async function submitName() {
 
 // Esc steps back one layer: the name row, then the search, then the sheet.
 function onKeydown(ev: KeyboardEvent) {
-  if (!open.value || ev.key !== "Escape") return;
+  if (!open.value || appLocked.value) return;
+  if (ev.key === "Tab" && relocate.mode === "shareImport") {
+    const items = Array.from(sheet.value?.querySelectorAll<HTMLElement>('button:not(:disabled), input:not(:disabled)') ?? []);
+    const first = items[0], last = items.at(-1);
+    if (ev.shiftKey && (document.activeElement === first || !sheet.value?.contains(document.activeElement))) { ev.preventDefault(); last?.focus(); }
+    else if (!ev.shiftKey && (document.activeElement === last || !sheet.value?.contains(document.activeElement))) { ev.preventDefault(); first?.focus(); }
+    return;
+  }
+  if (ev.key !== "Escape") return;
   ev.stopImmediatePropagation();
   if (relocate.naming) {
     if (!relocate.creating) relocate.naming = false;
@@ -124,7 +142,7 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onKeydown, true));
 <template>
   <Teleport to="body">
     <div v-if="open" class="scrim" @click.self="closeRelocate">
-      <section class="sheet glass glass-sheet" role="dialog" :aria-label="title">
+      <section ref="sheet" class="sheet glass glass-sheet" role="dialog" :aria-label="title">
         <header>
           <div class="titles">
             <h2>{{ title }}</h2>

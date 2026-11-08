@@ -1457,6 +1457,14 @@ watch(
   border-radius: 11px;
 }
 
+.segments.compact button:first-child {
+  border-radius: 18px 11px 11px 18px;
+}
+
+.segments.compact button:last-child {
+  border-radius: 11px 18px 18px 11px;
+}
+
 /* The layout toggle marks its state with a lighter chip, not the cobalt
    lens: only one primary pill per row (mock 01/02). */
 .segments.compact::before {
