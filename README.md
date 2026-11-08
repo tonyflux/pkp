@@ -22,10 +22,10 @@ Organize, sync, search, and play in one workspace. macOS 12 or later, and a Wind
 PKP is an independent desktop client for a PikPak account you already have. It is unaffiliated with PikPak. Use remains subject to PikPak's terms and applicable law. The source in this repository is [GPL-3.0-only](LICENSE).
 
 <p align="center">
-  <img src="assets/screenshots/en/workspace.webp" alt="PKP files workspace in English, showing fictional demo folders" width="880">
+  <img src="assets/screenshots/en/workspace-0.4.0.webp" alt="PKP files workspace in English, including LAN sharing and fictional demo folders" width="880">
 </p>
 
-<p align="center"><i>English files workspace. Illustration from the <a href="https://pkpapp.cc/en">English site</a>, redrawn from the current UI with fictional demo data.</i></p>
+<p align="center"><i>Current files workspace in an isolated browser preview, using fictional account, folders, storage figures and image previews. No production cloud data is shown.</i></p>
 
 ## What you can do
 
@@ -82,7 +82,7 @@ Since v0.2.0, releases use eight assets: the two installers, `update.json`, `upd
   </tr>
 </table>
 
-The workspace and four images above are illustrations from [pkpapp.cc/en](https://pkpapp.cc/en), redrawn from the UI with fictional demo data. An English capture of local search is not in the repository yet.
+The four images above are illustrations from [pkpapp.cc/en](https://pkpapp.cc/en), redrawn from the UI with fictional demo data. An English capture of local search is not in the repository yet.
 
 ## LAN sharing in the current source
 

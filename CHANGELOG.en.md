@@ -6,6 +6,7 @@
 
 Awaiting the user's own verification before any official publication; this is a preparation date, not a release date. Drafts are excluded from automatic updates, and v0.3.0 remains the latest public release. The detailed changes below do not establish real-device or production-cloud acceptance.
 
+- Replace both README hero images with the current workspace UI, including LAN sharing navigation. The isolated browser captures use synthetic account, folder and storage data; the existing draft installers and signed source snapshot are unchanged.
 - Share native-media caches between ordinary CI and signed builds to avoid recompiling the same macOS/Windows dependencies. Validate the complete Go dependency lock earlier and show Windows media compilation in the dependency-build phase, preserving all tests, updater smoke checks, and source/release verification.
 - Complete checksums for the full Go dependency graph used by corresponding-source export, avoiding `go.sum` changes that invalidate the frozen snapshot. Keep dependency versions and source-consistency checks unchanged, and document preparation before freezing release source.
 - Fix network text actions on sign-in inheriting generic button hover pills and minimum height. Restore compact footer text and keep the sign-in card inside narrow windows, preserving keyboard focus, network settings access, and QR/password switching.
