@@ -454,43 +454,43 @@ func TestPreviewWindowIsolation(t *testing.T) {
 		return resp.StatusCode
 	}
 
-	first, err := svc.openPreview(1, origin.URL+"/a.png", nil, "")
+	first, err := svc.openPreview(previewOwnerKey{windowID: 1}, origin.URL+"/a.png", nil, "")
 	if err != nil {
 		t.Fatalf("open first: %v", err)
 	}
 	if status(first) != http.StatusOK {
 		t.Fatal("first preview not served")
 	}
-	second, err := svc.openPreview(2, origin.URL+"/b.png", nil, "")
+	second, err := svc.openPreview(previewOwnerKey{windowID: 2}, origin.URL+"/b.png", nil, "")
 	if err != nil {
 		t.Fatalf("open second: %v", err)
 	}
-	third, err := svc.openPreview(2, origin.URL+"/c.pdf", nil, "application/pdf")
+	third, err := svc.openPreview(previewOwnerKey{windowID: 2}, origin.URL+"/c.pdf", nil, "application/pdf")
 	if err != nil {
 		t.Fatal(err)
 	}
-	svc.closePreview(2, second)
+	svc.closePreview(previewOwnerKey{windowID: 2}, second)
 	if status(second) != http.StatusNotFound || status(third) != http.StatusOK {
 		t.Fatal("revoking an old request changed the newer preview")
 	}
-	svc.closePreview(2, first)
+	svc.closePreview(previewOwnerKey{windowID: 2}, first)
 	if status(first) != http.StatusOK {
 		t.Error("another window revoked the first preview")
 	}
 	if status(third) != http.StatusOK {
 		t.Error("third preview not served")
 	}
-	svc.closePreviewWindow(1)
+	svc.closePreviewWindow(previewOwnerKey{windowID: 1})
 	if status(first) != http.StatusNotFound {
 		t.Error("closed window still serves its preview")
 	}
 	if status(third) != http.StatusOK {
 		t.Fatal("closing first window revoked the third")
 	}
-	if _, err := svc.openPreview(1, origin.URL+"/late.png", nil, ""); err == nil {
+	if _, err := svc.openPreview(previewOwnerKey{windowID: 1}, origin.URL+"/late.png", nil, ""); err == nil {
 		t.Error("a closed window published an in-flight preview")
 	}
-	svc.closePreview(2, "")
+	svc.closePreview(previewOwnerKey{windowID: 2}, "")
 	if status(third) != http.StatusNotFound {
 		t.Error("preview still served after ClosePreview")
 	}

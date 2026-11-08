@@ -2,13 +2,13 @@
 Version=1.0
 Name=PKP
 Comment=High-performance PikPak desktop client
-# %u passes one magnet link or file URI as a single argument, including spaces.
+# %u passes one supported URL or file URI as a single argument, including spaces.
 Exec=/usr/local/bin/pkp %u
 Terminal=false
 Type=Application
 Icon=pkp
 Categories=Utility;
 StartupWMClass=pkp
-MimeType=application/x-bittorrent;x-scheme-handler/magnet;
+MimeType=application/x-bittorrent;x-scheme-handler/magnet;x-scheme-handler/pkp;
 
  

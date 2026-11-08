@@ -2467,6 +2467,13 @@ export interface RemoveResult {
     "error": string;
 }
 
+export interface RestoreShareRequest {
+    "shareId": string;
+    "passCodeToken": string;
+    "parentId": string;
+    "fileIds": string[] | null;
+}
+
 /**
  * SavedSignIn is what a sign-in form starts from. The password itself stays
  * in the keychain: the form only learns that there is one.
@@ -2483,12 +2490,91 @@ export interface SavedSignIn {
     "autoSignIn": boolean;
 }
 
+export interface ShareEntry {
+    "id": string;
+    "name": string;
+
+    /**
+     * ParentID is the containing folder, "" at the root. The move/copy
+     * picker uses it to refuse an entry's own folder, which the server does.
+     */
+    "parentId": string;
+    "kind": string;
+    "mimeType": string;
+    "size": number;
+    "modifiedTime": string;
+    "thumbnail": string;
+    "folder": boolean;
+    "playable": boolean;
+    "starred": boolean;
+    "trashed": boolean;
+    "phase": string;
+
+    /**
+     * Category groups the entry for filtering and for the fallback icon:
+     * video, image, audio, document, archive or other.
+     */
+    "category": string;
+
+    /**
+     * Duration in seconds, present only when the listing carried media
+     * variants. The card hides the badge rather than showing a zero.
+     */
+    "duration": number;
+
+    /**
+     * Preview selects the viewer family: image, pdf, text, document, or empty.
+     */
+    "preview": string;
+
+    /**
+     * Path is where the entry lives, "All Files / A / B", set only where the
+     * folder is not implied: search results and the whole-drive file view.
+     */
+    "path": string;
+
+    /**
+     * DeleteTime is when the server will purge a trashed entry (its
+     * delete_time); "" for live ones. The recycle bin shows it as is.
+     */
+    "deleteTime": string;
+    "width": number;
+    "height": number;
+}
+
+export interface ShareFilePage {
+    "entries": ShareEntry[] | null;
+    "nextPageToken": string;
+    "passCodeToken": string;
+}
+
+export interface ShareImport {
+    "shareId": string;
+    "url": string;
+    "title": string;
+    "owner": string;
+    "status": string;
+    "statusText": string;
+    "fileCount": number;
+    "entries": ShareEntry[] | null;
+    "nextPageToken": string;
+    "passCodeToken": string;
+}
+
 /**
  * SharePage is one page of ListShares.
  */
 export interface SharePage {
     "shares": ShareSummary[] | null;
     "nextPageToken": string;
+}
+
+export interface SharePreview {
+    "url": string;
+    "kind": string;
+    "mimeType": string;
+    "name": string;
+    "text": TextPreview | null;
 }
 
 /**
@@ -2509,6 +2595,18 @@ export interface ShareRequest {
      * when PassCode is set.
      */
     "customPassCode": string;
+}
+
+export interface ShareRestoreResult {
+    "status": string;
+    "taskId": string;
+    "parentId": string;
+
+    /**
+     * Pending/error IDs are source IDs; complete IDs are restored IDs in selection order.
+     */
+    "fileIds": string[] | null;
+    "message": string;
 }
 
 /**

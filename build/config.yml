@@ -80,6 +80,8 @@ fileAssociations:
 protocols:
   - scheme: magnet
     description: Magnet link
+  - scheme: pkp
+    description: PikPak share preview
 
 # Other data
 other:

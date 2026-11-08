@@ -13,6 +13,7 @@ import (
 	"github.com/wailsapp/wails/v3/pkg/application"
 	"github.com/wailsapp/wails/v3/pkg/events"
 
+	"github.com/tonyflux/pkp/internal/drive"
 	"github.com/tonyflux/pkp/internal/torrent"
 )
 
@@ -30,10 +31,11 @@ type ExternalOpen struct {
 // ExternalOpenService retains requests until the page has safely staged them.
 // It never reads files or creates downloads, including while signed out or locked.
 type ExternalOpenService struct {
-	mu      sync.Mutex
-	nextID  uint
-	pending []ExternalOpen
-	notify  func()
+	mu        sync.Mutex
+	nextID    uint
+	pending   []ExternalOpen
+	notify    func()
+	clipboard func() (string, bool)
 }
 
 func NewExternalOpenService() *ExternalOpenService {
@@ -46,6 +48,7 @@ func NewExternalOpenService() *ExternalOpenService {
 //
 //wails:ignore
 func (s *ExternalOpenService) Attach(app *application.App, menu *MenuBarService, workingDir string) {
+	s.clipboard = app.Clipboard.Text
 	if runtime.GOOS == "darwin" {
 		app.Event.OnApplicationEvent(events.Common.ApplicationLaunchedWithUrl, func(e *application.ApplicationEvent) {
 			s.OpenURL(e.Context().URL())
@@ -93,18 +96,56 @@ func (s *ExternalOpenService) Ack(id uint) {
 	}
 }
 
-// OpenURL accepts only magnet links, never URLs that could name local files.
+// ClipboardShare returns only a validated share, never arbitrary clipboard text.
+// Server clients must not read the host machine's clipboard.
+func (s *ExternalOpenService) ClipboardShare() string {
+	if application.System.IsServer() || s.clipboard == nil {
+		return ""
+	}
+	text, ok := s.clipboard()
+	if !ok {
+		return ""
+	}
+	return externalShareURL(strings.TrimSpace(text))
+}
+
+// OpenURL accepts magnets, PikPak share URLs and explicit pkp://share wrappers.
 //
 //wails:ignore
 func (s *ExternalOpenService) OpenURL(value string) bool {
-	if !externalMagnet(value) {
+	if externalMagnet(value) {
+		value = "magnet:" + value[len("magnet:"):]
+		s.enqueue("magnet", value)
+		return true
+	}
+	canonical := externalShareURL(value)
+	if canonical == "" {
 		return false
 	}
-	if value[:len("magnet:")] != "magnet:" {
-		value = "magnet:" + value[len("magnet:"):]
-	}
-	s.enqueue("magnet", value)
+	s.enqueue("share", canonical)
 	return true
+}
+
+func externalShareURL(value string) string {
+	if !externalText(value) || len(value) > 8192 {
+		return ""
+	}
+	if strings.HasPrefix(strings.ToLower(value), "pkp:") {
+		u, err := url.Parse(value)
+		if err != nil || !strings.EqualFold(u.Scheme, "pkp") || u.Host != "share" || u.User != nil || u.Opaque != "" || u.Path != "" || u.Fragment != "" || strings.Contains(value, "#") {
+			return ""
+		}
+		query, err := url.ParseQuery(u.RawQuery)
+		if err != nil || len(query) != 1 || len(query["url"]) != 1 {
+			return ""
+		}
+		value = query.Get("url")
+	}
+	_, canonical, _, err := drive.ParseShareURL(value)
+	if err != nil {
+		return ""
+	}
+	return canonical
 }
 
 // OpenFile accepts filesystem input from the OS, not a browser URL callback.
@@ -134,6 +175,16 @@ func (s *ExternalOpenService) OpenArgs(args []string, workingDir string) {
 
 func (s *ExternalOpenService) enqueue(kind, value string) {
 	s.mu.Lock()
+	for _, item := range s.pending {
+		if item.Kind == kind && item.Value == value {
+			notify := s.notify
+			s.mu.Unlock()
+			if notify != nil {
+				notify()
+			}
+			return
+		}
+	}
 	s.nextID++
 	s.pending = append(s.pending, ExternalOpen{ID: s.nextID, Kind: kind, Value: value})
 	notify := s.notify

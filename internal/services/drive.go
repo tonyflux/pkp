@@ -268,6 +268,7 @@ type DriveService struct {
 	viewerMu      sync.Mutex
 	viewerWindows map[uint]viewerWindow
 	previewOwners map[uint]bool
+	shareImports  shareImportState
 
 	// mu guards accounts and current. A session's own fields are under its
 	// own lock, taken after this one.

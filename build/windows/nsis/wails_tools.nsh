@@ -240,10 +240,20 @@ RequestExecutionLevel "${REQUEST_EXECUTION_LEVEL}"
     WriteRegStr HKCU "Software\Classes\${PKP_MAGNET_CLASS}\shell\open\command" "" '$\"$INSTDIR\${PRODUCT_EXECUTABLE}$\" $\"%1$\"'
     WriteRegStr HKCU "Software\Classes\magnet\OpenWithProgids" "${PKP_MAGNET_CLASS}" ""
     WriteRegStr HKCU "${PKP_CAPABILITIES}\UrlAssociations" "magnet" "${PKP_MAGNET_CLASS}"
+    WriteRegStr HKCU "Software\Classes\pkp" "" "URL:PKP share preview"
+    WriteRegStr HKCU "Software\Classes\pkp" "URL Protocol" ""
+    WriteRegStr HKCU "Software\Classes\pkp\DefaultIcon" "" '$\"$INSTDIR\${PRODUCT_EXECUTABLE}$\",0'
+    WriteRegStr HKCU "Software\Classes\pkp\shell\open\command" "" '$\"$INSTDIR\${PRODUCT_EXECUTABLE}$\" $\"%1$\"'
+    WriteRegStr HKCU "${PKP_CAPABILITIES}\UrlAssociations" "pkp" "pkp"
     System::Call 'shell32::SHChangeNotify(i 0x08000000, i 0, p 0, p 0)'
 !macroend
 
 !macro wails.unassociateCustomProtocols
+    ReadRegStr $R0 HKCU "Software\Classes\pkp\shell\open\command" ""
+    ${If} $R0 == '$\"$INSTDIR\${PRODUCT_EXECUTABLE}$\" $\"%1$\"'
+        DeleteRegKey HKCU "Software\Classes\pkp"
+        DeleteRegValue HKCU "${PKP_CAPABILITIES}\UrlAssociations" "pkp"
+    ${EndIf}
     ReadRegStr $R0 HKCU "Software\Classes\${PKP_MAGNET_CLASS}\shell\open\command" ""
     ${If} $R0 == '$\"$INSTDIR\${PRODUCT_EXECUTABLE}$\" $\"%1$\"'
         DeleteRegValue HKCU "Software\Classes\magnet\OpenWithProgids" "${PKP_MAGNET_CLASS}"

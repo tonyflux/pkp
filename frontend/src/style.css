@@ -544,7 +544,8 @@ button.icon {
   transition:
     transform var(--dur) var(--ease),
     width var(--dur) var(--ease),
-    height var(--dur) var(--ease);
+    height var(--dur) var(--ease),
+    border-radius var(--dur) var(--ease);
 }
 
 [data-slide="still"]::before {
