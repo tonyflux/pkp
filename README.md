@@ -29,12 +29,13 @@ PKP is an independent desktop client for a PikPak account you already have. It i
 
 ## What you can do
 
-The LAN sharing, file context menus, keyboard shortcuts, and external magnet/torrent opening shown or described below are **unreleased** features in the current source; they are not included in the v0.3.0 installers.
+LAN sharing, file context menus, keyboard shortcuts, external magnet/torrent opening, and Share Import below are current-source features planned for **v0.4.0, a draft awaiting maintainer verification**. They are not included in the latest public v0.3.0 installers. Draft releases are excluded from automatic update discovery.
 
 - **AI organizing assistant, with review before apply.** Local filename rules can draft a plan with no model. You can also connect your own model (or local Ollama) and TMDB credentials. Renames, moves, and cleanup wait until you confirm the plan.
 - **Folder sync.** Pair a local folder with a cloud folder. Two-way sync, local-to-cloud backup, or cloud-to-local download. PKP scans both sides and shows the plan before it runs. Sync works while PKP is open.
 - **Native playback.** A bundled libmpv player: quality switching, subtitles, audio tracks, resume, and a separate window. Availability depends on the file, codec, and service.
 - **LAN sharing (unreleased).** Share selected local or cloud folders read-only with a separate password. Devices on the same network can browse, download originals, and play supported media through a responsive browser page while PKP is running.
+- **Share Import (v0.4.0 draft).** Paste a PikPak share link or explicitly open `pkp://share`; desktop builds also detect validated clipboard shares at startup or when returning to PKP. Browse a read-only grid/list preview, then explicitly choose the receiving account and destination folder and confirm. Detection and preview never import automatically. See the [user guide](docs/USAGE.en.md#import-a-pikpak-share).
 - **Local index search.** Each account keeps an index on this computer, with type, size, and other filters. Search does not send file names to a model. The first index takes time.
 - **Multiple accounts.** Each account has its own session, transfer queue, and index. Switching accounts leaves the others' transfers running.
 - **Privacy on this computer.** Remembered passwords and optional API keys use the macOS Keychain or Windows Credential Manager. See [Privacy](#privacy).
@@ -54,7 +55,7 @@ The macOS build is ad hoc signed and is not notarized, so the system may ask you
 
 **Homebrew.** PKP has no cask. `brew install --cask pikpak` installs PikPak's own app, which is a different program.
 
-v0.2.0 ships eight release assets: the two installers, `update.json`, `update.json.sig`, [`PKP-0.2.0-source.tar.gz`](https://github.com/tonyflux/pkp/releases/download/v0.2.0/PKP-0.2.0-source.tar.gz), `libmpv-sources.tar.gz`, `LICENSE`, and `SHA256SUMS`. The historical [v0.1.0](https://github.com/tonyflux/pkp/releases/tag/v0.1.0) installers stay under the proprietary terms shipped with that release. Prefer 0.2.0 for a new install. Usage statistics default to off in 0.2.0 and on in 0.1.0.
+Since v0.2.0, releases use eight assets: the two installers, `update.json`, `update.json.sig`, `PKP-<version>-source.tar.gz`, `libmpv-sources.tar.gz`, `LICENSE`, and `SHA256SUMS`. The v0.4.0 draft retains this set and the same update trust key; verification is still required before publication. The historical [v0.1.0](https://github.com/tonyflux/pkp/releases/tag/v0.1.0) installers stay under the proprietary terms shipped with that release. Prefer the latest public v0.3.0 for a new install. Usage statistics default to off in v0.2.0 and on in v0.1.0.
 
 ## In the app
 
