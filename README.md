@@ -29,9 +29,12 @@ PKP is an independent desktop client for a PikPak account you already have. It i
 
 ## What you can do
 
+The LAN sharing, file context menus, keyboard shortcuts, and external magnet/torrent opening shown or described below are **unreleased** features in the current source; they are not included in the v0.3.0 installers.
+
 - **AI organizing assistant, with review before apply.** Local filename rules can draft a plan with no model. You can also connect your own model (or local Ollama) and TMDB credentials. Renames, moves, and cleanup wait until you confirm the plan.
 - **Folder sync.** Pair a local folder with a cloud folder. Two-way sync, local-to-cloud backup, or cloud-to-local download. PKP scans both sides and shows the plan before it runs. Sync works while PKP is open.
 - **Native playback.** A bundled libmpv player: quality switching, subtitles, audio tracks, resume, and a separate window. Availability depends on the file, codec, and service.
+- **LAN sharing (unreleased).** Share selected local or cloud folders read-only with a separate password. Devices on the same network can browse, download originals, and play supported media through a responsive browser page while PKP is running.
 - **Local index search.** Each account keeps an index on this computer, with type, size, and other filters. Search does not send file names to a model. The first index takes time.
 - **Multiple accounts.** Each account has its own session, transfer queue, and index. Switching accounts leaves the others' transfers running.
 - **Privacy on this computer.** Remembered passwords and optional API keys use the macOS Keychain or Windows Credential Manager. See [Privacy](#privacy).
@@ -78,7 +81,29 @@ v0.2.0 ships eight release assets: the two installers, `update.json`, `update.js
   </tr>
 </table>
 
-These English images are illustrations from [pkpapp.cc/en](https://pkpapp.cc/en), redrawn from the current UI with fictional demo data. Running-app captures in Simplified Chinese stay in [`assets/screenshots/`](assets/screenshots) and in the [Chinese README](README.zh-CN.md). An English capture of local search is not in the repository yet.
+The workspace and four images above are illustrations from [pkpapp.cc/en](https://pkpapp.cc/en), redrawn from the UI with fictional demo data. An English capture of local search is not in the repository yet.
+
+## LAN sharing in the current source
+
+Choose a local folder or a fixed account and cloud folder, then set a separate password and start sharing. The visitor page is read-only. It can request file preparation if allowed; playback depends on the media and device. Sharing is off by default and stops when PKP exits.
+
+<p align="center">
+  <img src="assets/screenshots/en/lan-desktop.webp" alt="LAN sharing settings with sharing stopped and a demo local folder authorized" width="880">
+</p>
+
+<p align="center"><b>Desktop:</b> choose the sharing scope and permissions.</p>
+
+<p align="center">
+  <img src="assets/screenshots/en/lan-mobile.webp" alt="Mobile LAN visitor page browsing demo files in a read-only shared space" width="300">
+</p>
+
+<p align="center"><b>Visitor:</b> browse the authorized files.</p>
+
+These captures use the current UI and a local, isolated example folder. The desktop capture uses a simulated demo account, path and network address; its sharing service is stopped. The mobile capture shows a real loopback visitor session with example files, not a real phone or production cloud content.
+
+LAN access uses unencrypted HTTP: use it only on a trusted network and do not expose it to the public internet. See the [LAN sharing guide](docs/USAGE.en.md#lan-sharing) for setup, preparation, playback and security limits.
+
+File browsing in the current source also adds right-click menus and shortcuts such as F2 rename and copy/cut/paste. Magnet links and torrent files can open PKP's cloud-add confirmation without submitting a task automatically. See the [user guide](docs/USAGE.en.md).
 
 ## Build from source
 

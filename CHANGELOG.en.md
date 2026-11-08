@@ -4,6 +4,7 @@
 
 ## Unreleased
 
+- Add desktop and mobile LAN sharing captures to both READMEs, identifying unreleased features, demo data, and the unencrypted HTTP boundary.
 - Add default-off, read-only LAN sharing with a separate password, fixed account/folder authorization, address-only QR codes, a responsive five-language visitor page, original downloads, and staged computer preparation. Stop, password reset, and space disable revoke access. Codec-aware playback prefers originals, remuxing, or audio-only conversion before producing a complete compatibility copy at up to 1080p; its separate cache never overwrites or cleans up originals. Packages include FFmpeg/ffprobe. See the usage and privacy guides.
 - Redesign the LAN visitor interface with compact file rows, direct Play/Prepare actions, mobile task navigation, and one preparation status panel. A dedicated responsive player adds real progress/buffering, ten-second skips, volume, speed, and supported fullscreen/PiP. Same-folder files open on demand, returning preserves browsing context, and leaving releases old requests/media while ignoring stale results. Keep the login flow, read-only authorization, and manual playback after complete preparation.
 - Remove the eight-character minimum for LAN sharing and standalone App Lock passwords. Allow nonempty short passwords with matching confirmation while retaining input-size limits, password hashing, failed-attempt throttling, and reset revocation. Update all five UI languages and the usage guides.
