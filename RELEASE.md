@@ -23,6 +23,8 @@ v0.2.0 是首个开源版本；v0.3.0 沿用上文的八件附件与同一更新
 
 冻结源码前先运行 `go mod download all`，并将补齐的 `go.sum` 与其余发布输入一并提交。对应源码导出使用完整依赖图；不要等到冻结快照后才补写校验记录，也不要绕过干净快照检查。
 
+普通 CI 与签名构建共用按系统、架构和媒体构建脚本内容区分的 `media-…` 缓存；未命中时仍按固定来源和 SHA-256 重新构建。CI 在前端检查阶段核验完整 Go 依赖锁，签名构建在打包前再次核验；缓存不包含签名私钥，原生测试、升级助手烟测、源码一致性与发布验签均保留。
+
 - **本地发布：** 在 macOS 上按开发指南安装构建依赖，包括 Wails、CMake、NSIS 和捆绑库所需工具。运行 `make release-local RELEASE_NOTES=build/release-notes.md RELEASE_KEY=/secure/path/to/update-ed25519.key`，再运行 `make release-verify`。这只在本地构建和签名，不上传。若要上传已验证的草稿，以有权发布到 `tonyflux/pkp` 的身份登录 `gh`，运行 `make release-draft`；审阅后运行 `make release-publish`，将草稿发布为 Latest。
 - **可选 GitHub 工作流：** 在仓库外部设置中为 `release` 环境配置适当的必需审核人和部署限制，并配置环境密钥 `UPDATE_SIGNING_KEY`（匹配的私钥）及 `PUBLIC_RELEASE_TOKEN`（有权向 `tonyflux/pkp` 发布 Release）。环境保护由 GitHub 仓库设置控制，并非本文件强制；不要为拉取请求 CI 配置这些密钥。发布构建仅接受从 `main` 手动运行：指定已有源码标签并将 `publish` 设为 false，运行检查并在环境审批通过后构建、签名、验证及上传草稿。推送标签不会自动启动发布构建；本地发布后的 `release.published` 事件仍由独立的 `release-check.yml` 验证公开附件，`main` 与拉取请求 CI 保持不变。审阅草稿后，从 `main` 手动运行并将 `publish` 设为 true；工作流下载并验证已有草稿，再发布为 Latest，不重新构建。标签必须与源码版本一致且指向 `main` 可到达的提交。不要重新构建、重签或覆盖已经正式发布的版本；应发布新版本。还须单独保护标签创建和工作流变更。
 
