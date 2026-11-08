@@ -6,6 +6,7 @@ Read-only LAN sharing, Share Import previews, and improved desktop file actions.
 
 ## Highlights
 
+- **Sign-in layout**: keep network actions as text links on hover, restore compact footer labels, and prevent the login card from clipping in narrow windows. Keyboard focus and network settings access remain available.
 - **Share Import**: paste PikPak share links or open `pkp://share`, with access codes, thumbnails, grid/list views, nested pagination, cross-folder selection and read-only media previews. Explicitly confirm the receiving account and destination before submission. Cancellation preserves magnet/torrent drafts; uncertain submissions are not automatically replayed. Close, lock and stale replies reclaim preview resources.
 - **Desktop clipboard detection** checks validated shares at startup, foreground activation and account readiness. Opens previews only: no automatic import, background polling or interruption of existing dialogs, and no repeated canceled clipboard input. Server mode never reads the host clipboard.
 - **Default-off read-only LAN sharing** adds a separate password, fixed account/folder scope, address QR codes, responsive five-language visitor pages, original downloads and desktop advance preparation. Stop, password changes and space disable revoke access. Optional idle-sleep prevention is also off by default and does not prevent manual or lid-close sleep.

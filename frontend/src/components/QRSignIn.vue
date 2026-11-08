@@ -169,7 +169,8 @@ onBeforeUnmount(() => { generation++; stopTimers(); cancel(session); session = "
 .qr-status small, .privacy { color: var(--fg-dim); font-size: 11px; }
 .privacy { display: flex; align-items: center; justify-content: center; gap: 5px; margin: 0; }
 .network-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
-.network-actions button { border: 0; background: none; color: var(--accent); font-size: 12px; padding: 0; }
+.network-actions button { min-height: 0; border: 0; border-radius: 6px; background: none; color: var(--accent); font-size: 12px; line-height: 1.5; padding: 2px 4px; white-space: normal; }
+.network-actions button:hover:not(:disabled) { background: none; text-decoration: underline; text-underline-offset: 3px; }
 @media (max-height: 740px) {
   .qr-signin { gap: 12px; }
   .qr-status { min-height: 22px; }

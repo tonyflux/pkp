@@ -263,6 +263,7 @@ function netApplied() {
   height: 100%;
   overflow-y: auto;
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   place-items: center;
   align-items: safe center;
   padding: clamp(16px, 5vw, 40px);
@@ -492,7 +493,7 @@ header p {
   border-color: var(--glass-edge);
   color: var(--fg);
 }
-.login > .quiet { min-height: 28px; padding: 4px 10px; font-size: 12px; }
+.settings-links > .quiet { min-height: 28px; padding: 4px 10px; font-size: 12px; }
 
 @media (max-height: 740px) {
   .login-wrap { padding: 16px; }
