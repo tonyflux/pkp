@@ -1475,6 +1475,9 @@ watch(
           <button v-if="menu.entry.category === 'archive' && !menu.entry.folder" class="quiet" role="menuitem" @click="menuAction(openExtract)">
             <Icon name="archive" :size="17" /> {{ t("在线解压") }}
           </button>
+          <button class="quiet" role="menuitem" :title="t('按文件名整理成影视文件夹结构，执行前可逐项检查')" @click="menuAction((e) => organizeEntries([e]))">
+            <Icon name="spark" :size="17" /> {{ t("整理这些") }}
+          </button>
           <button class="quiet" role="menuitem" @click="menuAction((e) => { select(e); showInfo(); })">
             <Icon name="info" :size="17" /> {{ t("查看信息") }}
           </button>

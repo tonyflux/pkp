@@ -16,7 +16,11 @@ Use the account entry in the lower-left corner to add, switch, and manage accoun
 
 The Files page supports folder browsing, filtering by type, searching, starring, sharing, and previews, along with right-click context menus (for single items, multi-selection, and the folder canvas) and desktop keyboard shortcuts (`F2` to rename, arrow keys to move or `Shift` to extend selection, in-drive copy/cut/paste, and more; see “Settings → Shortcuts” for the full list). Building the initial local index may take some time. After you create a share, anyone who obtains the link or access code may be able to access the shared content. Configure sharing according to your actual needs and revoke shares promptly when they are no longer needed.
 
+Right-click a single file or folder, or a multi-selection, and choose “Organize” to open the AI Assistant's media organization plan. One folder is planned with its subfolders; a selection is limited to the selected items. Local rules build the plan first; review and confirm it before execution. Opening the plan does not automatically call a model.
+
 The file grid and filters adapt to the space available in the window. In short windows the workspace can scroll while the playback bar stays visible. This does not change system display scaling or reset your sidebar and information-panel choices.
+
+In-app file and folder selection sheets share a grid/list switch, including move/copy, cloud sync folders, cleanup scope, Cloud Add destinations, Share Import, torrent files, and archive contents/extraction destinations. The grid uses thumbnails or type icons; the list emphasizes names and paths. Switching views changes presentation only: selections, account, location, and authorization scope remain unchanged, and nothing is submitted. Native system file/folder dialogs retain the system's own views.
 
 ## Uploads, Downloads, and Cloud Add
 
@@ -65,7 +69,7 @@ To create a cloud space, choose its fixed source account and click folders to br
 
 The folder picker can search folder names across the selected source account's entire drive, showing full paths for up to 100 matches. Refine the query when there are many results. Search uses the existing local index; if it is not ready, clear the search and browse folder by folder. Clicking a result only navigates to that folder: you must still choose it and submit the new space. Clearing the search restores the previous browsing position, while switching accounts or closing the dialog discards stale search results.
 
-Folder selection and file preparation use one content scroller with visible bottom actions. Long names and path summaries stay compact; click the selected path, or focus it and press Enter, to expand and review the full authorized scope, then activate it again to collapse it.
+The cloud-folder picker for a new shared space supports grid/list views and scrolls long folder lists internally instead of growing the entire dialog. In short windows the form remains scrollable and bottom confirmation actions stay visible. File preparation retains one content scroller for browsing and selected files. Long names and path summaries stay compact; click the selected path, or focus it and press Enter, to expand and review the full authorized scope, then activate it again to collapse it.
 
 In a shared space, use Settings → Select files to prepare to browse only its authorized contents and select files across folders. Choose originals or compatible copies for common devices and explicitly confirm to submit them. This creates no sync pair and never uploads, deletes, or changes cloud files. Desktop preparation is independent of visitor preparation permission and does not enable it. Compatibility targets H.264/AAC/MP4; already compatible originals may be reused, while HDR or unsupported media may fail and individual devices still need verification. Partial submission failures remain listed for review and retry. Downloaded originals use the folder shown on the desktop tasks page; converted copies use the separate compatibility cache.
 

@@ -29,13 +29,11 @@ PKP is an independent desktop client for a PikPak account you already have. It i
 
 ## What you can do
 
-LAN sharing, file context menus, keyboard shortcuts, external magnet/torrent opening, and Share Import below are current-source features planned for **v0.4.0, a draft awaiting maintainer verification**. They are not included in the latest public v0.3.0 installers. Draft releases are excluded from automatic update discovery.
-
 - **AI organizing assistant, with review before apply.** Local filename rules can draft a plan with no model. You can also connect your own model (or local Ollama) and TMDB credentials. Renames, moves, and cleanup wait until you confirm the plan.
 - **Folder sync.** Pair a local folder with a cloud folder. Two-way sync, local-to-cloud backup, or cloud-to-local download. PKP scans both sides and shows the plan before it runs. Sync works while PKP is open.
 - **Native playback.** A bundled libmpv player: quality switching, subtitles, audio tracks, resume, and a separate window. Availability depends on the file, codec, and service.
-- **LAN sharing (unreleased).** Share selected local or cloud folders read-only with a separate password. Devices on the same network can browse, download originals, and play supported media through a responsive browser page while PKP is running.
-- **Share Import (v0.4.0 draft).** Paste a PikPak share link or explicitly open `pkp://share`; desktop builds also detect validated clipboard shares at startup or when returning to PKP. Browse a read-only grid/list preview, then explicitly choose the receiving account and destination folder and confirm. Detection and preview never import automatically. See the [user guide](docs/USAGE.en.md#import-a-pikpak-share).
+- **LAN sharing.** Share selected local or cloud folders read-only with a separate password. Devices on the same network can browse, download originals, and play supported media through a responsive browser page while PKP is running.
+- **Share Import.** Paste a PikPak share link or explicitly open `pkp://share`; desktop builds also detect validated clipboard shares at startup or when returning to PKP. Browse a read-only grid/list preview, then explicitly choose the receiving account and destination folder and confirm. Detection and preview never import automatically. See the [user guide](docs/USAGE.en.md#import-a-pikpak-share).
 - **Local index search.** Each account keeps an index on this computer, with type, size, and other filters. Search does not send file names to a model. The first index takes time.
 - **Multiple accounts.** Each account has its own session, transfer queue, and index. Switching accounts leaves the others' transfers running.
 - **Privacy on this computer.** Remembered passwords and optional API keys use the macOS Keychain or Windows Credential Manager. See [Privacy](#privacy).
@@ -44,18 +42,18 @@ The interface is available in English, Simplified Chinese, Traditional Chinese, 
 
 ## Install
 
-**[PKP 0.3.0](https://github.com/tonyflux/pkp/releases/tag/v0.3.0)** adds QR sign-in, Google Gemini API-key support and login reliability fixes. Download only from this repository's [latest Release](https://github.com/tonyflux/pkp/releases/latest), then check `SHA256SUMS` from the same release. Details and first-launch steps are in the [installation guide](docs/INSTALL.en.md). v0.2.0 was the first open-source release.
+**[PKP 0.4.0](https://github.com/tonyflux/pkp/releases/tag/v0.4.0)** adds read-only LAN sharing, Share Import previews, external magnet/torrent opening, unified grid/list pickers, and desktop context menus and shortcuts. Download only from this repository's [latest Release](https://github.com/tonyflux/pkp/releases/latest), then check `SHA256SUMS` from the same release. Details and first-launch steps are in the [installation guide](docs/INSTALL.en.md). v0.2.0 was the first open-source release.
 
 | Platform | Download |
 | --- | --- |
-| macOS 12 or later, Apple silicon and Intel | [PKP-0.3.0-macos-universal.dmg](https://github.com/tonyflux/pkp/releases/download/v0.3.0/PKP-0.3.0-macos-universal.dmg) |
-| Windows x64 / ARM64 preview | [PKP-0.3.0-windows-x64-arm64-setup.exe](https://github.com/tonyflux/pkp/releases/download/v0.3.0/PKP-0.3.0-windows-x64-arm64-setup.exe) |
+| macOS 12 or later, Apple silicon and Intel | [PKP-0.4.0-macos-universal.dmg](https://github.com/tonyflux/pkp/releases/download/v0.4.0/PKP-0.4.0-macos-universal.dmg) |
+| Windows x64 / ARM64 preview | [PKP-0.4.0-windows-x64-arm64-setup.exe](https://github.com/tonyflux/pkp/releases/download/v0.4.0/PKP-0.4.0-windows-x64-arm64-setup.exe) |
 
 The macOS build is ad hoc signed and is not notarized, so the system may ask you to approve the first launch. The Windows build has no Authenticode publisher signature, and playback, sync, notifications, and system authentication still need broader testing on real devices. Linux packages are not available.
 
 **Homebrew.** PKP has no cask. `brew install --cask pikpak` installs PikPak's own app, which is a different program.
 
-Since v0.2.0, releases use eight assets: the two installers, `update.json`, `update.json.sig`, `PKP-<version>-source.tar.gz`, `libmpv-sources.tar.gz`, `LICENSE`, and `SHA256SUMS`. The v0.4.0 draft retains this set and the same update trust key; verification is still required before publication. The historical [v0.1.0](https://github.com/tonyflux/pkp/releases/tag/v0.1.0) installers stay under the proprietary terms shipped with that release. Prefer the latest public v0.3.0 for a new install. Usage statistics default to off in v0.2.0 and on in v0.1.0.
+Since v0.2.0, releases use eight assets: the two installers, `update.json`, `update.json.sig`, `PKP-<version>-source.tar.gz`, `libmpv-sources.tar.gz`, `LICENSE`, and `SHA256SUMS`. v0.4.0 retains this set and the same update trust key. The historical [v0.1.0](https://github.com/tonyflux/pkp/releases/tag/v0.1.0) installers stay under the proprietary terms shipped with that release. Prefer the latest public v0.4.0 for a new install. Usage statistics defaulted to off in v0.2.0 and on in v0.1.0, and daily active installation statistics default to on since v0.3.0.
 
 ## In the app
 
@@ -84,7 +82,7 @@ Since v0.2.0, releases use eight assets: the two installers, `update.json`, `upd
 
 The four images above are illustrations from [pkpapp.cc/en](https://pkpapp.cc/en), redrawn from the UI with fictional demo data. An English capture of local search is not in the repository yet.
 
-## LAN sharing in the current source
+## LAN sharing
 
 Choose a local folder or a fixed account and cloud folder, then set a separate password and start sharing. The visitor page is read-only. It can request file preparation if allowed; playback depends on the media and device. Sharing is off by default and stops when PKP exits.
 
@@ -104,7 +102,7 @@ These captures use the current UI and a local, isolated example folder. The desk
 
 LAN access uses unencrypted HTTP: use it only on a trusted network and do not expose it to the public internet. See the [LAN sharing guide](docs/USAGE.en.md#lan-sharing) for setup, preparation, playback and security limits.
 
-File browsing in the current source also adds right-click menus and shortcuts such as F2 rename and copy/cut/paste. Magnet links and torrent files can open PKP's cloud-add confirmation without submitting a task automatically. See the [user guide](docs/USAGE.en.md).
+File browsing also includes right-click menus and shortcuts such as F2 rename and copy/cut/paste. Magnet links and torrent files can open PKP's cloud-add confirmation without submitting a task automatically. See the [user guide](docs/USAGE.en.md).
 
 ## Build from source
 

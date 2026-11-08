@@ -15,6 +15,7 @@ import (
 	"syscall"
 	"unsafe"
 
+	"github.com/tonyflux/pkp/internal/winpath"
 	"golang.org/x/sys/windows"
 )
 
@@ -23,9 +24,9 @@ func winOpen(path string, access uint32) (windows.Handle, error) {
 	if err != nil {
 		return windows.InvalidHandle, err
 	}
-	ntpath := `\??\` + strings.TrimPrefix(absolute, `\\?\`)
-	if strings.HasPrefix(absolute, `\\`) {
-		ntpath = `\??\UNC\` + strings.TrimPrefix(absolute, `\\`)
+	ntpath, err := winpath.Native(strings.TrimPrefix(absolute, `\\?\`))
+	if err != nil {
+		return windows.InvalidHandle, err
 	}
 	name, err := windows.NewNTUnicodeString(ntpath)
 	if err != nil {

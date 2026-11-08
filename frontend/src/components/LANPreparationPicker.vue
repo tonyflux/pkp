@@ -3,6 +3,8 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue"
 import Icon from "./Icon.vue";
 import Thumb from "./Thumb.vue";
 import Orbit from "./Orbit.vue";
+import FileViewSwitch from "./FileViewSwitch.vue";
+import PickerItems from "./PickerItems.vue";
 import type { Entry, PreparationEntry } from "../../bindings/github.com/tonyflux/pkp/internal/lanshare/models";
 import { LANService, lanError } from "../lanstore";
 import { accounts, appLocked } from "../store";
@@ -202,25 +204,25 @@ onBeforeUnmount(() => {
         <div ref="scrollBox" class="prepare-body">
           <p>{{ t('lan|仅在此空间内读取所选文件，不会创建同步、上传、删除或修改云盘文件。电脑准备不受访客准备权限开关影响。') }}</p>
           <div class="browser">
-            <div class="browser-toolbar"><nav :aria-label="t('lan|授权根目录')"><button type="button" :disabled="busy || !trail.length" @click="browse(trail.slice(0, -1))">{{ t('lan|返回上级目录') }}</button><button type="button" :disabled="busy || !trail.length" @click="browse([])">{{ t('lan|共享空间根目录') }}</button><span v-for="crumb in trail" :key="crumb.id"> / {{ crumb.name }}</span></nav><button type="button" class="refresh-directory quiet" :disabled="loading || busy" :aria-label="t('刷新')" :title="t('刷新')" data-prepare-refresh @click="browse(trail, true)"><Icon name="repeat" :size="18"/></button><div class="segments glass-well" role="group" :aria-label="t('文件视图')"><button type="button" :disabled="busy" :class="{ on: layout === 'grid' }" :aria-label="t('网格')" :title="t('网格')" :aria-pressed="layout === 'grid'" @click="layout = 'grid'"><Icon name="grid" :size="18"/></button><button type="button" :disabled="busy" :class="{ on: layout === 'list' }" :aria-label="t('列表')" :title="t('列表')" :aria-pressed="layout === 'list'" @click="layout = 'list'"><Icon name="list" :size="18"/></button></div></div>
+            <div class="browser-toolbar"><nav :aria-label="t('lan|授权根目录')"><button type="button" :disabled="busy || !trail.length" @click="browse(trail.slice(0, -1))">{{ t('lan|返回上级目录') }}</button><button type="button" :disabled="busy || !trail.length" @click="browse([])">{{ t('lan|共享空间根目录') }}</button><span v-for="crumb in trail" :key="crumb.id"> / {{ crumb.name }}</span></nav><button type="button" class="refresh-directory quiet" :disabled="loading || busy" :aria-label="t('刷新')" :title="t('刷新')" data-prepare-refresh @click="browse(trail, true)"><Icon name="repeat" :size="18"/></button><FileViewSwitch v-model="layout" :disabled="busy" /></div>
             <div ref="entriesBox" class="entries" :aria-busy="loading">
               <div v-if="loading" class="picker-loading" data-prepare-loading>
                 <div class="loading-label"><Orbit :size="18" :label="t('正在加载')"/><span aria-hidden="true">{{ t('正在加载') }}</span></div>
-                <div :class="layout === 'grid' ? 'grid' : 'loading-rows'" aria-hidden="true">
-                  <div v-for="index in layout === 'grid' ? 8 : 4" :key="index" :class="layout === 'grid' ? 'card loading-card' : 'loading-row'">
-                    <span :class="layout === 'grid' ? 'card-thumb skel' : 'loading-icon skel'" :style="{ '--i': index }"/>
+                <PickerItems :layout="layout" aria-hidden="true">
+                  <div v-for="index in layout === 'grid' ? 8 : 4" :key="index" class="picker-item loading-card">
+                    <span class="picker-thumb skel" :style="{ '--i': index }"/>
                     <span class="loading-line skel" :style="{ width: `${54 + (index * 13) % 32}%`, '--i': index }"/>
                   </div>
-                </div>
+                </PickerItems>
               </div>
               <p v-else-if="error" role="alert">{{ error }} <button type="button" @click="browse(trail, true)">{{ t('重试') }}</button></p>
               <p v-else-if="!entries.length">{{ t('lan|此目录没有文件或文件夹') }}</p>
-              <div v-else :class="{ grid: layout === 'grid' }">
+              <PickerItems v-else :layout="layout">
                 <template v-for="entry in entries" :key="entry.id">
-                  <button v-if="entry.isDir" :class="layout === 'grid' ? 'card' : 'entry quiet'" type="button" :data-prepare-card="entry.id" :data-prepare-folder="entry.id" :disabled="busy" @click="browse([...trail, { id: entry.id, name: entry.name }])"><span v-if="layout === 'grid'" class="card-thumb"><Thumb alt=""><Icon name="folder" :size="34" filled/></Thumb></span><Icon v-else name="folder" :size="18"/><span class="entry-name" :title="entry.name">{{ entry.name }}</span><Icon v-if="layout === 'list'" name="chevronRight" :size="16"/></button>
-                  <label v-else :class="layout === 'grid' ? ['card', { chosen: selected.some(item => item.id === entry.id), unavailable: isReady(entry) && !selected.some(item => item.id === entry.id) }] : 'entry'" :data-prepare-card="entry.id"><input type="checkbox" :data-prepare-file="entry.id" :checked="selected.some(item => item.id === entry.id)" :disabled="busy || (isReady(entry) && !selected.some(item => item.id === entry.id))" @change="toggle(entry)"/><span v-if="layout === 'grid'" class="card-thumb"><Thumb :src="thumbnails[entry.id]" alt="" lazy><Icon :name="category(entry)" :size="34"/></Thumb></span><span class="entry-name" :title="entry.name">{{ entry.name }}</span><span v-if="(entry.ready && !entry.needsVerification) || entry.desktopCompatibleReady" class="readiness"><span v-if="entry.ready && !entry.needsVerification">{{ t('lan|原件已就绪') }}</span><span v-if="entry.desktopCompatibleReady">{{ t('lan|兼容准备已就绪') }}</span></span></label>
+                  <button v-if="entry.isDir" class="picker-item quiet" type="button" :data-prepare-card="entry.id" :data-prepare-folder="entry.id" :disabled="busy" @click="browse([...trail, { id: entry.id, name: entry.name }])"><span class="picker-thumb"><Thumb alt=""><Icon name="folder" :size="34" filled/></Thumb></span><span class="picker-copy"><span class="picker-name" :title="entry.name">{{ entry.name }}</span></span><Icon class="picker-chevron" name="chevronRight" :size="16"/></button>
+                  <label v-else class="picker-item card" :class="{ chosen: selected.some(item => item.id === entry.id), 'is-picked': selected.some(item => item.id === entry.id), unavailable: isReady(entry) && !selected.some(item => item.id === entry.id) }" :data-prepare-card="entry.id"><input class="picker-check" type="checkbox" :data-prepare-file="entry.id" :checked="selected.some(item => item.id === entry.id)" :disabled="busy || (isReady(entry) && !selected.some(item => item.id === entry.id))" @change="toggle(entry)"/><span class="picker-thumb"><Thumb :src="layout === 'grid' ? thumbnails[entry.id] : undefined" alt="" lazy><Icon :name="category(entry)" :size="34"/></Thumb></span><span class="picker-copy"><span class="picker-name" :title="entry.name">{{ entry.name }}</span><span v-if="(entry.ready && !entry.needsVerification) || entry.desktopCompatibleReady" class="readiness picker-meta"><span v-if="entry.ready && !entry.needsVerification">{{ t('lan|原件已就绪') }}</span><span v-if="entry.desktopCompatibleReady">{{ t('lan|兼容准备已就绪') }}</span></span></span></label>
                 </template>
-              </div>
+              </PickerItems>
             </div>
           </div>
           <h3 ref="selectionHeading" tabindex="-1">{{ t('lan|已选择 {n} 个文件', { n: selected.length }) }}</h3>
@@ -254,34 +256,18 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); ou
 .browser-toolbar { position: sticky; top: 0; z-index: 3; display: flex; align-items: center; gap: 8px; padding-right: 8px; border-bottom: 1px solid var(--line); border-radius: 12px 12px 0 0; background: var(--glass-panel); }
 nav { display: flex; flex: 1; min-width: 0; align-items: center; flex-wrap: wrap; gap: 6px; padding: 8px; overflow-wrap: anywhere; }
 nav span { min-width: 0; overflow-wrap: anywhere; }
-.segments { display: flex; flex: none; padding: 3px; border-radius: 10px; }
-.segments button { display: grid; place-items: center; width: 36px; min-height: 34px; padding: 0; border: 0; border-radius: 8px; background: transparent; box-shadow: none; }
-.segments button.on { background: var(--accent-soft); box-shadow: inset 0 1px 0 color-mix(in srgb, var(--glass-rim) 40%, transparent); }
 .entries { min-height: 80px; padding: 6px; }
 .refresh-directory { display: grid; place-items: center; flex: none; width: 34px; min-height: 34px; padding: 0; }
 .picker-loading { overflow: hidden; }
 .loading-label { display: flex; align-items: center; gap: 8px; min-height: 36px; padding: 0 8px 6px; color: var(--fg-dim); font-size: 13px; }
 .loading-card { pointer-events: none; }
-.loading-row { display: flex; align-items: center; gap: 12px; min-height: 40px; padding: 8px; }
-.loading-icon { flex: none; width: 20px; height: 20px; border-radius: 6px; }
 .loading-line { display: block; height: 12px; max-width: calc(100% - 32px); border-radius: 6px; }
 .loading-card .loading-line { margin-top: 2px; }
-.entry { display: flex; align-items: center; justify-content: flex-start; gap: 8px; width: 100%; min-width: 0; text-align: left; padding: 8px; }
-.entry .entry-name { min-width: 0; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.entry .icon { flex: none; }
 .readiness { display: flex; flex: none; flex-wrap: wrap; gap: 4px; color: var(--fg-dim); font-size: 11px; }
 .readiness > span { padding: 2px 5px; border-radius: 5px; background: var(--accent-soft); color: var(--accent); }
 .selected-ready { color: var(--fg-dim); font-size: 12px; }
-.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(132px, 100%), 1fr)); gap: 6px; }
-.card { position: relative; display: flex; flex-direction: column; align-items: stretch; gap: 6px; min-width: 0; padding: 6px; border: 1px solid transparent; border-radius: 10px; text-align: left; cursor: pointer; background: transparent; color: inherit; }
-.card.chosen .card-thumb { box-shadow: 0 0 0 2px var(--accent), 0 0 0 5px var(--accent-soft); }
-.card.unavailable { cursor: default; }
-.card:focus-within { outline: 2px solid var(--accent); outline-offset: 1px; }
-.card input { position: absolute; z-index: 2; top: 10px; left: 10px; width: 20px; height: 20px; min-width: 0; min-height: 0; padding: 0; margin: 0; appearance: none; border: 1.5px solid rgba(255, 255, 255, .9); border-radius: 50%; background: rgba(6, 16, 28, .45); box-shadow: 0 1px 3px #0004; }
-.card input:checked { background: var(--primary); }
-.card input:checked::after { content: ""; position: absolute; left: 5px; top: 3px; width: 7px; height: 4px; border-left: 2px solid white; border-bottom: 2px solid white; transform: rotate(-45deg); }
-.card-thumb { position: relative; display: block; width: 100%; aspect-ratio: 16 / 9; overflow: hidden; border-radius: 8px; background: color-mix(in srgb, var(--fg) 8%, transparent); }
-.entry-name { display: block; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.unavailable { cursor: default; }
+.picker-item:focus-within { outline: 2px solid var(--accent); outline-offset: 1px; }
 h3 { font-size: 15px; margin: 15px 0 8px; }
 .selection { padding: 0; margin: 0; list-style: none; }
 .selection li { display: flex; justify-content: space-between; gap: 8px; align-items: start; padding: 5px 0; }
@@ -293,6 +279,6 @@ footer { border-top: 1px solid var(--line); padding-top: 12px; margin-top: 10px;
 .selection-jump { padding-left: 0; font-size: 13px; color: var(--fg-dim); }
 .footer-actions { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 8px; margin-left: auto; }
 .footer-actions button { max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
-@media (max-width: 600px) { .prepare-dialog { padding: 16px; } .browser-toolbar { flex-wrap: wrap; padding: 6px; gap: 4px; } .browser-toolbar nav { flex-basis: 100%; padding: 0; } .browser-toolbar .segments { margin-left: auto; } }
+@media (max-width: 600px) { .prepare-dialog { padding: 16px; } .browser-toolbar { flex-wrap: wrap; padding: 6px; gap: 4px; } .browser-toolbar nav { flex-basis: 100%; padding: 0; } .browser-toolbar .file-view-switch { margin-left: auto; } }
 @media (prefers-reduced-motion: reduce) { .picker-loading .skel::after { animation: none; } }
 </style>

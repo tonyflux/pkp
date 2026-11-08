@@ -7,6 +7,8 @@ import Orbit from "./Orbit.vue";
 import SelectMenu from "./SelectMenu.vue";
 import Toggle from "./Toggle.vue";
 import LANPreparationPicker from "./LANPreparationPicker.vue";
+import FileViewSwitch from "./FileViewSwitch.vue";
+import PickerItems from "./PickerItems.vue";
 import { inSelectMenu } from "../dom";
 import * as DriveService from "../../bindings/github.com/tonyflux/pkp/internal/services/driveservice";
 import type { FolderChoice } from "../../bindings/github.com/tonyflux/pkp/internal/services/models";
@@ -26,7 +28,6 @@ const tab = ref("settings");
 const network = ref("");
 const modal = ref<"" | "start" | "stop" | "password" | "create" | "remove" | "disable" | "prepare" | "cache" | "cancel" | "resume">("");
 const dialog = ref<HTMLElement>();
-const dialogBody = ref<HTMLElement>();
 const password = ref("");
 const repeat = ref("");
 const showPassword = ref(false);
@@ -48,6 +49,7 @@ const folderLoading = ref(false);
 const folderReady = ref(false);
 const folderError = ref("");
 const folderList = ref<HTMLElement>();
+const folderLayout = ref<"grid" | "list">("grid");
 const folderQuery = ref("");
 const folderMatches = ref<FolderChoice[]>([]);
 const folderSearching = ref(false);
@@ -234,14 +236,15 @@ function resetFolderSearch() {
 }
 function searchFolders(query: string) {
   const wasSearching = folderSearchActive.value;
-  if (!wasSearching && query.trim()) folderBrowseScroll = dialogBody.value?.scrollTop ?? 0;
+  if (!wasSearching && query.trim()) folderBrowseScroll = folderList.value?.scrollTop ?? 0;
   resetFolderSearch();
   folderQuery.value = query;
   if (!query.trim()) {
-    if (wasSearching) void nextTick(() => { if (dialogBody.value) dialogBody.value.scrollTop = folderBrowseScroll; });
+    if (wasSearching) void nextTick(() => { if (folderList.value) folderList.value.scrollTop = folderBrowseScroll; });
     return;
   }
   if (!draft.accountId || draft.kind !== "cloud" || !cloudPickerOpen.value) return;
+  void nextTick(() => { if (folderList.value) folderList.value.scrollTop = 0; });
   const generation = folderSearchGeneration, account = draft.accountId;
   folderSearching.value = true;
   folderSearchTimer = setTimeout(async () => {
@@ -264,6 +267,7 @@ async function browse(next: { id: string; name: string }[]) {
   const moveFocus = active instanceof HTMLElement && !!active.closest("[data-lan-cloud-picker], [data-lan-change-cloud]");
   const revealPicker = moveFocus || (active instanceof HTMLElement && active.getAttribute("aria-label") === t("lan|固定来源账号"));
   trail.value = [...next]; folders.value = [];
+  if (folderList.value) folderList.value.scrollTop = 0;
   folderLoading.value = true; folderReady.value = false; folderError.value = "";
   try {
     const result = await LANService.CloudFolders(draft.accountId, next.at(-1)?.id ?? "");
@@ -441,7 +445,7 @@ async function saveName() { const item = space.value; if (!item || !rename.value
     </section></div><footer>{{ t('lan|锁定应用、关窗驻留后继续共享；退出 PKP 或主动停止会断开访客连接。') }}</footer>
     <LANPreparationPicker v-if="preparingSpace && space?.id === preparingSpace" :key="preparingSpace" :space-id="preparingSpace" :space-name="space.name" :opener="preparationTrigger" @close="preparingSpace = ''" @tasks="preparingSpace = ''; tab = 'tasks'; refreshLANTasks()" />
     <Teleport to="body"><div v-if="modal" class="scrim lan-scrim"><section ref="dialog" class="lan-dialog" :class="{ 'create-dialog': modal === 'create' }" role="dialog" aria-modal="true" aria-labelledby="lan-dialog-title" tabindex="-1" @keydown.stop><form @submit.prevent="submit"><header><h2 id="lan-dialog-title">{{ title }}</h2><button type="button" :disabled="lan.busy || picking" :aria-label="t('lan|关闭对话框')" @click="close">×</button></header>
-      <div ref="dialogBody" class="dialog-body">
+      <div class="dialog-body">
       <template v-if="modal === 'create'">
         <label class="field">{{ t('lan|空间名称') }}<input v-model="draft.name" maxlength="120" required @input="nameEdited = true" /></label>
         <label class="field">{{ t('lan|来源类型') }}<span class="select glass-well"><SelectMenu v-model="draft.kind" class="face" :options="sourceOptions" :label="t('lan|来源类型')" :disabled="picking || lan.busy" @update:model-value="accountChanged"/><Icon name="chevronDown" :size="16"/></span></label>
@@ -466,31 +470,36 @@ async function saveName() { const item = space.value; if (!item || !rename.value
             <div v-else class="folder-picker" data-lan-cloud-picker>
               <p class="folder-picker-hint">{{ t('lan|进入文件夹浏览，确认后共享该目录及其子目录。') }}</p>
               <label class="folder-search"><Icon name="search" :size="17"/><input type="search" :value="folderQuery" :placeholder="t('lan|搜索此账号的文件夹')" :aria-label="t('lan|搜索此账号的文件夹')" autocomplete="off" spellcheck="false" data-lan-folder-search @input="searchFolders(($event.target as HTMLInputElement).value)" @keydown.enter.prevent/><button v-if="folderQuery" type="button" class="quiet" :aria-label="t('清除搜索')" @click="searchFolders('')"><Icon name="close" :size="16"/></button></label>
-              <div v-if="!folderSearchActive" class="folder-toolbar">
-                <button type="button" class="quiet folder-back" :disabled="!trail.length || folderLoading" :aria-label="t('lan|返回上级目录')" :title="t('lan|返回上级目录')" @click="browse(trail.slice(0, -1))"><Icon name="arrowLeft" :size="18"/></button>
-                <nav class="folder-crumbs" :aria-label="t('lan|授权根目录')">
-                  <button v-if="trail.length" type="button" class="quiet" :disabled="folderLoading" @click="browse([])">{{ t('lan|云盘根目录') }}</button><span v-else aria-current="location">{{ t('lan|云盘根目录') }}</span>
-                  <template v-for="(crumb, index) in trail" :key="crumb.id"><Icon name="chevronRight" :size="13"/><span v-if="index === trail.length - 1" aria-current="location" :title="crumb.name">{{ crumb.name }}</span><button v-else type="button" class="quiet" :disabled="folderLoading" :title="crumb.name" @click="browse(trail.slice(0, index + 1))">{{ crumb.name }}</button></template>
-                </nav>
+              <div class="folder-toolbar">
+                <template v-if="!folderSearchActive">
+                  <button type="button" class="quiet folder-back" :disabled="!trail.length || folderLoading" :aria-label="t('lan|返回上级目录')" :title="t('lan|返回上级目录')" @click="browse(trail.slice(0, -1))"><Icon name="arrowLeft" :size="18"/></button>
+                  <nav class="folder-crumbs" :aria-label="t('lan|授权根目录')">
+                    <button v-if="trail.length" type="button" class="quiet" :disabled="folderLoading" @click="browse([])">{{ t('lan|云盘根目录') }}</button><span v-else aria-current="location">{{ t('lan|云盘根目录') }}</span>
+                    <template v-for="(crumb, index) in trail" :key="crumb.id"><Icon name="chevronRight" :size="13"/><span v-if="index === trail.length - 1" aria-current="location" :title="crumb.name">{{ crumb.name }}</span><button v-else type="button" class="quiet" :disabled="folderLoading" :title="crumb.name" @click="browse(trail.slice(0, index + 1))">{{ crumb.name }}</button></template>
+                  </nav>
+                </template>
+                <p v-else class="folder-search-scope">{{ t('搜索整个云盘的文件夹') }}</p>
+                <FileViewSwitch v-model="folderLayout" :disabled="lan.busy" />
               </div>
-              <p v-else class="folder-search-scope">{{ t('搜索整个云盘的文件夹') }}</p>
               <div ref="folderList" class="folder-list" :aria-busy="folderSearchActive ? folderSearching : folderLoading">
+                <PickerItems :layout="folderLayout">
                 <template v-if="folderSearchActive">
-                  <p v-if="folderSearching" class="folder-state" role="status"><Orbit :size="20"/>{{ t('正在搜索…') }}</p>
-                  <div v-else-if="folderSearchError" class="folder-state"><p class="error" role="alert">{{ folderSearchError }}</p><button type="button" @click="searchFolders(folderQuery)">{{ t('重试') }}</button></div>
-                  <p v-else-if="!folderSearchReady" class="folder-state" role="status">{{ t('云盘索引还在建立，暂时不能搜索全盘；可以逐层浏览。') }}</p>
-                  <p v-else-if="!folderMatches.length" class="folder-state" role="status">{{ t('没有找到文件夹，试试其他名称') }}</p>
+                  <p v-if="folderSearching" class="folder-state picker-state" role="status"><Orbit :size="20"/>{{ t('正在搜索…') }}</p>
+                  <div v-else-if="folderSearchError" class="folder-state picker-state"><p class="error" role="alert">{{ folderSearchError }}</p><button type="button" @click="searchFolders(folderQuery)">{{ t('重试') }}</button></div>
+                  <p v-else-if="!folderSearchReady" class="folder-state picker-state" role="status">{{ t('云盘索引还在建立，暂时不能搜索全盘；可以逐层浏览。') }}</p>
+                  <p v-else-if="!folderMatches.length" class="folder-state picker-state" role="status">{{ t('没有找到文件夹，试试其他名称') }}</p>
                   <template v-else>
-                    <button v-for="folder in folderMatches" :key="folder.id" type="button" class="quiet folder-row folder-result" :data-lan-folder-result="folder.id" :title="trailPath(folder.trail ?? [])" @click="browse(folder.trail ?? [])"><Icon name="folder" :size="20" filled/><span><strong>{{ folder.name }}</strong><small>{{ trailPath(folder.trail ?? []) }}</small></span><Icon name="chevronRight" :size="16"/></button>
-                    <p v-if="folderMatches.length >= 100" class="folder-search-limit">{{ t('lan|最多显示 100 个结果，请缩小搜索范围。') }}</p>
+                    <button v-for="folder in folderMatches" :key="folder.id" type="button" class="quiet picker-item" :data-lan-folder-result="folder.id" :title="trailPath(folder.trail ?? [])" @click="browse(folder.trail ?? [])"><span class="picker-thumb"><Icon name="folder" :size="20" filled/></span><span class="picker-copy"><strong class="picker-name">{{ folder.name }}</strong><small class="picker-meta">{{ trailPath(folder.trail ?? []) }}</small></span><Icon class="picker-chevron" name="chevronRight" :size="16"/></button>
+                    <p v-if="folderMatches.length >= 100" class="folder-search-limit picker-state">{{ t('lan|最多显示 100 个结果，请缩小搜索范围。') }}</p>
                   </template>
                 </template>
                 <template v-else>
-                  <p v-if="folderLoading" class="folder-state" role="status"><Orbit :size="20"/>{{ t('lan|读取目录中') }}</p>
-                  <div v-else-if="folderError" class="folder-state"><Icon name="alert" :size="22"/><p class="error" role="alert">{{ folderError }}</p><button type="button" @click="browse(trail)">{{ t('重试') }}</button></div>
-                  <p v-else-if="folderReady && !folders.length" class="folder-state">{{ t('这里没有子文件夹，可以选择这里。') }}</p>
-                  <button v-for="folder in folders" v-else :key="folder.id" type="button" class="quiet folder-row" :data-lan-folder="folder.id" :title="folder.name" @click="browse([...trail, folder])"><Icon name="folder" :size="20" filled/><span>{{ folder.name }}</span><Icon name="chevronRight" :size="16"/></button>
+                  <p v-if="folderLoading" class="folder-state picker-state" role="status"><Orbit :size="20"/>{{ t('lan|读取目录中') }}</p>
+                  <div v-else-if="folderError" class="folder-state picker-state"><Icon name="alert" :size="22"/><p class="error" role="alert">{{ folderError }}</p><button type="button" @click="browse(trail)">{{ t('重试') }}</button></div>
+                  <p v-else-if="folderReady && !folders.length" class="folder-state picker-state">{{ t('这里没有子文件夹，可以选择这里。') }}</p>
+                  <button v-for="folder in folders" v-else :key="folder.id" type="button" class="quiet picker-item" :data-lan-folder="folder.id" :title="folder.name" @click="browse([...trail, folder])"><span class="picker-thumb"><Icon name="folder" :size="20" filled/></span><span class="picker-copy"><span class="picker-name">{{ folder.name }}</span></span><Icon class="picker-chevron" name="chevronRight" :size="16"/></button>
                 </template>
+                </PickerItems>
               </div>
               <div v-if="!folderSearchActive" class="folder-current"><span>{{ t('lan|当前目录') }}</span><strong :title="currentFolder">{{ currentFolder }}</strong></div>
               <p v-if="!folderSearchActive && folderReady && !trail.length" class="folder-root-warning"><Icon name="info" :size="16"/>{{ t('lan|选择云盘根目录将共享此账号下的全部文件，请确认范围。') }}</p>
@@ -625,22 +634,17 @@ async function saveName() { const item = space.value; if (!item || !rename.value
 .folder-search input { flex: 1; min-width: 0; width: 100%; padding: 10px 0; border: 0; background: transparent; color: var(--fg); }
 .folder-search input::-webkit-search-cancel-button { display: none; }
 .folder-search button { display: grid; place-items: center; flex: none; padding: 6px; }
-.folder-picker .folder-search-scope,.folder-search-limit { margin: 0; padding: 0 14px 8px; font-size: 13px; color: var(--fg-dim); }
-.folder-result > span { display: grid; gap: 3px; }
-.folder-result strong { font-weight: 500; overflow: hidden; text-overflow: ellipsis; }
-.folder-result small { color: var(--fg-dim); white-space: normal; overflow-wrap: anywhere; line-height: 1.5; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
+.folder-picker .folder-search-scope,.folder-search-limit { margin: 0; font-size: 13px; color: var(--fg-dim); }
+.folder-search-scope { flex: 1; min-width: 0; padding-left: 6px; }
+.folder-search-limit { padding: 8px; }
 .folder-toolbar { display: flex; align-items: center; gap: 4px; padding: 4px 8px 8px; border-bottom: 1px solid var(--line); }
 .folder-toolbar .folder-back { display: grid; place-items: center; flex: none; width: 34px; min-height: 34px; padding: 6px; }
 .folder-crumbs { display: flex; align-items: center; gap: 3px; flex: 1; min-width: 0; overflow-x: auto; white-space: nowrap; scrollbar-width: thin; }
 .folder-crumbs button,.folder-crumbs > span { flex: none; max-width: 200px; overflow: hidden; text-overflow: ellipsis; padding: 6px; font-size: 13px; }
 .folder-crumbs [aria-current] { font-weight: 600; color: var(--fg); }
-.folder-list { min-height: 116px; padding: 6px; }
+.folder-list { min-height: 116px; max-height: clamp(116px, 28dvh, 280px); overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; }
 .folder-state { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; text-align: center; min-height: 104px; margin: 0; padding: 18px; font-size: 14px; }
 .folder-state p { margin: 0; }
-.folder-row { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 42px; padding: 8px 10px; text-align: left; font-size: 14px; }
-.folder-row > .icon:first-child { color: var(--accent); }
-.folder-row > span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.folder-row > .icon:last-child { color: var(--fg-dim); }
 .folder-current { display: grid; gap: 4px; border-top: 1px solid var(--line); padding: 12px 14px 0; }
 .folder-current > span { font-size: 13px; color: var(--fg-dim); }
 .folder-current strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }

@@ -4,11 +4,9 @@
 
 ## 下载状态
 
-**v0.3.0** 新增扫码登录、Gemini API Key 支持及登录修复。从 [最新 Release](https://github.com/tonyflux/pkp/releases/latest) 下载：[macOS Universal](https://github.com/tonyflux/pkp/releases/download/v0.3.0/PKP-0.3.0-macos-universal.dmg) / [Windows x64 与 ARM64](https://github.com/tonyflux/pkp/releases/download/v0.3.0/PKP-0.3.0-windows-x64-arm64-setup.exe)。对照同一 Release 的 `SHA256SUMS` 并验证签名。请从本仓库的 Releases 获取安装包。
+**v0.4.0** 新增局域网只读共享、分享转存预览、外部磁力链／种子打开、统一网格／列表选择器及文件右键菜单与快捷键。从 [最新 Release](https://github.com/tonyflux/pkp/releases/latest) 下载：[macOS Universal](https://github.com/tonyflux/pkp/releases/download/v0.4.0/PKP-0.4.0-macos-universal.dmg) / [Windows x64 与 ARM64](https://github.com/tonyflux/pkp/releases/download/v0.4.0/PKP-0.4.0-windows-x64-arm64-setup.exe)。对照同一 Release 的 `SHA256SUMS` 并验证签名。请从本仓库的 Releases 获取安装包。
 
-v0.2.0 是首个开源版本。v0.3.0 继续提供 `PKP-0.3.0-source.tar.gz`（与安装包对应的 PKP 自有源码）和 `libmpv-sources.tar.gz`（第三方对应源码，不含 PKP 自有源码）。
-
-**v0.4.0 仅准备为草稿，等待维护者自行验证后再正式发布；最新公开稳定版仍为 v0.3.0。** 当前源码中的局域网共享、文件右键菜单与快捷键、外部磁力链／种子打开，以及分享转存不包含在上述稳定版安装包中。分享转存支持粘贴 PikPak 分享链接、显式打开 `pkp://share` 和桌面端自动识别经过校验的剪贴板分享；只读网格／列表预览后，须选择接收账号、目标目录并确认，不会自动转存。操作与限制见[使用说明](USAGE.md)。v0.4.0 草稿沿用八件附件与同一更新信任公钥；草稿不参与自动更新发现，也不表示已完成真机或生产云端验收。
+v0.2.0 是首个开源版本。v0.4.0 继续提供 `PKP-0.4.0-source.tar.gz`（与安装包对应的 PKP 自有源码）和 `libmpv-sources.tar.gz`（第三方对应源码，不含 PKP 自有源码）。分享转存支持粘贴 PikPak 分享链接、显式打开 `pkp://share` 和桌面端自动识别经过校验的剪贴板分享；只读网格／列表预览后，须选择接收账号、目标目录并确认，不会自动转存。操作与限制见[使用说明](USAGE.md)。
 
 **v0.1.0 仍可下载**，作为历史版本：[macOS Universal](https://github.com/tonyflux/pkp/releases/download/v0.1.0/PKP-0.1.0-macos-universal.dmg) / [Windows x64 与 ARM64](https://github.com/tonyflux/pkp/releases/download/v0.1.0/PKP-0.1.0-windows-x64-arm64-setup.exe)。该 Release 同时提供 `libmpv-sources.tar.gz` 和当时的使用条款。v0.1.0 安装包不是由本仓库当前源码构建，仍适用[当时的闭源条款](legal/v0.1.0-proprietary.txt)。新安装请优先使用最新版本。使用统计在 v0.2.0 默认关闭，在 v0.1.0 默认开启；v0.3.0 改为默认开启每日活跃安装统计。
 

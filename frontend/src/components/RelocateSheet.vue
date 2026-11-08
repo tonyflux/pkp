@@ -11,6 +11,8 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import Icon from "./Icon.vue";
 import Orbit from "./Orbit.vue";
+import FileViewSwitch from "./FileViewSwitch.vue";
+import PickerItems from "./PickerItems.vue";
 import {
   accountName,
   appLocked,
@@ -27,6 +29,7 @@ import { t } from "../i18n";
 import type { Entry } from "../../bindings/github.com/tonyflux/pkp/internal/services";
 
 const sheet = ref<HTMLElement>();
+const layout = ref<"grid" | "list">("grid");
 let sharePickerFocus: HTMLElement | null = null;
 watch(() => relocate.mode === "shareImport", async open => {
   if (!open) { if (!appLocked.value && sharePickerFocus?.isConnected) sharePickerFocus.focus(); sharePickerFocus = null; return; }
@@ -183,6 +186,7 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onKeydown, true));
             </template>
           </nav>
           <p v-else class="crumbs found">{{ t("搜索整个云盘的文件夹") }}</p>
+          <FileViewSwitch v-model="layout" />
           <button
             v-if="canCreate"
             class="quiet new"
@@ -196,27 +200,27 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onKeydown, true));
         </div>
 
         <p v-if="relocate.error" class="warning" role="alert">{{ relocate.error }}</p>
-        <div class="list glass-well" :aria-busy="relocate.loading || relocate.searching">
+        <PickerItems :layout="layout" class="list glass-well" :aria-busy="relocate.loading || relocate.searching">
           <template v-if="searching">
-            <p v-if="relocate.searching" class="state"><Orbit :size="18" /> {{ t("正在搜索…") }}</p>
-            <p v-else-if="!relocate.searchable" class="state">{{ t("云盘索引还在建立，暂时不能搜索全盘；可以逐层浏览。") }}</p>
-            <p v-else-if="!relocate.results.length" class="state">{{ t("没有找到文件夹，试试其他名称") }}</p>
+            <p v-if="relocate.searching" class="state picker-state"><Orbit :size="18" /> {{ t("正在搜索…") }}</p>
+            <p v-else-if="!relocate.searchable" class="state picker-state">{{ t("云盘索引还在建立，暂时不能搜索全盘；可以逐层浏览。") }}</p>
+            <p v-else-if="!relocate.results.length" class="state picker-state">{{ t("没有找到文件夹，试试其他名称") }}</p>
             <button
               v-for="folder in relocate.results"
               v-else
               :key="folder.id"
-              class="quiet row"
-              :title="trailPath(folder.trail ?? [])"
+              class="quiet picker-item"
+              :disabled="pickedIds.has(folder.id)"
+              :title="pickedIds.has(folder.id) ? words.self : trailPath(folder.trail ?? [])"
               @click="enterRelocateResult(folder)"
             >
-              <Icon name="folder" :size="20" filled />
-              <span class="name">{{ folder.name }}</span>
-              <small class="path">{{ trailPath((folder.trail ?? []).slice(0, -1)) }}</small>
-              <Icon name="chevronRight" :size="16" />
+              <span class="picker-thumb"><Icon name="folder" :size="20" filled /></span>
+              <span class="picker-copy"><span class="picker-name" :title="folder.name">{{ folder.name }}</span><small class="picker-meta">{{ trailPath((folder.trail ?? []).slice(0, -1)) }}</small></span>
+              <Icon class="picker-chevron" name="chevronRight" :size="16" />
             </button>
           </template>
           <template v-else>
-            <form v-if="relocate.naming" class="naming" @submit.prevent="submitName">
+            <form v-if="relocate.naming" class="naming picker-state" @submit.prevent="submitName">
               <Icon name="folder" :size="20" filled />
               <input
                 ref="nameField"
@@ -233,26 +237,25 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onKeydown, true));
                 {{ relocate.creating ? t("创建中…") : t("创建") }}
               </button>
             </form>
-            <div v-if="relocate.loading" class="state"><Orbit :size="18" /> {{ t("正在加载文件夹…") }}</div>
-            <p v-else-if="!relocate.folders.length && !relocate.naming" class="state">
+            <div v-if="relocate.loading" class="state picker-state"><Orbit :size="18" /> {{ t("正在加载文件夹…") }}</div>
+            <p v-else-if="!relocate.folders.length && !relocate.naming" class="state picker-state">
               {{ words.empty }}
             </p>
             <button
               v-for="folder in relocate.folders"
               v-else
               :key="folder.id"
-              class="quiet row"
+              class="quiet picker-item"
               :disabled="pickedIds.has(folder.id)"
               :title="pickedIds.has(folder.id) ? words.self : folder.name"
               @click="enter(folder)"
             >
-              <Icon name="folder" :size="20" filled />
-              <span class="name">{{ folder.name }}</span>
-              <small v-if="pickedIds.has(folder.id)">{{ t("已选") }}</small>
-              <Icon v-else name="chevronRight" :size="16" />
+              <span class="picker-thumb"><Icon name="folder" :size="20" filled /></span>
+              <span class="picker-copy"><span class="picker-name" :title="folder.name">{{ folder.name }}</span><small v-if="pickedIds.has(folder.id)" class="picker-meta">{{ t("已选") }}</small></span>
+              <Icon v-if="!pickedIds.has(folder.id)" class="picker-chevron" name="chevronRight" :size="16" />
             </button>
           </template>
-        </div>
+        </PickerItems>
 
         <footer>
           <span class="note" :class="{ warn: alreadyHere }">
@@ -482,50 +485,6 @@ header p {
   color: var(--fg-dim);
 }
 
-.row {
-  width: 100%;
-  justify-content: flex-start;
-  gap: 12px;
-  min-height: 44px;
-  padding: 0 12px;
-  border-radius: 10px;
-  color: var(--fg);
-  font-size: 15px;
-}
-
-.row > :first-child {
-  flex: none;
-  color: var(--accent);
-}
-
-.row .name {
-  flex: 1;
-  min-width: 0;
-  text-align: left;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.row small {
-  flex: none;
-  font-size: 12px;
-  color: var(--fg-dim);
-}
-
-/* A search hit's parent path tells same-named folders apart; the name keeps the room. */
-.row small.path {
-  flex: 0 1 auto;
-  max-width: 45%;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.row > :last-child:not(small) {
-  color: var(--fg-dim);
-}
 
 footer {
   display: flex;

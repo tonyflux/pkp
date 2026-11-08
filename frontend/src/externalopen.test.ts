@@ -378,6 +378,24 @@ describe("external cloud-add consumption", () => {
     await vi.waitFor(() => expect(backend.pending).toEqual([]));
   });
 
+  it("keeps torrent choices and destination when switching views without submitting", async () => {
+    drive.status = status();
+    cloudAdd.torrent = meta("/tmp/view-switch.torrent");
+    cloudAdd.tab = "torrent"; cloudAdd.picked = new Set([0]);
+    cloudAdd.dest = [{ id: "chosen", name: "Chosen destination" }];
+    ui.cloudAddOpen = true;
+    await mountSheet();
+    sheetButton("列表").click(); await idle();
+    expect([...cloudAdd.picked]).toEqual([0]);
+    const file = document.querySelectorAll<HTMLInputElement>(".files .picker-check")[1];
+    file.click(); await idle();
+    sheetButton("网格").click(); await idle();
+    expect([...cloudAdd.picked]).toEqual([0, 1]);
+    expect(cloudAdd.dest.map(crumb => crumb.id)).toEqual(["chosen"]);
+    expect(document.querySelectorAll(".files .picker-check:checked")).toHaveLength(2);
+    expect(backend.calls).not.toContain("AddTorrent");
+  });
+
   it("reports an unreadable torrent without blocking the next external link", async () => {
     drive.status = status();
     backend.read = async () => { throw new Error("种子文件已被删除"); };

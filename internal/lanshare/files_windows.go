@@ -10,6 +10,7 @@ import (
 	"strings"
 	"unsafe"
 
+	"github.com/tonyflux/pkp/internal/winpath"
 	"golang.org/x/sys/windows"
 )
 
@@ -27,6 +28,9 @@ func ntOpen(parent windows.Handle, name string, directory bool) (*os.File, error
 	var handle windows.Handle
 	var status windows.IO_STATUS_BLOCK
 	err = windows.NtCreateFile(&handle, windows.GENERIC_READ|windows.SYNCHRONIZE, &attrs, &status, nil, 0, windows.FILE_SHARE_READ|windows.FILE_SHARE_WRITE|windows.FILE_SHARE_DELETE, windows.FILE_OPEN, flags, 0, 0)
+	if status, ok := err.(windows.NTStatus); ok {
+		err = status.Errno()
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -42,8 +46,12 @@ func openAbsolute(path string, directory bool) (*os.File, error) {
 	if !filepath.IsAbs(path) || filepath.Clean(path) != path || strings.HasPrefix(path, `\\`) {
 		return nil, errForbidden
 	}
-	// OBJ_DONT_REPARSE rejects reparses in every absolute component, not only the final entry.
-	return ntOpen(0, `\??\`+path, directory)
+	// Resolve the DOS drive alias without allowing filesystem reparses.
+	native, err := winpath.Native(path)
+	if err != nil {
+		return nil, err
+	}
+	return ntOpen(0, native, directory)
 }
 
 func openRelative(root *os.File, rel string, directory bool) (*os.File, error) {

@@ -257,6 +257,38 @@ describe("LAN folder search authorization", () => {
     expect(bridge.AddSpace).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ accountId: "a", rootId: "current", kind: "cloud" }));
   });
 
+  it("keeps browsing and explicit authorization unchanged when switching directory views", async () => {
+    await openPicker();
+    await click('.file-view-switch [aria-label="列表"]');
+    expect(bridge.CloudFolders).toHaveBeenCalledTimes(1);
+    expect(document.querySelector(".folder-current strong")?.textContent).toBe("云盘根目录");
+    expect(bridge.AddSpace).not.toHaveBeenCalled();
+    await click('[data-lan-folder="existing"]');
+    await click('.file-view-switch [aria-label="网格"]');
+    expect(bridge.CloudFolders).toHaveBeenLastCalledWith("a", "existing");
+    expect(document.querySelector(".folder-current strong")?.textContent).toBe("Existing");
+    expect(document.querySelector<HTMLButtonElement>("[data-lan-confirm]")!.disabled).toBe(true);
+    await click("[data-lan-choose-cloud]");
+    await click("[data-lan-ack]"); await click("[data-lan-confirm]");
+    expect(bridge.AddSpace).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ accountId: "a", rootId: "existing", kind: "cloud" }));
+  });
+
+  it("restores the directory list after clearing search and resets scrolling for a new directory", async () => {
+    bridge.SearchFolders.mockResolvedValue(result("found"));
+    await openPicker();
+    const list = document.querySelector<HTMLElement>(".folder-list")!;
+    const body = document.querySelector<HTMLElement>(".dialog-body")!;
+    list.scrollTop = 420; body.scrollTop = 35;
+    await search("Movies");
+    expect(list.scrollTop).toBe(0);
+    list.scrollTop = 80;
+    await click('[aria-label="清除搜索"]');
+    expect(list.scrollTop).toBe(420);
+    expect(body.scrollTop).toBe(35);
+    await click('[data-lan-folder="existing"]');
+    expect(list.scrollTop).toBe(0);
+  });
+
   it("discards results from the previous account and restores browsing when a pending search is cleared", async () => {
     const previousAccount = deferred(), cleared = deferred();
     bridge.SearchFolders.mockImplementation((account: string) => account === "a" ? previousAccount.promise : cleared.promise);

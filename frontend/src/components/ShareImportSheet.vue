@@ -4,11 +4,12 @@ import { Browser } from "@wailsio/runtime";
 import Icon from "./Icon.vue";
 import Thumb from "./Thumb.vue";
 import Orbit from "./Orbit.vue";
+import FileViewSwitch from "./FileViewSwitch.vue";
+import PickerItems from "./PickerItems.vue";
 import SelectMenu, { type SelectOption } from "./SelectMenu.vue";
 import { accountLabel, accounts, appLocked, notify, relocate } from "../store";
 import { bytes, clock, kindLabel, maskLogin } from "../format";
 import { t } from "../i18n";
-import { vSlide } from "../slide";
 import type { ShareEntry } from "../../bindings/github.com/tonyflux/pkp/internal/services";
 import {
   shareImport as s, browseShare, chooseShareAccount, closeShareImport, closeSharePreview,
@@ -19,6 +20,16 @@ import {
 const sheet = ref<HTMLElement>();
 const previewCard = ref<HTMLElement>();
 const layout = ref<"grid" | "list">("grid");
+const fileWell = ref<HTMLElement>();
+let viewScroll = { grid: 0, list: 0 };
+watch(layout, async (view, previous) => {
+  const box = fileWell.value?.querySelector<HTMLElement>(".file-scroll");
+  if (box) viewScroll[previous] = box.scrollTop;
+  await nextTick();
+  const current = fileWell.value?.querySelector<HTMLElement>(".file-scroll");
+  if (current) current.scrollTop = viewScroll[view];
+}, { flush: "pre" });
+watch(() => `${s.account}:${s.info?.shareId}:${s.trail.at(-1)?.id ?? ''}`, () => { viewScroll = { grid: 0, list: 0 }; });
 const resourceLoading = ref(false);
 let autoPlayPending = false;
 watch(() => s.preview, preview => {
@@ -147,36 +158,33 @@ onBeforeUnmount(closeSharePreview);
             <strong>{{ t("文件预览") }} <span class="count">{{ s.entries.length }}</span></strong>
             <div class="preview-tools">
               <div class="bulk-select"><button class="text" :disabled="s.loading || s.attempted" @click="selectVisibleShare(true)">{{ t("全选") }}</button><span>·</span><button class="text muted" :disabled="s.loading || s.attempted" @click="selectVisibleShare(false)">{{ t("全不选") }}</button></div>
-              <div v-slide class="layout-switch glass-well" role="group" :aria-label="t('视图')">
-                <button type="button" :class="{ on: layout === 'grid' }" :title="t('网格')" :aria-label="t('网格')" :aria-pressed="layout === 'grid'" @click="layout = 'grid'"><Icon name="grid" :size="16" /></button>
-                <button type="button" :class="{ on: layout === 'list' }" :title="t('列表')" :aria-label="t('列表')" :aria-pressed="layout === 'list'" @click="layout = 'list'"><Icon name="list" :size="16" /></button>
-              </div>
+              <FileViewSwitch v-model="layout" :label="t('视图')" />
             </div>
           </div>
-          <div class="file-well">
+          <div ref="fileWell" class="file-well">
             <nav class="breadcrumbs" :aria-label="t('分享目录')">
               <Icon name="folder" :size="13" /><button :disabled="s.loading" @click="browseShare([])">{{ t("全部文件") }}</button>
               <template v-for="(crumb, index) in s.trail" :key="crumb.id"><Icon name="chevronRight" :size="11" /><button :disabled="s.loading" @click="browseShare(s.trail.slice(0, index + 1))">{{ crumb.name }}</button></template>
             </nav>
-            <div :key="`${s.account}:${s.info?.shareId}:${s.trail.at(-1)?.id ?? ''}`" class="file-scroll" :class="{ grid: layout === 'grid' }" :aria-busy="s.loading">
-              <article v-for="entry in s.entries" :key="entry.id" class="file-row" :class="{ selected: shareSelected(entry) }" @click="clickEntry(entry, $event)" @dblclick="view(entry)">
-                <button type="button" class="thumbnail" :class="{ folder: entry.folder, compact: !entry.thumbnail && !['video', 'image', 'audio'].includes(entry.category) }" :aria-label="entry.folder ? t('打开文件夹：{name}', { name: entry.name }) : t('预览文件：{name}', { name: entry.name })" :disabled="s.loading" @keydown.enter.prevent="view(entry)">
+            <PickerItems :key="`${s.account}:${s.info?.shareId}:${s.trail.at(-1)?.id ?? ''}`" :layout="layout" class="file-scroll" :aria-busy="s.loading">
+              <article v-for="entry in s.entries" :key="entry.id" class="file-row picker-item" :class="{ selected: shareSelected(entry), 'is-picked': shareSelected(entry) }" @click="clickEntry(entry, $event)" @dblclick="view(entry)">
+                <button type="button" class="thumbnail picker-thumb" :class="{ folder: entry.folder, compact: !entry.thumbnail && !['video', 'image', 'audio'].includes(entry.category) }" :aria-label="entry.folder ? t('打开文件夹：{name}', { name: entry.name }) : t('预览文件：{name}', { name: entry.name })" :disabled="s.loading" @keydown.enter.prevent="view(entry)">
                   <Thumb :src="entry.thumbnail" :alt="entry.name" lazy><Icon :name="icon(entry)" :size="23" /></Thumb>
                   <span v-if="entry.category === 'video' && !entry.folder" class="play"><Icon name="play" :size="12" /></span>
                   <span v-if="entry.duration > 0 && !entry.folder" class="duration">{{ clock(entry.duration) }}</span>
                 </button>
-                <div class="file-copy">
-                  <div class="file-heading"><button type="button" class="filename" :title="entry.name" :disabled="s.loading" @click.stop="view(entry)" @dblclick.stop><span>{{ entry.name }}</span><Icon v-if="entry.folder" class="folder-chevron" name="chevronRight" :size="13" /></button><span v-if="entry.width >= 3840" class="tag">4K</span></div>
+                <div class="file-copy picker-copy">
+                  <div class="file-heading"><button type="button" class="filename" :title="entry.name" :disabled="s.loading" @click.stop="view(entry)" @dblclick.stop><span class="picker-name">{{ entry.name }}</span><Icon v-if="entry.folder" class="folder-chevron" name="chevronRight" :size="13" /></button><span v-if="entry.width >= 3840" class="tag">4K</span></div>
                   <p>{{ metadata(entry) }}</p>
                   <small v-if="shareCovered(entry)">{{ t("已包含在所选文件夹中") }}</small>
                 </div>
-                <input class="pick" type="checkbox" :checked="shareSelected(entry)" :aria-label="t('选择：{name}', { name: entry.name })" :disabled="s.loading || s.attempted" @click.stop @dblclick.stop @change="toggleShareEntry(entry)" />
+                <input class="pick picker-check" type="checkbox" :checked="shareSelected(entry)" :aria-label="t('选择：{name}', { name: entry.name })" :disabled="s.loading || s.attempted" @click.stop @dblclick.stop @change="toggleShareEntry(entry)" />
               </article>
-              <p v-if="!s.entries.length && !s.loading" class="empty">{{ t("此目录没有文件") }}</p>
-              <p v-if="s.pageError" class="error page-error" role="alert">{{ s.pageError }}</p>
-              <button v-if="s.nextPageToken || s.pageError" class="load-more text" :disabled="s.loading" @click="s.pageError ? retrySharePage() : browseShare(s.trail, true)"><Orbit v-if="s.loading" :size="16" />{{ s.pageError ? t("重试") : t("加载更多") }}</button>
-              <div v-else-if="s.loading" class="loading"><Orbit :size="20" /></div>
-            </div>
+              <p v-if="!s.entries.length && !s.loading" class="empty picker-state">{{ t("此目录没有文件") }}</p>
+              <p v-if="s.pageError" class="error page-error picker-state" role="alert">{{ s.pageError }}</p>
+              <button v-if="s.nextPageToken || s.pageError" class="load-more text picker-state" :disabled="s.loading" @click="s.pageError ? retrySharePage() : browseShare(s.trail, true)"><Orbit v-if="s.loading" :size="16" />{{ s.pageError ? t("重试") : t("加载更多") }}</button>
+              <div v-else-if="s.loading" class="loading picker-state"><Orbit :size="20" /></div>
+            </PickerItems>
             <div class="selection-summary"><span>{{ t("已选 {n} 个项目", { n: s.picked.size }) }} <b v-if="selectedSize">· {{ bytes(selectedSize) }}</b></span><span class="hint"><Icon name="image" :size="13" />{{ t("单击选择 · 双击预览") }}</span></div>
           </div>
         </div>
@@ -240,33 +248,22 @@ header p { margin: 7px 0 3px; color: var(--fg-dim); font-size: 13px; }
 .toolbar { padding: 0 3px 8px; font-size: 14px; flex-wrap: wrap; }
 .preview-tools { display: flex; align-items: center; gap: 10px; }
 .bulk-select { display: flex; align-items: center; gap: 4px; }
-.layout-switch { display: inline-flex; align-items: center; gap: 2px; flex: none; padding: 3px; border-radius: var(--radius-pill); isolation: isolate; }
-.layout-switch button { width: 36px; height: 30px; min-height: 30px; padding: 0; border: 0; background: transparent; box-shadow: none; color: var(--fg-dim); }
-.layout-switch button:first-child { border-radius: 15px 9px 9px 15px; }
-.layout-switch button:last-child { border-radius: 9px 15px 15px 9px; }
-.layout-switch button:hover:not(.on) { background: color-mix(in srgb, var(--fg) 7%, transparent); color: var(--fg); }
-.layout-switch::before { background: var(--accent-soft); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--glass-edge) 50%, transparent), inset 0 1px 0 color-mix(in srgb, var(--glass-rim) 45%, transparent); }
-.layout-switch button.on { background: transparent; color: var(--fg); }
 .count { font-size: 11px; font-weight: 400; color: var(--fg-dim); background: var(--glass-inset); border-radius: 20px; padding: 2px 6px; margin-left: 5px; }
 .file-well { flex: 1; min-height: 0; display: flex; flex-direction: column; border: 1px solid var(--line-strong); border-radius: 17px; overflow: hidden; background: var(--canvas); }
 .breadcrumbs { flex: none; display: flex; align-items: center; gap: 5px; padding: 6px 14px; color: var(--fg-dim); font-size: 11px; line-height: 1; background: var(--glass-inset); border-bottom: 1px solid var(--line); overflow-x: auto; scrollbar-width: none; }
 .breadcrumbs button { display: inline-flex; align-items: center; min-height: 24px; padding: 0 2px; border: 0; border-radius: 4px; background: transparent; color: inherit; font-size: inherit; line-height: 1; white-space: nowrap; }
 .file-scroll { flex: 1; max-height: 365px; min-height: 0; overflow-y: auto; scrollbar-width: none; }
 .file-scroll::-webkit-scrollbar, .breadcrumbs::-webkit-scrollbar, .preview-card::-webkit-scrollbar { display: none; }
-.file-row { display: flex; align-items: center; gap: 14px; padding: 12px 16px; border-bottom: 1px solid var(--line); cursor: pointer; user-select: none; transition: background var(--dur) var(--ease); }
-.file-row:last-child { border-bottom: none; }
-.file-row:hover { background: var(--accent-soft); }
-.file-row.selected { background: var(--accent-soft); box-shadow: inset 2px 0 var(--accent); }
-.thumbnail { position: relative; flex: none; width: 96px; height: 54px; border: 1px solid var(--line-strong); border-radius: 8px; overflow: hidden; background: var(--glass-inset); padding: 0; }
-.thumbnail.compact, .thumbnail.folder { width: 36px; height: 36px; }
+.file-row { cursor: pointer; user-select: none; }
+.thumbnail { padding: 0; }
+.file-scroll:not(.grid) .thumbnail { width: 96px; height: 54px; }
+.file-scroll:not(.grid) .thumbnail.compact, .file-scroll:not(.grid) .thumbnail.folder { width: 36px; height: 36px; }
 .thumbnail:hover:not(:disabled) { background: var(--glass-inset); border-color: var(--accent); }
 .play { position: absolute; inset: 0; margin: auto; width: 24px; height: 24px; border-radius: 50%; background: #0009; color: white; display: grid; place-items: center; pointer-events: none; }
 .duration { position: absolute; bottom: 3px; right: 3px; padding: 0 3px; border-radius: 3px; background: #000b; color: white; font: 9px ui-monospace, monospace; }
-.file-copy { flex: 1; min-width: 0; }
 /* Text actions must not inherit the global pill button's hover lens or height. */
 .file-heading { display: flex; align-items: center; gap: 6px; min-width: 0; }
 .filename { display: inline-flex; align-items: center; gap: 3px; min-width: 0; max-width: 100%; min-height: 20px; padding: 0; border: 0; border-radius: 4px; background: transparent; font: inherit; font-size: 13px; font-weight: 500; line-height: 18px; color: var(--fg); text-align: left; }
-.filename > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .filename:hover:not(:disabled), .breadcrumbs button:hover:not(:disabled) { background: transparent; color: var(--accent); }
 .filename:hover:not(:disabled) > span, .breadcrumbs button:hover:not(:disabled) { text-decoration: underline; text-underline-offset: 3px; }
 .filename:hover:not(:disabled) .folder-chevron { color: var(--accent); }
@@ -274,26 +271,11 @@ header p { margin: 7px 0 3px; color: var(--fg-dim); font-size: 13px; }
 .folder-chevron { flex: none; color: var(--fg-dim); }
 .file-copy p { margin: 4px 0 0; color: var(--fg-dim); font-size: 11px; line-height: 1.5; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 .file-copy small { font-size: 10px; color: var(--accent); }
-.pick { appearance: none; -webkit-appearance: none; position: relative; flex: none; display: grid; place-items: center; width: 18px; height: 18px; margin: 0 0 0 5px; padding: 0; border: 1.5px solid var(--fg-dim); border-radius: 50%; background: transparent; cursor: pointer; transition: background var(--dur) var(--ease), border-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease); }
-.pick:checked { background: var(--primary) border-box; border-color: transparent; }
-.pick:checked::after { content: ""; width: 5px; height: 9px; border: solid var(--on-primary); border-width: 0 1.8px 1.8px 0; transform: translateY(-0.5px) rotate(45deg); }
-.pick:disabled { opacity: .45; cursor: default; }
-.file-scroll.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 150px), 1fr)); align-content: start; gap: 14px 12px; padding: 14px; }
-.grid .file-row { position: relative; display: grid; grid-template-columns: minmax(0, 1fr); align-content: start; gap: 8px; min-width: 0; padding: 0; border: 0; border-radius: 12px; }
-.grid .file-row:hover, .grid .file-row.selected { background: transparent; box-shadow: none; }
-.grid .thumbnail { width: 100%; height: auto; aspect-ratio: 16 / 9; border-radius: 12px; }
-.grid .file-row.selected .thumbnail { box-shadow: 0 0 0 2px var(--accent), 0 0 0 5px var(--accent-soft); }
-.grid .thumbnail :deep(.fallback svg) { width: 30px; height: 30px; }
-.grid .file-copy { padding: 0 2px 2px; }
 .grid .file-heading { align-items: flex-start; min-height: 36px; }
 .grid .filename { align-items: flex-start; min-height: 0; font-size: 12px; line-height: 18px; }
-.grid .filename > span { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; white-space: normal; overflow-wrap: anywhere; word-break: break-all; }
 .grid .folder-chevron { height: 18px; }
 .grid .file-copy p { margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .grid .file-copy small { display: none; }
-.grid .pick { position: absolute; z-index: 1; top: 8px; left: 8px; width: 20px; height: 20px; margin: 0; border-color: rgba(255, 255, 255, .86); background: rgba(6, 16, 28, .42); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); box-shadow: 0 1px 3px rgba(0, 0, 0, .28); }
-.grid .pick:checked { background: var(--primary) border-box; border-color: rgba(255, 255, 255, .92); }
-.grid > .empty, .grid > .page-error, .grid > .load-more, .grid > .loading { grid-column: 1 / -1; }
 .selection-summary { flex: none; display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 16px; font-size: 11px; border-top: 1px solid var(--line); background: var(--glass-inset); }
 .selection-summary b { color: var(--accent); margin-left: 6px; }
 .hint { display: flex; gap: 5px; align-items: center; color: var(--fg-dim); font-size: 10px; }

@@ -2,6 +2,8 @@
 import { computed, ref, watch } from "vue";
 import Icon from "./Icon.vue";
 import Orbit from "./Orbit.vue";
+import FileViewSwitch from "./FileViewSwitch.vue";
+import PickerItems from "./PickerItems.vue";
 import {
   accountLabel,
   accounts,
@@ -175,6 +177,7 @@ function verdict(line: Line): { ok: boolean; reason: string } {
 // The torrent lives in the store beside the link draft, so switching tabs —
 // or closing the sheet — never throws away a picked file and its selection.
 const torrent = computed(() => cloudAdd.torrent);
+const filesLayout = ref<"grid" | "list">("grid");
 const files = computed<TorrentFile[]>(() => torrent.value?.files ?? []);
 const pickedFiles = computed(() => files.value.filter((f) => cloudAdd.picked.has(f.index)));
 const pickedSize = computed(() => pickedFiles.value.reduce((sum, f) => sum + f.size, 0));
@@ -316,23 +319,25 @@ async function submitTorrent() {
               <button class="quiet" :disabled="cloudAdd.reading || submitting" @click="pickTorrent">{{ t("换一个") }}</button>
             </div>
 
-            <div class="well files">
-              <label v-for="f in files" :key="f.index" class="file" :class="{ on: cloudAdd.picked.has(f.index) }">
-                <input type="checkbox" :checked="cloudAdd.picked.has(f.index)" :disabled="submitting" @change="toggleFile(f)" />
-                <Icon :name="glyph(f)" :size="17" />
-                <span class="path" :title="f.path">{{ f.path }}</span>
-                <span class="size">{{ bytes(f.size) }}</span>
-              </label>
-            </div>
-
-            <div class="hint">
+            <div class="files-toolbar">
               <span class="picks">
                 <button class="quiet" :disabled="submitting" @click="pickAll">{{ t("全选") }}</button>
                 <button class="quiet" :disabled="submitting" @click="pickNone">{{ t("全不选") }}</button>
                 <button v-if="videoCount && videoCount < files.length" class="quiet" :disabled="submitting" @click="pickVideos">{{ t("只选视频") }}</button>
               </span>
-              <span class="tally">{{ t("已选 {n} 个 · {size}", { n: pickedFiles.length, size: bytes(pickedSize) }) }}</span>
+              <div class="files-tools"><span class="tally">{{ t("已选 {n} 个 · {size}", { n: pickedFiles.length, size: bytes(pickedSize) }) }}</span><FileViewSwitch v-model="filesLayout" :disabled="submitting || cloudAdd.reading" /></div>
             </div>
+            <PickerItems :layout="filesLayout" class="files glass-well" role="group" aria-label="Torrent">
+              <label v-for="f in files" :key="f.index" class="picker-item" :class="{ 'is-picked': cloudAdd.picked.has(f.index) }">
+                <span class="picker-thumb"><Icon :name="glyph(f)" :size="17" /></span>
+                <span class="picker-copy">
+                  <span class="picker-name" :title="f.path">{{ f.path }}</span>
+                  <span class="picker-meta size">{{ bytes(f.size) }}</span>
+                </span>
+                <input class="picker-check" type="checkbox" :checked="cloudAdd.picked.has(f.index)" :disabled="submitting" @change="toggleFile(f)" />
+              </label>
+            </PickerItems>
+
           </template>
         </template>
 
@@ -369,7 +374,7 @@ async function submitTorrent() {
 <style scoped>
 .sheet {
   width: min(700px, calc(100vw - 80px));
-  max-height: calc(100vh - 100px);
+  max-height: calc(100dvh - 48px);
   gap: 16px;
 }
 
@@ -609,60 +614,28 @@ header p {
   color: var(--fg-dim);
 }
 
-/* The file list is the well in list form: rows, not one text column. */
-.well.files {
-  flex-direction: column;
-  align-items: stretch;
-  gap: 2px;
-  padding: 8px;
-}
-
-.file {
+.files-toolbar {
   display: flex;
   align-items: center;
-  gap: 10px;
-  min-height: 36px;
-  padding: 0 10px;
-  border-radius: 10px;
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--fg-dim);
-  cursor: pointer;
-  transition: background var(--dur) var(--ease), color var(--dur) var(--ease);
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
-.file:hover {
-  background: color-mix(in srgb, var(--glass-control) 55%, transparent);
+.files {
+  max-height: 260px;
+  min-height: 120px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  border: 1px solid var(--line);
+  border-radius: 16px;
 }
 
-.file.on {
-  background: var(--accent-soft);
-  color: var(--fg);
-}
+.files-tools { display: flex; align-items: center; gap: 10px; }
 
-.file input {
-  flex: none;
-  margin: 0;
-  accent-color: var(--accent);
-}
-
-.file > svg {
-  flex: none;
-  opacity: 0.75;
-}
-
-.file .path {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.file .size {
-  flex: none;
+.size {
   font-variant-numeric: tabular-nums;
-  color: var(--fg-dim);
 }
 
 .picks {
@@ -767,5 +740,17 @@ footer button {
 
 footer button.primary {
   min-width: 196px;
+}
+@media (max-height: 700px) {
+  .sheet { padding: 20px 24px; gap: 10px; }
+  header h2 { font-size: 22px; line-height: 28px; }
+  header p { margin: 3px 0 0; font-size: 13px; }
+  .source button { min-height: 34px; }
+}
+@media (max-width: 600px) {
+  .sheet { width: calc(100vw - 32px); padding: 20px; gap: 10px; }
+  .files-tools { flex-wrap: wrap; margin-left: auto; justify-content: flex-end; }
+  .dest { flex-wrap: wrap; }
+  footer button, footer button.primary { flex: 1; min-width: 0; }
 }
 </style>
