@@ -107,6 +107,11 @@ watch(
   { flush: "pre" },
 );
 
+const signedOutSettings = ref<HTMLElement>();
+watch(() => settingsFocus.request, () => {
+  if (settingsFocus.tab === "updates" && signedOutSettings.value) signedOutSettings.value.scrollTop = 0;
+}, { flush: "post" });
+
 useTelemetryActivity();
 
 // The lock comes first: with App Lock on, PKP starts locked and bootstrap's
@@ -129,15 +134,17 @@ onMounted(() => {
   <BootSplash v-if="booting" />
 
   <div v-else-if="!signedIn && ui.route === 'settings'" class="signedout-settings glass glass-sheet">
-    <div class="signedout-settings-head">
-      <button class="pill" @click="ui.route = 'files'">{{ t("返回登录") }}</button>
-      <nav :aria-label="t('设置分组')">
-        <button class="pill" :aria-pressed="settingsFocus.tab === 'privacy'" @click="openSettings('privacy')">{{ t("tab|隐私与安全") }}</button>
-        <button class="pill" :aria-pressed="settingsFocus.tab !== 'privacy'" @click="openSettings('updates')">{{ t("关于与更新") }}</button>
-      </nav>
+    <div ref="signedOutSettings" class="signedout-settings-body">
+      <div class="signedout-settings-head">
+        <button class="pill" @click="ui.route = 'files'">{{ t("返回登录") }}</button>
+        <nav :aria-label="t('设置分组')">
+          <button class="pill" :aria-pressed="settingsFocus.tab === 'privacy'" @click="openSettings('privacy')">{{ t("tab|隐私与安全") }}</button>
+          <button class="pill" :aria-pressed="settingsFocus.tab !== 'privacy'" @click="openSettings('updates')">{{ t("关于与更新") }}</button>
+        </nav>
+      </div>
+      <PrivacySettings v-if="settingsFocus.tab === 'privacy'" />
+      <UpdateSettings v-else />
     </div>
-    <PrivacySettings v-if="settingsFocus.tab === 'privacy'" />
-    <UpdateSettings v-else />
   </div>
   <div v-else-if="!signedIn && ui.route === 'lan'" class="signedout-lan">
     <button class="pill" @click="ui.route = 'files'">{{ t("返回登录") }}</button>
@@ -218,7 +225,9 @@ onMounted(() => {
 </template>
 
 <style scoped>
-.signedout-settings { position: fixed; z-index: 1; inset: 44px 20px 20px; max-width: 780px; margin: 0 auto; padding: 24px; overflow: auto; border-radius: 26px; }
+.signedout-settings { position: fixed; z-index: 1; inset: 44px 20px 20px; max-width: 780px; margin: 0 auto; display: flex; flex-direction: column; overflow: hidden; border-radius: 26px; }
+/* Keep the glass rim outside the scrolling content. */
+.signedout-settings-body { flex: 1; min-height: 0; padding: 24px; overflow-y: auto; }
 .signedout-settings-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 24px; }
 .signedout-settings-head nav { display: flex; flex-wrap: wrap; gap: 8px; }
 .signedout-settings-head [aria-pressed="true"] { color: var(--accent); border-color: var(--accent); }
