@@ -14,7 +14,7 @@
 
 PKP 是面向 PikPak 用户的**非官方桌面客户端**，用于管理自己的云盘文件、多账号传输与媒体播放。PKP 不隶属于 PikPak，也不代表其运营方；使用时仍须遵守 PikPak 的服务条款与适用法律。
 
-> **v0.4.0** 新增局域网只读共享、分享转存预览、外部磁力链／种子打开、统一网格／列表选择器及桌面右键菜单与快捷键，提供 macOS Universal 与 Windows x64 / ARM64 安装包。从 [最新 Release](https://github.com/tonyflux/pkp/releases/latest) 下载；安装前请阅读[安装说明](docs/INSTALL.md)并校验同一 Release 的 `SHA256SUMS`。
+> **v0.4.1** 优化「关于与更新」顶部版本卡操作与安全 Markdown 更新说明，并包含 v0.4.0 的局域网只读共享、分享转存预览、外部磁力链／种子打开、统一网格／列表选择器及桌面右键菜单与快捷键，提供 macOS Universal 与 Windows x64 / ARM64 安装包。从 [最新 Release](https://github.com/tonyflux/pkp/releases/latest) 下载；安装前请阅读[安装说明](docs/INSTALL.md)并校验同一 Release 的 `SHA256SUMS`。
 >
 > v0.1.0 安装包仍适用当时的闭源条款，且不是由本仓库这份源码构建。原先放在文首的许可说明已原样移至 [版本许可记录](docs/legal/version-licensing.md)。v0.2.0 的八件附件与 v0.1.0 的七件附件及原有条款，以该记录为准。
 
