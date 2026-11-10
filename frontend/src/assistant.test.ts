@@ -42,6 +42,12 @@ const backend = vi.hoisted(() => {
   return { calls, answers, service };
 });
 
+const nativePicker = vi.hoisted(() => ({ open: vi.fn() }));
+vi.mock("@wailsio/runtime", async (original) => ({
+  ...await original<Record<string, unknown>>(),
+  Dialogs: { OpenFile: nativePicker.open },
+}));
+
 vi.mock("../bindings/github.com/tonyflux/pkp/internal/services", () => ({
   DriveService: backend.service(),
   PlayerService: backend.service(),
@@ -95,10 +101,23 @@ import {
   retryTurn,
   retryTurnId,
   submitComposer,
+  runCard,
+  stopAssistantOperation,
+  cloudAdd,
+  shares,
+  openShares,
+  selectedShare,
+  loadDownloads,
+  loadUploads,
+  loadTasks,
+  transfers,
+  player,
+  viewer,
+  closeViewer,
   type AskScope,
 } from "./store";
 import { emptyQuery } from "./searchquery";
-import type { CardRow } from "./agent";
+import type { CardRow, OperationAction, OperationCard } from "./agent";
 import { conversationBody, type ConversationView } from "./assistantcore";
 
 /* ---------------- the drive ---------------- */
@@ -299,6 +318,8 @@ afterEach(() => {
 });
 
 beforeEach(async () => {
+  nativePicker.open.mockReset();
+  nativePicker.open.mockResolvedValue(null);
   consent.a = { metadata: false, content: false };
   consent.b = { metadata: false, content: false };
   chatScript = [];
@@ -312,6 +333,15 @@ beforeEach(async () => {
   drive.entries = [];
   drive.picked = [];
   drive.indexProgress = null;
+  ui.view = "all";
+  ui.cloudAddOpen = false;
+  cloudAdd.tab = "link";
+  cloudAdd.draft = "";
+  cloudAdd.torrent = null;
+  cloudAdd.dest = [];
+  cloudAdd.picked = new Set();
+  shares.list = [];
+  shares.selectedId = "";
   localSearch.range = null;
   localSearch.result = null;
   localSearch.picked = [];
@@ -1328,5 +1358,685 @@ describe("AI assistant · Retention decisions", () => {
       expect(planReviewed.value.map((c) => c.item.id).sort()).toEqual(below.filter((e) => e.id !== "c1").map((e) => e.id).sort());
       expect(planUndecided.value.map((c) => c.item.id)).toEqual(["c1"]);
     } finally { backend.answers.set("PlanTree", original); }
+  });
+});
+
+describe("AI assistant · Confirmed cloud operations", () => {
+  function deferred<T>() {
+    let resolve!: (value: T) => void;
+    const promise = new Promise<T>((done) => { resolve = done; });
+    return { promise, resolve };
+  }
+
+  async function fileOperation(action: OperationAction, handles: string[], extra: Record<string, unknown> = {}) {
+    answer("SearchIndex", () => ({
+      hits: series.map((file) => ({ ...file, path: "待分类" })), total: series.length, aggregate: [], under: "",
+    }));
+    answer("FileDetail", (id: string) => {
+      const file = [inbox0, ...below].find((row) => row.id === id);
+      if (!file) throw new Error("File not found");
+      return file;
+    });
+    chatScript = [
+      () => reply("", [{ name: "search_files", arguments: {} }]),
+      () => reply("", [{ name: "propose_operation", arguments: { action, handles, ...extra } }]),
+      () => reply("请检查操作卡。"),
+    ];
+    await say("管理这些文件");
+    answerConsent(true, false);
+    await settle();
+    const turn = assistant.conversation!.turns.at(-1)!;
+    const card = turn.cards.find((candidate): candidate is OperationCard => candidate.kind === "operation");
+    if (!card) throw new Error(`No operation card: ${JSON.stringify(turn.traces)}`);
+    return { turn, card };
+  }
+
+  it.each(["star", "unstar"] as const)("leaves the cloud unchanged until confirming %s and prevents duplicate submission", async (action) => {
+    const initial = action === "unstar";
+    const cloud = new Map(["a", "b"].map((account) => [account, series.map((file) => ({ ...file, starred: initial }))]));
+    answer("AssistantOperate", (account: string, req: { action: string; ids: string[] }) => ({
+      results: req.ids.map((id) => {
+        const file = cloud.get(account)?.find((row) => row.id === id);
+        if (!file || (req.action !== "star" && req.action !== "unstar")) return { id, name: "", error: "Unsupported operation" };
+        file.starred = req.action === "star";
+        return { id, name: file.name, error: "" };
+      }),
+    }));
+    const { turn, card } = await fileOperation(action, ["f1"]);
+    drive.entries = cloud.get("a")!.map((file) => ({ ...file }));
+    expect(cloud.get("a")!.map((file) => file.starred)).toEqual([initial, initial, initial]);
+    expect(drive.entries.map((file) => file.starred)).toEqual([initial, initial, initial]);
+    const first = runCard(turn.id, card.id);
+    const duplicate = runCard(turn.id, card.id);
+    await Promise.all([first, duplicate]);
+    expect(cloud.get("a")!.map((file) => file.starred)).toEqual([!initial, initial, initial]);
+    expect(cloud.get("b")!.map((file) => file.starred)).toEqual([initial, initial, initial]);
+    expect(drive.entries.map((file) => file.starred)).toEqual([!initial, initial, initial]);
+    expect(callsOf("AssistantOperate")).toHaveLength(1);
+    expect(card).toMatchObject({ state: "done", progress: { done: 1, total: 1 }, results: [{ id: "s1", error: "" }] });
+  });
+
+  it("does not execute a saved draft when its running state cannot be persisted", async () => {
+    const { turn, card } = await fileOperation("copy", ["f1"]);
+    const savedDraft = callsOf("SaveConversation").at(-1)!.args[2] as string;
+    answer("SaveConversation", () => { throw new Error("磁盘已满"); });
+    await runCard(turn.id, card.id);
+    expect(callsOf("AssistantOperate")).toEqual([]);
+    expect(card).toMatchObject({ state: "failed", progress: { done: 0, total: 1 }, results: [] });
+    expect(assistant.running).toBe(false);
+    answer("Conversation", () => savedDraft);
+    await openConversation(assistant.conversation!.id);
+    expect(assistant.conversation!.turns.at(-1)!.cards.find((saved) => saved.id === card.id)?.state).toBe("draft");
+  });
+
+  it.each([1, 2])("stops a batch when receipt %i cannot be saved and restores earlier receipts", async (failedReceipt) => {
+    const { turn, card } = await fileOperation("star", ["f1", "f2", "f3"]);
+    let durable = "";
+    answer("SaveConversation", (_account: string, _info: unknown, body: string) => {
+      const saved = JSON.parse(body).turns.at(-1).cards.find((row: { id: string }) => row.id === card.id);
+      if (saved.progress.done >= failedReceipt) throw new Error("磁盘已满");
+      durable = body;
+    });
+    const submitted: string[] = [];
+    answer("AssistantOperate", (_account: string, req: { ids: string[] }) => {
+      submitted.push(...req.ids);
+      return { results: [{ id: req.ids[0], name: "Video", error: "" }] };
+    });
+    await runCard(turn.id, card.id);
+    expect(submitted).toEqual(series.slice(0, failedReceipt).map((file) => file.id));
+    expect(card).toMatchObject({ state: "failed", progress: { done: failedReceipt, total: 3 } });
+    expect(card.results).toEqual(submitted.map((id) => ({ id, name: "Video", error: "" })));
+    expect(assistant.running).toBe(false);
+    answer("Conversation", () => durable);
+    await openConversation(assistant.conversation!.id);
+    const restored = assistant.conversation!.turns.at(-1)!.cards.find((saved) => saved.id === card.id);
+    expect(restored).toMatchObject({
+      state: "failed", progress: { done: failedReceipt - 1, total: 3 },
+      results: submitted.slice(0, -1).map((id) => ({ id, name: "Video", error: "" })),
+    });
+    await runCard(turn.id, card.id);
+    expect(submitted).toHaveLength(failedReceipt);
+  });
+
+  it("updates cached star flags only for successful items, including the local search", async () => {
+    const { turn, card } = await fileOperation("star", ["f1", "f2"]);
+    drive.entries = series.map((file) => ({ ...file }));
+    drive.detail = { ...series[0] } as typeof drive.detail;
+    localSearch.account = "a";
+    localSearch.result = { hits: series.map((file) => ({ ...file, createdTime: "", position: 0, playedAt: "" })), total: series.length, aggregate: [], under: "", underMissing: false };
+    answer("AssistantOperate", (_account: string, req: { ids: string[] }) => ({
+      results: [{ id: req.ids[0], name: "Video", error: req.ids[0] === "s2" ? "Denied" : "" }],
+    }));
+    await runCard(turn.id, card.id);
+    expect(drive.entries.map((file) => file.starred)).toEqual([true, false, false]);
+    expect(localSearch.result!.hits!.map((file) => file.starred)).toEqual([true, false, false]);
+    expect(drive.detail?.starred).toBe(true);
+    expect(card.state).toBe("failed");
+  });
+
+  it("removes only successfully unstarred items from a cached starred page", async () => {
+    const { turn, card } = await fileOperation("unstar", ["f1"]);
+    drive.entries = series.map((file) => ({ ...file, starred: true }));
+    drive.picked = ["s1"];
+    drive.live = false;
+    drive.total = drive.offset = drive.entries.length;
+    ui.view = "starred";
+    answer("AssistantOperate", () => ({ results: [{ id: "s1", name: "Video", error: "" }] }));
+    await runCard(turn.id, card.id);
+    expect(drive.entries.map((file) => file.id)).toEqual(["s2", "s3"]);
+    expect(drive.picked).toEqual([]);
+    expect(drive.total).toBe(2);
+    expect(drive.offset).toBe(2);
+  });
+
+  it("does not patch another account's cached file after an in-flight operation", async () => {
+    const started = deferred<void>(), result = deferred<{ results: { id: string; name: string; error: string }[] }>();
+    const { turn, card } = await fileOperation("star", ["f1"]);
+    answer("AssistantOperate", () => { started.resolve(undefined); return result.promise; });
+    const running = runCard(turn.id, card.id);
+    await started.promise;
+    answer("Status", () => statusOf("b"));
+    await loadAccounts();
+    drive.entries = [{ ...series[0] }];
+    result.resolve({ results: [{ id: "s1", name: "Video", error: "" }] });
+    await running;
+    expect(drive.entries[0].starred).toBe(false);
+  });
+
+  it("removes successful share cancellations from cached pages while retaining failures", async () => {
+    answer("ListShares", () => ({ shares: ["first", "second", "retained"].map((id) => ({ id, title: id, status: "active" })), nextPageToken: "" }));
+    await openShares();
+    shares.selectedId = "first";
+    answer("AssistantResources", () => ({
+      items: shares.list.map((share) => ({ id: share.id, name: share.title, kind: "share", folder: false, parentId: "", size: 1, modifiedTime: "", state: "active", progress: 0 })),
+      nextPageToken: "",
+    }));
+    chatScript = [
+      () => reply("", [{ name: "list_shares", arguments: {} }]),
+      () => reply("", [{ name: "propose_operation", arguments: { action: "cancel_share", handles: ["s1", "s2"] } }]),
+      () => reply("请确认取消。"),
+    ];
+    await say("取消这两个分享");
+    answerConsent(true, false);
+    await settle();
+    const turn = assistant.conversation!.turns.at(-1)!;
+    const card = turn.cards.find((candidate): candidate is OperationCard => candidate.kind === "operation")!;
+    answer("AssistantOperate", (_account: string, req: { ids: string[] }) => ({
+      results: [{ id: req.ids[0], name: req.ids[0], error: req.ids[0] === "second" ? "Denied" : "" }],
+    }));
+    await runCard(turn.id, card.id);
+    await openShares();
+    expect(shares.list.map((share) => share.id)).toEqual(["second", "retained"]);
+    expect(selectedShare.value).toBeNull();
+    expect(card.results.map((result) => !!result.error)).toEqual([false, true]);
+  });
+
+  it.each(["download", "upload", "cloud"] as const)("removes confirmed %s records from the correct account's cache", async (domain) => {
+    const rows = ["remove", "keep"].map((id) => ({ id, name: id, account: "a", state: "done", phase: "PHASE_TYPE_COMPLETE" }));
+    const other = { ...rows[0], account: "b" };
+    answer("Downloads", () => [...rows, other]);
+    answer("Uploads", () => [...rows, other]);
+    let cloudRows = rows;
+    answer("Tasks", () => ({ tasks: cloudRows, nextPageToken: "", expiresIn: 0 }));
+    if (domain === "download") await loadDownloads();
+    else if (domain === "upload") await loadUploads();
+    else await loadTasks(true);
+    const kind = domain === "cloud" ? "task" : domain;
+    const action = domain === "cloud" ? "remove_cloud_task" : `remove_${domain}`;
+    answer("AssistantResources", () => ({ items: rows.map((row) => ({ ...row, kind, folder: false, parentId: "", size: 1, modifiedTime: "", progress: 100 })), nextPageToken: "" }));
+    chatScript = [
+      () => reply("", [{ name: "transfer_status", arguments: {} }]),
+      () => reply("", [{ name: "propose_operation", arguments: { action, handles: [domain === "cloud" ? "c1" : domain === "upload" ? "u1" : "d1"] } }]),
+      () => reply("请确认移除。"),
+    ];
+    await say("移除第一条传输记录");
+    answerConsent(true, false);
+    await settle();
+    const turn = assistant.conversation!.turns.at(-1)!;
+    const card = turn.cards.find((candidate): candidate is OperationCard => candidate.kind === "operation")!;
+    answer("AssistantOperate", () => {
+      cloudRows = cloudRows.filter((row) => row.id !== "remove");
+      return { results: [{ id: "remove", name: "remove", error: "" }] };
+    });
+    await runCard(turn.id, card.id);
+    const cached: { id: string; account?: string }[] = domain === "download" ? drive.downloads : domain === "upload" ? drive.uploads : transfers.cloud.a.tasks;
+    expect(cached.filter((row) => !row.account || row.account === "a").map((row) => row.id)).toEqual(["keep"]);
+    if (domain !== "cloud") expect(cached.filter((row) => row.account === "b").map((row) => row.id)).toEqual(["remove"]);
+  });
+
+  it("does not resurrect a removed cloud task when an older paginated refresh finishes", async () => {
+    const rows = ["remove", "keep"].map((id) => ({ id, name: id, phase: "PHASE_TYPE_COMPLETE" }));
+    answer("Tasks", () => ({ tasks: rows, nextPageToken: "", expiresIn: 0 }));
+    await loadTasks(true, "a");
+    await loadTasks(true, "b");
+    answer("AssistantResources", () => ({
+      items: rows.map((row) => ({ ...row, kind: "task", folder: false, parentId: "", size: 1, modifiedTime: "", state: "done", progress: 100 })),
+      nextPageToken: "",
+    }));
+    chatScript = [
+      () => reply("", [{ name: "transfer_status", arguments: {} }]),
+      () => reply("", [{ name: "propose_operation", arguments: { action: "remove_cloud_task", handles: ["c1"] } }]),
+      () => reply("请确认移除。"),
+    ];
+    await say("移除第一条云添加记录");
+    answerConsent(true, false);
+    await settle();
+    const turn = assistant.conversation!.turns.at(-1)!;
+    const card = turn.cards.find((candidate): candidate is OperationCard => candidate.kind === "operation")!;
+    const nextPage = deferred<{ tasks: typeof rows; nextPageToken: string; expiresIn: number }>();
+    const readingNextPage = deferred<void>();
+    let removed = false;
+    answer("Tasks", (account: string, token: string) => {
+      if (account !== "a") throw new Error("Unexpected account refresh");
+      if (token) {
+        readingNextPage.resolve(undefined);
+        return nextPage.promise;
+      }
+      return { tasks: removed ? [rows[1]] : [rows[0]], nextPageToken: removed ? "" : "next", expiresIn: 0 };
+    });
+    answer("AssistantOperate", (account: string, req: { action: string; ids: string[] }) => {
+      if (account !== "a" || req.action !== "remove_cloud_task" || req.ids[0] !== "remove") throw new Error("Unexpected task removal");
+      removed = true;
+      return { results: [{ id: "remove", name: "remove", error: "" }] };
+    });
+    const refreshing = loadTasks(true, "a");
+    await readingNextPage.promise;
+    await runCard(turn.id, card.id);
+    expect(transfers.cloud.a.tasks.map((task) => task.id)).toEqual(["keep"]);
+    nextPage.resolve({ tasks: [rows[1]], nextPageToken: "", expiresIn: 0 });
+    await refreshing;
+    expect(card).toMatchObject({ state: "done", progress: { done: 1, total: 1 } });
+    expect(transfers.cloud.a.tasks.map((task) => task.id)).toEqual(["keep"]);
+    expect(transfers.cloud.b.tasks.map((task) => task.id)).toEqual(["remove", "keep"]);
+    expect(callsOf("Tasks").filter((call) => call.args[0] === "b")).toHaveLength(1);
+  });
+
+  it("does not republish a removed cloud task when the refresh after it fails", async () => {
+    const rows = ["remove", "keep"].map((id) => ({ id, name: id, phase: "PHASE_TYPE_COMPLETE" }));
+    answer("Tasks", () => ({ tasks: rows, nextPageToken: "", expiresIn: 0 }));
+    await loadTasks(true, "a");
+    answer("AssistantResources", () => ({
+      items: rows.map((row) => ({ ...row, kind: "task", folder: false, parentId: "", size: 1, modifiedTime: "", state: "done", progress: 100 })),
+      nextPageToken: "",
+    }));
+    chatScript = [
+      () => reply("", [{ name: "transfer_status", arguments: {} }]),
+      () => reply("", [{ name: "propose_operation", arguments: { action: "remove_cloud_task", handles: ["c1"] } }]),
+      () => reply("请确认移除。"),
+    ];
+    await say("移除第一条云添加记录");
+    answerConsent(true, false);
+    await settle();
+    const turn = assistant.conversation!.turns.at(-1)!;
+    const card = turn.cards.find((candidate): candidate is OperationCard => candidate.kind === "operation")!;
+    const nextPage = deferred<{ tasks: typeof rows; nextPageToken: string; expiresIn: number }>();
+    const readingNextPage = deferred<void>();
+    let removed = false;
+    let failing = false;
+    answer("Tasks", (account: string, token: string) => {
+      if (account !== "a") throw new Error("Unexpected account refresh");
+      if (failing) throw new Error("刷新失败");
+      if (token) {
+        readingNextPage.resolve(undefined);
+        return nextPage.promise;
+      }
+      return { tasks: removed ? [rows[1]] : [rows[0]], nextPageToken: removed ? "" : "next", expiresIn: 0 };
+    });
+    answer("AssistantOperate", (account: string, req: { action: string; ids: string[] }) => {
+      if (account !== "a" || req.action !== "remove_cloud_task" || req.ids[0] !== "remove") throw new Error("Unexpected task removal");
+      removed = true;
+      return { results: [{ id: "remove", name: "remove", error: "" }] };
+    });
+    const refreshing = loadTasks(true, "a");
+    await readingNextPage.promise;
+    await runCard(turn.id, card.id);
+    // The pass that began before the removal must not publish its pages,
+    // even when the pass that follows it cannot read the list at all.
+    failing = true;
+    nextPage.resolve({ tasks: [rows[1]], nextPageToken: "", expiresIn: 0 });
+    await refreshing;
+    expect(transfers.cloud.a.tasks.map((task) => task.id)).toEqual(["keep"]);
+  });
+
+  it("hands a chosen torrent to the torrent settings without submitting a task", async () => {
+    nativePicker.open.mockResolvedValueOnce("/private/native/chosen.torrent");
+    answer("ReadTorrent", () => ({ name: "Chosen torrent", files: [{ index: 2, path: "video.mkv", size: 100 }] }));
+    const { turn, card } = await fileOperation("upload_torrent", []);
+    await runCard(turn.id, card.id);
+    expect(ui.cloudAddOpen).toBe(true);
+    expect(cloudAdd.tab).toBe("torrent");
+    expect(cloudAdd.torrent?.name).toBe("Chosen torrent");
+    expect([...cloudAdd.picked]).toEqual([2]);
+    expect(callsOf("AddTorrent")).toEqual([]);
+    expect(callsOf("AddOfflineTasks")).toEqual([]);
+    expect(callsOf("AssistantOperate")).toEqual([]);
+  });
+
+  it.each(["cancel", "failure", "success"] as const)("records the actual file opening outcome: %s", async (outcome) => {
+    const { turn, card } = await fileOperation("open_file", ["f1"]);
+    if (outcome === "failure") answer("PlayFile", () => { throw new Error("无法播放此文件"); });
+    if (outcome === "cancel") {
+      player.owner = "b";
+      player.presentation = "bar";
+    }
+    try {
+      const running = runCard(turn.id, card.id);
+      if (outcome === "cancel") {
+        await settle();
+        const dialog = accounts.dialog;
+        if (dialog?.kind !== "replace") throw new Error("Missing playback replacement question");
+        dialog.resolve(false);
+      }
+      await running;
+      expect(card.state).toBe(outcome === "success" ? "done" : outcome === "cancel" ? "cancelled" : "failed");
+      expect(card.progress.done).toBe(outcome === "success" ? 1 : 0);
+      expect(callsOf("PlayFile").length).toBe(outcome === "cancel" ? 0 : 1);
+      expect(assistant.running).toBe(false);
+    } finally {
+      player.owner = "";
+      player.presentation = "off";
+    }
+  });
+
+  it("does not report a failed preview as an opened file", async () => {
+    const { turn, card } = await fileOperation("open_file", ["f1"]);
+    const target = { ...series[0], playable: false, preview: "image" };
+    answer("FileDetail", () => target);
+    answer("ViewerList", () => ({ entries: [target], total: 1, offset: 0, live: false, nextPageToken: "" }));
+    answer("PreviewFile", () => { throw new Error("Preview unavailable"); });
+    try {
+      await runCard(turn.id, card.id);
+      expect(card).toMatchObject({ state: "failed", progress: { done: 0, total: 1 } });
+      expect(viewer.entry?.id).toBe(target.id);
+      expect(viewer.error).not.toBe("");
+      expect(callsOf("PreviewFile")).toHaveLength(1);
+      expect(callsOf("PlayFile")).toEqual([]);
+      expect(assistant.running).toBe(false);
+    } finally {
+      closeViewer();
+    }
+  });
+
+  it.each(["failure", "success"] as const)("records the actual folder location outcome: %s", async (outcome) => {
+    const { turn, card } = await fileOperation("open_file", ["f1"]);
+    const target = { ...series[0], playable: false };
+    answer("FileDetail", () => target);
+    answer("List", (req: { offset: number }) => {
+      if (outcome === "failure") throw new Error("Folder unavailable");
+      return { entries: [req.offset ? target : series[1]], total: 2, offset: req.offset, live: false, nextPageToken: "" };
+    });
+    await runCard(turn.id, card.id);
+    expect(card).toMatchObject({ state: outcome === "success" ? "done" : "failed", progress: { done: outcome === "success" ? 1 : 0, total: 1 } });
+    expect(drive.picked).toEqual(outcome === "success" ? [target.id] : []);
+    expect(drive.entries.map((file) => file.id)).toEqual(outcome === "success" ? [series[1].id, target.id] : []);
+    expect(ui.route).toBe("files");
+    expect(drive.trail.map((folder) => folder.id)).toEqual([inbox0.id]);
+    expect(callsOf("PlayFile")).toEqual([]);
+    expect(callsOf("PreviewFile")).toEqual([]);
+    expect(callsOf("List")).toHaveLength(outcome === "success" ? 2 : 1);
+    expect(assistant.running).toBe(false);
+  });
+
+  it("does not report a file as opened when locating it cannot sync", async () => {
+    const { turn, card } = await fileOperation("open_file", ["f1"]);
+    const target = { ...series[0], playable: false };
+    const folder = { ...inbox0, id: target.parentId, name: "待分类", folder: true };
+    answer("FileDetail", (id: string) => (id === target.id ? target : { ...folder, id }));
+    answer("FolderTrail", () => [{ id: folder.id, name: folder.name }]);
+    // The folder reads empty here, so only the sync could place the file,
+    // and the sync fails: the card must not say it opened.
+    answer("List", () => ({ entries: [], total: 0, offset: 0, live: false, nextPageToken: "" }));
+    answer("RequestSync", () => { throw new Error("同步失败"); });
+    drive.indexProgress = { ready: true } as NonNullable<typeof drive.indexProgress>;
+    await runCard(turn.id, card.id);
+    expect(card).toMatchObject({ state: "failed", progress: { done: 0, total: 1 }, note: expect.stringContaining("文件未能打开") });
+    expect(drive.picked).toEqual([]);
+    expect(callsOf("RequestSync")).toHaveLength(1);
+    expect(assistant.running).toBe(false);
+  });
+
+  it("opens and selects a located file without a debounced search replacing its slow list", async () => {
+    vi.useFakeTimers();
+    try {
+      const { turn, card } = await fileOperation("open_file", ["f1"]);
+      const target = { ...series[0], playable: false };
+      answer("FileDetail", () => target);
+      drive.indexProgress = { ready: true } as NonNullable<typeof drive.indexProgress>;
+      ui.query = "previous search";
+      await settle();
+      const listing = deferred<void>();
+      const firstPage = deferred<{ entries: Entry[]; total: number; offset: number; live: boolean; nextPageToken: string }>();
+      answer("List", () => {
+        listing.resolve(undefined);
+        return callsOf("List").length === 1
+          ? firstPage.promise
+          : { entries: [series[1]], total: 1, offset: 0, live: false, nextPageToken: "" };
+      });
+      const running = runCard(turn.id, card.id);
+      await listing.promise;
+      await settle();
+      await vi.advanceTimersByTimeAsync(250);
+      firstPage.resolve({ entries: [target], total: 1, offset: 0, live: false, nextPageToken: "" });
+      await running;
+      expect(card).toMatchObject({ state: "done", progress: { done: 1, total: 1 } });
+      expect(ui.query).toBe("");
+      expect(drive.picked).toEqual([target.id]);
+      expect(drive.entries.map((file) => file.id)).toEqual([target.id]);
+      expect(callsOf("List")).toHaveLength(1);
+      expect(callsOf("PlayFile")).toEqual([]);
+      expect(assistant.running).toBe(false);
+    } finally {
+      vi.clearAllTimers();
+      vi.useRealTimers();
+    }
+  });
+
+  it.each(["全部文件", " 影片"])("accepts the unchanged offline destination %s", async (name) => {
+    const folder = { ...inbox0, id: "destination", name };
+    answer("FileDetail", () => folder);
+    answer("FolderTrail", () => [{ id: folder.id, name }]);
+    chatScript = [
+      () => reply("", [{ name: "propose_offline_add", arguments: { urls: ["https://example.test/file"] } }]),
+      () => reply("请确认云添加。"),
+    ];
+    void askAssistant("保存到当前文件夹", { folder: [{ id: folder.id, name }] });
+    await settle();
+    answerConsent(true, false);
+    await settle();
+    const turn = assistant.conversation!.turns.at(-1)!;
+    const card = turn.cards.find((candidate) => candidate.kind === "offline")!;
+    const submitted: string[] = [];
+    answer("AddOfflineTasks", (_account: string, _urls: string[], parent: string) => {
+      submitted.push(parent);
+      return [{ ok: true, taskId: "created", name: "File", error: "" }];
+    });
+    await runCard(turn.id, card.id);
+    expect(submitted).toEqual([folder.id]);
+    expect(card.state).toBe("done");
+  });
+
+  it.each(["全部文件", " 影片"])("accepts a normalized find_folders handle for the unchanged offline destination %s", async (name) => {
+    const folder = { ...inbox0, id: "destination", name };
+    answer("FindFolders", () => [{ id: folder.id, path: `全部文件 / ${name}`, trail: [{ id: folder.id, name }] }]);
+    answer("FileDetail", () => folder);
+    answer("FolderTrail", () => [{ id: folder.id, name }]);
+    chatScript = [
+      () => reply("", [{ name: "find_folders", arguments: { path: "destination" } }]),
+      () => reply("", [{ name: "propose_offline_add", arguments: { folder: "f1", urls: ["https://example.test/file"] } }]),
+      () => reply("请确认云添加。"),
+    ];
+    await say("保存到找到的文件夹");
+    answerConsent(true, false);
+    await settle();
+    const turn = assistant.conversation!.turns.at(-1)!;
+    const card = turn.cards.find((candidate) => candidate.kind === "offline")!;
+    expect(card).toMatchObject({ state: "draft", folderId: folder.id });
+    expect(callsOf("AddOfflineTasks")).toEqual([]);
+    const submitted: string[] = [];
+    answer("AddOfflineTasks", (account: string, _urls: string[], parent: string) => {
+      if (account !== "a" || parent !== folder.id) throw new Error("Unexpected destination");
+      submitted.push(parent);
+      return [{ ok: true, taskId: "created", name: "File", error: "" }];
+    });
+    await runCard(turn.id, card.id);
+    expect(submitted).toEqual([folder.id]);
+    expect(card.state).toBe("done");
+  });
+
+  it("re-adds only failed BTIH cloud tasks and reports the rest", async () => {
+    const hash = (letter: string) => letter.repeat(40);
+    const cloud = [
+      { id: "c1", name: "running.bin", phase: "PHASE_TYPE_RUNNING", hash: hash("a"), progress: 20, fileSize: 10 },
+      { id: "c2", name: "failed.bin", phase: "PHASE_TYPE_ERROR", hash: hash("b"), progress: 0, fileSize: 10 },
+    ];
+    answer("AssistantResources", () => ({
+      items: cloud.map((task) => ({ id: task.id, name: task.name, kind: "task", folder: false, parentId: "", size: task.fileSize, modifiedTime: "", state: task.phase, progress: task.progress })),
+      nextPageToken: "",
+    }));
+    answer("Tasks", () => ({ tasks: cloud, nextPageToken: "", expiresIn: 0 }));
+    chatScript = [
+      () => reply("", [{ name: "transfer_status", arguments: {} }]),
+      () => reply("", [{ name: "propose_offline_add", arguments: { tasks: ["c1", "c2"] } }]),
+      () => reply("请确认云添加。"),
+    ];
+    await say("重新添加这两个任务");
+    answerConsent(true, false);
+    await settle();
+    const turn = assistant.conversation!.turns.at(-1)!;
+    const card = turn.cards.find((candidate) => candidate.kind === "offline")!;
+    const submitted: string[][] = [];
+    answer("AddOfflineTasks", (_account: string, urls: string[]) => {
+      submitted.push(urls);
+      return [{ ok: true, taskId: "created", name: "failed.bin", error: "" }];
+    });
+    await runCard(turn.id, card.id);
+    expect(submitted).toEqual([[`magnet:?xt=urn:btih:${hash("b")}`]]);
+    expect(card.state).toBe("failed");
+    expect(card.note).toContain("无法重新添加");
+    expect(assistant.running).toBe(false);
+  });
+
+  it("stops after the in-flight item and preserves its receipt", async () => {
+    const started = deferred<void>(), release = deferred<void>();
+    const submitted: string[] = [];
+    answer("AssistantOperate", async (_account: string, req: { ids: string[] }) => {
+      started.resolve(undefined);
+      await release.promise;
+      submitted.push(...req.ids);
+      return { results: [{ id: req.ids[0], name: series[0].name, error: "" }] };
+    });
+    const { turn, card } = await fileOperation("star", ["f1", "f2", "f3"]);
+    const running = runCard(turn.id, card.id);
+    await started.promise;
+    stopAssistantOperation();
+    release.resolve(undefined);
+    await running;
+    expect(submitted).toEqual(["s1"]);
+    expect(card).toMatchObject({ stopped: true, progress: { done: 1, total: 3 }, results: [{ id: "s1", error: "" }] });
+    const body = callsOf("SaveConversation").at(-1)!.args[2] as string;
+    expect(JSON.parse(body).turns.at(-1).cards.find((saved: { id: string }) => saved.id === card.id)).toMatchObject({ stopped: true, progress: { done: 1, total: 3 } });
+  });
+
+  it("refuses a changed file before submitting any item", async () => {
+    const { turn, card } = await fileOperation("star", ["f1", "f2"]);
+    answer("FileDetail", (id: string) => ({ ...[inbox0, ...below].find((file) => file.id === id)!, ...(id === "s2" ? { name: "他人修改的文件名.mkv" } : {}) }));
+    await runCard(turn.id, card.id);
+    expect(callsOf("AssistantOperate")).toEqual([]);
+    expect(card.state).toBe("failed");
+    expect(card.results).toEqual([]);
+  });
+
+  it("does not widen a saved selection after the composer switches to the whole drive", async () => {
+    drive.entries = [series[0]];
+    drive.picked = [series[0].id];
+    setAssistantScope("selection");
+    const { turn, card } = await fileOperation("star", ["f1"]);
+    setAssistantScope("drive");
+    card.rows = [{ id: clips[0].id, name: clips[0].name, folder: false, path: "待分类", size: clips[0].size, modified: clips[0].modifiedTime, played: "" }];
+    card.targetIds = [clips[0].id];
+    await runCard(turn.id, card.id);
+    expect(callsOf("AssistantOperate")).toEqual([]);
+    expect(card.state).toBe("failed");
+  });
+
+  it("restores only explicitly confirmed trash items from a later page and never permanently deletes", async () => {
+    const restored: string[] = [];
+    const item = (id: string, name: string) => ({
+      id, name, kind: "trash_file", folder: false, parentId: "", size: 100, modifiedTime: "2026-10-01", state: "trashed", progress: 0,
+    });
+    answer("AssistantResources", (_account: string, kind: string, token: string) => {
+      if (kind !== "trash") throw new Error("Wrong resource domain");
+      return token ? { items: [item("trash-b", "保留的资料.txt")], nextPageToken: "" } : { items: [item("trash-a", "旧资料.txt")], nextPageToken: "private-cursor" };
+    });
+    answer("AssistantOperate", (_account: string, req: { action: string; ids: string[] }) => {
+      if (req.action !== "restore") throw new Error("Unexpected mutation");
+      restored.push(...req.ids);
+      return { results: req.ids.map((id) => ({ id, name: "保留的资料.txt", error: "" })) };
+    });
+    chatScript = [
+      () => reply("", [{ name: "list_trash", arguments: {} }]),
+      () => reply("", [{ name: "list_trash", arguments: { pageToken: "p1" } }]),
+      () => reply("", [{ name: "propose_operation", arguments: { action: "restore", handles: ["t2"] } }]),
+      () => reply("请确认恢复。"),
+    ];
+    await say("恢复第二页的资料");
+    answerConsent(true, false);
+    await settle();
+    const turn = assistant.conversation!.turns.at(-1)!;
+    const card = turn.cards.find((candidate): candidate is OperationCard => candidate.kind === "operation")!;
+    expect(restored).toEqual([]);
+    expect(modelBodies()).not.toContain("private-cursor");
+    expect(modelBodies()).not.toContain("trash-b");
+    await runCard(turn.id, card.id);
+    expect(restored).toEqual(["trash-b"]);
+    expect(callsOf("EmptyTrash")).toEqual([]);
+    expect(callsOf("RemoveFiles")).toEqual([]);
+  });
+
+  it("uses only native-picker paths for upload, never a model-provided local path", async () => {
+    vi.useFakeTimers();
+    try {
+      const uploaded: string[] = [];
+      answer("UploadFiles", (account: string, paths: string[]) => {
+        uploaded.push(...paths);
+        return { tasks: [{ id: "u1", name: "chosen.mkv", account, state: "queued" }], failed: [] };
+      });
+      nativePicker.open.mockResolvedValueOnce(["/private/native/chosen.mkv"]);
+      const { turn, card } = await fileOperation("upload_files", [], { paths: ["/private/model/invented.key"] });
+      expect(nativePicker.open).not.toHaveBeenCalled();
+      await runCard(turn.id, card.id);
+      expect(uploaded).toEqual(["/private/native/chosen.mkv"]);
+      expect(card.state).toBe("done");
+      await say("查看结果");
+      answerConsent(true, false);
+      await settle();
+      expect(modelBodies()).not.toContain("/private/native/");
+    } finally {
+      vi.clearAllTimers();
+      vi.useRealTimers();
+    }
+  });
+
+  it("retains submitted uploads and failed inputs in the same saved receipt", async () => {
+    const { turn, card } = await fileOperation("upload_folder", []);
+    nativePicker.open.mockResolvedValueOnce(["/private/native/chosen"]);
+    answer("UploadFiles", (account: string) => ({
+      tasks: [{ id: "u-partial", name: "readable.txt", account, state: "queued" }],
+      failed: [{ name: "missing.txt", error: "所选文件无法读取" }],
+    }));
+    await runCard(turn.id, card.id);
+    expect(card).toMatchObject({
+      state: "failed", progress: { done: 2, total: 2 },
+      results: [{ id: "u-partial", name: "readable.txt", error: "" }, { id: "", name: "missing.txt", error: "所选文件无法读取" }],
+    });
+    expect(drive.uploads.find((task) => task.id === "u-partial")).toMatchObject({ account: "a", state: "queued" });
+    const saved = JSON.parse(callsOf("SaveConversation").at(-1)!.args[2] as string);
+    expect(saved.turns.at(-1).cards.find((row: { id: string }) => row.id === card.id).results).toEqual(card.results);
+  });
+
+  it("does not upload when the account changes while the native picker is open", async () => {
+    const opened = deferred<void>(), chosen = deferred<string[]>();
+    nativePicker.open.mockImplementationOnce(() => { opened.resolve(undefined); return chosen.promise; });
+    const { turn, card } = await fileOperation("upload_files", []);
+    const running = runCard(turn.id, card.id);
+    await opened.promise;
+    answer("Status", () => statusOf("b"));
+    await loadAccounts();
+    chosen.resolve(["/private/chosen.mkv"]);
+    await running;
+    expect(callsOf("UploadFiles")).toEqual([]);
+    expect(card.stopped).toBe(true);
+    expect(card.state).toBe("failed");
+    const saves = callsOf("SaveConversation");
+    expect(saves.at(-1)!.args[0]).toBe("a");
+    expect(assistant.account).not.toBe("a");
+  });
+
+  it("allows pausing a live download after normal progress updates", async () => {
+    let modified = "2026-10-01T00:00:00Z";
+    let paused = false;
+    answer("AssistantResources", () => ({
+      items: [{ id: "d1", name: "进行中的视频.mkv", kind: "download", folder: false, parentId: "", size: 1000, modifiedTime: modified, state: "downloading", progress: 50 }],
+      nextPageToken: "",
+    }));
+    answer("AssistantOperate", (_account: string, req: { action: string; ids: string[] }) => {
+      if (req.action !== "pause_download" || req.ids[0] !== "d1") throw new Error("Wrong operation");
+      paused = true;
+      return { results: [{ id: "d1", name: "进行中的视频.mkv", error: "" }] };
+    });
+    chatScript = [
+      () => reply("", [{ name: "transfer_status", arguments: {} }]),
+      () => reply("", [{ name: "propose_operation", arguments: { action: "pause_download", handles: ["d1"] } }]),
+      () => reply("请确认暂停。"),
+    ];
+    await say("暂停这个下载");
+    answerConsent(true, false);
+    await settle();
+    const turn = assistant.conversation!.turns.at(-1)!;
+    const card = turn.cards.find((candidate): candidate is OperationCard => candidate.kind === "operation")!;
+    modified = "2026-10-01T00:00:15Z";
+    await runCard(turn.id, card.id);
+    expect(paused).toBe(true);
+    expect(card.state).toBe("done");
   });
 });

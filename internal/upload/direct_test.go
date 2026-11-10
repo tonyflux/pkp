@@ -76,7 +76,7 @@ func TestDirectUploadPersistsSlotBeforeSendingAndResumesWithoutRecreate(t *testi
 	if len(q.List()) != 0 || len(q2.List()) != 0 || manual.Load() != 0 {
 		t.Fatal("direct upload leaked into manual transfer center")
 	}
-	if rs, err := readJournal(journal); err != nil || len(rs) != 0 {
+	if rs, _, err := readJournal(journal); err != nil || len(rs) != 0 {
 		t.Fatalf("manual journal contains direct job: %v %v", rs, err)
 	}
 }

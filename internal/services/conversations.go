@@ -1,6 +1,7 @@
 package services
 
 import (
+	"bytes"
 	"cmp"
 	"encoding/json"
 	"errors"
@@ -14,8 +15,8 @@ import (
 
 // The AI assistant's conversations, kept on this computer per account in
 // assistant-<key>.json (recent chats saved locally by account) and removed with the account.
-// A conversation's body is the webview's own JSON, stored and handed back
-// as is: this side only bounds it and keeps the list in order.
+// Bodies are stored and returned as plain JSON: ordinary content is bounded,
+// while upload receipts remain complete even for large selected folders.
 
 const (
 	conversationKeep    = 20
@@ -96,9 +97,9 @@ func (d *DriveService) Conversation(account, id string) (string, error) {
 }
 
 // SaveConversation keeps one of account's conversations, in place of the
-// one with its id, and drops the oldest beyond conversationKeep. body is
-// JSON text of at most 2 MiB. An UpdatedAt that is not RFC 3339 becomes
-// now.
+// one with its id, and drops the oldest beyond conversationKeep. Ordinary
+// JSON content is limited to 2 MiB, excluding complete upload receipts.
+// An UpdatedAt that is not RFC 3339 becomes now.
 func (d *DriveService) SaveConversation(account string, info ConversationInfo, body string) error {
 	s, err := d.sessionFor(account)
 	if err != nil {
@@ -108,9 +109,10 @@ func (d *DriveService) SaveConversation(account string, info ConversationInfo, b
 		return errConversationID
 	}
 	if len(body) > maxConversationBody {
-		return errConversationTooLarge
-	}
-	if !json.Valid([]byte(body)) {
+		if !conversationUploadReceiptsFit(body) {
+			return errConversationTooLarge
+		}
+	} else if !json.Valid([]byte(body)) {
 		return errConversationBody
 	}
 	info.Title = tmdb.CleanLine(info.Title, maxConversationName)
@@ -136,6 +138,42 @@ func (d *DriveService) SaveConversation(account string, info ConversationInfo, b
 		saved = saved[:conversationKeep]
 	}
 	return d.writeConversations(s.key, saved)
+}
+
+// Only typed upload outcomes may grow past the ordinary conversation limit.
+// Keep the original JSON intact so reopening never loses queued or failed inputs.
+// The shape is exact — unknown fields fail the decode — because that is what
+// keeps the exemption from carrying arbitrary payloads: a frontend change to
+// these results has to change AssistantOperationItem with it.
+func conversationUploadReceiptsFit(body string) bool {
+	var view struct {
+		Version int `json:"version"`
+		Turns   []struct {
+			Cards []struct {
+				Kind    string          `json:"kind"`
+				Action  string          `json:"action"`
+				Results json.RawMessage `json:"results"`
+			} `json:"cards"`
+		} `json:"turns"`
+	}
+	if err := json.Unmarshal([]byte(body), &view); err != nil || view.Version != conversationVersion {
+		return false
+	}
+	size := len(body)
+	for _, turn := range view.Turns {
+		for _, card := range turn.Cards {
+			if card.Kind != "operation" || (card.Action != "upload_files" && card.Action != "upload_folder") {
+				continue
+			}
+			var results []AssistantOperationItem
+			decoder := json.NewDecoder(bytes.NewReader(card.Results))
+			decoder.DisallowUnknownFields()
+			if err := decoder.Decode(&results); err == nil && len(results) != 0 {
+				size -= len(card.Results) - 2 // Leave the empty array in the ordinary budget.
+			}
+		}
+	}
+	return size <= maxConversationBody
 }
 
 // DeleteConversation forgets one of account's conversations; one already

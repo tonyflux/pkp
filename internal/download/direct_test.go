@@ -90,7 +90,7 @@ func TestDirectReceiveResumesRangesButRefusesSameSizeChangedVersion(t *testing.T
 	if len(q.List()) != 0 || len(q2.List()) != 0 || manual.Load() != 0 {
 		t.Fatal("direct download leaked into manual list/events")
 	}
-	if rs, err := readJournal(journal); err != nil || len(rs) != 0 {
+	if rs, _, err := readJournal(journal); err != nil || len(rs) != 0 {
 		t.Fatalf("direct job leaked into manual journal: %v %v", rs, err)
 	}
 }

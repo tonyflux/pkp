@@ -6,6 +6,7 @@ import {
   folderSummaryForModel,
   foldersForModel,
   Handles,
+  HISTORY_CHARS,
   indexBlocked,
   MAX_CALLS,
   mediaSummaryForModel,
@@ -17,7 +18,7 @@ import {
   rowsForModel,
   runTurn,
   searchForModel,
-  transfersForModel,
+  resourcesForModel,
   type AgentDeps,
   type AIChatReply,
   type AIChatRequest,
@@ -25,6 +26,10 @@ import {
   type FilesCard,
   type ModelRow,
   type PlanCard,
+  type OperationCard,
+  type ResourceRow,
+  type ResourcesCard,
+  type ToolArgsMap,
   type ToolImpls,
   type Turn,
   type TurnOptions,
@@ -926,26 +931,6 @@ describe("what tools tell the model", () => {
     expect(info).not.toContain("ABCDEF");
     expect(info).not.toContain("thumb");
     expect(info).toContain("1920×1080");
-    const task = {
-      id: "task-real",
-      name: "纪录片合集",
-      phase: "PHASE_TYPE_ERROR",
-      progress: 30,
-      fileSize: 0,
-      message: "Failed",
-      errorDetail: "task_file_deleted",
-      createdTime: "2026-10-10T08:00:00Z",
-      updatedTime: "2026-10-10T09:00:00Z",
-      savedTo: "全部文件 / 影视",
-      hash: "0123456789ABCDEF0123456789ABCDEF01234567",
-      url: "magnet:?xt=urn:btih:0123456789abcdef",
-      fileId: "file-real",
-    };
-    const transfers = transfersForModel([task], [], handles);
-    expect(transfers).toContain("c1 | 纪录片合集");
-    expect(transfers).not.toContain("0123456789");
-    expect(transfers).not.toContain("magnet");
-    expect(transfers).not.toContain("task-real");
     expect(foldersForModel([{ id: "x", path: "全部文件 / 影视 / 纪录片" }], handles)).toContain("影视/纪录片");
   });
 
@@ -973,3 +958,310 @@ describe("what tools tell the model", () => {
 
 });
 
+
+describe("operation capabilities and saved confirmations", () => {
+  const resource: ResourceRow = {
+    id: "private-resource-id", name: "待恢复.mkv", kind: "trash_file", folder: false, parentId: "",
+    path: "", size: GiB, modified: "2026-10-01", state: "trashed", progress: 0,
+  };
+  const operation = (): OperationCard => ({
+    kind: "operation", id: "action", title: "加星标", state: "draft", note: "", action: "star",
+    rows: cardRows([hit]), targetIds: [hit.id], folderId: "", path: "", name: "", scope: {},
+    progress: { done: 0, total: 1 }, results: [], stopped: false,
+  });
+
+  it("keeps identical resource IDs in distinct domains across a saved conversation", () => {
+    const original = new Handles();
+    const file = original.of("same-id", "file");
+    const trash = original.of("same-id", "trash_file");
+    const upload = original.of("same-id", "upload");
+    const download = original.of("same-id", "download");
+    const restored = new Handles(original.snapshot());
+    expect(parseToolCall("propose_operation", { action: "restore", handles: [trash] }, restored)).toMatchObject({
+      args: { targets: [{ id: "same-id", kind: "trash_file" }] },
+    });
+    expect(parseToolCall("propose_operation", { action: "pause_download", handles: [download] }, restored)).toMatchObject({
+      args: { targets: [{ id: "same-id", kind: "download" }] },
+    });
+    expect(() => parseToolCall("propose_operation", { action: "restore", handles: [file] }, restored)).toThrow(ModelOutputError);
+    expect(() => parseToolCall("propose_operation", { action: "pause_download", handles: [upload] }, restored)).toThrow(ModelOutputError);
+    expect(original.snapshot()).toEqual(restored.snapshot());
+  });
+
+  it("keeps account-bound continuation tokens local and rejects another catalog's token", () => {
+    const handles = new Handles();
+    const token = "account-private-and-server-private-cursor";
+    const text = resourcesForModel([resource], token, handles, "trash");
+    expect(text).not.toContain(resource.id);
+    expect(text).not.toContain(token);
+    const page = /nextPageToken=(p\d+)/.exec(text)![1];
+    const restored = new Handles(handles.snapshot());
+    expect(parseToolCall("list_trash", { pageToken: page }, restored)).toEqual({ tool: "list_trash", args: { pageToken: token } });
+    expect(() => parseToolCall("list_shares", { pageToken: page }, restored)).toThrow(ModelOutputError);
+    expect(() => parseToolCall("list_trash", { pageToken: token }, restored)).toThrow(ModelOutputError);
+  });
+
+  it("bounds a catalog or operation card in history while this turn's tool result stays whole", () => {
+    const turnWith = (cards: Turn["cards"]): Turn => ({
+      id: "turn", at: "", user: "查看回收站", text: "已读取。", traces: [], cards,
+      usage: { input: 0, output: 0, calls: 1 }, stop: "end", error: "", denied: false, notice: "", mode: "tools", modeNote: "",
+    });
+    const longRows: ResourceRow[] = Array.from({ length: 40 }, (_, n) => ({
+      id: `private-trash-${n}`, name: `${"长".repeat(245)}-${n}.mkv`, kind: "trash_file", folder: false,
+      parentId: "", path: "", size: GiB, modified: "", state: "", progress: 0,
+    }));
+    const handles = new Handles();
+    // What the tool hands over this turn is complete: every row, and the
+    // last row's handle usable.
+    const page = resourcesForModel(longRows, "", handles, "trash");
+    expect(page.split("\n")).toHaveLength(3 + longRows.length);
+    expect(page).toContain(`${handles.peek(longRows.at(-1)!.id, "trash_file")} |`);
+
+    const catalog: ResourcesCard = { kind: "resources", id: "page", title: "回收站", state: "done", note: "", resource: "trash", rows: longRows, nextPageToken: "" };
+    const fromCatalog = compactHistory([turnWith([catalog])], handles)[1].content;
+    expect(fromCatalog.length).toBeLessThan(HISTORY_CHARS);
+    const listedRows = fromCatalog.split("\n").filter((line) => line.includes("| trash_file |")).length;
+    expect(listedRows).toBeGreaterThan(0);
+    expect(listedRows).toBeLessThan(longRows.length);
+    expect(fromCatalog).toContain("the first");
+
+    const targets = Array.from({ length: 200 }, (_, n) => ({
+      ...cardRows([hit])[0], id: `target-${n}`, name: `目标-${n}-${"长".repeat(60)}.mkv`,
+    }));
+    const action: OperationCard = { ...operation(), rows: targets, targetIds: targets.map((row) => row.id), results: [] };
+    const fromAction = compactHistory([turnWith([action])], handles)[1].content;
+    expect(fromAction.length).toBeLessThan(HISTORY_CHARS);
+    expect(fromAction).toContain("more targets omitted");
+  });
+
+  it("never invokes an operation implementation for either permanent-delete route", async () => {
+    const submit = vi.fn(async () => ({ forModel: "unexpected", trace: "" }));
+    const chat = fakeChat([
+      reply("", [
+        ["propose_operation", { action: "empty_trash" }],
+        ["propose_operation", { action: "permanent_delete", handles: ["f1"] }],
+      ]),
+      reply("这些操作不可用。"),
+    ]);
+    const state = fresh();
+    state.handles.of(hit.id, "file");
+    const turn = await runTurn(makeDeps({ chat: chat.fn, tools: { propose_operation: submit } }), state, "永久删除", opts());
+    expect(submit).not.toHaveBeenCalled();
+    expect(turn.cards).toEqual([]);
+    expect(turn.traces.map((trace) => trace.state)).toEqual(["failed", "failed"]);
+  });
+
+  it("keeps duplicate-name operation targets and destination usable after multiple searches are elided", async () => {
+    const state = fresh();
+    const first = { ...hit, id: "first-copy", path: "Movies/First" };
+    const second = { ...hit, id: "second-copy", path: "Movies/Second" };
+    const hidden = { ...hit, id: "not-selected", name: "Unselected candidate" };
+    const destination = state.handles.of("archive-folder", "folder", "Archive/2026");
+    const draft = vi.fn(async (args: ToolArgsMap["propose_operation"]) => ({
+      forModel: "Awaiting confirmation", trace: "",
+      card: {
+        ...operation(), action: "copy" as const, rows: cardRows([first, second]), targetIds: args.targets.map((target) => target.id),
+        folderId: "archive-folder", path: "Archive/2026", progress: { done: 0, total: 2 },
+      },
+    }));
+    const chat = fakeChat([
+      reply("", [["search_files", { keywords: ["first"] }], ["search_files", { keywords: ["second"] }]]),
+      () => reply("", [["propose_operation", {
+        action: "copy", handles: [state.handles.peek(first.id, "file"), state.handles.peek(second.id, "file")], folder: destination,
+      }]]),
+      reply("请确认复制。"),
+    ]);
+    const prior = await runTurn(makeDeps({
+      chat: chat.fn, tools: { ...searchTools([[first, hidden], [second]]), propose_operation: draft },
+    }), state, "把找到的两个同名文件复制到归档", opts());
+    expect(prior.cards.filter((card) => card.kind === "files")).toHaveLength(2);
+    expect(prior.cards.some((card) => card.kind === "operation")).toBe(true);
+    const followup = fakeChat([
+      (request) => {
+        const history = request.messages[1].content;
+        expect(history).toContain(`${state.handles.peek(first.id, "file")} ${first.name} (Movies/First)`);
+        expect(history).toContain(`${state.handles.peek(second.id, "file")} ${second.name} (Movies/Second)`);
+        expect(history).toContain(`${destination} Archive/2026`);
+        expect(history).not.toContain(hidden.name);
+        expect(history).not.toContain(first.id);
+        expect(history).not.toContain(second.id);
+        const target = /(f\d+) [^;\n]+ \(Movies\/Second\)/.exec(history)![1];
+        return reply("", [["propose_operation", { action: "star", handles: [target] }]]);
+      },
+      reply("请确认加星标。"),
+    ]);
+    const nextDraft = vi.fn(async (_args: ToolArgsMap["propose_operation"]) => ({ forModel: "Awaiting confirmation", trace: "" }));
+    await runTurn(makeDeps({ chat: followup.fn, tools: { propose_operation: nextDraft } }), { ...state, turns: [prior] }, "给第二个目录里的那个也加星标", opts());
+    expect(nextDraft).toHaveBeenCalledTimes(1);
+    expect(nextDraft.mock.calls[0][0]).toMatchObject({ action: "star", targets: [{ id: second.id, kind: "file" }] });
+  });
+
+  it.each([
+    ["star", "file"], ["retry_upload", "upload"],
+  ] as const)("retries only the recorded failed %s target after reopening", async (action, kind) => {
+    const state = fresh();
+    const rows = ["succeeded", "failed", "unprocessed"].map((suffix) => ({
+      ...hit, id: `private-${suffix}`, name: "Duplicate.mkv", path: "",
+    }));
+    const wrongDomain = state.handles.of(rows[1].id, kind === "file" ? "upload" : "file");
+    const targets = rows.map((row) => state.handles.of(row.id, kind));
+    const prior = await runTurn(makeDeps({ chat: fakeChat([reply("Please confirm.")]).fn }), state, "Process these three files", opts());
+    prior.cards = [{
+      ...operation(), action, state: "failed", rows: cardRows(rows), targetIds: rows.map((row) => row.id),
+      progress: { done: 2, total: 3 }, stopped: true,
+      results: [
+        { id: rows[0].id, name: "/Users/private/succeeded.mkv", error: "" },
+        { id: rows[1].id, name: "/Users/private/failed.mkv", error: "https://private.example/?token=secret" },
+      ],
+    }];
+    const saved = readConversation(conversationBody({
+      id: "saved", title: "", createdAt: "", updatedAt: "", usage: { used: 0, limit: 1000 },
+      turns: [prior], handles: state.handles.snapshot(), plans: {},
+    }), "saved")!;
+    const restored = { turns: saved.turns, handles: new Handles(saved.handles) };
+    const followup = fakeChat([
+      (request) => {
+        const history = request.messages[1].content;
+        expect(history).toContain(`${targets[0]} Duplicate.mkv [Succeeded]`);
+        expect(history).toContain(`${targets[1]} Duplicate.mkv [Failed]`);
+        expect(history).toContain(`${targets[2]} Duplicate.mkv [No recorded result]`);
+        expect(history).not.toContain(`${wrongDomain} Duplicate.mkv`);
+        for (const row of rows) expect(history).not.toContain(row.id);
+        expect(history).not.toContain("/Users/private");
+        expect(history).not.toContain("private.example");
+        const failed = /([fu]\d+) Duplicate\.mkv \[Failed\]/.exec(history)![1];
+        return reply("", [["propose_operation", { action, handles: [failed] }]]);
+      },
+      reply("Please confirm retrying the failed item."),
+    ]);
+    const draft = vi.fn(async (_args: ToolArgsMap["propose_operation"]) => ({ forModel: "Awaiting confirmation", trace: "" }));
+    const next = await runTurn(makeDeps({ chat: followup.fn, tools: { propose_operation: draft } }), restored, "Retry only the failed item", opts());
+    expect(next.stop).toBe("end");
+    expect(draft).toHaveBeenCalledTimes(1);
+    expect(draft.mock.calls[0][0]).toMatchObject({ action, targets: [{ id: rows[1].id, kind }] });
+  });
+
+  it("keeps upload receipt targets actionable without exposing local input paths or unbounded batches", async () => {
+    const state = fresh();
+    const prior = await runTurn(makeDeps({ chat: fakeChat([reply("Please confirm.")]).fn }), state, "Upload selected files", opts());
+    prior.cards = [{
+      ...operation(), action: "upload_files", state: "failed", rows: [], targetIds: [],
+      progress: { done: 10002, total: 10002 },
+      results: [
+        { id: "private-queued", name: "/Users/private/Duplicate.mkv", error: "" },
+        { id: "private-failed", name: "C:\\private\\Duplicate.mkv", error: "token=private-secret" },
+        { id: "", name: "/Users/private/unreadable.mkv", error: "Unreadable local input" },
+        ...Array.from({ length: 9999 }, (_, n) => ({ id: `private-upload-${n}`, name: "x".repeat(255), error: "" })),
+      ],
+    }];
+    const followup = fakeChat([
+      (request) => {
+        const history = request.messages[1].content;
+        expect(history).toMatch(/u\d+ Duplicate\.mkv \[Submitted\]/);
+        expect(history).toMatch(/u\d+ Duplicate\.mkv \[Failed\]/);
+        expect(history).toContain("unreadable.mkv [Failed]");
+        expect(history).not.toMatch(/u\d+ unreadable\.mkv/);
+        expect(history).toContain("more results omitted");
+        expect(history.length).toBeLessThanOrEqual(8000);
+        for (const secret of ["private-queued", "private-failed", "/Users/private", "C:\\private", "private-secret", "Unreadable local input"]) {
+          expect(history).not.toContain(secret);
+        }
+        const target = /(u\d+) Duplicate\.mkv \[Failed\]/.exec(history)![1];
+        return reply("", [["propose_operation", { action: "retry_upload", handles: [target] }]]);
+      },
+      reply("Please confirm retrying the failed upload."),
+    ]);
+    const draft = vi.fn(async (_args: ToolArgsMap["propose_operation"]) => ({ forModel: "Awaiting confirmation", trace: "" }));
+    const next = await runTurn(makeDeps({ chat: followup.fn, tools: { propose_operation: draft } }), { ...state, turns: [prior] }, "Retry the failed upload", opts());
+    expect(next.stop).toBe("end");
+    expect(draft).toHaveBeenCalledTimes(1);
+    expect(draft.mock.calls[0][0]).toMatchObject({ action: "retry_upload", targets: [{ id: "private-failed", kind: "upload" }] });
+  });
+
+  it.each([
+    ["restore", "trash_file"], ["restore", "trash_folder"], ["cancel_share", "share"],
+    ["pause_download", "download"], ["retry_upload", "upload"], ["retry_cloud_task", "task"],
+  ] as const)("preserves %s target handles in the %s domain for the next turn", async (action, kind) => {
+    const state = fresh();
+    const file = state.handles.of(hit.id, "file");
+    const domain = state.handles.of(hit.id, kind);
+    const card = { ...operation(), action, rows: cardRows([{ ...hit, folder: kind === "trash_folder" }]) };
+    const prior = await runTurn(makeDeps({ chat: fakeChat([reply("请确认。")]).fn }), state, "处理这个项目", opts());
+    prior.cards = [card];
+    const chat = fakeChat([reply("好的。")]);
+    await runTurn(makeDeps({ chat: chat.fn }), { ...state, turns: [prior] }, "再处理这个项目", opts());
+    const history = chat.requests[0].messages[1].content;
+    expect(history).toContain(`${domain} ${hit.name}`);
+    expect(history).not.toContain(`${file} ${hit.name}`);
+    expect(history).not.toContain(hit.id);
+  });
+
+
+  it("preserves manual confirmation after reopening and never replays an interrupted submission", async () => {
+    const card = operation();
+    const state = fresh();
+    state.handles.of(hit.id, "file");
+    const chat = fakeChat([reply("", [["propose_operation", { action: "star", handles: ["f1"] }]]), reply("请确认。")]);
+    const turn = await runTurn(makeDeps({
+      chat: chat.fn, tools: { propose_operation: async () => ({ forModel: "Awaiting confirmation", trace: "", card }) },
+    }), state, "加星标", opts());
+    const view = { id: "saved", title: "", createdAt: "", updatedAt: "", usage: { used: 0, limit: 1000 }, turns: [turn], handles: state.handles.snapshot(), plans: {} };
+    expect(readConversation(conversationBody(view), view.id)?.turns[0].cards[0].state).toBe("draft");
+    card.state = "running";
+    const loaded = readConversation(conversationBody(view), view.id)!;
+    expect(loaded.turns[0].cards[0].state).toBe("failed");
+    expect(retryable({ ...loaded.turns[0], stop: "error" })).toBe(false);
+    const damaged = JSON.parse(conversationBody(view));
+    damaged.turns[0].cards[0].action = "empty_trash";
+    expect(readConversation(JSON.stringify(damaged), view.id)).toBeNull();
+  });
+
+  it("does not include execution errors, secrets or local paths in later model context", async () => {
+    const card = operation();
+    const state = fresh();
+    state.handles.of(hit.id, "file");
+    const chat = fakeChat([reply("", [["propose_operation", { action: "star", handles: ["f1"] }]]), reply("请确认。")]);
+    const turn = await runTurn(makeDeps({
+      chat: chat.fn, tools: { propose_operation: async () => ({ forModel: "Awaiting confirmation", trace: "", card }) },
+    }), state, "加星标", opts());
+    card.state = "failed";
+    card.note = "/Users/private/secret";
+    card.results = [{ id: hit.id, name: hit.name, error: "https://private.example/?token=secret" }];
+    const context = JSON.stringify(compactHistory([turn], state.handles));
+    expect(context).not.toContain(card.note);
+    expect(context).not.toContain("private.example");
+    expect(context).not.toContain(hit.id);
+    expect(context).toContain(hit.name);
+  });
+});
+
+describe("resource page completeness", () => {
+  it("keeps the last handle and continuation usable when every filename is long", async () => {
+    const rows: ResourceRow[] = Array.from({ length: 40 }, (_, n) => ({
+      id: `private-trash-${n}`, name: `${"长".repeat(245)}-${n}.mkv`, kind: "trash_file", folder: false,
+      parentId: "", path: "", size: 1, modified: "", state: "", progress: 0,
+    }));
+    let continued = false;
+    const chat = fakeChat([
+      reply("", [["list_trash", {}]]),
+      (req) => {
+        const result = req.messages.at(-1)!.content;
+        expect(result).toContain("t40 |");
+        const token = /nextPageToken=(p\d+)/.exec(result)![1];
+        return reply("", [["list_trash", { pageToken: token }]]);
+      },
+      reply("已读完。"),
+    ]);
+    const turn = await runTurn(makeDeps({
+      chat: chat.fn,
+      tools: {
+        list_trash: async ({ pageToken }, { handles }) => {
+          continued = pageToken === "server-private-cursor";
+          return { forModel: resourcesForModel(pageToken ? [] : rows, pageToken ? "" : "server-private-cursor", handles, "trash"), trace: "" };
+        },
+      },
+    }), fresh(), "查看回收站全部项目", opts());
+    expect(continued).toBe(true);
+    expect(turn.traces.map((trace) => trace.state)).toEqual(["done", "done"]);
+  });
+});

@@ -7,6 +7,7 @@
  */
 import type { Crumb } from "../bindings/github.com/tonyflux/pkp/internal/services";
 import type { AssistantScope, Card, HandleSnapshot, PlanCard, ProposedItem, Turn } from "./agent";
+import { OPERATION_ACTIONS, type OperationAction } from "./agent";
 import { classify, type Identity } from "./media";
 import { active, type Change, type Tree } from "./organizer";
 import { N_, t } from "./i18n";
@@ -49,6 +50,32 @@ function isObject(v: unknown): v is Record<string, unknown> {
   return typeof v === "object" && v !== null && !Array.isArray(v);
 }
 
+function storedScope(v: unknown): boolean {
+  return isObject(v) &&
+    (v.folder === undefined || (Array.isArray(v.folder) && v.folder.every((c) => isObject(c) && typeof c.id === "string" && typeof c.name === "string"))) &&
+    (v.entries === undefined || (Array.isArray(v.entries) && v.entries.every((e) => isObject(e) && typeof e.id === "string" && typeof e.name === "string" && typeof e.folder === "boolean")));
+}
+
+function storedCard(v: unknown): boolean {
+  if (!isObject(v)) return false;
+  if (v.kind !== "operation" && v.kind !== "resources") return true;
+  if (typeof v.state !== "string" || !["draft", "running", "done", "failed", "cancelled", "undone"].includes(v.state) ||
+    typeof v.id !== "string" || typeof v.title !== "string" || typeof v.note !== "string" || !Array.isArray(v.rows) ||
+    !v.rows.every((r) => isObject(r) && typeof r.id === "string" && typeof r.name === "string" && typeof r.folder === "boolean" &&
+      typeof r.path === "string" && typeof r.modified === "string" && typeof r.size === "number" && Number.isFinite(r.size))) return false;
+  if (v.kind === "resources") {
+    return typeof v.resource === "string" && ["trash", "shares", "transfers"].includes(v.resource) && typeof v.nextPageToken === "string" &&
+      v.rows.every((r) => isObject(r) && typeof r.kind === "string" && ["trash_file", "trash_folder", "share", "task", "upload", "download"].includes(r.kind) &&
+        typeof r.parentId === "string" && typeof r.state === "string" && typeof r.progress === "number" && Number.isFinite(r.progress));
+  }
+  return OPERATION_ACTIONS.includes(v.action as OperationAction) &&
+    typeof v.folderId === "string" && typeof v.path === "string" && typeof v.name === "string" && storedScope(v.scope) &&
+    Array.isArray(v.targetIds) && v.targetIds.length <= 200 && v.targetIds.every((id) => typeof id === "string") &&
+    isObject(v.progress) && Number.isSafeInteger(v.progress.done) && Number.isSafeInteger(v.progress.total) &&
+    typeof v.stopped === "boolean" && Array.isArray(v.results) &&
+    v.results.every((r) => isObject(r) && typeof r.id === "string" && typeof r.name === "string" && typeof r.error === "string");
+}
+
 /**
  * readConversation reads a saved body back; anything that is not a
  * conversation this client wrote is null, and the page says it could not be
@@ -64,13 +91,21 @@ export function readConversation(body: string, id: string): ConversationView | n
   if (!isObject(o) || o.version !== BODY_VERSION || !Array.isArray(o.turns)) return null;
   const usage = isObject(o.usage) ? o.usage : {};
   const handles = isObject(o.handles) && Array.isArray(o.handles.records) ? (o.handles as unknown as HandleSnapshot) : { records: [] };
+  const turns = (o.turns as unknown[]).filter((turn): turn is Turn => isObject(turn) && typeof turn.id === "string" && Array.isArray(turn.cards) && Array.isArray(turn.traces));
+  if (turns.some((turn) => turn.cards.some((card) => !storedCard(card)))) return null;
+  for (const turn of turns) for (const card of turn.cards) {
+    if (["operation", "offline", "download", "share"].includes(card.kind) && card.state === "running") {
+      card.state = "failed";
+      card.note = t("上次操作中断，未自动重试；请重新查询实际状态。");
+    }
+  }
   return {
     id,
     title: typeof o.title === "string" ? o.title : "",
     createdAt: typeof o.createdAt === "string" ? o.createdAt : "",
     updatedAt: typeof o.updatedAt === "string" ? o.updatedAt : "",
     usage: { used: Number(usage.used) || 0, limit: Number(usage.limit) || 0 },
-    turns: (o.turns as unknown[]).filter((t): t is Turn => isObject(t) && typeof t.id === "string" && Array.isArray(t.cards) && Array.isArray(t.traces)),
+    turns,
     scope: isObject(o.scope) ? (o.scope as AssistantScope) : undefined,
     handles,
     plans: isObject(o.plans) ? (o.plans as Record<string, PlanProposal>) : {},
@@ -83,9 +118,9 @@ export function conversationTitle(text: string): string {
   return line.length > 40 ? `${line.slice(0, 40)}…` : line || t("新对话");
 }
 
-/** hasPendingPlan: a plan card of the conversation still waits for execution confirmation. */
+/** Any unconfirmed write card lets the home page resume the conversation. */
 export function hasPendingPlan(turns: readonly Turn[]): boolean {
-  return turns.some((t) => t.cards.some((c) => c.kind === "plan" && c.state === "draft"));
+  return turns.some((turn) => turn.cards.some((card) => card.state === "draft" && card.kind !== "files" && card.kind !== "stats" && card.kind !== "resources"));
 }
 
 /** findCard is a card by id across the turns, with the turn holding it. */

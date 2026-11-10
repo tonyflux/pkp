@@ -4,6 +4,7 @@ export default {
   // FloatingToolbar
   返回当前文件夹: { tw: "返回目前資料夾", en: "Back to current folder", ja: "現在のフォルダに戻る", ko: "현재 폴더로 돌아가기" },
   返回上一级: { tw: "返回上一層", en: "Up one level", ja: "1 つ上の階層へ", ko: "상위 폴더로" },
+  返回文件列表: { tw: "返回檔案列表", en: "Back to file list", ja: "ファイル一覧に戻る", ko: "파일 목록으로 돌아가기" },
   "AI 助手 · 计划预览": { tw: "AI 助理 · 計畫預覽", en: "AI Assistant · Plan preview", ja: "AI アシスタント · プランのプレビュー", ko: "AI 어시스턴트 · 계획 미리보기" },
   "AI 助手 · 回执": { tw: "AI 助理 · 回執", en: "AI Assistant · Receipt", ja: "AI アシスタント · 実行結果", ko: "AI 어시스턴트 · 실행 결과" },
   "AI 助手": { tw: "AI 助理", en: "AI Assistant", ja: "AI アシスタント", ko: "AI 어시스턴트" },

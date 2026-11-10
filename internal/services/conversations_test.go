@@ -109,6 +109,49 @@ func TestSaveConversationChecksWhatItKeeps(t *testing.T) {
 	}
 }
 
+func TestConversationsKeepLargeUploadReceipts(t *testing.T) {
+	svc := conversationService(t)
+	var results strings.Builder
+	for i := range 10000 {
+		if i > 0 {
+			results.WriteByte(',')
+		}
+		failure := ""
+		if i%10 == 0 {
+			failure = "Permission denied"
+		}
+		fmt.Fprintf(&results, `{"id":"u%d","name":%q,"error":%q}`, i, fmt.Sprintf("%s-%d.mkv", strings.Repeat("n", 190), i), failure)
+	}
+	body := func(action, text string) string {
+		return fmt.Sprintf(`{"version":1,"turns":[{"id":"turn","cards":[{"kind":"operation","id":"upload","action":%q,"state":"failed","results":[%s]}],"traces":[],"user":%q}]}`, action, results.String(), text)
+	}
+	for _, action := range []string{"upload_files", "upload_folder"} {
+		t.Run(action, func(t *testing.T) {
+			original := body(action, "Upload my selection")
+			if len(original) <= maxConversationBody {
+				t.Fatal("fixture must exceed the ordinary conversation limit")
+			}
+			if err := svc.SaveConversation("", ConversationInfo{ID: action}, original); err != nil {
+				t.Fatalf("save upload outcomes: %v", err)
+			}
+			if restored, err := svc.Conversation("", action); err != nil || restored != original {
+				t.Fatalf("upload outcomes changed on reopen: %v", err)
+			}
+		})
+	}
+	for name, original := range map[string]string{
+		"other operation":        body("star", ""),
+		"oversized conversation": body("upload_folder", strings.Repeat("x", maxConversationBody)),
+		"unknown receipt fields": fmt.Sprintf(`{"version":1,"turns":[{"cards":[{"kind":"operation","action":"upload_folder","results":[{"id":"u1","name":"File","error":"","extra":%q}]}]}]}`, strings.Repeat("x", maxConversationBody)),
+	} {
+		t.Run(name, func(t *testing.T) {
+			if err := svc.SaveConversation("", ConversationInfo{ID: "rejected"}, original); !errors.Is(err, errConversationTooLarge) {
+				t.Fatalf("save unrelated oversized content: %v", err)
+			}
+		})
+	}
+}
+
 // Deleting forgets one; conversations are their account's, and go with it.
 func TestConversationsDeleteAndBelongToTheirAccount(t *testing.T) {
 	svc := conversationService(t)

@@ -168,8 +168,9 @@ onBeforeUnmount(() => { generation++; stopTimers(); cancel(session); session = "
 .qr-status small { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .qr-status small, .privacy { color: var(--fg-dim); font-size: 11px; }
 .privacy { display: flex; align-items: center; justify-content: center; gap: 5px; margin: 0; }
-.network-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
-.network-actions button { border: 0; background: none; color: var(--accent); font-size: 12px; padding: 0; }
+.network-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 4px 8px; max-width: 100%; }
+.network-actions button { min-height: 32px; max-width: 100%; padding: 6px 10px; border: 0; border-radius: 6px; background: transparent; color: var(--accent); font-size: 12px; font-weight: 600; white-space: normal; overflow-wrap: anywhere; }
+.network-actions button:hover:not(:disabled) { background: transparent; color: var(--accent); text-decoration: underline; text-underline-offset: 3px; }
 @media (max-height: 740px) {
   .qr-signin { gap: 12px; }
   .qr-status { min-height: 22px; }

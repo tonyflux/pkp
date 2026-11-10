@@ -20,7 +20,7 @@ func (noBackend) GetFile(context.Context, string, drive.GetFileParams) (*drive.F
 func TestJournalRestoreRules(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "downloads.json")
 	half := []part{{Start: 0, End: 10, Pos: 5}}
-	if err := writeJournal(path, []record{
+	if err := writeJournal(path, 0, []record{
 		{Task: Task{ID: "d1", FileID: "a", State: StateDone, Size: 10, Done: 10}},
 		{Task: Task{ID: "d2", FileID: "b", State: StateDownloading, Size: 10, Done: 5, Speed: 9, Threads: 4}, Parts: half},
 		{Task: Task{ID: "d3", FileID: "c", State: StatePaused, Size: 10, Done: 5}, Parts: half},
@@ -90,7 +90,45 @@ func TestJournalRestoreRules(t *testing.T) {
 		t.Fatalf("the unreadable journal was not kept aside: %v", err)
 	}
 	q2.Close()
-	if rs, err := readJournal(bad); err != nil || len(rs) != 0 {
+	if rs, _, err := readJournal(bad); err != nil || len(rs) != 0 {
 		t.Fatalf("after close the journal is %d records, %v", len(rs), err)
+	}
+}
+
+// A saved assistant card names a transfer by its ID, and conversations
+// outlive the queue. An ID handed out twice would aim a confirmed action at
+// a task the user never chose, so the number survives removal and restart.
+func TestQueueDoesNotReuseIDsAfterRestart(t *testing.T) {
+	dir := t.TempDir()
+	journal := filepath.Join(dir, "downloads.json")
+	src := func(fileID, name string) Source { return Source{FileID: fileID, Name: name, Dir: dir} }
+
+	q := New(noBackend{}, Options{})
+	q.Open(journal, quietLog)
+	first, err := q.Add(src("f1", "first.bin"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	second, err := q.Add(src("f2", "second.bin"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if first.ID != "d1" || second.ID != "d2" {
+		t.Fatalf("ids %q, %q", first.ID, second.ID)
+	}
+	if err := q.Remove(second.ID); err != nil {
+		t.Fatalf("remove: %v", err)
+	}
+	q.Close()
+
+	restored := New(noBackend{}, Options{})
+	restored.Open(journal, quietLog)
+	defer restored.Close()
+	next, err := restored.Add(src("f3", "second.bin"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if next.ID != "d3" {
+		t.Fatalf("restart gave %q: the removed d2 must not come back", next.ID)
 	}
 }

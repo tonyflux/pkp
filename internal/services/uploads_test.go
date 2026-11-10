@@ -58,8 +58,9 @@ func TestUploadRecordsSurviveRestart(t *testing.T) {
 	if err := os.WriteFile(photo, []byte("pixels"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := first.UploadFiles("", []string{photo}, ""); err != nil {
-		t.Fatalf("upload: %v", err)
+	batch, err := first.UploadFiles("", []string{photo}, "")
+	if err != nil || len(batch.Tasks) != 1 || len(batch.Failed) != 0 {
+		t.Fatalf("upload: %+v, error %v", batch, err)
 	}
 	deadline := time.Now().Add(5 * time.Second)
 	for first.Uploads()[0].Active() {
@@ -83,6 +84,44 @@ func TestUploadRecordsSurviveRestart(t *testing.T) {
 	}
 	if got[0].Category != "image" {
 		t.Errorf("restored record lost its icon bucket: %q", got[0].Category)
+	}
+}
+
+func TestUploadFilesRetainsQueuedTasksWithMissingInput(t *testing.T) {
+	svc := newDriveService(t, func(w http.ResponseWriter, r *http.Request) {
+		if authAndTokenRoutes(w, r) {
+			return
+		}
+		// Queue retention does not depend on whether the remote transfer succeeds.
+		w.WriteHeader(http.StatusBadRequest)
+		io.WriteString(w, `{"error":"upload_unavailable"}`)
+	})
+	t.Cleanup(func() { _ = svc.ServiceShutdown() })
+	dir := t.TempDir()
+	photo := filepath.Join(dir, "photo.jpg")
+	if err := os.WriteFile(photo, []byte("pixels"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	missing := filepath.Join(dir, "missing.jpg")
+	batch, err := svc.UploadFiles("", []string{photo, missing}, "")
+	if err != nil {
+		t.Fatalf("partial batch rejected: %v", err)
+	}
+	if len(batch.Tasks) != 1 || batch.Tasks[0].Name != "photo.jpg" || batch.Tasks[0].ID == "" {
+		t.Fatalf("queued tasks = %+v", batch.Tasks)
+	}
+	if len(batch.Failed) != 1 || batch.Failed[0].Name != "missing.jpg" || batch.Failed[0].Error == "" {
+		t.Fatalf("failed inputs = %+v", batch.Failed)
+	}
+	queued := svc.Uploads()
+	if len(queued) != 1 || queued[0].ID != batch.Tasks[0].ID || queued[0].Path != photo || queued[0].Account != batch.Tasks[0].Account {
+		t.Fatalf("successful input missing from real queue: %+v", queued)
+	}
+	for _, account := range []string{"", "missing-account"} {
+		empty, err := svc.UploadFiles(account, nil, "")
+		if (err != nil) != (account != "") || empty.Tasks == nil || empty.Failed == nil {
+			t.Errorf("empty batch for %q: %+v, error %v", account, empty, err)
+		}
 	}
 }
 

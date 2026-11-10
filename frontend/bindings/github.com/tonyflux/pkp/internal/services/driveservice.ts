@@ -150,6 +150,23 @@ export function Arrivals(account: string): $CancellablePromise<$models.Arrival[]
 }
 
 /**
+ * AssistantOperate is intentionally separate from manual UI RPCs: no method
+ * names, permanent deletes or trash-emptying flag can cross this boundary.
+ * Validate the entire batch before the first write, then report each outcome.
+ */
+export function AssistantOperate(account: string, req: $models.AssistantOperationRequest): $CancellablePromise<$models.AssistantOperationResult> {
+    return $Call.ByID(2094773501, account, req);
+}
+
+/**
+ * AssistantResources reads only the named account. Every local record is
+ * reachable before cloud pages, without repeating locals on each cloud page.
+ */
+export function AssistantResources(account: string, kind: string, pageToken: string): $CancellablePromise<$models.AssistantResourcePage> {
+    return $Call.ByID(1624331440, account, kind, pageToken);
+}
+
+/**
  * AttachWebview remembers the main window and puts its page loads behind the
  * proxy in force. The webview's own requests — thumbnails, avatars and anything else
  * the page fetches — do not go through Go's transports, so they have to be
@@ -916,9 +933,9 @@ export function RevokeSessions(sessionIDs: string[] | null): $CancellablePromise
 
 /**
  * SaveConversation keeps one of account's conversations, in place of the
- * one with its id, and drops the oldest beyond conversationKeep. body is
- * JSON text of at most 2 MiB. An UpdatedAt that is not RFC 3339 becomes
- * now.
+ * one with its id, and drops the oldest beyond conversationKeep. Ordinary
+ * JSON content is limited to 2 MiB, excluding complete upload receipts.
+ * An UpdatedAt that is not RFC 3339 becomes now.
  */
 export function SaveConversation(account: string, info: $models.ConversationInfo, body: string): $CancellablePromise<void> {
     return $Call.ByID(127409039, account, info, body);
@@ -1391,10 +1408,10 @@ export function UpdateWebDAVClient(username: string, password: string, opts: $mo
  * are picked. A folder is walked here and queued file by file, each
  * carrying its path relative to the folder's parent so the tree is
  * recreated on the server. Dotfiles (.DS_Store and friends) and empty
- * folders are skipped. Paths are checked as they are added; the rest still
- * go in when one is rejected, and the error names every one that was.
+ * folders are skipped. Paths are checked as they are added; failed inputs
+ * are reported alongside every queued task, without rejecting the batch.
  */
-export function UploadFiles(account: string, paths: string[] | null, parentID: string): $CancellablePromise<$models.UploadTask[] | null> {
+export function UploadFiles(account: string, paths: string[] | null, parentID: string): $CancellablePromise<$models.UploadBatchResult> {
     return $Call.ByID(379961131, account, paths, parentID);
 }
 

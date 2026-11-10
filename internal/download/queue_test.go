@@ -673,7 +673,7 @@ func TestRestartAfterCloseResumes(t *testing.T) {
 	waitTask(t, q, task.ID, func(tk Task) bool { return tk.Done >= 4<<20 })
 	q.Close()
 
-	rs, err := readJournal(journalPath)
+	rs, _, err := readJournal(journalPath)
 	if err != nil || len(rs) != 1 {
 		t.Fatalf("journal: %d records, %v", len(rs), err)
 	}

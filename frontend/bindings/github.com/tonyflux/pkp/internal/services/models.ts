@@ -640,6 +640,44 @@ export interface Arrival {
     "hasSuggestions": boolean;
 }
 
+export interface AssistantOperationItem {
+    "id": string;
+    "name": string;
+    "error": string;
+}
+
+export interface AssistantOperationRequest {
+    "action": string;
+    "ids": string[] | null;
+    "parentId": string;
+    "name": string;
+}
+
+export interface AssistantOperationResult {
+    "results": AssistantOperationItem[] | null;
+}
+
+/**
+ * AssistantResource deliberately contains metadata only, never a transfer's
+ * source URL, credentials, error detail, hash or local destination.
+ */
+export interface AssistantResource {
+    "id": string;
+    "name": string;
+    "kind": string;
+    "folder": boolean;
+    "parentId": string;
+    "size": number;
+    "modifiedTime": string;
+    "state": string;
+    "progress": number;
+}
+
+export interface AssistantResourcePage {
+    "items": AssistantResource[] | null;
+    "nextPageToken": string;
+}
+
 /**
  * AudioDetails is the playing music file's own description. Empty fields
  * are unknown; Cover is a data: URL, "" when the file carries no picture.
@@ -2954,6 +2992,22 @@ export interface UpdateState {
     "info": UpdateInfo | null;
     "received": number;
     "notice": boolean;
+}
+
+/**
+ * UploadBatchResult keeps queued tasks even when other inputs fail.
+ */
+export interface UploadBatchResult {
+    "tasks": UploadTask[] | null;
+    "failed": UploadFailure[] | null;
+}
+
+/**
+ * UploadFailure identifies a local input that could not be queued.
+ */
+export interface UploadFailure {
+    "name": string;
+    "error": string;
 }
 
 /**

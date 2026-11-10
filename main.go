@@ -217,9 +217,13 @@ func main() {
 			return
 		}
 		account := target.Attributes["data-upload-account"]
-		if _, err := library.UploadFiles(account, event.Context().DroppedFiles(), parent); err != nil {
+		result, err := library.UploadFiles(account, event.Context().DroppedFiles(), parent)
+		if err != nil {
 			log.Printf("upload: %v", err)
 			return
+		}
+		for _, failure := range result.Failed {
+			log.Printf("upload: %s: %s", failure.Name, failure.Error)
 		}
 	})
 

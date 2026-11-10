@@ -423,23 +423,18 @@ export default {
     ja: "この会話の使用量上限に達したため、ここで停止しました。これまでの結果は残ります。",
     ko: "이 대화의 사용량 한도에 도달해 여기서 멈췄습니다. 지금까지의 결과는 유지됩니다.",
   },
+  "可前往 AI 设置，调高“单个对话上限”或开启“不限制”，下一轮生效。模型费用仍按实际用量计费。": {
+    tw: "可前往 AI 設定，調高「單一對話上限」或開啟「不限制」，下一輪生效。模型費用仍按實際用量計費。",
+    en: "In AI settings, increase “Per-chat limit” or enable “No limit” for the next turn. Your model provider still bills actual usage.",
+    ja: "AI 設定で「会話ごとの上限」を増やすか「無制限」を有効にすると、次のターンから反映されます。モデルサービスは引き続き実際の使用量に応じて課金します。",
+    ko: "AI 설정에서 “대화당 한도”를 늘리거나 “제한 없음”을 켜면 다음 차례부터 적용됩니다. 모델 서비스는 실제 사용량에 따라 계속 요금을 청구합니다.",
+  },
+  "前往 AI 设置": { tw: "前往 AI 設定", en: "Open AI settings", ja: "AI 設定を開く", ko: "AI 설정 열기" },
   这一轮要发给模型的内容: {
     tw: "這一輪要傳給模型的內容",
     en: "What this turn sends to the model",
     ja: "このターンでモデルに送る内容",
     ko: "이번 차례에 모델로 보내는 내용",
-  },
-  "你的这句话、本对话之前的问答文字，以及 AI 调用本地工具后查到的文件名、所在路径、大小与时间（每次最多 40 项）。路径中的文件夹名也会发送。": {
-    tw: "你的這句話、本對話之前的問答文字，以及 AI 呼叫本機工具後查到的檔名、所在路徑、大小與時間（每次最多 40 項）。路徑中的資料夾名稱也會傳送。",
-    en: "Your message, the earlier text of this conversation, and the file names, paths, sizes and times the AI finds with local tools (up to 40 items each time). Folder names in the paths are sent too.",
-    ja: "あなたのメッセージ、この会話のこれまでのやり取り、そして AI がローカルツールで見つけたファイル名・パス・サイズ・日時（1 回につき最大 40 項目）。パスに含まれるフォルダ名も送信されます。",
-    ko: "보낸 메시지, 이 대화의 이전 문답, 그리고 AI가 로컬 도구로 찾은 파일 이름, 경로, 크기, 시간(한 번에 최대 40개 항목). 경로 속 폴더 이름도 전송됩니다.",
-  },
-  "文件内容、字幕、账号凭据、下载链接和 TMDB 返回的资料。": {
-    tw: "檔案內容、字幕、帳號憑證、下載連結和 TMDB 傳回的資料。",
-    en: "File contents, subtitles, account credentials, download links and data from TMDB.",
-    ja: "ファイルの内容、字幕、アカウントの認証情報、ダウンロードリンク、TMDB から取得したデータ。",
-    ko: "파일 내용, 자막, 계정 자격 증명, 다운로드 링크, TMDB에서 받은 데이터.",
   },
   "已取消，未向模型发送任何内容。": {
     tw: "已取消，未向模型傳送任何內容。",

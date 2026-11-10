@@ -22,8 +22,12 @@ const (
 )
 
 type journalFile struct {
-	Version int      `json:"version"`
-	Tasks   []record `json:"tasks"`
+	Version int `json:"version"`
+	// Seq is the last number the queue handed out. The surviving records
+	// cannot say how far it got — they are removed, or dropped by keepDone —
+	// so without it a restart would give a removed task's ID to a new one.
+	Seq   int      `json:"seq,omitempty"`
+	Tasks []record `json:"tasks"`
 }
 
 // record is one job as the journal keeps it: the task, and the ranges an
@@ -49,16 +53,17 @@ type journal struct {
 // restarts on its own. A file that cannot be read is moved aside rather than
 // overwritten.
 func (q *Queue) Open(path string, log *slog.Logger) {
-	rs, err := readJournal(path)
+	rs, seq, err := readJournal(path)
 	if err != nil {
 		log.Warn("download: journal unreadable, starting empty", "path", path, "error", err)
 		if err := os.Rename(path, path+".bad"); err != nil {
 			log.Warn("download: could not move the unreadable journal aside", "error", err)
 		}
-		rs = nil
+		rs, seq = nil, 0
 	}
 
 	q.mu.Lock()
+	q.seq = max(q.seq, seq)
 	for _, r := range rs {
 		t := r.Task
 		n := seqOf(t.ID)
@@ -111,13 +116,15 @@ func (q *Queue) writeJournalLocked() {
 		return
 	}
 	jn.pending = false
-	if err := writeJournal(jn.path, records(q.snapshot(), keepDone)); err != nil {
+	rs, seq := q.snapshot()
+	if err := writeJournal(jn.path, seq, records(rs, keepDone)); err != nil {
 		jn.log.Warn("download: journal not saved", "path", jn.path, "error", err)
 	}
 }
 
-// snapshot is every job as the journal keeps it, in the order added.
-func (q *Queue) snapshot() []record {
+// snapshot is every job as the journal keeps it, in the order added, with
+// the last number the queue handed out.
+func (q *Queue) snapshot() ([]record, int) {
 	q.mu.Lock()
 	defer q.mu.Unlock()
 	out := make([]record, 0, len(q.jobs))
@@ -134,7 +141,7 @@ func (q *Queue) snapshot() []record {
 		out = append(out, r)
 	}
 	sort.Slice(out, func(a, b int) bool { return seqOf(out[a].ID) < seqOf(out[b].ID) })
-	return out
+	return out, q.seq
 }
 
 // records is what the journal keeps: every job's last state without its
@@ -166,29 +173,29 @@ func records(rs []record, keep int) []record {
 	return out
 }
 
-func readJournal(path string) ([]record, error) {
+func readJournal(path string) ([]record, int, error) {
 	data, err := os.ReadFile(path)
 	if errors.Is(err, os.ErrNotExist) {
-		return nil, nil
+		return nil, 0, nil
 	}
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	var f journalFile
 	if err := json.Unmarshal(data, &f); err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	if f.Version != journalVersion {
-		return nil, fmt.Errorf("download: journal version %d is not %d", f.Version, journalVersion)
+		return nil, 0, fmt.Errorf("download: journal version %d is not %d", f.Version, journalVersion)
 	}
-	return f.Tasks, nil
+	return f.Tasks, f.Seq, nil
 }
 
 // writeJournal replaces path atomically: a crash mid-write leaves the
 // previous journal, never half of a new one. Owner-only, like the rest of
 // the account's files.
-func writeJournal(path string, rs []record) error {
-	data, err := json.Marshal(journalFile{Version: journalVersion, Tasks: rs})
+func writeJournal(path string, seq int, rs []record) error {
+	data, err := json.Marshal(journalFile{Version: journalVersion, Seq: seq, Tasks: rs})
 	if err != nil {
 		return err
 	}

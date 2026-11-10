@@ -107,14 +107,15 @@ export function isContentRefused(err: unknown): boolean {
 
 /* ---------------- handles ---------------- */
 
-export type HandleKind = "file" | "folder" | "task";
+export type ResourceKind = "trash_file" | "trash_folder" | "share" | "task" | "upload" | "download";
+export type HandleKind = "file" | "folder" | ResourceKind | "page";
 
 export interface HandleRecord {
-  /** "f12" for a file or folder, "c3" for a cloud-add task. */
+  /** Domain-specific handles keep file, trash, sharing and transfer IDs separate. */
   handle: string;
   id: string;
   kind: HandleKind;
-  /** Folders: their path from the root ("Movies/Documentaries"), so search_files can take a handle for `under`. */
+  /** Folder path, or catalog name for a local-only pagination handle. */
   path: string;
 }
 
@@ -123,7 +124,9 @@ export interface HandleSnapshot {
   records: HandleRecord[];
 }
 
-const HANDLE = /^([fc])([1-9]\d{0,6})$/;
+const HANDLE_PREFIX = { file: "f", folder: "f", task: "c", trash_file: "t", trash_folder: "t", share: "s", upload: "u", download: "d", page: "p" } as const;
+type HandlePrefix = (typeof HANDLE_PREFIX)[HandleKind];
+const HANDLE = /^([fctsudp])([1-9]\d{0,6})$/;
 
 /**
  * Handles maps real ids to the short names the model sees, per
@@ -133,39 +136,42 @@ const HANDLE = /^([fc])([1-9]\d{0,6})$/;
 export class Handles {
   private readonly byHandle = new Map<string, HandleRecord>();
   private readonly byId = new Map<string, HandleRecord>();
-  private files = 0;
-  private tasks = 0;
+  private readonly counts: Record<HandlePrefix, number> = { f: 0, c: 0, t: 0, s: 0, u: 0, d: 0, p: 0 };
 
   constructor(snapshot?: HandleSnapshot) {
-    for (const r of snapshot?.records ?? []) {
+    for (const r of snapshot && Array.isArray(snapshot.records) ? snapshot.records : []) {
+      if (!r || typeof r !== "object" || Array.isArray(r) || typeof r.handle !== "string" ||
+        typeof r.id !== "string" || !r.id || typeof r.path !== "string" ||
+        typeof r.kind !== "string" || !Object.prototype.hasOwnProperty.call(HANDLE_PREFIX, r.kind)) continue;
       const m = HANDLE.exec(r.handle);
-      if (!m || !r.id || this.byHandle.has(r.handle) || (m[1] === "c") !== (r.kind === "task")) continue;
-      this.add({ handle: r.handle, id: r.id, kind: r.kind, path: r.path || "" });
-      if (m[1] === "f") this.files = Math.max(this.files, Number(m[2]));
-      else this.tasks = Math.max(this.tasks, Number(m[2]));
+      const prefix = HANDLE_PREFIX[r.kind];
+      if (!m || this.byHandle.has(r.handle) || m[1] !== prefix) continue;
+      this.add({ handle: r.handle, id: r.id, kind: r.kind, path: r.path });
+      this.counts[prefix] = Math.max(this.counts[prefix], Number(m[2]));
     }
   }
 
   private add(r: HandleRecord) {
     this.byHandle.set(r.handle, r);
-    this.byId.set(`${r.kind === "task" ? "c" : "f"}:${r.id}`, r);
+    this.byId.set(`${HANDLE_PREFIX[r.kind]}:${r.id}`, r);
   }
 
   /** of is the handle for an id, made on first sight; a folder's path is kept up to date. */
   of(id: string, kind: HandleKind, path = ""): string {
-    const known = this.byId.get(`${kind === "task" ? "c" : "f"}:${id}`);
+    const prefix = HANDLE_PREFIX[kind];
+    const known = this.byId.get(`${prefix}:${id}`);
     if (known) {
       if (path) known.path = path;
       return known.handle;
     }
-    const handle = kind === "task" ? `c${++this.tasks}` : `f${++this.files}`;
+    const handle = `${prefix}${++this.counts[prefix]}`;
     this.add({ handle, id, kind, path });
     return handle;
   }
 
   /** peek is the handle an id already has, without making one. */
   peek(id: string, kind: HandleKind): string | undefined {
-    return this.byId.get(`${kind === "task" ? "c" : "f"}:${id}`)?.handle;
+    return this.byId.get(`${HANDLE_PREFIX[kind]}:${id}`)?.handle;
   }
 
   resolve(handle: string): HandleRecord | undefined {
@@ -282,7 +288,49 @@ export interface ShareCard extends CardBase {
   rows: CardRow[];
 }
 
-export type Card = FilesCard | StatsCard | PlanCard | OfflineCard | DownloadCard | ShareCard;
+export const OPERATION_ACTIONS = [
+  "create_folder", "copy", "star", "unstar", "restore",
+  "pause_download", "resume_download", "restart_download", "cancel_download", "remove_download",
+  "retry_upload", "cancel_upload", "remove_upload", "retry_cloud_task", "remove_cloud_task", "cancel_share",
+  "upload_files", "upload_folder", "upload_torrent", "extract_archive", "open_file",
+] as const;
+export type OperationAction = (typeof OPERATION_ACTIONS)[number];
+
+export interface ResourceRow {
+  id: string;
+  name: string;
+  kind: ResourceKind;
+  folder: boolean;
+  parentId: string;
+  path: string;
+  size: number;
+  modified: string;
+  state: string;
+  progress: number;
+}
+
+export interface ResourcesCard extends CardBase {
+  kind: "resources";
+  resource: "trash" | "shares" | "transfers";
+  rows: ResourceRow[];
+  nextPageToken: string;
+}
+
+export interface OperationCard extends CardBase {
+  kind: "operation";
+  action: OperationAction;
+  rows: CardRow[];
+  targetIds: string[];
+  folderId: string;
+  path: string;
+  name: string;
+  scope: AssistantScope;
+  progress: { done: number; total: number };
+  results: { id: string; name: string; error: string }[];
+  stopped: boolean;
+}
+
+export type Card = FilesCard | StatsCard | PlanCard | OfflineCard | DownloadCard | ShareCard | ResourcesCard | OperationCard;
 
 /** Explicit presentation of this turn's searches; source ids and selected file ids stay local. */
 export interface SearchResultGroup {
@@ -340,7 +388,7 @@ export function indexBlocked(turn: Pick<Turn, "traces">): boolean {
  * the user acted on (every plan-like card still a draft).
  */
 export function retryable(t: Turn): boolean {
-  return (t.stop === "error" || (t.stop === "end" && indexBlocked(t))) && t.cards.every((c) => c.state === "draft" || c.kind === "files" || c.kind === "stats");
+  return (t.stop === "error" || (t.stop === "end" && indexBlocked(t))) && t.cards.every((c) => c.state === "draft" || c.kind === "files" || c.kind === "stats" || c.kind === "resources");
 }
 
 /* ---------------- tools ---------------- */
@@ -355,9 +403,11 @@ export const READ_TOOLS = [
   "transfer_status",
   "storage_quota",
   "cleanup_results",
+  "list_trash",
+  "list_shares",
 ] as const;
 
-export const PLAN_TOOLS = ["organize_media", "propose_changes", "propose_offline_add", "propose_download", "propose_share"] as const;
+export const PLAN_TOOLS = ["organize_media", "propose_changes", "propose_offline_add", "propose_download", "propose_share", "propose_operation"] as const;
 
 export type ToolName = (typeof READ_TOOLS)[number] | (typeof PLAN_TOOLS)[number];
 
@@ -391,14 +441,17 @@ export interface ToolArgsMap {
   folder_summary: { folder: FolderRef };
   file_info: { target: Target };
   recent_plays: Record<string, never>;
-  transfer_status: Record<string, never>;
+  transfer_status: { pageToken: string };
   storage_quota: Record<string, never>;
   cleanup_results: Record<string, never>;
+  list_trash: { pageToken: string };
+  list_shares: { pageToken: string };
   organize_media: { folder: FolderRef | null; targets: Target[]; instructions: string };
   propose_changes: { title: string; items: ProposedItem[] };
   propose_offline_add: { urls: string[]; taskIds: string[]; folder: FolderRef | null };
   propose_download: { targets: Target[] };
   propose_share: { targets: Target[] };
+  propose_operation: { action: OperationAction; targets: HandleRecord[]; folder: FolderRef | null; name: string };
 }
 
 export type ParsedCall = { [K in ToolName]: { tool: K; args: ToolArgsMap[K] } }[ToolName];
@@ -561,12 +614,12 @@ export const TOOL_DEFS: readonly ToolDef[] = [
   },
   {
     name: "transfer_status",
-    description: "Status of cloud-add tasks and local transfers; cloud-add task IDs start with c.",
+    description: "List cloud-add tasks and this account's local uploads/downloads with domain-specific handles and progress. Follow nextPageToken for more; no local paths, task URLs or hashes are sent.",
     plan: false,
     running: N_("正在读取传输状态"),
     done: N_("已读取传输状态"),
     failed: N_("无法读取传输状态"),
-    schema: NO_ARGS,
+    schema: { type: "object", properties: { pageToken: { type: "string", description: "Continuation returned by this tool; omit for the first page" } } },
   },
   {
     name: "storage_quota",
@@ -634,7 +687,7 @@ export const TOOL_DEFS: readonly ToolDef[] = [
   },
   {
     name: "propose_offline_add",
-    description: "Cloud-add draft: save user-provided links or cloud-add tasks to be added again (IDs starting with c) to a folder. Add only after user confirmation.",
+    description: "Cloud-add draft: save user-provided links, or failed BTIH cloud-add tasks (IDs starting with c) to be added again, to a folder. Add only after user confirmation.",
     plan: true,
     running: N_("正在准备云添加草案"),
     done: N_("已准备云添加草案"),
@@ -665,6 +718,42 @@ export const TOOL_DEFS: readonly ToolDef[] = [
     done: N_("已准备分享草案"),
     failed: N_("无法准备分享草案"),
     schema: { type: "object", properties: { handles: HANDLES_FIELD }, required: ["handles"] },
+  },
+  {
+    name: "list_trash",
+    description: "Browse this account's recycle bin. Returns trash-only handles for propose_operation restore. Follow nextPageToken for more. Never permanently delete or empty the recycle bin.",
+    plan: false,
+    running: N_("正在查看回收站"),
+    done: N_("已查看回收站"),
+    failed: N_("无法查看回收站"),
+    schema: { type: "object", properties: { pageToken: { type: "string" } } },
+  },
+  {
+    name: "list_shares",
+    description: "List this account's existing shares and their status, without links or access codes. Returns share-only handles for cancellation drafts. Follow nextPageToken for more.",
+    plan: false,
+    running: N_("正在查看分享"),
+    done: N_("已查看分享"),
+    failed: N_("无法查看分享"),
+    schema: { type: "object", properties: { pageToken: { type: "string" } } },
+  },
+  {
+    name: "propose_operation",
+    description: "Create a confirmation card for a cloud-drive operation. Nothing executes until the user confirms. Use file handles for copy/star/unstar/open_file/extract_archive, trash handles for restore, and exact transfer/share handle domains for controls. Failed BTIH cloud tasks alone support retry. Uploads use a native picker chosen by the user, never model-supplied local paths. Torrent, extraction and file opening continue through existing UI. Permanent deletion and emptying trash are forbidden.",
+    plan: true,
+    running: N_("正在准备操作草案"),
+    done: N_("已准备操作草案"),
+    failed: N_("无法准备操作草案"),
+    schema: {
+      type: "object",
+      properties: {
+        action: { type: "string", enum: [...OPERATION_ACTIONS] },
+        handles: HANDLES_FIELD,
+        folder: FOLDER_FIELD,
+        name: { type: "string", description: "New folder name for create_folder only" },
+      },
+      required: ["action"],
+    },
   },
 ];
 
@@ -813,6 +902,35 @@ function parseItems(o: Record<string, unknown>, handles: Handles): ProposedItem[
   return out;
 }
 
+/** Handle domains are shared by parsing and confirmation-time catalog lookups. */
+export function operationHandleKinds(action: OperationAction): readonly HandleKind[] {
+  if (action === "create_folder" || action.startsWith("upload_")) return [];
+  if (action === "restore") return ["trash_file", "trash_folder"];
+  if (action === "cancel_share") return ["share"];
+  if (action.endsWith("_download")) return ["download"];
+  if (action.endsWith("_upload")) return ["upload"];
+  if (action.endsWith("_cloud_task")) return ["task"];
+  return action === "extract_archive" ? ["file"] : ["file", "folder"];
+}
+
+function parseOperation(o: Record<string, unknown>, handles: Handles): ToolArgsMap["propose_operation"] {
+  const raw = text(o, "action", 80);
+  if (!OPERATION_ACTIONS.includes(raw as OperationAction)) throw new ModelOutputError(t("不支持的助手操作：{action}", { action: raw }));
+  const action = raw as OperationAction;
+  const targets = handleList(o, "handles", handles, operationHandleKinds(action), 200);
+  const creates = action === "create_folder" || action.startsWith("upload_");
+  if (creates ? targets.length > 0 : targets.length === 0) throw new ModelOutputError(t("操作对象与所选动作不匹配"));
+  if ((action === "open_file" || action === "extract_archive") && targets.length !== 1) throw new ModelOutputError(t("此操作一次只能选择一项"));
+  const name = text(o, "name", 255);
+  if (action === "create_folder") {
+    const why = nameError(name);
+    if (why) throw new ModelOutputError(why);
+  } else if (name) throw new ModelOutputError(t("此操作不接受新文件夹名称"));
+  const folder = folderArg(o, "folder", handles);
+  if (folder && action !== "copy" && !creates) throw new ModelOutputError(t("此操作不接受目标文件夹"));
+  return { action, targets, folder, name };
+}
+
 /**
  * parseToolCall reads one call strictly: an unknown tool, a bad field or a
  * handle that was never handed out throws ModelOutputError — the reason
@@ -865,8 +983,16 @@ export function parseToolCall(name: string, args: unknown, handles: Handles): Pa
       if (typeof r === "string") throw unknownHandles([r]);
       return { tool: def.name, args: { target: target(r) } };
     }
-    case "recent_plays":
     case "transfer_status":
+    case "list_trash":
+    case "list_shares": {
+      const token = text(o, "pageToken", 80);
+      const resource = def.name === "list_trash" ? "trash" : def.name === "list_shares" ? "shares" : "transfers";
+      const page = token ? handles.resolve(token) : null;
+      if (token && (!page || page.kind !== "page" || page.path !== resource)) throw unknownHandles([token]);
+      return { tool: def.name, args: { pageToken: page?.id ?? "" } };
+    }
+    case "recent_plays":
     case "storage_quota":
     case "cleanup_results":
       return { tool: def.name, args: {} };
@@ -892,6 +1018,8 @@ export function parseToolCall(name: string, args: unknown, handles: Handles): Pa
       if (!targets.length) throw new ModelOutputError(t("{key} 不能为空", { key: "handles" }));
       return { tool: def.name, args: { targets } };
     }
+    case "propose_operation":
+      return { tool: def.name, args: parseOperation(o, handles) };
   }
 }
 
@@ -967,6 +1095,31 @@ export function cardRows(rows: readonly ModelRow[]): CardRow[] {
     modified: r.modifiedTime,
     played: playState(r.position, r.duration, true),
   }));
+}
+
+/**
+ * Catalogs contain metadata only; their IDs remain behind domain-specific
+ * handles. `chars` bounds what an earlier turn replays (0 for the full page,
+ * as a tool result hands it over this turn).
+ */
+export function resourcesForModel(rows: readonly ResourceRow[], nextPageToken: string, handles: Handles, resource: ResourcesCard["resource"], chars = 0): string {
+  const lines: string[] = [];
+  let used = 0;
+  for (const row of rows) {
+    const name = oneLine(row.name);
+    const shown = name.length > 160 ? `${name.slice(0, 160)}…` : name;
+    const line = `${handles.of(row.id, row.kind)} | ${shown} | ${row.kind} | ${oneLine(row.state)} | ${row.progress}% | ${size(row.size)}`;
+    if (chars && used + line.length + 1 > chars) break;
+    lines.push(line);
+    used += line.length + 1;
+  }
+  const omitted = rows.length - lines.length;
+  return [
+    `This page contains ${rows.length} items${omitted ? `, the first ${lines.length} of them here` : ""}. Long names are abbreviated; full names are on the card.`,
+    nextPageToken ? `More items are available. nextPageToken=${handles.of(nextPageToken, "page", resource)}` : "End of results.",
+    "Handle | Name | Domain | State | Progress | Size",
+    ...lines,
+  ].join("\n");
 }
 
 export interface AggregateLike {
@@ -1110,65 +1263,6 @@ export function playsForModel(plays: readonly PlayLike[], handles: Handles): str
   ].join("\n");
 }
 
-export interface TaskLike {
-  id: string;
-  name: string;
-  phase: string;
-  progress: number;
-  fileSize: number;
-  message: string;
-  errorDetail: string;
-  createdTime: string;
-  updatedTime: string;
-  savedTo: string;
-}
-
-export interface LocalTransferLike {
-  name: string;
-  /** 「Download」「Upload」 */
-  kind: string;
-  /** 「In progress」「Paused」「Failed」… as the transfer center says it. */
-  state: string;
-  progress: number;
-}
-
-const PHASE_LABEL: Record<string, string> = {
-  PHASE_TYPE_PENDING: "Waiting",
-  PHASE_TYPE_RUNNING: "In progress",
-  PHASE_TYPE_COMPLETE: "Completed",
-  PHASE_TYPE_ERROR: "Failed",
-};
-
-/**
- * transfersForModel is a transfer_status result: cloud-add tasks under c
- * handles — never their links or hashes — and the local transfers.
- */
-export function transfersForModel(tasks: readonly TaskLike[], local: readonly LocalTransferLike[], handles: Handles): string {
-  const lines: string[] = [];
-  const shown = tasks.slice(0, ROW_LIMIT);
-  lines.push(tasks.length ? `Total cloud add tasks: ${tasks.length} tasks${tasks.length > shown.length ? `, listing the latest ${shown.length} tasks` : ""}：` : "No cloud add tasks.");
-  if (shown.length) {
-    lines.push("ID | Name | Status | Progress | Size | Save to | Updated at | Description");
-    for (const t of shown) {
-      lines.push(
-        [
-          handles.of(t.id, "task"),
-          oneLine(t.name),
-          PHASE_LABEL[t.phase] ?? oneLine(t.phase),
-          `${Math.round(t.progress)}%`,
-          t.fileSize ? size(t.fileSize) : "-",
-          oneLine(modelPath(t.savedTo)) || "-",
-          (t.updatedTime || t.createdTime || "").slice(0, 16).replace("T", " ") || "-",
-          oneLine([t.message, t.errorDetail].filter((s) => s).join(" ")).slice(0, 80) || "-",
-        ].join(" | "),
-      );
-    }
-  }
-  const mine = local.slice(0, ROW_LIMIT);
-  lines.push(local.length ? `Total local transfers: ${local.length} transfers:` : "No local transfers.");
-  for (const l of mine) lines.push(`${oneLine(l.kind)} | ${oneLine(l.name)} | ${oneLine(l.state)} | ${Math.round(l.progress)}%`);
-  return lines.join("\n");
-}
 
 export interface QuotaLike {
   limit: number;
@@ -1282,13 +1376,14 @@ export function systemPrompt(today: Date, context = ""): string {
     `Today is ${localDay(today)} (${WEEKDAYS[today.getDay()]}).`,
     context ? `User's current location: ${oneLine(context)}` : "",
     "Rules:",
-    "1. Read-only tools (search_files, show_results, find_folders, folder_summary, file_info, recent_plays, transfer_status, storage_quota, cleanup_results) run directly on the local machine and may be called at any time without asking for the user's consent.",
-    "2. You cannot modify the cloud drive directly. Moving, renaming, creating folders, moving to the recycle bin, cloud adding, downloading, and sharing must only be handled by generating plan cards using organize_media or tools whose names start with propose_. Execution may occur only after the user reviews and confirms. After generating a card, ask the user to review and confirm in the card; do not say the operation is already complete.",
-    "3. Refer to files and folders (IDs starting with f) and cloud-add tasks (IDs starting with c) only using IDs that have appeared in tool results; do not invent IDs, paths, or filenames. When unsure, check with read-only tools first.",
+    "1. Read-only tools search files and folders, summarize storage, browse the recycle bin and shares, and list cloud/local transfers. They do not change anything.",
+    "2. You cannot perform operations directly. Generate confirmation cards using organize_media or propose_ tools. Creating folders, copying, moving, renaming, starring, trashing/restoring, transfers and sharing require explicit user confirmation. A generated card is NOT an executed operation; ask the user to review it.",
+    "3. Use only handles returned by tools: f=file/folder, t=trashed file/folder, c=cloud-add task, u=local upload, d=local download, s=share; p handles continue a specific catalog page. Domains cannot be interchanged. Never invent handles or IDs. Re-query when unsure.",
     "4. Tool results list at most 40 items and provide the total count; if more are needed, narrow the criteria and search again.",
-    "5. Use organize_media for organizing movies and TV shows (categorizing and renaming by series or movie), with names determined by local rules and the metadata database; use propose_changes for other moves, renames, and moves to the recycle bin. Generate only one plan for the same request.",
+    "5. Use organize_media for movies/TV; propose_changes for moves, renames and moving to Trash; propose_operation for the other listed actions. Never empty the recycle bin or permanently delete any file, including one by one. These capabilities do not exist. Upload paths and archive passwords are chosen in native/dedicated UI, never sent to you. Copy and task controls acknowledge submission, not eventual completion.",
     "6. You do not have access to file contents, subtitles, or metadata database (TMDB) information. Groups marked 'Matched' have already been identified locally; do not guess their titles.",
     "7. Answer concisely. Do not show users IDs, JSON, or your reasoning process; use filenames when mentioning files.",
+    "Resource catalogs are paginated: follow nextPageToken to inspect further items; do not pretend a page is the full drive. Canceling shares invalidates existing links. Removing a cloud-add task preserves saved files. Canceling local transfers may discard partial bytes; the confirmation card explains the effect.",
     "8. All intermediate searches are kept only in the collapsed search process; neither the last query nor the broadest query is automatically treated as the answer. After completing searches, if you are not generating an action plan, you must call show_results before your final response, using search IDs returned by tools in the current turn to select genuinely relevant result groups. Name and group different intents separately; one group may combine multiple related searches, and handles may select only the relevant files within them. Do not select irrelevant searches or searches with zero hits; if there are no relevant results, use groups=[]. Titles must summarize the content in the user's language, not just say 'Search results'. Statistical searches must be in separate groups without handles. Answer normally in the final text; do not repeat the JSON.",
     `Always use ${lang} to reply to the user.`,
   ]
@@ -1340,8 +1435,53 @@ const CARD_STATE_LABEL: Record<CardState, string> = {
   undone: "Undone",
 };
 
-function cardLine(c: Card, handles: Handles, visibleSearch = false): string {
-  const head = `[Card:${oneLine(c.title)}，${CARD_STATE_LABEL[c.state]}］`;
+function cardLine(c: Card, handles: Handles, visibleSearch = false, receiptChars = HISTORY_CHARS / 2): string {
+  const state = c.kind === "operation" && c.state === "done"
+    ? c.action === "upload_torrent" || c.action === "extract_archive"
+      ? "Setup opened; task not submitted"
+      : c.action === "open_file" ? "File opened" : CARD_STATE_LABEL[c.state]
+    : CARD_STATE_LABEL[c.state];
+  const head = `[Card:${oneLine(c.title)}，${state}］`;
+  if (c.kind === "resources") return `${head}\n${resourcesForModel(c.rows, c.nextPageToken, handles, c.resource, receiptChars)}`;
+  if (c.kind === "operation") {
+    let names: string;
+    if (c.action === "upload_files" || c.action === "upload_folder") {
+      const receipts: string[] = [];
+      let chars = 0;
+      for (const result of c.results) {
+        const name = oneLine(result.name.split(/[\\/]/).pop() ?? "");
+        const outcome = result.error ? "Failed" : "Submitted";
+        const h = result.id ? handles.of(result.id, "upload") : "";
+        const line = `${h ? `${h} ` : ""}${name} [${outcome}]`;
+        if (chars + line.length + 2 > receiptChars) break;
+        receipts.push(line);
+        chars += line.length + 2;
+      }
+      names = receipts.join("; ");
+      if (receipts.length < c.results.length) names += `; ${c.results.length - receipts.length} more results omitted`;
+    } else {
+      const kinds = operationHandleKinds(c.action);
+      const results = new Map(c.results.map((result) => [result.id, result]));
+      const parts: string[] = [];
+      let chars = 0;
+      for (const row of c.rows) {
+        const h = kinds.map((kind) => handles.peek(row.id, kind)).find(Boolean);
+        const path = oneLine(modelPath(row.path));
+        const result = results.get(row.id);
+        const outcome = result ? result.error ? "Failed" : "Succeeded" : "No recorded result";
+        const line = `${h ? `${h} ` : ""}${oneLine(row.name)}${path ? ` (${path})` : ""} [${outcome}]`;
+        if (parts.length && chars + line.length + 2 > receiptChars) break;
+        parts.push(line);
+        chars += line.length + 2;
+      }
+      names = parts.join("; ");
+      if (parts.length < c.rows.length) names += `; ${c.rows.length - parts.length} more targets omitted`;
+    }
+    const folder = c.folderId || c.path || c.action === "copy" || c.action === "create_folder" || c.action.startsWith("upload_")
+      ? `; folder=${handles.peek(c.folderId, "folder") ?? ""} ${oneLine(modelPath(c.path)) || "Root directory"}`
+      : "";
+    return `${head} Action=${c.action}; targets=${names || oneLine(c.name)}${folder}; processed=${c.progress.done}/${c.progress.total}; failures=${c.results.filter((result) => !!result.error).length}${c.stopped ? "; stopped before remaining items" : ""}`;
+  }
   if (c.kind !== "files" && c.kind !== "download" && c.kind !== "share") return head;
   const named = c.rows
     .slice(0, visibleSearch ? undefined : 20)
@@ -1379,7 +1519,7 @@ export function compactHistory(turns: readonly Turn[], handles: Handles): { role
     const answer = [
       t.text.trim() || (t.error ? `(Error:${oneLine(t.error)}）` : "(No text response)"),
       ...groups.map(({ card }) => cardLine(card, handles, true)),
-      ...cards.map((card) => cardLine(card, handles)),
+      ...cards.map((card) => cardLine(card, handles, false, HISTORY_CHARS / 2 / cards.length)),
     ].join("\n");
     const pair = [
       { role: "user" as const, content: [t.user.trim(), ...(scope.length ? [`[Scope:${scope.join("；")}］`] : [])].join("\n") },
@@ -1580,9 +1720,9 @@ export async function runTurn(deps: AgentDeps, state: ConversationState, userTex
     const go = await deps.consent({
       title: t("这一轮要发给模型的内容"),
       sends: t(
-        "你的这句话、本对话之前的问答文字，以及 AI 调用本地工具后查到的文件名、所在路径、大小与时间（每次最多 40 项）。路径中的文件夹名也会发送。",
+        "发送你的这句话、本对话之前的问答文字，以及工具查到的文件名、云盘路径、大小、时间、回收站项目、分享状态和传输任务元数据（每页最多 40 项）。问题或历史问答中的敏感内容也会发送。",
       ),
-      notSent: t("文件内容、字幕、账号凭据、下载链接和 TMDB 返回的资料。"),
+      notSent: t("工具查询不会额外发送文件内容、字幕、账号凭据、下载和分享链接、分享口令、任务源链接、本地文件路径或 TMDB 资料；不包括你在问题或历史问答中写入的内容。"),
       estimate: estimate(),
       level: "metadata",
     });

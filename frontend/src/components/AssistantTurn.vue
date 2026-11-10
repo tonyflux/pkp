@@ -14,7 +14,7 @@ import Icon from "./Icon.vue";
 import Orbit from "./Orbit.vue";
 import { indexBlocked, type AssistantScope, type Card, type SearchResultGroup, type Trace, type Turn } from "../agent";
 import { t } from "../i18n";
-import { assistantScopeLabel, drive, indexReady, indexText, notify, retryTurn } from "../store";
+import { assistantScopeLabel, drive, indexReady, indexText, notify, openAISettings, retryTurn } from "../store";
 import { linkTarget, parseMarkdown } from "../markdown";
 
 const props = defineProps<{
@@ -155,6 +155,10 @@ const shown = computed(() => {
         <p v-if="ending" class="ending" :class="ending.tone">
           {{ ending.text }}
           <button v-if="retry && !indexRetry" type="button" class="quiet retry" @click="retryTurn(turnId)"><Icon name="restore" :size="13" />{{ t("重试") }}</button>
+        </p>
+        <p v-if="turn?.stop === 'budget'" class="ending info">
+          {{ t("可前往 AI 设置，调高“单个对话上限”或开启“不限制”，下一轮生效。模型费用仍按实际用量计费。") }}
+          <button type="button" class="quiet retry" @click="openAISettings()">{{ t("前往 AI 设置") }}<Icon name="arrowRight" :size="13" /></button>
         </p>
         <p v-if="turn?.modeNote" class="ending info">{{ turn.modeNote }}</p>
         <footer v-if="!live && text.trim()" class="answer-footer"><AssistantCopyButton :text="text" :label="t('复制回答')" /></footer>

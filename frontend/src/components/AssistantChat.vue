@@ -10,7 +10,7 @@ import Icon from "./Icon.vue";
 import type { Card } from "../agent";
 import { formatTokens } from "../aiprompt";
 import { t } from "../i18n";
-import { accountById, accountName, assistant, retryTurnId } from "../store";
+import { accountById, accountName, assistant, assistantHome, retryTurnId } from "../store";
 
 const conversation = computed(() => assistant.conversation);
 const turns = computed(() => conversation.value?.turns ?? []);
@@ -140,6 +140,11 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="ai-chat">
+    <div class="chat-nav">
+      <button class="quiet back" type="button" :disabled="!!assistant.busy || !!assistant.live || assistant.running || !!assistant.consent || !!assistant.connect" @click="assistantHome()">
+        <Icon name="chevronLeft" :size="16" />{{ t("返回助手首页") }}
+      </button>
+    </div>
     <div ref="scroller" class="chat-scroll" @scroll.passive="onScroll" @pointerdown="onPointerDown">
       <div class="chat-inner">
         <header class="chat-heading">
@@ -186,6 +191,23 @@ onBeforeUnmount(() => {
   flex-direction: column;
 }
 
+.chat-nav {
+  flex: none;
+  width: min(880px, calc(100% - 80px));
+  margin: 20px auto 0;
+}
+
+.back {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 32px;
+  margin-left: -8px;
+  padding: 4px 8px;
+  font-size: 12px;
+  color: var(--accent);
+}
+
 .chat-scroll {
   flex: 1;
   min-height: 0;
@@ -197,7 +219,7 @@ onBeforeUnmount(() => {
 .chat-inner {
   width: min(880px, calc(100% - 80px));
   margin: 0 auto;
-  padding: 30px 0 25px;
+  padding: 12px 0 25px;
 }
 
 .chat-heading {
@@ -269,12 +291,24 @@ onBeforeUnmount(() => {
 }
 
 @media (max-width: 959px) {
+  .chat-nav,
   .chat-inner {
     width: min(880px, calc(100% - 42px));
   }
 }
 
 @media (max-width: 550px) {
+  .chat-nav {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: var(--canvas-flat);
+    align-self: stretch;
+    width: auto;
+    margin: 0;
+    padding: 14px 16px 0;
+  }
+
   .ai-chat {
     flex: 1 0 auto;
     min-height: auto;

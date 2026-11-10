@@ -26,6 +26,7 @@ import {
   drive,
   goBack,
   indexReady,
+  localSearchShown,
   openAISettings,
   openViewer,
   play,
@@ -45,7 +46,7 @@ const search = ref<HTMLInputElement>();
 
 const backTitle = computed(() =>
   t("{name}（{note}）", {
-    name: ui.view === "all" && ui.scope === "drive" ? t("返回当前文件夹") : t("返回上一级"),
+    name: localSearchShown.value ? t("返回文件列表") : ui.view === "all" && ui.scope === "drive" ? t("返回当前文件夹") : t("返回上一级"),
     note: shortcutText("["),
   }),
 );

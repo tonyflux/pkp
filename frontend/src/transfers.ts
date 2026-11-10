@@ -92,6 +92,12 @@ const DOWNLOAD_STATE: Record<string, TransferState> = {
   done: "done",
 };
 
+/** One normalization for task rows, menu summaries and Assistant resource cards. */
+export function transferState(kind: TransferKind, state: string): TransferState {
+  const states = kind === "cloud" ? PHASE_STATE : kind === "upload" ? UPLOAD_STATE : DOWNLOAD_STATE;
+  return states[state] ?? "waiting";
+}
+
 // Failures the server names by a code (a task's params.error_detail), in
 // the page's words. Only codes seen on real tasks are here: the server
 // sends task_file_deleted with "File deleted" or, to clients it takes for
@@ -118,7 +124,7 @@ const NO_FAILURE = { reason: "", rawError: "" };
 
 /** blocked marks a task of an account whose session ended. */
 export function fromTask(task: TaskSummary, blocked = false): TransferItem {
-  const state = PHASE_STATE[task.phase] ?? "waiting";
+  const state = transferState("cloud", task.phase);
   // A signed-out account's task may have moved on: no progress is claimed for it.
   const progress = state === "running" && !blocked ? Math.max(0, Math.min(100, task.progress)) : null;
   const failed = state === "failed";
@@ -177,7 +183,7 @@ export function mergeMoving(tasks: TaskSummary[], moving: TaskSummary[]): TaskSu
 }
 
 export function fromUpload(task: UploadTask, blocked = false): TransferItem {
-  const state = UPLOAD_STATE[task.state] ?? "waiting";
+  const state = transferState("upload", task.state);
   const running = state === "running";
   // An empty file has nothing to send; it is not stuck at 0%.
   const progress = running ? (task.size > 0 ? Math.min(100, (task.done / task.size) * 100) : 100) : null;
@@ -209,7 +215,7 @@ export function fromUpload(task: UploadTask, blocked = false): TransferItem {
 }
 
 export function fromDownload(task: DownloadTask, blocked = false): TransferItem {
-  const state = DOWNLOAD_STATE[task.state] ?? "waiting";
+  const state = transferState("download", task.state);
   const running = state === "running";
   // An empty file has nothing to fetch; it is not stuck at 0%.
   const progress = running ? (task.size > 0 ? Math.min(100, (task.done / task.size) * 100) : 100) : null;

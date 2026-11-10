@@ -2,7 +2,6 @@ package services
 
 import (
 	"context"
-	"errors"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -29,6 +28,18 @@ type UploadTask struct {
 	// Account is the account the upload belongs to (Account.ID), fixed
 	// when it was queued.
 	Account string `json:"account"`
+}
+
+// UploadFailure identifies a local input that could not be queued.
+type UploadFailure struct {
+	Name  string `json:"name"`
+	Error string `json:"error"`
+}
+
+// UploadBatchResult keeps queued tasks even when other inputs fail.
+type UploadBatchResult struct {
+	Tasks  []UploadTask    `json:"tasks"`
+	Failed []UploadFailure `json:"failed"`
 }
 
 func toUploadTask(account string, t upload.Task) UploadTask {
@@ -108,16 +119,17 @@ func (d *DriveService) folderTrail(s *accountSession, folderID string) ([]Crumb,
 // are picked. A folder is walked here and queued file by file, each
 // carrying its path relative to the folder's parent so the tree is
 // recreated on the server. Dotfiles (.DS_Store and friends) and empty
-// folders are skipped. Paths are checked as they are added; the rest still
-// go in when one is rejected, and the error names every one that was.
-func (d *DriveService) UploadFiles(account string, paths []string, parentID string) ([]UploadTask, error) {
+// folders are skipped. Paths are checked as they are added; failed inputs
+// are reported alongside every queued task, without rejecting the batch.
+func (d *DriveService) UploadFiles(account string, paths []string, parentID string) (UploadBatchResult, error) {
+	out := UploadBatchResult{Tasks: []UploadTask{}, Failed: []UploadFailure{}}
 	s, err := d.sessionFor(account)
 	if err != nil {
-		return nil, err
+		return out, err
 	}
 	q, err := s.liveQueue()
 	if err != nil {
-		return nil, err
+		return out, err
 	}
 	// The destination is named once per batch: the index or a few server
 	// reads up the tree, never once per file.
@@ -129,10 +141,9 @@ func (d *DriveService) UploadFiles(account string, paths []string, parentID stri
 		}
 		label = folderPath(crumbs)
 	}
-	var (
-		added []UploadTask
-		errs  []error
-	)
+	fail := func(path string, err error) {
+		out.Failed = append(out.Failed, UploadFailure{Name: filepath.Base(path), Error: err.Error()})
+	}
 	add := func(path, dir string) {
 		to := upload.Target{ParentID: parentID, Dir: dir, SavedTo: label}
 		if label != "" && dir != "" {
@@ -140,15 +151,15 @@ func (d *DriveService) UploadFiles(account string, paths []string, parentID stri
 		}
 		task, err := q.Add(path, to)
 		if err != nil {
-			errs = append(errs, err)
+			fail(path, err)
 			return
 		}
-		added = append(added, toUploadTask(s.key, task))
+		out.Tasks = append(out.Tasks, toUploadTask(s.key, task))
 	}
 	for _, root := range paths {
 		info, err := os.Stat(root)
 		if err != nil {
-			errs = append(errs, err)
+			fail(root, err)
 			continue
 		}
 		if !info.IsDir() {
@@ -158,7 +169,7 @@ func (d *DriveService) UploadFiles(account string, paths []string, parentID stri
 		base := filepath.Dir(root)
 		err = filepath.WalkDir(root, func(path string, entry fs.DirEntry, err error) error {
 			if err != nil {
-				errs = append(errs, err)
+				fail(path, err)
 				return nil
 			}
 			if path != root && strings.HasPrefix(entry.Name(), ".") {
@@ -175,10 +186,10 @@ func (d *DriveService) UploadFiles(account string, paths []string, parentID stri
 			return nil
 		})
 		if err != nil {
-			errs = append(errs, err)
+			fail(root, err)
 		}
 	}
-	return added, errors.Join(errs...)
+	return out, nil
 }
 
 // CancelUpload stops one of an account's queued or running uploads; its

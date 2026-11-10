@@ -67,6 +67,7 @@ import type {
   RemoveReport,
   RemoveResult,
   TaskSummary,
+  UploadBatchResult,
   UploadTask,
   TextPreview,
   TorrentMeta,
@@ -116,7 +117,10 @@ import {
   retryable,
   runTurn,
   searchForModel,
-  transfersForModel,
+  OPERATION_ACTIONS,
+  operationHandleKinds,
+  type HandleKind,
+  resourcesForModel,
   type AIChatRequest,
   type AssistantScope,
   type Card,
@@ -124,14 +128,20 @@ import {
   type DownloadCard,
   type FilesCard,
   type FolderRef,
+  type HandleSnapshot,
   type ModelRow,
   type OfflineCard,
+  type OperationAction,
+  type OperationCard,
   type PlanCard,
   type ProposedItem,
   type SearchResultGroup,
+  type ResourceRow,
+  type ResourcesCard,
   type ShareCard,
   type StatsCard,
   type Target as AgentTarget,
+  type ToolArgsMap,
   type ToolImpls,
   type Trace,
   type TurnDisclosure,
@@ -2168,7 +2178,7 @@ let listSerial = 0;
  * rather than the previous contents sitting there until the answer lands.
  * A plain refresh keeps the rows and only dims them.
  */
-export async function reload(fresh = false) {
+export async function reload(fresh = false): Promise<boolean> {
   const serial = ++listSerial;
   if (fresh) {
     drive.entries = [];
@@ -2181,13 +2191,13 @@ export async function reload(fresh = false) {
     const page = await run(t("加载列表"), () => DriveService.List(listRequest(0, "")));
     // A slower answer for a folder the user already left must not replace
     // the one they are looking at.
-    if (serial !== listSerial) return;
-    if (!page) return;
+    if (serial !== listSerial || !page) return false;
     drive.entries = page.entries ?? [];
     drive.total = page.total;
     drive.offset = page.offset + drive.entries.length;
     drive.live = page.live;
     drive.nextPageToken = page.nextPageToken;
+    return true;
   } finally {
     if (serial === listSerial) drive.listLoading = false;
   }
@@ -2313,12 +2323,14 @@ function applyIndexProgress(progress: IndexProgress) {
 }
 
 export async function openView(view: LibraryView) {
-  const fromSaved = !!savedHistory.id || localSearch.force;
+  const fromSearch = !!savedHistory.id || localSearch.force || (ui.route === "files" && localSearchShown.value);
   if (!leaveSavedHistory(() => void openView(view))) return;
-  if (view === ui.view && !fromSaved) {
+  if (view === ui.view && !fromSearch) {
     ui.route = "files";
     return;
   }
+  clearTimeout(queryTimer);
+  restoring = true;
   if (ui.view === "all") fileTrails.set(currentId.value, drive.trail.map((c) => ({ ...c })));
   ui.view = view;
   ui.route = "files";
@@ -2326,6 +2338,7 @@ export async function openView(view: LibraryView) {
   localSearch.force = false;
   localSearch.range = null;
   drive.trail = view === "all" ? (fileTrails.get(currentId.value) ?? []).map((c) => ({ ...c })) : [];
+  void nextTick(() => (restoring = false));
   clearSelection();
   await reload(true);
 }
@@ -2350,14 +2363,14 @@ export async function goToCrumb(index: number) {
   await reload(true);
 }
 
-// Inside a folder, up one level; over the whole drive, back to the folder
-// it was opened from.
-export const canGoBack = computed(() => ui.view === "all" && (ui.scope === "drive" || drive.trail.length > 0));
+// Search is a view over the file list; Back leaves it before moving folders.
+export const canGoBack = computed(() => localSearchShown.value || (ui.view === "all" && (ui.scope === "drive" || drive.trail.length > 0)));
 
-/** goBack is the toolbar's Go Up / Return to Current Folder (⌘[). */
+/** goBack is the toolbar's Back / Go Up / Return to Current Folder (⌘[). */
 export function goBack() {
   if (!canGoBack.value) return;
-  if (ui.scope === "drive") void setScope("folder");
+  if (localSearchShown.value) void openView(ui.view);
+  else if (ui.scope === "drive") void setScope("folder");
   else void goToCrumb(drive.trail.length - 1);
 }
 
@@ -3079,6 +3092,17 @@ function ids(entries: Entry[]): string[] {
   return entries.map((e) => e.id);
 }
 
+function applyStarred(targets: string[], starred: boolean) {
+  for (const id of targets) patchEntry(id, { starred });
+  if (localSearch.account === currentId.value) {
+    for (const hit of localSearch.result?.hits ?? []) if (targets.includes(hit.id)) hit.starred = starred;
+  }
+  if (ui.view === "starred" && !starred) {
+    removeEntries(targets);
+    clearSelection();
+  }
+}
+
 export async function setStarred(entries: Entry[], starred: boolean) {
   if (!entries.length) return;
   const ok = await run(starred ? t("加星标") : t("取消星标"), async () => {
@@ -3086,11 +3110,7 @@ export async function setStarred(entries: Entry[], starred: boolean) {
     return true;
   });
   if (!ok) return;
-  for (const e of entries) patchEntry(e.id, { starred });
-  if (ui.view === "starred" && !starred) {
-    removeEntries(ids(entries));
-    clearSelection();
-  }
+  applyStarred(ids(entries), starred);
   if (entries.length > 1) notify(starred ? t("已加星标 {n} 项", { n: entries.length }) : t("已取消星标 {n} 项", { n: entries.length }), "success");
 }
 
@@ -4247,6 +4267,8 @@ let deltaTo: { id: string; push: (text: string) => void } | null = null;
 let handles = new Handles();
 /** Draft plans of the open conversation's cards, by plan id. */
 const drafts = new Map<string, AssistantPlan>();
+/** The confirmed card owns its account and receipt until submission ends. */
+let cardRun: { card: Card; account: string; stop: boolean } | null = null;
 /** What the connect sheet holds back until a model is connected. */
 type Held =
   | { kind: "turn"; text: string; scope?: AskScope; plan: AssistantPlan | null; card: FilesCard | null }
@@ -4355,7 +4377,7 @@ function askConsent(sheet: Pick<ConsentSheet, "title" | "lede" | "sends" | "esti
   assistant.consent = {
     accountName: accountName(account),
     level: "metadata",
-    notSends: t("文件内容、字幕、账号凭据、下载链接和 TMDB 返回的资料。"),
+    notSends: t("工具查询不会额外发送文件内容、字幕、账号凭据、下载和分享链接、分享口令、任务源链接、本地文件路径或 TMDB 资料；不包括你在问题或历史问答中写入的内容。"),
     to: modelLine(),
     ...sheet,
   };
@@ -4463,11 +4485,10 @@ export async function loadConversations() {
 }
 
 /** saveConversation keeps the conversation on this computer after each turn or card change. */
-async function saveConversation(conv: ConversationView) {
-  const account = assistant.account;
-  if (!account || !conv.turns.length) return;
+async function saveConversation(conv: ConversationView, account = assistant.account, snapshot: HandleSnapshot = handles.snapshot()): Promise<boolean> {
+  if (!account || !conv.turns.length) return false;
   conv.updatedAt = new Date().toISOString();
-  conv.handles = handles.snapshot();
+  conv.handles = snapshot;
   const info: ConversationInfo = {
     id: conv.id,
     title: conv.title,
@@ -4479,10 +4500,10 @@ async function saveConversation(conv: ConversationView) {
     await DriveService.SaveConversation(account, info, conversationBody(conv));
   } catch (err) {
     if (account === currentId.value) say(t("这段对话没能保存：{error}", { error: errorText(err) }), "warning");
-    return;
+    return false;
   }
-  if (account !== currentId.value) return;
-  assistant.conversations = [info, ...assistant.conversations.filter((c) => c.id !== info.id)];
+  if (account === currentId.value) assistant.conversations = [info, ...assistant.conversations.filter((c) => c.id !== info.id)];
+  return true;
 }
 
 /** newConversation is New Conversation: the home's composer starts it. */
@@ -4784,16 +4805,90 @@ async function scopedQuery(account: string, query: AIQuery, scope: AskScope): Pr
   return local;
 }
 
-// English transfer states for model context, independent of translated UI labels.
-const TRANSFER_STATE: Record<string, string> = {
-  queued: "Queued",
-  uploading: "In progress",
-  downloading: "In progress",
-  paused: "Paused",
-  done: "Completed",
-  failed: "Failed",
-  cancelled: "Canceled",
+const OPERATION_TITLES: Record<OperationAction, string> = {
+  create_folder: N_("新建文件夹"), copy: N_("复制"), star: N_("加星标"), unstar: N_("取消星标"), restore: N_("从回收站恢复"),
+  pause_download: N_("暂停下载"), resume_download: N_("继续下载"), restart_download: N_("重新下载"), cancel_download: N_("取消下载"), remove_download: N_("移除下载记录"),
+  retry_upload: N_("重试上传"), cancel_upload: N_("取消上传"), remove_upload: N_("移除上传记录"),
+  retry_cloud_task: N_("重试云添加任务"), remove_cloud_task: N_("移除云添加任务"), cancel_share: N_("取消分享"),
+  upload_files: N_("上传文件"), upload_folder: N_("上传文件夹"), upload_torrent: N_("添加种子"),
+  extract_archive: N_("在线解压"), open_file: N_("打开文件"),
 };
+
+function operationResource(action: OperationAction): ResourcesCard["resource"] | null {
+  if (action === "restore") return "trash";
+  if (action === "cancel_share") return "shares";
+  return action.endsWith("_download") || action.endsWith("_upload") || action.endsWith("_cloud_task") ? "transfers" : null;
+}
+
+function requireDriveScope(scope: AskScope): void {
+  if (scope.entries || scope.folder?.length) throw new Error(t("此查询需要将范围切换为整个云盘"));
+}
+
+async function resourcePage(account: string, resource: ResourcesCard["resource"], pageToken: string): Promise<ResourcesCard> {
+  const page = await DriveService.AssistantResources(account, resource, pageToken);
+  return {
+    resource,
+    kind: "resources", id: "", title: resource === "trash" ? t("回收站") : resource === "shares" ? t("我的分享") : t("传输任务"),
+    state: "done", note: "", nextPageToken: page.nextPageToken,
+    rows: (page.items ?? []).map((row) => ({
+      id: row.id, name: row.name, kind: row.kind as ResourceRow["kind"], folder: row.folder,
+      parentId: row.parentId, path: "", size: row.size, modified: row.modifiedTime, state: row.state, progress: row.progress,
+    })),
+  };
+}
+
+/** Resolve every requested resource, not merely the first catalog page. */
+async function resourceTargets(account: string, resource: ResourcesCard["resource"], targets: readonly { id: string }[], kinds: readonly HandleKind[]): Promise<ResourceRow[]> {
+  const wanted = new Set(targets.map((target) => target.id));
+  const found = new Map<string, ResourceRow>();
+  const seen = new Set<string>();
+  let token = "";
+  do {
+    if (seen.has(token)) throw new Error(t("结果分页已变化，请重新查询"));
+    seen.add(token);
+    const page = await resourcePage(account, resource, token);
+    for (const row of page.rows) if (kinds.includes(row.kind) && wanted.has(row.id)) found.set(row.id, row);
+    token = page.nextPageToken;
+  } while (token && found.size !== wanted.size);
+  if (found.size !== wanted.size) throw new Error(t("操作对象已变化，请重新查询后确认"));
+  return targets.map((target) => found.get(target.id)!);
+}
+
+async function operationFolder(account: string, ref: FolderRef | null, scope: AskScope): Promise<FolderRef> {
+  const folder = await resolveFolder(account, ref ?? {
+    id: scope.folder?.at(-1)?.id ?? "",
+    path: scope.folder?.map((crumb) => crumb.name).join("/") ?? "",
+  }, scope);
+  await checkScopeTargets(scope, [{ id: folder.id, folder: true }]);
+  if (folder.id) {
+    const entry = await DriveService.FileDetail(folder.id);
+    if (!entry.folder || entry.trashed) throw new Error(t("目标文件夹已变化，请重新选择"));
+    return { id: entry.id, path: (await trailOf(entry.id)).map((crumb) => crumb.name).join("/") };
+  }
+  return { id: "", path: "" };
+}
+
+async function operationDraft(account: string, args: ToolArgsMap["propose_operation"], scope: AskScope): Promise<OperationCard> {
+  const resource = operationResource(args.action);
+  let rows: CardRow[];
+  if (resource) {
+    requireDriveScope(scope);
+    rows = (await resourceTargets(account, resource, args.targets, operationHandleKinds(args.action))).map((row) => ({
+      id: row.id, name: row.name, folder: row.folder, path: "", size: row.size, modified: row.modified, played: "",
+    }));
+  } else {
+    const targets = args.targets.map((target) => ({ id: target.id, folder: target.kind === "folder" }));
+    await checkScopeTargets(scope, targets);
+    rows = await targetRows(targets);
+  }
+  const needsFolder = args.action === "copy" || args.action === "create_folder" || args.action.startsWith("upload_");
+  const folder = needsFolder ? await operationFolder(account, args.folder, scope) : { id: "", path: "" };
+  return {
+    kind: "operation", id: "", title: t(OPERATION_TITLES[args.action]), state: "draft", note: "", action: args.action,
+    rows, targetIds: args.targets.map((target) => target.id), folderId: folder.id, path: folder.path, name: args.name,
+    scope: snapshotScope(scope), progress: { done: 0, total: Math.max(1, rows.length) }, results: [], stopped: false,
+  };
+}
 
 /**
  * turnTools are the tools of one turn: read-only ones answer from the
@@ -4873,17 +4968,10 @@ function turnTools(account: string, serial: number, conv: ConversationView, room
       const card: FilesCard = { kind: "files", id: "", title: t("最近播放"), state: "done", note: "", total: rows.length, rows: cardRows(rows), aggregate: [], query: null };
       return { forModel: playsForModel(plays, handles), trace: t("{n} 条", { n: plays.length }), card };
     },
-    transfer_status: async () => {
-      if (scope.entries || scope.folder?.length) throw new Error(t("此查询需要将范围切换为整个云盘"));
-      const page = await DriveService.Tasks(account, "");
-      const tasks = page.tasks ?? [];
-      const local = [
-        ...drive.uploads.filter((u) => u.account === account).map((u) => ({ name: u.name, kind: "Upload", state: TRANSFER_STATE[u.state] ?? u.state, progress: u.size ? (u.done / u.size) * 100 : 0 })),
-        ...drive.downloads
-          .filter((d) => d.account === account)
-          .map((d) => ({ name: d.name, kind: "Download", state: TRANSFER_STATE[d.state] ?? d.state, progress: d.size ? (d.done / d.size) * 100 : 0 })),
-      ];
-      return { forModel: transfersForModel(tasks, local, handles), trace: t("{n} 个云添加任务", { n: tasks.length }) };
+    transfer_status: async ({ pageToken }) => {
+      requireDriveScope(scope);
+      const card = await resourcePage(account, "transfers", pageToken);
+      return { forModel: resourcesForModel(card.rows, card.nextPageToken, handles, card.resource), trace: t("{n} 项", { n: card.rows.length }), card };
     },
     storage_quota: async () => {
       const q = await DriveService.Quota();
@@ -4893,6 +4981,21 @@ function turnTools(account: string, serial: number, conv: ConversationView, room
       if (scope.entries || scope.folder?.length) throw new Error(t("此查询需要将范围切换为整个云盘"));
       const mine = cleanup.account === account;
       return { forModel: cleanupForModel(mine ? cleanup.dup.page : null, mine ? cleanup.empty.page : null, handles), trace: t("已读取") };
+    },
+    list_trash: async ({ pageToken }) => {
+      requireDriveScope(scope);
+      const card = await resourcePage(account, "trash", pageToken);
+      return { forModel: resourcesForModel(card.rows, card.nextPageToken, handles, card.resource), trace: t("{n} 项", { n: card.rows.length }), card };
+    },
+    list_shares: async ({ pageToken }) => {
+      requireDriveScope(scope);
+      const card = await resourcePage(account, "shares", pageToken);
+      return { forModel: resourcesForModel(card.rows, card.nextPageToken, handles, card.resource), trace: t("{n} 项", { n: card.rows.length }), card };
+    },
+    propose_operation: async (args) => {
+      const card = await operationDraft(account, args, scope);
+      if (serial !== taskSerial || account !== currentId.value) throw new Error(t("操作范围或账号已变化，请重新发起"));
+      return { forModel: "Confirmation card generated. Nothing has been submitted. The user must review and confirm in the card.", trace: card.title, card };
     },
     organize_media: async ({ folder, targets, instructions }) => {
       let plan: AssistantPlan;
@@ -5008,8 +5111,12 @@ function turnTools(account: string, serial: number, conv: ConversationView, room
 
 /** targetRows names what a download or share card acts on. */
 async function targetRows(targets: readonly AgentTarget[]): Promise<CardRow[]> {
-  const details = await Promise.all(targets.map((t) => DriveService.FileDetail(t.id)));
-  return details.map((d) => cardRowOf(d, ""));
+  const details = await Promise.all(targets.map(async (target) => {
+    const entry = await DriveService.FileDetail(target.id);
+    if (entry.trashed || entry.folder !== target.folder) throw new Error(t("操作对象已变化，请重新查询后确认"));
+    return cardRowOf(entry, await pathOfParent(entry.parentId));
+  }));
+  return details;
 }
 
 /* ---------- cards ---------- */
@@ -5051,43 +5158,261 @@ export async function cleanupAssistantResults(rows: readonly Pick<CardRow, "id" 
   });
 }
 
-/**
- * runCard is Confirm on an offline, download or share card: only now the
- * existing transfer or share call is made, for the conversation's account.
- */
-export async function runCard(turnId: string, cardId: string) {
-  const found = assistant.conversation ? findCard(assistant.conversation.turns, cardId) : null;
-  const card = found?.card;
-  if (!card || card.state !== "draft" || assistant.account !== currentId.value) return;
-  const account = assistant.account;
-  if (card.kind === "offline") {
-    await setCard(turnId, cardId, { state: "running" });
-    let tasks = transfers.cloud[account]?.tasks ?? [];
-    if (card.taskIds.some((id) => !tasks.some((t) => t.id === id))) tasks = (await DriveService.Tasks(account, "").catch(() => null))?.tasks ?? tasks;
-    // A magnet task is added again from its info hash; the link never went to the model.
-    const again = card.taskIds.map((id) => tasks.find((t) => t.id === id)?.hash ?? "").filter((h) => h);
-    const results = await addOffline([...card.urls, ...again.map((h) => `magnet:?xt=urn:btih:${h}`)], card.folderId);
-    const ok = results.filter((r) => r.ok).length;
-    const missed = card.taskIds.length - again.length;
-    let note = results.length - ok ? t("已提交 {n} 项，{failed} 项失败", { n: ok, failed: results.length - ok }) : t("已提交 {n} 项", { n: ok });
-    if (missed) note = t("{text}，{n} 个任务无法重新添加", { text: note, n: missed });
-    await setCard(turnId, cardId, { state: ok ? "done" : "failed", note });
-    return;
+/** Fresh snapshots prevent a confirmed card from silently acting on changed files. */
+async function checkedCardEntries(rows: readonly CardRow[], scope: AskScope, paths: boolean): Promise<Entry[]> {
+  await checkScopeTargets(scope, rows);
+  const entries = await entriesOf(rows);
+  for (let i = 0; i < rows.length; i++) {
+    const before = rows[i], now = entries[i];
+    if (now.trashed || now.name !== before.name || now.folder !== before.folder || now.size !== before.size || now.modifiedTime !== before.modified ||
+      (paths && await pathOfParent(now.parentId) !== before.path)) throw new Error(t("操作对象已变化，请重新查询后确认"));
   }
-  if (card.kind === "download" || card.kind === "share") {
-    let entries: Entry[];
-    try {
-      entries = await entriesOf(card.rows);
-    } catch (err) {
-      await setCard(turnId, cardId, { state: "failed", note: errorText(err) });
+  return entries;
+}
+
+/** Stop affects only not-yet-submitted items; an accepted request is not rolled back. */
+export function stopAssistantOperation(): void {
+  if (!cardRun) return;
+  cardRun.stop = true;
+  assistant.stopping = true;
+  if (cardRun.card.kind === "operation") cardRun.card.stopped = true;
+}
+
+async function executeOperationCard(account: string, card: OperationCard, scope: AskScope, check: () => void, persist: () => Promise<void>): Promise<void> {
+  if (!OPERATION_ACTIONS.includes(card.action)) throw new Error(t("不支持的助手操作：{action}", { action: card.action }));
+  const creates = card.action === "create_folder" || card.action.startsWith("upload_");
+  if (card.targetIds.length > 200 || new Set(card.targetIds).size !== card.targetIds.length ||
+    card.targetIds.length !== card.rows.length || card.targetIds.some((id, i) => id !== card.rows[i].id) ||
+    (creates ? card.targetIds.length > 0 : !card.targetIds.length)) throw new Error(t("操作对象与所选动作不匹配"));
+  const resource = operationResource(card.action);
+  let entries: Entry[] = [];
+  if (resource) {
+    requireDriveScope(scope);
+    const fresh = await resourceTargets(account, resource, card.rows, operationHandleKinds(card.action));
+    // Size is stable while a transfer runs (its progress is not), and a
+    // local queue number can be handed out again after a restart: the ID
+    // alone would aim the card at whatever holds that number now.
+    if (fresh.some((row, i) => row.name !== card.rows[i].name || row.folder !== card.rows[i].folder || row.size !== card.rows[i].size)) {
+      throw new Error(t("操作对象已变化，请重新查询后确认"));
+    }
+  } else entries = await checkedCardEntries(card.rows, scope, true);
+  check();
+  const needsFolder = card.action === "copy" || creates;
+  if (needsFolder) {
+    const folder = await operationFolder(account, { id: card.folderId, path: card.path }, scope);
+    if (modelPath(folder.path) !== modelPath(card.path)) throw new Error(t("目标文件夹已变化，请重新选择"));
+    check();
+  }
+  card.progress = { done: 0, total: Math.max(1, card.targetIds.length) };
+  card.results = [];
+  if (card.action === "upload_files" || card.action === "upload_folder") {
+    const paths = await Dialogs.OpenFile({
+      ...uploadPickers[card.action === "upload_files" ? "files" : "folders"],
+      Message: t("上传到「{name}」", { name: card.path || t("全部文件") }), ButtonText: t("上传"), AllowsMultipleSelection: true,
+    });
+    check();
+    if (!paths?.length) {
+      card.state = "cancelled";
+      card.note = t("未选择文件，没有提交上传。");
       return;
     }
-    if (card.kind === "download") {
-      await downloadEntries(entries);
-      await setCard(turnId, cardId, { state: "done", note: t("已加入 {n} 个下载", { n: entries.length }) });
+    const destination = await operationFolder(account, { id: card.folderId, path: card.path }, scope);
+    if (destination.path !== card.path) throw new Error(t("目标文件夹已变化，请重新选择"));
+    check();
+    let batch: UploadBatchResult;
+    try {
+      batch = await DriveService.UploadFiles(account, paths, destination.id);
+    } catch (err) {
+      let message = errorText(err);
+      for (const path of paths) message = message.split(path).join(t("所选文件"));
+      throw new Error(message);
+    }
+    const added = batch.tasks ?? [];
+    for (const task of added) applyUpload(task);
+    card.results = [
+      ...added.map((task) => ({ id: task.id, name: task.name, error: task.state === "failed" || task.state === "cancelled" ? t("失败") : "" })),
+      ...(batch.failed ?? []).map((failure) => ({ id: "", name: failure.name, error: errorText(new Error(failure.error)) })),
+    ];
+    if (!card.results.length) throw new Error(t("服务未返回操作结果，请重新查询实际状态"));
+    const failed = card.results.filter((result) => !!result.error).length;
+    card.progress = { done: card.results.length, total: card.results.length };
+    card.state = failed ? "failed" : "done";
+    card.note = t("已提交 {n} 项，{failed} 项失败", { n: card.results.length - failed, failed });
+    return;
+  }
+  if (card.action === "upload_torrent") {
+    if (cloudAdd.draft.trim() || cloudAdd.torrent) throw new Error(t("云添加中有未提交的内容，请先完成或清除"));
+    const path = await Dialogs.OpenFile({
+      Title: t("选择种子文件"), Message: t("选择一个 .torrent 文件"), ButtonText: t("打开"),
+      CanChooseFiles: true, CanChooseDirectories: false, Filters: [{ DisplayName: t("种子文件"), Pattern: "*.torrent" }],
+    });
+    check();
+    if (!path) { card.state = "cancelled"; card.note = t("未选择种子，没有提交云添加。"); return; }
+    const meta = await DriveService.ReadTorrent(path);
+    const destination = await trailOf(card.folderId);
+    check();
+    if (cloudAdd.draft.trim() || cloudAdd.torrent) throw new Error(t("云添加中有未提交的内容，请先完成或清除"));
+    cloudAdd.tab = "torrent";
+    cloudAdd.torrent = meta;
+    cloudAdd.picked = new Set((meta.files ?? []).map((file) => file.index));
+    cloudAdd.dest = destination;
+    ui.cloudAddOpen = true;
+    card.note = t("已打开种子添加设置，尚未提交云添加。");
+    card.progress.done = 1;
+    card.state = "done";
+    return;
+  }
+  if (card.action === "open_file" || card.action === "extract_archive") {
+    if (entries.length !== 1) throw new Error(t("此操作一次只能选择一项"));
+    check();
+    if (card.action === "extract_archive") {
+      if (entries[0].folder || entries[0].category !== "archive") throw new Error(t("请选择可在线解压的压缩包"));
+      openExtract(entries[0]);
+      card.note = t("已打开解压设置，尚未提交解压。");
     } else {
-      openCreateShare(entries);
-      await setCard(turnId, cardId, { state: "done", note: t("已打开分享设置") });
+      const outcome = await viewEntry(entries[0]);
+      if (outcome === "cancelled") {
+        card.state = "cancelled";
+        card.note = t("已取消打开文件，没有执行操作。");
+        return;
+      }
+      if (outcome !== "opened") {
+        card.state = "failed";
+        card.note = t("文件未能打开，可能已移动或失效。");
+        return;
+      }
+      card.note = t("已打开文件");
+    }
+    card.progress.done = 1;
+    card.state = "done";
+    return;
+  }
+  const ids = creates ? [""] : card.targetIds;
+  for (const id of ids) {
+    check();
+    const name = card.rows.find((row) => row.id === id)?.name ?? card.name;
+    try {
+      const reply = await DriveService.AssistantOperate(account, { action: card.action, ids: id ? [id] : [], parentId: needsFolder ? card.folderId : "", name: card.name });
+      if (reply.results?.length !== 1) throw new Error(t("服务未返回操作结果，请重新查询实际状态"));
+      card.results.push(reply.results[0]);
+      if (!reply.results[0].error) {
+        if (card.action === "remove_download") drive.downloads = drive.downloads.filter((task) => !isTransfer(task, { account, id }));
+        else if (card.action === "remove_upload") drive.uploads = drive.uploads.filter((task) => !isTransfer(task, { account, id }));
+        else if (card.action === "remove_cloud_task") {
+          const list = transfers.cloud[account];
+          if (list) list.tasks = list.tasks.filter((task) => task.id !== id);
+          void loadTasks(true, account);
+        } else if (card.action === "retry_cloud_task") void loadTasks(true, account);
+        else if (account === currentId.value) {
+          if (card.action === "star" || card.action === "unstar") applyStarred([id], card.action === "star");
+          else if (card.action === "cancel_share") removeCanceledShares(new Set([id]));
+          else if (card.action === "restore" && ui.view === "trash") {
+            removeEntries([id]);
+            clearSelection();
+            void loadTrashSummary();
+          } else if (card.action === "create_folder" && ui.view === "all" && currentFolderId.value === card.folderId) void reload(false);
+        }
+      }
+    } catch (err) {
+      card.results.push({ id, name, error: errorText(err) });
+    }
+    card.progress.done += 1;
+    await persist();
+  }
+  const failed = card.results.filter((result) => !!result.error).length;
+  card.state = failed ? "failed" : "done";
+  card.note = t("已提交 {n} 项，{failed} 项失败", { n: card.results.length - failed, failed });
+}
+
+/** Confirmed cards are pinned to their original conversation, account and scope. */
+export async function runCard(turnId: string, cardId: string) {
+  const conv = assistant.conversation;
+  const found = conv ? findCard(conv.turns, cardId) : null;
+  const card = found?.card;
+  if (!conv || !found || found.turn.id !== turnId || !card || card.state !== "draft" || assistant.account !== currentId.value || !idle() ||
+    !["operation", "offline", "download", "share"].includes(card.kind)) return;
+  const account = assistant.account;
+  const scope = snapshotScope(card.kind === "operation" ? card.scope : found.turn.scope ?? {});
+  const snapshot = handles.snapshot();
+  const run = { card, account, stop: false };
+  cardRun = run;
+  assistant.running = true;
+  assistant.stopping = false;
+  card.state = "running";
+  card.note = "";
+  const persist = async () => {
+    if (!(await saveConversation(conv, account, snapshot))) throw new Error(t("无法保存操作状态，已停止提交；已经提交的操作不会回滚，请重新查询实际状态。"));
+  };
+  const check = () => {
+    if (run.stop || currentId.value !== account || assistant.conversation !== conv) {
+      if (card.kind === "operation") card.stopped = true;
+      throw new Error(t("已停止提交剩余项目；已经提交的操作不会回滚，仍可能完成。"));
+    }
+  };
+  try {
+    await persist();
+    check();
+    if (card.kind === "operation") await executeOperationCard(account, card, scope, check, persist);
+    else if (card.kind === "offline") {
+      const destination = await operationFolder(account, { id: card.folderId, path: card.path }, scope);
+      if (modelPath(destination.path) !== modelPath(card.path)) throw new Error(t("目标文件夹已变化，请重新选择"));
+      check();
+      const tasks = new Map<string, TaskSummary>();
+      const wanted = new Set(card.taskIds);
+      const seen = new Set<string>();
+      let token = "";
+      while (tasks.size < wanted.size) {
+        if (seen.has(token)) throw new Error(t("结果分页已变化，请重新查询"));
+        seen.add(token);
+        const page = await DriveService.Tasks(account, token);
+        check();
+        for (const task of page.tasks ?? []) if (wanted.has(task.id)) tasks.set(task.id, task);
+        token = page.nextPageToken;
+        if (!token) break;
+      }
+      check();
+      // Only a failed BTIH task can be added again: a running or finished
+      // one would duplicate its transfer, which is the rule retry_cloud_task
+      // already enforces on the service side.
+      const again = card.taskIds
+        .map((id) => tasks.get(id))
+        .filter((task): task is TaskSummary => !!task && task.phase === "PHASE_TYPE_ERROR")
+        .map((task) => task.hash ?? "")
+        .filter((hash) => hash);
+      const missed = card.taskIds.length - again.length;
+      const results = await DriveService.AddOfflineTasks(account, [...card.urls, ...again.map((hash) => `magnet:?xt=urn:btih:${hash}`)], destination.id);
+      if (!results?.length) throw new Error(t("服务未返回操作结果，请重新查询实际状态"));
+      const ok = results.filter((result) => result.ok).length;
+      const failed = results.length - ok + missed;
+      card.state = failed ? "failed" : "done";
+      const note = t("已提交 {n} 项，{failed} 项失败", { n: ok, failed });
+      card.note = missed ? t("{text}，{n} 个任务无法重新添加", { text: note, n: missed }) : note;
+      void loadTasks(true, account);
+    } else if (card.kind === "download" || card.kind === "share") {
+      const entries = await checkedCardEntries(card.rows, scope, false);
+      check();
+      if (card.kind === "download") {
+        const added = await DriveService.DownloadFiles(account, entries.map(downloadItem));
+        if (!added?.length) throw new Error(t("服务未返回操作结果，请重新查询实际状态"));
+        for (const task of added) applyDownload(task);
+        const failed = added.filter((task) => task.state === "failed" || task.state === "cancelled").length;
+        card.state = failed ? "failed" : "done";
+        card.note = t("已提交 {n} 项，{failed} 项失败", { n: added.length - failed, failed });
+      } else {
+        openCreateShare(entries);
+        card.state = "done";
+        card.note = t("已打开分享设置");
+      }
+    }
+  } catch (err) {
+    card.state = "failed";
+    card.note = errorText(err);
+  } finally {
+    await saveConversation(conv, account, snapshot);
+    if (cardRun === run) {
+      cardRun = null;
+      assistant.running = false;
+      assistant.stopping = false;
     }
   }
 }
@@ -6205,6 +6530,7 @@ export async function runPlan(keepUndecided?: boolean) {
 
 /** stopPlanRun is Stop: the step in flight finishes, nothing after it starts. */
 export async function stopPlanRun() {
+  if (cardRun) { stopAssistantOperation(); return; }
   if (!assistant.running || assistant.stopping) return;
   assistant.stopping = true;
   await DriveService.StopOrganize(assistant.runAccount).catch(() => undefined);
@@ -7101,8 +7427,9 @@ export async function openComic(entry: Entry) {
   }
 }
 
-export async function openViewer(entry: Entry, siblings?: Entry[]) {
-  if (entry.folder) return;
+export async function openViewer(entry: Entry, siblings?: Entry[]): Promise<boolean> {
+  if (entry.folder) return false;
+  const account = currentId.value;
   const newFolder = !viewer.entry || viewer.folderId !== entry.parentId;
   if (ui.route !== "viewer") {
     viewer.returnRoute = ui.route;
@@ -7129,6 +7456,7 @@ export async function openViewer(entry: Entry, siblings?: Entry[]) {
   }
   if (newFolder) void loadViewerFolder();
   await loadViewer(false);
+  return currentId.value === account && !accounts.switching && ui.route === "viewer" && viewer.entry?.id === entry.id && !viewer.error;
 }
 
 /** Read every folder page, independently of file-page filters and selection. */
@@ -7450,6 +7778,11 @@ export async function copyShareLinks(items: ShareSummary[]): Promise<void> {
   if (ok && inactive) notify(t("已复制，但其中 {n} 个分享已不可访问", { n: inactive }), "info");
 }
 
+function removeCanceledShares(ids: ReadonlySet<string>) {
+  shares.list = shares.list.filter((share) => !ids.has(share.id));
+  if (ids.has(shares.selectedId)) shares.selectedId = "";
+}
+
 /** cancelShares stops the links for good; the caller has confirmed. */
 export async function cancelShares(items: ShareSummary[]): Promise<void> {
   const ids = new Set(items.filter((share) => share.id && share.status !== "canceled").map((share) => share.id));
@@ -7463,8 +7796,7 @@ export async function cancelShares(items: ShareSummary[]): Promise<void> {
     return true;
   });
   if (!ok || account !== accountKey()) return;
-  shares.list = shares.list.filter((share) => !ids.has(share.id));
-  if (ids.has(shares.selectedId)) shares.selectedId = "";
+  removeCanceledShares(ids);
   notify(t("已取消 {n} 个分享，链接已失效", { n: ids.size }), "success");
 }
 
@@ -7857,7 +8189,9 @@ export const currentDownloads = computed(() => drive.downloads.filter((t) => t.a
 
 // The walk in progress per account. A walk carries on while another account
 // is on screen: its list is that account's, kept for when it is shown.
-const walks = new Map<string, { again: boolean; done: Promise<void> }>();
+// `stale` marks a pass whose pages were read before the list moved, so its
+// idea of the list must not be published: a removed task would come back.
+const walks = new Map<string, { again: boolean; stale: boolean; done: Promise<void> }>();
 // The next poll per account, while one of its tasks is pending or running.
 const polls = new Map<string, number>();
 
@@ -7866,23 +8200,26 @@ const polls = new Map<string, number>();
  * screen by default); an account keeps thousands, a few seconds' walk. A
  * call while a walk of the account is under way joins it instead of
  * restarting it, unless `changed` says the list moved since that walk began
- * (tasks added or removed); then another walk follows it. A list left with
- * a task still moving is polled until none is (pollTasks).
+ * (tasks added or removed); then that pass keeps what it read to itself and
+ * another walk follows it. A list left with a task still moving is polled
+ * until none is (pollTasks).
  */
 export function loadTasks(changed = false, account = currentId.value): Promise<void> {
   if (!account) return Promise.resolve();
   const running = walks.get(account);
   if (running) {
     running.again ||= changed;
+    running.stale ||= changed;
     return running.done;
   }
-  const walk = { again: false, done: Promise.resolve() };
+  const walk = { again: false, stale: false, done: Promise.resolve() };
   walk.done = (async () => {
     let expiresIn = 0;
     try {
       do {
         walk.again = false;
-        expiresIn = await walkTasks(account);
+        walk.stale = false;
+        expiresIn = await walkTasks(account, walk);
       } while (walk.again && accountById(account));
     } finally {
       walks.delete(account);
@@ -7899,9 +8236,11 @@ export function loadTasks(changed = false, account = currentId.value): Promise<v
  * swaps in the new list once it is whole, so the list never shrinks to one
  * page and grows back. A page that fails keeps what was there; only the
  * account on screen says so in a toast. Returns the server's expires_in, 0
- * when the pass did not finish.
+ * when the pass did not finish. A pass marked stale publishes nothing: the
+ * rows already on screen were corrected by the removal itself, and this
+ * pass's pages predate it.
  */
-async function walkTasks(account: string): Promise<number> {
+async function walkTasks(account: string, walk: { stale: boolean }): Promise<number> {
   const list = cloudEntry(account);
   const progressive = list.tasks.length === 0;
   list.loading = true;
@@ -7920,12 +8259,12 @@ async function walkTasks(account: string): Promise<number> {
       if (!page || transfers.cloud[account] !== list) return 0;
       all.push(...(page.tasks ?? []));
       list.loaded = all.length;
-      if (progressive) list.tasks = all.slice();
+      if (progressive && !walk.stale) list.tasks = all.slice();
       expiresIn = page.expiresIn;
       // A token that does not move would walk forever.
       token = page.nextPageToken === token ? "" : page.nextPageToken;
     } while (token);
-    list.tasks = all;
+    if (!walk.stale) list.tasks = all;
     list.updatedAt = new Date().toISOString();
     return expiresIn;
   } finally {
@@ -8150,9 +8489,12 @@ export async function pickAndUpload(what: keyof typeof uploadPickers) {
     AllowsMultipleSelection: true,
   });
   if (!paths?.length) return;
-  const added = await run(t("上传"), () => DriveService.UploadFiles(account, paths, parentId));
-  for (const task of added ?? []) applyUpload(task);
-  if (added?.length && account === currentId.value) ui.route = "transfers";
+  const batch = await run(t("上传"), () => DriveService.UploadFiles(account, paths, parentId));
+  if (!batch) return;
+  const added = batch.tasks ?? [];
+  for (const task of added) applyUpload(task);
+  if (added.length && account === currentId.value) ui.route = "transfers";
+  if (batch.failed?.length) notify(failedText(t("已提交 {n} 项", { n: added.length }), batch.failed.map((failure) => t("{name}（{reason}）", { name: failure.name, reason: reasonOf(failure.error) }))), "error");
 }
 
 /**
@@ -8415,13 +8757,15 @@ export async function removeTasks(items: TransferItem[], deleteFiles: boolean) {
 // selectId and scrolls to it, reading on through the folder's pages until
 // it turns up (a few thousand rows at most); past that, the folder alone
 // shows.
-async function openFolderAt(folderId: string, selectId: string) {
-  if (!leaveSavedHistory(() => void openFolderAt(folderId, selectId))) return;
+async function openFolderAt(folderId: string, selectId: string): Promise<boolean> {
+  if (!leaveSavedHistory(() => void openFolderAt(folderId, selectId))) return false;
   const account = currentId.value;
   const switchVersion = switchSerial;
   const trail = await run(t("打开所在文件夹"), () => DriveService.FolderTrail(folderId));
-  if (!trail || account !== currentId.value || switchVersion !== switchSerial || accounts.switching) return;
+  if (!trail || account !== currentId.value || switchVersion !== switchSerial || accounts.switching) return false;
   if (ui.scope === "drive" && ui.route === "files" && ui.view === "all") scopeAnchors.drive = filesPlace.save();
+  restoring = true;
+  clearTimeout(queryTimer);
   ui.view = "all";
   ui.scope = "folder";
   ui.route = "files";
@@ -8429,9 +8773,8 @@ async function openFolderAt(folderId: string, selectId: string) {
   ui.query = "";
   drive.trail = trail.map((c) => ({ id: c.id, name: c.name }));
   clearSelection();
-  await reload(true);
-  // Clearing the box queued a refetch of its own; this one already answers it.
-  clearTimeout(queryTimer);
+  void nextTick(() => (restoring = false));
+  if (!(await reload(true))) return false;
   const serial = listSerial;
   const find = () => (selectId ? drive.entries.find((e) => e.id === selectId) : undefined);
   let entry = find();
@@ -8439,20 +8782,25 @@ async function openFolderAt(folderId: string, selectId: string) {
     await loadMore();
     entry = find();
   }
-  if (serial !== listSerial) return;
+  if (serial !== listSerial || account !== currentId.value || accounts.switching) return false;
   if (entry) {
     select(entry);
     filesPlace.reveal(entry.id);
   }
-  if (entry || (!selectId && drive.entries.length) || drive.live || !indexReady.value) return;
+  if (entry || (!selectId && drive.entries.length) || drive.live || !indexReady.value) return true;
   // The index catches up with the drive one pass at a time (every 2 min):
   // what a cloud task has just saved is on the server and not in the index
   // yet, so its folder reads empty. Pull the changes in now, as Refresh does.
   pendingPick = { folder: folderId, id: selectId };
   refreshPending = true;
+  let synced = true;
   await DriveService.RequestSync("").catch(() => {
     refreshPending = false;
+    synced = false;
   });
+  // A failed sync means the pick was never made: say so instead of
+  // reporting the file opened.
+  return synced && account === currentId.value && switchVersion === switchSerial && !accounts.switching;
 }
 
 /**
@@ -8489,15 +8837,23 @@ export async function locateEntry(entry: Entry) {
   await openFolderAt(entry.parentId, entry.id);
 }
 
+/** How an entry was routed: opened, declined by the user, or nothing opened. */
+export type OpenOutcome = "opened" | "cancelled" | "failed";
+
+/** Route a checked entry without another account-relative metadata lookup. */
+async function viewEntry(detail: Entry): Promise<OpenOutcome> {
+  if (detail.folder) return (await openFolderAt(detail.id, "")) ? "opened" : "failed";
+  if (detail.playable) return play(detail, [detail]);
+  if (detail.preview) return (await openViewer(detail, [detail])) ? "opened" : "failed";
+  return (await openFolderAt(detail.parentId, detail.id)) ? "opened" : "failed";
+}
+
 /** viewFile plays, previews or opens what a transfer produced; anything else is shown in its folder. */
 export async function viewFile(item: Pick<TransferItem, "account" | "fileId">) {
   if (!(await showAccount(item.account))) return;
   const detail = await run(t("查看"), () => DriveService.FileDetail(item.fileId));
   if (!detail) return;
-  if (detail.folder) await openFolderAt(detail.id, "");
-  else if (detail.playable) await play(detail, [detail]);
-  else if (detail.preview) await openViewer(detail, [detail]);
-  else await openFolderAt(detail.parentId, detail.id);
+  await viewEntry(detail);
 }
 
 /* ---------------- playback ---------------- */
@@ -8519,17 +8875,17 @@ let eofHandled = false;
  * belongs to the account on screen; replacing another account's video asks
  * first.
  */
-export async function play(entry: Entry, queue?: Entry[], startAt = 0) {
+export async function play(entry: Entry, queue?: Entry[], startAt = 0): Promise<OpenOutcome> {
   const account = currentId.value;
   if (playingElsewhere.value) {
     const owner = player.owner;
-    if (!(await askReplace(owner))) return;
+    if (!(await askReplace(owner))) return "cancelled";
     // Opening this video writes where the other one was left; asking first
     // is how a failure to keep it can be said.
     const saved = await DriveService.SavePlayback().catch(() => null);
     if (saved === null) notify(t("没能保存「{name}」的播放进度", { name: accountName(owner) }), "error");
   }
-  if (!account || currentId.value !== account || accounts.switching) return;
+  if (!account || currentId.value !== account || accounts.switching) return "cancelled";
   // A queue is of one kind: music plays on into music
   // in the same folder, a video into the videos beside it.
   const audio = entry.category === "audio";
@@ -8542,16 +8898,25 @@ export async function play(entry: Entry, queue?: Entry[], startAt = 0) {
   // The host reports the stage rectangle on mount, and the native surface
   // has to exist before mpv initialises its video output.
   await nextTick();
-  if (currentId.value !== account || accounts.switching) return;
+  if (currentId.value !== account || accounts.switching) return "cancelled";
   if (player.presentation === "window") {
-    await run(t("独立窗口播放"), () => PlayerService.OpenWindow(audio));
-    if (currentId.value !== account || accounts.switching) return;
+    const opened = await run(t("独立窗口播放"), async () => {
+      await PlayerService.OpenWindow(audio);
+      return true;
+    });
+    if (!opened) return "failed";
+    if (currentId.value !== account || accounts.switching) return "cancelled";
   }
 
-  await run(t("播放"), () =>
-    startAt > 0 ? DriveService.ResumeFile(account, entry.id, startAt) : DriveService.PlayFile(account, entry.id),
-  );
+  const opened = await run(t("播放"), async () => {
+    if (startAt > 0) await DriveService.ResumeFile(account, entry.id, startAt);
+    else await DriveService.PlayFile(account, entry.id);
+    return true;
+  });
+  if (!opened) return "failed";
+  if (currentId.value !== account || accounts.switching) return "cancelled";
   await applyRememberedVolume();
+  return "opened";
 }
 
 /** playSource names where a play starts from, for Playback Source: a search hit's own path, the folder on screen, or "". */

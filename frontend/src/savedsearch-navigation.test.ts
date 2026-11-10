@@ -2,17 +2,22 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { nextTick } from "vue";
 import type { DriveStatus, IndexProgress } from "../bindings/github.com/tonyflux/pkp/internal/services";
 
-const backend = vi.hoisted(() => ({ search: vi.fn(async () => ({ hits: [], total: 0, aggregate: null, under: "", underMissing: false })) }));
+const backend = vi.hoisted(() => ({
+  search: vi.fn(async () => ({ hits: [], total: 0, aggregate: null, under: "", underMissing: false })),
+  list: vi.fn(async (request: { query: string }) => ({
+    entries: [{ id: request.query ? "filtered" : "all-files" }], total: 1, offset: 0, live: false, nextPageToken: "",
+  })),
+}));
 vi.mock("../bindings/github.com/tonyflux/pkp/internal/services", () => ({
-  DriveService: new Proxy({}, { get: (_, name) => name === "SearchIndex" ? backend.search : async () => null }),
+  DriveService: new Proxy({}, { get: (_, name) => name === "SearchIndex" ? backend.search : name === "List" ? backend.list : async () => null }),
   PlayerService: new Proxy({}, { get: () => async () => null }),
   AppearanceService: new Proxy({}, { get: () => async () => null }),
   MenuBarService: new Proxy({}, { get: () => async () => null }),
   TelemetryService: new Proxy({}, { get: () => async () => null }),
 }));
 import {
-  accounts, closeSavedHistoryDialog, currentSavedSearch, deleteSavedHistory, discardSavedHistoryChanges, drive,
-  localSearch, localSearchShown, openHistory, openSavedHistoryDialog, openSavedSearch, renameSavedHistory,
+  accounts, canGoBack, closeSavedHistoryDialog, currentSavedSearch, deleteSavedHistory, discardSavedHistoryChanges, drive,
+  goBack, localSearch, localSearchShown, openHistory, openLocalSearch, openNav, openSavedHistoryDialog, openSavedSearch, renameSavedHistory,
   resolveSavedHistoryLeave, savedHistory, savedHistoryCanSave, savedHistoryDirty, saveSavedHistoryAs,
   saveSavedHistoryChanges, searchParse, ui,
 } from "./store";
@@ -38,6 +43,61 @@ beforeEach(async () => {
   loadSavedSearches("a");
 });
 afterEach(() => { vi.restoreAllMocks(); vi.useRealTimers(); });
+
+describe("leaving local search", () => {
+  it.each(["sidebar", "back"] as const)("returns to the file list from the assistant's unfinished-video search using %s", async (exit) => {
+    ui.view = "all";
+    ui.scope = "folder";
+    ui.route = "assistant";
+    openLocalSearch("类型:视频 没看完");
+    await settle();
+    expect(localSearchShown.value).toBe(true);
+    expect(ui.route).toBe("files");
+
+    if (exit === "sidebar") openNav("all");
+    else {
+      expect(canGoBack.value).toBe(true);
+      goBack();
+    }
+    await settle();
+    expect(ui.route).toBe("files");
+    expect(ui.query).toBe("");
+    expect(localSearchShown.value).toBe(false);
+  });
+
+  it.each(["sidebar", "back"] as const)("reloads the unfiltered list when returning from a search with keywords using %s", async (exit) => {
+    ui.view = "all";
+    ui.scope = "folder";
+    openLocalSearch("Ocean 类型:视频");
+    await settle();
+    expect(drive.entries.map((entry) => entry.id)).toEqual(["filtered"]);
+    backend.list.mockClear();
+
+    if (exit === "sidebar") openNav("all");
+    else goBack();
+    await settle();
+    expect(drive.entries.map((entry) => entry.id)).toEqual(["all-files"]);
+    expect(backend.list).toHaveBeenCalledTimes(1);
+  });
+
+  it.each(["sidebar", "back"] as const)("asks before leaving a modified saved search using %s", async (exit) => {
+    ui.view = "all";
+    ui.scope = "folder";
+    const item = saveSearch("a", "Videos", "Ocean", null, "all");
+    openSavedSearch(item.id);
+    ui.query = "Ocean 类型:视频";
+    await settle();
+    if (exit === "sidebar") openNav("all");
+    else goBack();
+    expect(savedHistory.dialog?.kind).toBe("leave");
+    expect(ui.query).toBe("Ocean 类型:视频");
+    resolveSavedHistoryLeave("discard");
+    await settle();
+    expect(localSearchShown.value).toBe(false);
+    expect(ui.query).toBe("");
+    expect(savedSearches.items[0].query).toBe("Ocean");
+  });
+});
 
 describe("saved history editing", () => {
   it("re-evaluates relative dates when reopening the same stored ID", async () => {

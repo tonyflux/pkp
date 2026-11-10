@@ -6,6 +6,7 @@
 // computer; none of this was sent anywhere.
 import { computed, ref } from "vue";
 import Icon from "./Icon.vue";
+import AssistantOperations from "./AssistantOperations.vue";
 import { bytes, stamp } from "../format";
 import { t, num } from "../i18n";
 import { classify } from "../media";
@@ -141,6 +142,7 @@ const proposalVerb = computed(() =>
       </button>
     </div>
   </section>
+  <AssistantOperations v-else-if="card.kind === 'operation' || card.kind === 'resources'" :card="card" :turn-id="turnId" :live="live" />
 
   <!-- Local results / Downloads / Shares -->
   <section v-else-if="(card.kind === 'files' && (card.rows.length || card.aggregate.some(row => row.count > 0))) || card.kind === 'download' || card.kind === 'share'" class="ai-card rows-card">

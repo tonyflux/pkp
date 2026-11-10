@@ -130,7 +130,7 @@ func TestJournalUnreadableIsMovedAside(t *testing.T) {
 		t.Fatalf("the unreadable journal was not kept aside: %v", err)
 	}
 	q.Close()
-	if tasks, err := readJournal(path); err != nil || len(tasks) != 0 {
+	if tasks, _, err := readJournal(path); err != nil || len(tasks) != 0 {
 		t.Fatalf("after close the journal should be valid and empty, got %d tasks, err %v", len(tasks), err)
 	}
 }
@@ -157,5 +157,41 @@ func TestRecordsKeepNewestFinishedOnly(t *testing.T) {
 	}
 	if got[0].Done != 7 || got[0].Resume == nil || got[0].Resume.FileID != "p2" {
 		t.Errorf("a resumable failure lost its slot or its sent bytes: %+v", got[0])
+	}
+}
+
+// The same rule for uploads: the assistant's saved card names u<number>,
+// and a restart must never give that number to another file.
+func TestQueueDoesNotReuseIDsAfterRestart(t *testing.T) {
+	dir := t.TempDir()
+	journal := filepath.Join(dir, "uploads.json")
+	src := filepath.Join(dir, "fail.bin")
+	if err := os.WriteFile(src, []byte("data"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	q := New(restartBackend{}, 1, nil)
+	q.Open(journal, quietLog)
+	first, err := q.Add(src, Target{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if first.ID != "u1" {
+		t.Fatalf("first id %q", first.ID)
+	}
+	if err := q.Remove(first.ID); err != nil {
+		t.Fatalf("remove: %v", err)
+	}
+	q.Close()
+
+	restored := New(restartBackend{}, 1, nil)
+	restored.Open(journal, quietLog)
+	defer restored.Close()
+	next, err := restored.Add(src, Target{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if next.ID != "u2" {
+		t.Fatalf("restart gave %q: the removed u1 must not come back", next.ID)
 	}
 }
