@@ -2,7 +2,7 @@
 
 [简体中文](CHANGELOG.md) · English
 
-## Unreleased
+## 0.5.0 · 2026-11-10
 
 - Fix returning to the file list after opening local search from the AI assistant. The toolbar Back button and “All Files” sidebar entry now exit search while preserving the unsaved-changes prompt for saved searches.
 - Fix the missing route back from an AI conversation by adding “Back to assistant home.” Saved conversations remain available under Recent conversations.
