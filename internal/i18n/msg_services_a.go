@@ -52,7 +52,7 @@ func init() {
 		"密码错误 %d 次，请 %d 分钟后再试":  {Hant: "密碼錯誤 %d 次，請 %d 分鐘後再試", En: "Wrong password %d times. Try again in %d min", Ja: "パスワードを %d 回間違えました。%d 分後に再試行してください", Ko: "암호를 %d번 틀렸습니다. %d분 후에 다시 시도하세요"},
 		"密码错误 %d 次，请 %d 秒后再试":   {Hant: "密碼錯誤 %d 次，請 %d 秒後再試", En: "Wrong password %d times. Try again in %d s", Ja: "パスワードを %d 回間違えました。%d 秒後に再試行してください", Ko: "암호를 %d번 틀렸습니다. %d초 후에 다시 시도하세요"},
 		"系统身份验证已经打开":            {Hant: "系統驗證已經開啟", En: "System authentication is already open", Ja: "システム認証はすでに表示されています", Ko: "시스템 인증 창이 이미 열려 있습니다"},
-		"密码至少 %d 位":             {Hant: "密碼至少 %d 個字元", En: "The password must be at least %d characters", Ja: "パスワードは %d 文字以上にしてください", Ko: "암호는 %d자 이상이어야 합니다"},
+		"请输入新密码":                {Hant: "請輸入新密碼", En: "Enter a new password", Ja: "新しいパスワードを入力してください", Ko: "새 암호를 입력하세요"},
 		"密码最多 %d 位":             {Hant: "密碼最多 %d 個字元", En: "The password can be at most %d characters", Ja: "パスワードは %d 文字以内にしてください", Ko: "암호는 최대 %d자입니다"},
 
 		// conversations.go, inbox.go, plays.go

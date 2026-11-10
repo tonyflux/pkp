@@ -450,6 +450,14 @@ export function IndexProgress(): $CancellablePromise<$models.IndexProgress> {
 }
 
 /**
+ * InspectShare performs only anonymous reads; selecting a receiver never changes
+ * the app's active account and no account credentials enter this response.
+ */
+export function InspectShare(account: string, rawURL: string, passCode: string): $CancellablePromise<$models.ShareImport> {
+    return $Call.ByID(1617188222, account, rawURL, passCode);
+}
+
+/**
  * Language reads Interface Language as saved; a file that names none, or a language
  * this build does not have, follows the system.
  */
@@ -471,6 +479,14 @@ export function List(req: $models.ListRequest): $CancellablePromise<$models.List
  */
 export function ListFolders(parentID: string): $CancellablePromise<$models.Entry[] | null> {
     return $Call.ByID(3208134790, parentID);
+}
+
+/**
+ * ListShareFiles uses the header endpoint for root pagination: detail pagination
+ * alone loses the original pass code on protected shares.
+ */
+export function ListShareFiles(account: string, shareID: string, passCodeToken: string, parentID: string, pageToken: string): $CancellablePromise<$models.ShareFilePage> {
+    return $Call.ByID(1459238819, account, shareID, passCodeToken, parentID, pageToken);
 }
 
 /**
@@ -665,6 +681,10 @@ export function PollQRSignIn(id: string): $CancellablePromise<$models.QRSignInSt
  */
 export function PreviewFile(fileID: string): $CancellablePromise<string> {
     return $Call.ByID(3880504729, fileID);
+}
+
+export function PreviewShareFile(account: string, shareID: string, passCodeToken: string, fileID: string): $CancellablePromise<$models.SharePreview> {
+    return $Call.ByID(356170808, account, shareID, passCodeToken, fileID);
 }
 
 /**
@@ -865,6 +885,14 @@ export function RestartDownload(account: string, id: string): $CancellablePromis
  */
 export function RestoreFiles(account: string, fileIDs: string[] | null): $CancellablePromise<$models.RemoveReport> {
     return $Call.ByID(3113181308, account, fileIDs);
+}
+
+/**
+ * RestoreShare is the only share-import mutation, called after confirmation.
+ * Retain every possibly accepted write independently of its presentation status.
+ */
+export function RestoreShare(account: string, req: $models.RestoreShareRequest): $CancellablePromise<$models.ShareRestoreResult> {
+    return $Call.ByID(2755199908, account, req);
 }
 
 /**
@@ -1184,6 +1212,13 @@ export function SetTransferPreference(name: string, on: boolean): $CancellablePr
  */
 export function SetWebDAVEnabled(enabled: boolean): $CancellablePromise<void> {
     return $Call.ByID(131762035, enabled);
+}
+
+/**
+ * ShareRestoreStatus accepts only a task returned by this account's restore.
+ */
+export function ShareRestoreStatus(account: string, taskID: string): $CancellablePromise<$models.ShareRestoreResult> {
+    return $Call.ByID(3943985972, account, taskID);
 }
 
 /**

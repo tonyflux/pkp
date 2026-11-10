@@ -27,6 +27,12 @@ var (
 type DirectRequest struct {
 	ID, FileID, Path, Checkpoint string
 	Size                         int64
+	// VerifyComplete observes the engine's still-open, fully received file
+	// before publication. An error keeps it partial; the callback must not close it.
+	VerifyComplete func(*os.File) error
+	// ValidateDestination runs after the queue slot is acquired, before any
+	// checkpoint directory can be created beneath a caller-selected disk.
+	ValidateDestination func() error
 }
 
 type fileVersion struct {
@@ -43,6 +49,7 @@ func (v fileVersion) known() bool { return v.Modified != "" || v.Hash != "" || v
 type directJob struct {
 	checkpoint string
 	progress   func(Task)
+	verify     func(*os.File) error
 	version    fileVersion
 	etag       string
 	file       string
@@ -70,7 +77,7 @@ func (q *Queue) Receive(ctx context.Context, req DirectRequest, onProgress func(
 	ctx, cancel := context.WithCancelCause(ctx)
 	defer cancel(nil)
 	j := &job{Task: Task{ID: req.ID, FileID: req.FileID, Name: filepath.Base(req.Path), Path: req.Path, Size: req.Size, State: StateQueued, UpdatedAt: stamp()}, cancel: cancel,
-		direct: &directJob{checkpoint: filepath.Clean(req.Checkpoint), progress: onProgress}}
+		direct: &directJob{checkpoint: filepath.Clean(req.Checkpoint), progress: onProgress, verify: req.VerifyComplete}}
 	q.mu.Lock()
 	if q.closing {
 		q.mu.Unlock()
@@ -112,7 +119,13 @@ func (q *Queue) Receive(ctx context.Context, req DirectRequest, onProgress func(
 	j.lastAt = time.Now()
 	q.mu.Unlock()
 	q.emit(j, true)
-	err := q.restoreDirect(j)
+	var err error
+	if req.ValidateDestination != nil {
+		err = req.ValidateDestination()
+	}
+	if err == nil {
+		err = q.restoreDirect(j)
+	}
 	if err == nil {
 		err = q.download(ctx, j, threads)
 	}
@@ -326,6 +339,14 @@ func (q *Queue) downloadDirect(ctx context.Context, j *job, threads int) error {
 		}
 	} else {
 		return ErrChanged
+	}
+	if j.direct.verify != nil {
+		if err := j.direct.verify(f); err != nil {
+			return err
+		}
+	}
+	if err := ctx.Err(); err != nil {
+		return err
 	}
 	if err := f.Close(); err != nil {
 		return err

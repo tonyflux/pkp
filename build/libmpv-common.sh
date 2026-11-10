@@ -143,13 +143,15 @@ install_licenses() {
 	rm -rf "$1"
 	cp -R "$work/licenses" "$1"
 	cat >"$1/README.txt" <<'EOF'
-PKP bundles libmpv and the libraries it is built from. They are free
-software under the licenses in the directories beside this file; mpv and
-FFmpeg are built LGPL (mpv -Dgpl=false, FFmpeg without --enable-gpl).
+PKP bundles libmpv, ffmpeg, ffprobe and the libraries they are built from.
+They are free software under the licenses in the directories beside this
+file; mpv and FFmpeg are built LGPL (mpv -Dgpl=false, FFmpeg with GPL and
+nonfree disabled). H.264 encoding uses the operating system's VideoToolbox
+or Media Foundation implementation; AAC uses FFmpeg's native encoder.
 
-The complete corresponding source of the bundled libraries, with the
-scripts that build them, is published as libmpv-sources.tar.gz with each
-PKP release. You may replace the bundled libraries with your own builds of
-them.
+The complete corresponding source of the bundled libraries and programs,
+with the scripts that build them, is published as libmpv-sources.tar.gz
+with each PKP release. You may replace these libraries and programs with
+your own builds.
 EOF
 }

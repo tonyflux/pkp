@@ -8,6 +8,8 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import Icon from "./Icon.vue";
 import Orbit from "./Orbit.vue";
+import FileViewSwitch from "./FileViewSwitch.vue";
+import PickerItems from "./PickerItems.vue";
 import { bytes } from "../format";
 import { archiveType, itemMeta, selectionSummary } from "../extract";
 import { t } from "../i18n";
@@ -41,6 +43,8 @@ const ICON: Record<string, string> = {
 };
 
 const browsing = computed(() => extract.browser.open);
+const contentsLayout = ref<"grid" | "list">("grid");
+const browserLayout = ref<"grid" | "list">("grid");
 const picked = computed(() => new Set(extract.picked));
 const allPicked = computed(() => extract.items.length > 0 && picked.value.size === extract.items.length);
 const somePicked = computed(() => picked.value.size > 0 && !allPicked.value);
@@ -176,6 +180,7 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onKeydown, true));
               <h2 id="extract-title">{{ t("选择保存位置") }}</h2>
               <p>{{ t("浏览当前账号的整个云盘") }}</p>
             </div>
+            <FileViewSwitch v-model="browserLayout" :disabled="extract.submitting" />
           </header>
 
           <label class="search">
@@ -207,46 +212,50 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onKeydown, true));
           </nav>
           <p v-else class="crumbs found">{{ t("搜索整个云盘的文件夹") }}</p>
 
-          <div class="folders glass-well" role="list" :aria-busy="extract.browser.loading || extract.browser.searching">
-            <p v-if="extract.browser.error" class="state warn">
+          <PickerItems :layout="browserLayout" class="folders glass-well" role="list" :aria-busy="extract.browser.loading || extract.browser.searching">
+            <p v-if="extract.browser.error" class="state picker-state warn">
               {{ t("没有读到文件夹：{error}", { error: extract.browser.error }) }}
               <button class="small" @click="searching ? searchExtractFolders(extract.browser.query) : browseExtractTo(extract.browser.trail)">{{ t("重试") }}</button>
             </p>
             <template v-else-if="searching">
-              <p v-if="extract.browser.searching" class="state"><Orbit :size="18" /> {{ t("正在搜索…") }}</p>
-              <p v-else-if="!extract.browser.searchable" class="state">{{ t("云盘索引还在建立，暂时不能搜索全盘；可以逐层浏览。") }}</p>
-              <p v-else-if="!extract.browser.results.length" class="state">{{ t("没有找到文件夹，试试其他名称") }}</p>
+              <p v-if="extract.browser.searching" class="state picker-state"><Orbit :size="18" /> {{ t("正在搜索…") }}</p>
+              <p v-else-if="!extract.browser.searchable" class="state picker-state">{{ t("云盘索引还在建立，暂时不能搜索全盘；可以逐层浏览。") }}</p>
+              <p v-else-if="!extract.browser.results.length" class="state picker-state">{{ t("没有找到文件夹，试试其他名称") }}</p>
               <button
                 v-for="folder in extract.browser.results"
                 v-else
                 :key="folder.id"
-                class="quiet row"
+                class="quiet picker-item"
                 role="listitem"
                 @click="enterExtractResult(folder)"
               >
-                <Icon name="folder" :size="19" filled />
-                <span class="name" :title="folder.name">{{ folder.name }}</span>
-                <small class="path" :title="trailPath(folder.trail ?? [])">{{ trailPath((folder.trail ?? []).slice(0, -1)) }}</small>
-                <Icon name="chevronRight" :size="15" />
+                <span class="picker-thumb"><Icon name="folder" :size="19" filled /></span>
+                <span class="picker-copy">
+                  <strong class="picker-name" :title="folder.name">{{ folder.name }}</strong>
+                  <small class="picker-meta" :title="trailPath(folder.trail ?? [])">{{ trailPath((folder.trail ?? []).slice(0, -1)) }}</small>
+                </span>
+                <Icon class="picker-chevron" name="chevronRight" :size="15" />
               </button>
             </template>
-            <p v-else-if="extract.browser.loading" class="state"><Orbit :size="18" /> {{ t("正在加载文件夹…") }}</p>
-            <p v-else-if="!extract.browser.folders.length" class="state">{{ t("这里没有子文件夹；可以选择当前位置") }}</p>
+            <p v-else-if="extract.browser.loading" class="state picker-state"><Orbit :size="18" /> {{ t("正在加载文件夹…") }}</p>
+            <p v-else-if="!extract.browser.folders.length" class="state picker-state">{{ t("这里没有子文件夹；可以选择当前位置") }}</p>
             <template v-else>
               <button
                 v-for="folder in extract.browser.folders"
                 :key="folder.id"
-                class="quiet row"
+                class="quiet picker-item"
                 role="listitem"
                 @click="browseExtractTo([...extract.browser.trail, { id: folder.id, name: folder.name }])"
               >
-                <Icon name="folder" :size="19" filled />
-                <span class="name" :title="folder.name">{{ folder.name }}</span>
-                <small>{{ subfolders(folder.subfolders) }}</small>
-                <Icon name="chevronRight" :size="15" />
+                <span class="picker-thumb"><Icon name="folder" :size="19" filled /></span>
+                <span class="picker-copy">
+                  <strong class="picker-name" :title="folder.name">{{ folder.name }}</strong>
+                  <small class="picker-meta">{{ subfolders(folder.subfolders) }}</small>
+                </span>
+                <Icon class="picker-chevron" name="chevronRight" :size="15" />
               </button>
             </template>
-          </div>
+          </PickerItems>
 
           <footer class="browser-foot">
             <p class="location">
@@ -347,33 +356,39 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onKeydown, true));
                   <strong>{{ t("选择要解压的内容") }}</strong>
                   <small aria-live="polite">{{ summary }}</small>
                 </div>
-                <label class="all">
-                  <input
-                    type="checkbox"
-                    :checked="allPicked"
-                    :indeterminate.prop="somePicked"
-                    :disabled="extract.submitting"
-                    @change="pickAllExtract(($event.target as HTMLInputElement).checked)"
-                  />
-                  {{ t("全选") }}
-                </label>
+                <div class="contents-tools">
+                  <label class="all">
+                    <input
+                      type="checkbox"
+                      :checked="allPicked"
+                      :indeterminate.prop="somePicked"
+                      :disabled="extract.submitting"
+                      @change="pickAllExtract(($event.target as HTMLInputElement).checked)"
+                    />
+                    {{ t("全选") }}
+                  </label>
+                  <FileViewSwitch v-model="contentsLayout" :disabled="extract.submitting" />
+                </div>
               </div>
-              <div class="items glass-well" role="group" :aria-label="t('压缩包里的内容')">
-                <label v-for="item in extract.items" :key="item.path" class="item">
+              <PickerItems :layout="contentsLayout" class="items glass-well" role="group" :aria-label="t('压缩包里的内容')">
+                <label v-for="item in extract.items" :key="item.path" class="picker-item" :class="{ 'is-picked': picked.has(item.path) }" :title="item.path">
+                  <span class="picker-thumb"><Icon :name="ICON[item.category] ?? 'file'" :size="19" :filled="item.folder" /></span>
+                  <span class="picker-copy">
+                    <strong class="picker-name" :title="item.name">{{ item.name }}</strong>
+                    <small class="picker-meta">
+                      {{ itemMeta(item) }}
+                      <span v-if="!item.folder && item.size" class="item-size">· {{ bytes(item.size) }}</span>
+                    </small>
+                  </span>
                   <input
+                    class="picker-check"
                     type="checkbox"
                     :checked="picked.has(item.path)"
                     :disabled="extract.submitting"
                     @change="toggleExtractPick(item.path)"
                   />
-                  <Icon :name="ICON[item.category] ?? 'file'" :size="19" :filled="item.folder" />
-                  <span class="item-words">
-                    <strong :title="item.name">{{ item.name }}</strong>
-                    <small>{{ itemMeta(item) }}</small>
-                  </span>
-                  <em v-if="!item.folder && item.size">{{ bytes(item.size) }}</em>
                 </label>
-              </div>
+              </PickerItems>
 
               <div class="section-head place">
                 <strong>{{ t("保存位置") }}</strong>
@@ -752,7 +767,6 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onKeydown, true));
 }
 
 .source-words,
-.item-words,
 .dest-words {
   flex: 1;
   min-width: 0;
@@ -760,8 +774,6 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onKeydown, true));
 
 .source-words strong,
 .source-words small,
-.item-words strong,
-.item-words small,
 .dest-words strong,
 .dest-words small {
   display: block;
@@ -775,7 +787,6 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onKeydown, true));
 }
 
 .source-words small,
-.item-words small,
 .dest-words small {
   font-size: 12px;
   color: var(--fg-dim);
@@ -796,6 +807,13 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onKeydown, true));
   justify-content: space-between;
   gap: 12px;
   margin: 20px 1px 9px;
+}
+
+.contents-tools {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: none;
 }
 
 .section-head strong {
@@ -822,7 +840,7 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onKeydown, true));
   cursor: pointer;
 }
 
-input[type="checkbox"] {
+.all input {
   flex: none;
   width: 17px;
   height: 17px;
@@ -839,38 +857,7 @@ input[type="checkbox"] {
   scrollbar-width: thin;
 }
 
-.item {
-  display: flex;
-  align-items: center;
-  gap: 11px;
-  min-height: 52px;
-  padding: 6px 14px;
-  cursor: pointer;
-}
-
-.item + .item {
-  border-top: 1px solid var(--line);
-}
-
-.item:hover {
-  background: var(--accent-soft);
-}
-
-.item > svg {
-  flex: none;
-  color: var(--accent);
-}
-
-.item-words strong {
-  font-size: 14px;
-  font-weight: 600;
-}
-
-.item em {
-  flex: none;
-  font-style: normal;
-  font-size: 12px;
-  color: var(--fg-dim);
+.item-size {
   font-variant-numeric: tabular-nums;
 }
 
@@ -1250,8 +1237,9 @@ input[type="checkbox"] {
 
 .folders {
   flex: 1;
-  min-height: 120px;
+  min-height: 0;
   overflow-y: auto;
+  overscroll-behavior: contain;
   border-radius: 14px;
   scrollbar-width: thin;
 }
@@ -1275,52 +1263,6 @@ input[type="checkbox"] {
   color: var(--danger);
 }
 
-.row {
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
-  gap: 11px;
-  width: 100%;
-  min-height: 54px;
-  padding: 0 16px;
-  border-radius: 0;
-  color: var(--fg);
-  text-align: left;
-}
-
-.row + .row {
-  border-top: 1px solid var(--line);
-}
-
-.row > svg:first-child {
-  flex: none;
-  color: var(--accent);
-}
-
-.row > svg:last-child {
-  flex: none;
-  color: var(--fg-dim);
-}
-
-.row .name {
-  flex: 1;
-  min-width: 0;
-  font-size: 15px;
-  font-weight: 600;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.row small {
-  flex: none;
-  max-width: 58%;
-  font-size: 12px;
-  color: var(--fg-dim);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
 
 .location {
   display: flex;
@@ -1377,9 +1319,6 @@ input[type="checkbox"] {
     max-height: 168px;
   }
 
-  .item {
-    min-height: 46px;
-  }
 
   .dest {
     min-height: 56px;

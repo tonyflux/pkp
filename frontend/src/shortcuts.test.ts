@@ -42,14 +42,23 @@ describe("commandFor", () => {
     expect(commandFor(press("ArrowUp", { meta: true }), true, true)).toBeNull();
     expect(commandFor(press("ArrowLeft", { alt: true }), false, false)).toBe("back");
     expect(commandFor(press("ArrowLeft", { alt: true }), false, true)).toBeNull();
+    expect(commandFor(press("ArrowUp", { alt: true }), false, true)).toBeNull();
+    expect(commandFor(press("Backspace"), false, true)).toBeNull();
+    expect(commandFor(press("Enter", { alt: true }), false, true)).toBeNull();
     expect(commandFor(press("r", { meta: true }), true, true)).toBe("refresh");
     expect(commandFor({ ...press("k", { meta: true }), isComposing: true }, true, false)).toBeNull();
   });
 
-  it("gives F5 and Alt+← only off macOS", () => {
+  it("gives F5, Alt+←/↑, Backspace and Alt+Enter only off macOS", () => {
     expect(commandFor(press("F5"), false, false)).toBe("refresh");
     expect(commandFor(press("F5"), true, false)).toBeNull();
     expect(commandFor(press("ArrowLeft", { alt: true }), true, false)).toBeNull();
+    expect(commandFor(press("ArrowUp", { alt: true }), false, false)).toBe("back");
+    expect(commandFor(press("ArrowUp", { alt: true }), true, false)).toBeNull();
+    expect(commandFor(press("Backspace"), false, false)).toBe("back");
+    expect(commandFor(press("Backspace"), true, false)).toBeNull();
+    expect(commandFor(press("Enter", { alt: true }), false, false)).toBe("info");
+    expect(commandFor(press("Enter", { alt: true }), true, false)).toBeNull();
   });
 });
 

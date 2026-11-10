@@ -106,6 +106,7 @@ type Panel = "" | "webdav" | "mcp" | "pat" | "apps";
 
 const tab = ref<Tab>("basic");
 const panel = ref<Panel>("");
+const main = ref<HTMLElement>();
 // The three cards whose island is AccessIsland.
 const access = computed(() => (panel.value === "mcp" || panel.value === "pat" || panel.value === "apps" ? panel.value : null));
 
@@ -164,6 +165,7 @@ const extra = computed(() => {
 function select(next: Tab) {
   tab.value = next;
   if (next !== "connect") panel.value = "";
+  if (next === "updates") void nextTick(() => { if (main.value) main.value.scrollTop = 0; });
 }
 
 // Manage account / Configure AI from elsewhere lands here, on mount or while open.
@@ -626,7 +628,7 @@ onBeforeUnmount(() => {
         </button>
       </nav>
 
-      <div class="main">
+      <div ref="main" class="main">
         <!-- ---------- General ---------- -->
         <template v-if="tab === 'basic'">
           <h2>{{ t("基本") }}</h2>

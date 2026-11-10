@@ -8,7 +8,9 @@ import { computed, markRaw, nextTick, onBeforeUnmount, onMounted, reactive, watc
 import { Browser, Clipboard, Dialogs, Events, Window } from "@wailsio/runtime";
 import { applyLanguage, i18n, isLocale, N_, t, type LanguagePref } from "./i18n";
 import { playFinished } from "./plays";
-import { AppLockService, AppearanceService, DriveService, MenuBarService, NotifyService, PlayerService, TelemetryService } from "../bindings/github.com/tonyflux/pkp/internal/services";
+import { closeShareImport, openShareImport, shareImport, shareImportBusy, shareImportPending } from "./shareimport";
+import { shareLink } from "./sharelink";
+import { AppLockService, AppearanceService, DriveService, ExternalOpenService, MenuBarService, NotifyService, PlayerService, TelemetryService } from "../bindings/github.com/tonyflux/pkp/internal/services";
 import type {
   AIChatReply,
   AIDelta,
@@ -36,6 +38,7 @@ import type {
   EmptyFolder,
   EmptyFolderPage,
   Entry,
+  ExternalOpen,
   FileDetail,
   FolderChoice,
   IndexProgress,
@@ -210,7 +213,7 @@ export const inMenuBarWindow = new URLSearchParams(location.search).get("window"
 
 export const inViewerWindow = new URLSearchParams(location.search).get("window") === "viewer";
 
-export type Route = "files" | "transfers" | "player" | "shares" | "settings" | "viewer" | "assistant" | "cleanup" | "sync" | "history";
+export type Route = "files" | "transfers" | "player" | "shares" | "settings" | "viewer" | "assistant" | "cleanup" | "sync" | "history" | "lan";
 export type LibraryView = "all" | "starred" | "trash";
 export type CategoryFilter = "all" | "video" | "image" | "document" | "audio" | "other";
 /** All Files's Browse Scope: one folder's direct children, or every file of the drive. */
@@ -341,7 +344,7 @@ export const syncDraft = reactive({ pending: false, busy: false, discard: null a
  * The Settings tab a page sends the user to — Manage Accounts opens Account Management. The page
  * reads it when it mounts or when it changes, and clears it.
  */
-export const settingsFocus = reactive({ tab: "" as "" | "accounts" | "ai" | "network" | "keys" | "updates" | "privacy" });
+export const settingsFocus = reactive({ tab: "" as "" | "accounts" | "ai" | "network" | "keys" | "updates" | "privacy", request: 0 });
 
 /** openSettings is Settings (⌘,), on `tab` when one is named. */
 export function openSettings(tab: "" | "accounts" | "ai" | "network" | "keys" | "updates" | "privacy" = "") {
@@ -349,6 +352,7 @@ export function openSettings(tab: "" | "accounts" | "ai" | "network" | "keys" | 
   ui.accountsOpen = false;
   settingsFocus.tab = tab;
   ui.route = "settings";
+  settingsFocus.request += 1;
 }
 
 /** openAccountManager is Manage Accounts: Settings · Account Management. */
@@ -357,7 +361,7 @@ export function openAccountManager() {
 }
 
 /** Navigation targets in the order of their number shortcuts. */
-export type NavKey = LibraryView | "cleanup" | "assistant" | "sync" | "transfers" | "shares" | "history";
+export type NavKey = LibraryView | "cleanup" | "assistant" | "sync" | "transfers" | "shares" | "history" | "lan";
 export const NAV_KEYS: readonly NavKey[] = ["all", "starred", "cleanup", "assistant", "history", "transfers", "sync", "shares", "trash"];
 
 /** openNav is a click on the nav's item (or its ⌘1…⌘9). */
@@ -366,6 +370,9 @@ export function openNav(key: NavKey) {
   switch (key) {
     case "history":
       openHistory();
+      return;
+    case "lan":
+      ui.route = "lan";
       return;
     case "sync":
       ui.route = "sync";
@@ -906,7 +913,7 @@ async function runLockSheet(step: () => Promise<AppLockResult | null>): Promise<
   else appLockSheet.error = r.result === "wrong" ? t("当前密码不正确") : lockNote(r, false);
 }
 
-/** submitLockSheet hands the sheet's fields (already checked for length and repeat) to the flow that opened it. */
+/** submitLockSheet hands the sheet's fields (already checked for nonempty input and repeat) to the flow that opened it. */
 export function submitLockSheet(input: LockSheetInput): Promise<void> {
   const next = sheetNext;
   return next ? runLockSheet(() => next(input)) : Promise.resolve();
@@ -1434,30 +1441,36 @@ async function loadAccountData() {
 export async function switchAccount(id: string): Promise<boolean> {
   ui.accountsOpen = false;
   if (!id || id === (accounts.switching || currentId.value)) return true;
-  if (!(await leaveUnsubmitted(id))) return false;
-  return own(async () => {
-    const paused = await settlePlayback(id);
-    leaveScreen();
-    accounts.switching = id;
-    const serial = ++switchSerial;
-    const call = switchChain.then(() => DriveService.SwitchAccount(id));
-    switchChain = call.catch(() => undefined);
-    let status: DriveStatus;
-    try {
-      status = await call;
-    } catch (err) {
+  externalAccountChanges++;
+  try {
+    if (!(await leaveUnsubmitted(id))) return false;
+    return await own(async () => {
+      const paused = await settlePlayback(id);
+      leaveScreen();
+      accounts.switching = id;
+      const serial = ++switchSerial;
+      const call = switchChain.then(() => DriveService.SwitchAccount(id));
+      switchChain = call.catch(() => undefined);
+      let status: DriveStatus;
+      try {
+        status = await call;
+      } catch (err) {
+        if (serial !== switchSerial) return false;
+        const back = await DriveService.Status().catch(() => null);
+        if (back) await enterAccount(back, { message: t("没有切换到「{name}」：{error}", { name: accountName(id), error: errorText(err) }), tone: "error" });
+        return false;
+      }
       if (serial !== switchSerial) return false;
-      const back = await DriveService.Status().catch(() => null);
-      if (back) await enterAccount(back, { message: t("没有切换到「{name}」：{error}", { name: accountName(id), error: errorText(err) }), tone: "error" });
-      return false;
-    }
-    if (serial !== switchSerial) return false;
-    const name = accountLabel(accounts.list.find((a) => a.id === status.accountId));
-    const switched = status.needsPassword ? t("已切换到「{name}」 · 需要重新登录", { name }) : t("已切换到「{name}」", { name });
-    const message = [switched, paused].filter(Boolean).join(" · ");
-    await enterAccount(status, { message, tone: status.needsPassword ? "info" : "success" });
-    return true;
-  });
+      const name = accountLabel(accounts.list.find((a) => a.id === status.accountId));
+      const switched = status.needsPassword ? t("已切换到「{name}」 · 需要重新登录", { name }) : t("已切换到「{name}」", { name });
+      const message = [switched, paused].filter(Boolean).join(" · ");
+      await enterAccount(status, { message, tone: status.needsPassword ? "info" : "success" });
+      return true;
+    });
+  } finally {
+    externalAccountChanges--;
+    if (!externalAccountChanges) void stageExternalOpen();
+  }
 }
 
 /* ---------- unsubmitted sheets ---------- */
@@ -1476,16 +1489,214 @@ export const cloudAdd = reactive({
   // with all of them.
   picked: new Set<number>(),
   reading: false,
+  submitting: false,
   // Save to: the folder the tasks land in, [] for the server's own download
   // folder (drive.CreateOfflineTask without a parent). The sheet fills it
   // with the page's folder when it opens with nothing pending.
   dest: [] as Crumb[],
 });
 
+// OS launches can arrive before login, unlock or the webview's subscriptions.
+// Go retains them until this window has staged each one for confirmation.
+// Cancel pauses automatic staging until a reopen or a new external request.
+export const externalOpen = reactive({ pending: [] as ExternalOpen[], paused: false });
+let externalListening = false;
+let externalRead = 0;
+let externalStaging = false;
+// Includes the discard confirmation, before accounts.switching is set.
+let externalAccountChanges = 0;
+let clipboardShareRead = 0;
+let clipboardShareSeen = "";
+let clipboardShareOpened = "";
+
+function canCheckClipboardShare(): boolean {
+  return document.visibilityState === "visible" && document.hasFocus() &&
+    canOpenExternal() && !!currentAccount.value && !externalStaging && !externalOpen.pending.length &&
+    !cloudAdd.reading && !cloudAdd.submitting && !ui.cloudAddOpen &&
+    !shareImport.open && !shareImportBusy() && !document.querySelector(".scrim");
+}
+
+/** Sample on activation, not in the background; stale reads must not open a sheet. */
+async function checkClipboardShare(): Promise<void> {
+  const serial = ++clipboardShareRead;
+  if (!canCheckClipboardShare()) return;
+  const account = currentId.value, seen = epoch;
+  try {
+    const value = await ExternalOpenService.ClipboardShare();
+    if (serial !== clipboardShareRead || account !== currentId.value || seen !== epoch || !canCheckClipboardShare()) return;
+    const link = shareLink(value);
+    if (!link) return;
+    const handled = link.url === clipboardShareSeen || link.url === clipboardShareOpened;
+    clipboardShareSeen = link.url;
+    if (!handled) openPikPakShare(link.url);
+  } catch {
+    // Clipboard failures are optional intake, never a notification or a retry loop.
+  }
+}
+
+function canOpenExternal(): boolean {
+  return !!drive.status?.configured && !accounts.switching && !accounts.dialog && !externalAccountChanges && !appLocked.value;
+}
+
+/** Share intake never replaces another unconfirmed share or submits offline tasks. */
+export function openPikPakShare(value: string): boolean {
+  const link = shareLink(value);
+  if (!link || !canOpenExternal() || !currentAccount.value || cloudAdd.submitting || cloudAdd.reading || shareImportBusy()) return false;
+  if (shareImport.url && shareImport.url !== link.url) {
+    shareImport.open = true;
+    notify(t("请先处理当前分享，再打开另一个分享"), "info");
+    return false;
+  }
+  ++clipboardShareRead;
+  clipboardShareOpened = link.url;
+  if (ui.route === "player") collapsePlayer();
+  ui.cloudAddOpen = false;
+  if (shareImport.url === link.url) shareImport.open = true;
+  else void openShareImport(link.url);
+  return true;
+}
+
+async function refreshExternalOpen(resume = true): Promise<void> {
+  if (resume) externalOpen.paused = false;
+  const serial = ++externalRead;
+  try {
+    const pending = await ExternalOpenService.Pending();
+    if (serial !== externalRead) return;
+    externalOpen.pending = pending ?? [];
+    if (externalOpen.pending.length && !externalOpen.paused && canOpenExternal()) {
+      if (ui.route === "player") collapsePlayer();
+      if (externalOpen.pending.some((p) => p.kind !== "share") && !shareImport.open) ui.cloudAddOpen = true;
+      else if (shareImport.url) shareImport.open = true;
+    }
+    await stageExternalOpen();
+    void checkClipboardShare();
+  } catch (err) {
+    notify(t("无法读取外部打开请求：{error}", { error: errorText(err) }), "error");
+  }
+}
+
+function externalAlreadyStaged(item: ExternalOpen): boolean {
+  if (item.kind === "share") return shareImport.url === item.value;
+  if (item.kind === "magnet") return cloudAdd.draft.split("\n").some((line) => line.trim() === item.value);
+  return item.kind === "torrent" && cloudAdd.torrent?.path === item.value;
+}
+
+async function stageExternalOpen(): Promise<void> {
+  if (externalOpen.paused || externalStaging || !canOpenExternal() || cloudAdd.submitting || cloudAdd.reading || shareImportBusy()) return;
+  // A duplicate delivery is acknowledged without replacing edits or selections.
+  const item = externalOpen.pending.find((p) => {
+    if (p.kind === "share") return externalAlreadyStaged(p) || !shareImport.url;
+    if (shareImport.open) return false;
+    if (externalAlreadyStaged(p)) return true;
+    return p.kind === "magnet" ? !cloudAdd.draft.trim() : p.kind === "torrent" && !cloudAdd.torrent;
+  });
+  if (!item) return;
+  externalStaging = true;
+  let handled = false;
+  let interrupted = false;
+  try {
+    if (item.kind === "share") {
+      if (!openPikPakShare(item.value)) return;
+    } else {
+      if (!cloudAdd.draft.trim() && !cloudAdd.torrent) {
+        cloudAdd.dest = currentFolderId.value ? drive.trail.map((c) => ({ ...c })) : [];
+      }
+      if (ui.route === "player") collapsePlayer();
+      ui.cloudAddOpen = true;
+    }
+    if (item.kind === "magnet") {
+      cloudAdd.tab = "link";
+      if (!cloudAdd.draft.trim()) cloudAdd.draft = item.value;
+    } else if (item.kind === "torrent") {
+      cloudAdd.tab = "torrent";
+      if (!externalAlreadyStaged(item)) {
+        cloudAdd.reading = true;
+        try {
+          if (!(await loadCloudTorrent(item.value))) {
+            interrupted = true;
+            return;
+          }
+        } finally {
+          cloudAdd.reading = false;
+        }
+      }
+    }
+    // An unreadable torrent was reported by run(); it must not block the
+    // remaining opens. A changed account, by contrast, keeps the request.
+    await ExternalOpenService.Ack(item.id);
+    ++externalRead;
+    externalOpen.pending = externalOpen.pending.filter((p) => p.id !== item.id);
+    handled = true;
+  } catch (err) {
+    notify(t("无法读取外部打开请求：{error}", { error: errorText(err) }), "error");
+  } finally {
+    externalStaging = false;
+    // The reading watcher may already have run while staging was locked.
+    if (interrupted) void stageExternalOpen();
+  }
+  if (handled) await refreshExternalOpen(false);
+}
+
+/** Only the main window consumes OS requests; other windows leave them in Go. */
+export async function watchExternalOpen(): Promise<void> {
+  if (inPlayerWindow || inMenuBarWindow || inViewerWindow) return;
+  if (!externalListening) {
+    externalListening = true;
+    Events.On("external:open", () => {
+      ++clipboardShareRead;
+      void refreshExternalOpen();
+    });
+    const foreground = () => {
+      ++clipboardShareRead;
+      if (document.visibilityState === "visible" && document.hasFocus()) void refreshExternalOpen(false);
+    };
+    window.addEventListener("focus", foreground);
+    window.addEventListener("blur", () => { ++clipboardShareRead; });
+    document.addEventListener("visibilitychange", foreground);
+    document.addEventListener("paste", (event) => {
+      const target = event.target as HTMLElement | null;
+      if (target?.closest("input, textarea, select, [contenteditable]:not([contenteditable=false])") || document.querySelector(".scrim")) return;
+      const value = event.clipboardData?.getData("text/plain") ?? "";
+      if (shareLink(value) && openPikPakShare(value)) event.preventDefault();
+    });
+    watch(
+      () => accounts.dialog,
+      (dialog) => {
+        if (!dialog && canOpenExternal()) void refreshExternalOpen(false);
+      },
+    );
+    watch(
+      [() => drive.status?.configured, () => drive.status?.accountId, () => accounts.switching, appLocked],
+      () => {
+        if (canOpenExternal()) void refreshExternalOpen();
+        else ++clipboardShareRead;
+      },
+    );
+    // Status can arrive before Accounts on cold start; keep shares queued
+    // until their receiving account can be selected, without resuming a cancel.
+    watch(currentAccount, () => void refreshExternalOpen(false));
+    watch(
+      () => ui.cloudAddOpen,
+      (open) => {
+        if (!open) return;
+        externalOpen.paused = false;
+        void stageExternalOpen();
+      },
+    );
+    watch(
+      [() => cloudAdd.draft, () => cloudAdd.torrent, () => cloudAdd.reading, () => cloudAdd.submitting, () => shareImport.url, () => shareImport.open, shareImportBusy],
+      () => void stageExternalOpen(),
+    );
+  }
+  await refreshExternalOpen();
+}
+
 /** What the account on screen has started and not submitted, "" for nothing. */
 function unsubmitted(): string {
   if (savedHistoryDirty.value) return t("未保存的已保存历史更改");
   if (syncDraft.pending) return t("尚未确认的文件夹同步");
+  const incomingShare = shareImportPending();
+  if (incomingShare) return incomingShare;
   if (cloudAdd.draft.trim()) return t("云添加的链接");
   if (cloudAdd.torrent) return t("云添加的种子");
   if (shares.targets.length && !shares.created) return t("创建中的分享");
@@ -1523,6 +1734,10 @@ async function leaveUnsubmitted(target: string): Promise<boolean> {
     notify(t("正在确认同步关系，请稍后再切换账号"), "info");
     return false;
   }
+  if (shareImportBusy()) {
+    notify(t("正在提交分享转存，请稍后再切换账号"), "info");
+    return false;
+  }
   const what = unsubmitted();
   if (!what) return true;
   const go = await ask({ kind: "leave", target, what });
@@ -1535,6 +1750,9 @@ async function leaveUnsubmitted(target: string): Promise<boolean> {
     cloudAdd.draft = "";
     clearTorrent();
     ui.cloudAddOpen = false;
+    const paused = externalOpen.paused;
+    closeShareImport();
+    externalOpen.paused = paused;
     closeCreateShare();
     ui.newFolderOpen = false;
     resetAssistant();
@@ -1624,8 +1842,14 @@ export async function setKeepPlaying(on: boolean) {
  */
 export async function openSignIn(account = "") {
   ui.accountsOpen = false;
-  if (account !== currentId.value && !(await leaveUnsubmitted(account))) return;
-  accounts.dialog = { kind: "signin", account };
+  externalAccountChanges++;
+  try {
+    if (account !== currentId.value && !(await leaveUnsubmitted(account))) return;
+    accounts.dialog = { kind: "signin", account };
+  } finally {
+    externalAccountChanges--;
+    if (!externalAccountChanges) void stageExternalOpen();
+  }
 }
 
 /** closeAccountDialog closes the dialog without an answer; a question counts as No. */
@@ -1667,7 +1891,9 @@ export async function completeQRSignIn(res: SignInResult): Promise<SignInResult>
 }
 
 async function applySignInResult(res: SignInResult): Promise<SignInResult> {
-    if (res.failure) return res;
+  if (res.failure) return res;
+  externalAccountChanges++;
+  try {
     const from = currentId.value;
     if (accounts.dialog?.kind === "signin") accounts.dialog = null;
     const id = res.status.accountId;
@@ -1685,6 +1911,10 @@ async function applySignInResult(res: SignInResult): Promise<SignInResult> {
     const message = [res.existed ? t("已切换到「{name}」", { name }) : t("已添加并切换到「{name}」", { name }), paused].filter(Boolean).join(" · ");
     await enterAccount(res.status, { fresh: !res.existed, message });
     return res;
+  } finally {
+    externalAccountChanges--;
+    if (!externalAccountChanges) void refreshExternalOpen();
+  }
 }
 
 /** cancelSignIn calls off a sign-in in flight: a late success is not kept. */
@@ -1818,6 +2048,9 @@ function clearSession() {
   ui.panelTab = "overview";
   ui.workspace = "files";
   ui.cloudAddOpen = false;
+  const paused = externalOpen.paused;
+  closeShareImport();
+  externalOpen.paused = paused;
   ui.newFolderOpen = false;
   if (ui.route === "player") player.returnRoute = "files";
   else ui.route = "files";
@@ -3269,7 +3502,7 @@ export function trailPath(trail: Crumb[]): string {
  * New Folder makes a folder in the level on screen and walks into it.
  */
 export const relocate = reactive({
-  mode: "" as "" | "move" | "copy" | "cloudAdd" | "cleanup" | "sync",
+  mode: "" as "" | "move" | "copy" | "cloudAdd" | "cleanup" | "sync" | "shareImport",
   account: "",
   error: "",
   items: [] as Entry[],
@@ -3290,14 +3523,22 @@ export const relocate = reactive({
 let relocateSerial = 0;
 let relocateSearchSerial = 0;
 let relocateSearchTimer = 0;
-let syncFolderChosen: ((trail: Crumb[]) => void) | null = null;
+let relocateChosen: ((trail: Crumb[]) => void) | null = null;
 
 export function openSyncFolderPicker(account: string, folderId: string, choose: (trail: Crumb[]) => void) {
   closeRelocate();
   relocate.mode = "sync";
   relocate.account = account;
-  syncFolderChosen = choose;
+  relocateChosen = choose;
   void relocateTo(folderId ? [{ id: folderId, name: "" }] : []);
+}
+
+export function openShareFolderPicker(account: string, trail: Crumb[], choose: (trail: Crumb[]) => void) {
+  closeRelocate();
+  relocate.mode = "shareImport";
+  relocate.account = account;
+  relocateChosen = choose;
+  void relocateTo(trail.map((crumb) => ({ ...crumb })));
 }
 
 export function openRelocate(mode: "move" | "copy", entries: Entry[]) {
@@ -3323,7 +3564,7 @@ export function closeRelocate() {
   relocate.mode = "";
   relocate.account = "";
   relocate.error = "";
-  syncFolderChosen = null;
+  relocateChosen = null;
   relocate.items = [];
   relocate.trail = [];
   relocate.folders = [];
@@ -3344,12 +3585,12 @@ export async function relocateTo(trail: Crumb[]) {
   relocate.loading = true;
   try {
     const account = relocate.account;
-    if (relocate.mode === "sync") {
+    if (relocate.mode === "sync" || relocate.mode === "shareImport") {
       const actual = await DriveService.SyncFolderTrail(account, trail.at(-1)?.id ?? "");
       if (serial !== relocateSerial) return;
       relocate.trail = actual ?? [];
     }
-    const folders = relocate.mode === "sync"
+    const folders = relocate.mode === "sync" || relocate.mode === "shareImport"
       ? await DriveService.SyncFolders(account, relocate.trail.at(-1)?.id ?? "")
       : await DriveService.ListFolders(trail.at(-1)?.id ?? "");
     if (serial !== relocateSerial) return;
@@ -3403,7 +3644,7 @@ export function enterRelocateResult(folder: FolderChoice) {
  * name; on a refusal the name row stays open under the error notice.
  */
 export async function createRelocateFolder(name: string): Promise<boolean> {
-  if (relocate.creating || !relocate.mode) return false;
+  if (relocate.creating || !relocate.mode || relocate.mode === "shareImport") return false;
   const serial = relocateSerial;
   const parent = relocate.trail.map((c) => ({ ...c }));
   const parentId = parent.at(-1)?.id ?? "";
@@ -3431,10 +3672,10 @@ export async function createRelocateFolder(name: string): Promise<boolean> {
 
 export async function confirmRelocate() {
   const { mode, items } = relocate;
-  if (!mode || relocate.working || relocate.creating || relocate.naming || relocate.loading || relocate.error || (mode === "sync" && relocate.query.trim())) return;
-  if (mode === "sync") {
+  if (!mode || relocate.working || relocate.creating || relocate.naming || relocate.loading || relocate.error || ((mode === "sync" || mode === "shareImport") && relocate.query.trim())) return;
+  if (mode === "sync" || mode === "shareImport") {
     const trail = relocate.trail.map((c) => ({ ...c }));
-    const choose = syncFolderChosen;
+    const choose = relocateChosen;
     closeRelocate();
     choose?.(trail);
     return;
@@ -3485,6 +3726,93 @@ export async function confirmRelocate() {
     }
   } finally {
     relocate.working = false;
+  }
+}
+
+/* ---------------- clipboard (copy / cut / paste) ---------------- */
+
+export const clipboard = reactive({
+  mode: "" as "" | "move" | "copy",
+  account: "",
+  items: [] as Entry[],
+  working: false,
+});
+
+/** copyToClipboard records entries in the drive clipboard for pasting into a folder. */
+export function copyToClipboard(mode: "move" | "copy", entries: Entry[]) {
+  if (!entries.length || !currentId.value) return;
+  clipboard.mode = mode;
+  clipboard.account = currentId.value;
+  clipboard.items = [...entries];
+  notify(
+    mode === "move"
+      ? (entries.length === 1
+          ? t("已剪切「{name}」，可在目标文件夹粘贴", { name: entries[0].name })
+          : t("已剪切 {n} 项，可在目标文件夹粘贴", { n: entries.length }))
+      : (entries.length === 1
+          ? t("已复制「{name}」，可在目标文件夹粘贴", { name: entries[0].name })
+          : t("已复制 {n} 项，可在目标文件夹粘贴", { n: entries.length })),
+    "info",
+  );
+}
+
+/** Whether the current view is a browsable folder that accepts pasting from the drive clipboard. */
+export const canPasteHere = computed(
+  () =>
+    !!clipboard.mode &&
+    clipboard.account === currentId.value &&
+    clipboard.items.length > 0 &&
+    ui.route === "files" &&
+    ui.view === "all" &&
+    !wholeDrive.value &&
+    !ui.query.trim(),
+);
+
+/** pasteClipboard copies or moves the clipboard's entries into the current folder. */
+export async function pasteClipboard(modeOverride?: "move" | "copy") {
+  if (!canPasteHere.value || clipboard.working) return;
+  const mode = modeOverride ?? clipboard.mode;
+  const items = [...clipboard.items];
+  const targetId = currentFolderId.value;
+  const where = currentFolderName.value;
+  const pickedIds = new Set(items.map((e) => e.id));
+  if (pickedIds.has(targetId) || drive.trail.some((c) => pickedIds.has(c.id))) {
+    notify(mode === "move" ? t("不能移动到所选文件夹自身") : t("不能复制到所选文件夹自身"), "error");
+    return;
+  }
+  if (items.some((e) => e.parentId === targetId)) {
+    notify(t("所选项目已在这个文件夹里，请选择其他位置"), "info");
+    return;
+  }
+  clipboard.working = true;
+  try {
+    const ok = await run(mode === "move" ? t("移动") : t("复制"), async () => {
+      if (mode === "move") await DriveService.MoveFiles(ids(items), targetId);
+      else await DriveService.CopyFiles(ids(items), targetId);
+      return true;
+    });
+    if (!ok) return;
+    if (mode === "move") {
+      clipboard.mode = "";
+      clipboard.items = [];
+      void reload(false);
+      notify(
+        items.length === 1
+          ? t("已把「{name}」移动到「{where}」", { name: items[0].name, where })
+          : t("已把 {n} 项移动到「{where}」", { n: items.length, where }),
+        "success",
+      );
+    } else {
+      void reload(false);
+      notify(
+        items.length === 1
+          ? t("已开始把「{name}」复制到「{where}」，完成后会出现在目标文件夹", { name: items[0].name, where })
+          : t("已开始把 {n} 项复制到「{where}」，完成后会出现在目标文件夹", { n: items.length, where }),
+        "success",
+      );
+    }
+  } finally {
+    clipboard.working = false;
   }
 }
 
@@ -8350,21 +8678,35 @@ export async function addOffline(urls: string[], parentId: string) {
  * to start with.
  */
 export async function pickTorrent(): Promise<void> {
-  const path = await Dialogs.OpenFile({
-    Title: t("选择种子文件"),
-    Message: t("选择一个 .torrent 文件"),
-    ButtonText: t("打开"),
-    CanChooseFiles: true,
-    CanChooseDirectories: false,
-    Filters: [{ DisplayName: t("种子文件"), Pattern: "*.torrent" }],
-  });
-  if (!path) return;
+  if (cloudAdd.reading || cloudAdd.submitting) return;
+  const stamp = accountKey();
   cloudAdd.reading = true;
+  try {
+    const path = await Dialogs.OpenFile({
+      Title: t("选择种子文件"),
+      Message: t("选择一个 .torrent 文件"),
+      ButtonText: t("打开"),
+      CanChooseFiles: true,
+      CanChooseDirectories: false,
+      Filters: [{ DisplayName: t("种子文件"), Pattern: "*.torrent" }],
+    });
+    if (!path || stamp !== accountKey() || !canOpenExternal()) return;
+    await loadCloudTorrent(path);
+  } finally {
+    cloudAdd.reading = false;
+  }
+}
+
+// false means the page changed while reading: keep an OS request queued.
+async function loadCloudTorrent(path: string): Promise<boolean> {
+  const stamp = accountKey();
   const meta = await run(t("读取种子"), () => DriveService.ReadTorrent(path));
-  cloudAdd.reading = false;
-  if (!meta) return;
-  cloudAdd.torrent = meta;
-  cloudAdd.picked = new Set((meta.files ?? []).map((f) => f.index));
+  if (stamp !== accountKey() || !canOpenExternal()) return false;
+  if (meta) {
+    cloudAdd.torrent = meta;
+    cloudAdd.picked = new Set((meta.files ?? []).map((f) => f.index));
+  }
+  return true;
 }
 
 /** clearTorrent drops the picked torrent and its selection. */
@@ -9296,6 +9638,7 @@ export async function bootstrap() {
   document.documentElement.dataset.skin = ui.skin;
   applyTransparency();
   void loadTelemetry();
+  void watchExternalOpen();
 
   // bootstrap is re-entered from the splash's retry button; the event
   // subscription must not be.
@@ -9342,7 +9685,11 @@ export async function bootstrap() {
       void loadInbox(event.data.account);
     });
     // Quitting asks before what is typed and not submitted is lost; Go asks, so it is told.
-    watch(unsubmitted, (what) => void MenuBarService.SetUnsaved(what).catch(() => undefined), { immediate: true });
+    watch(
+      () => unsubmitted() || (externalOpen.pending.length ? t("待处理的外部打开请求") : ""),
+      (what) => void MenuBarService.SetUnsaved(what).catch(() => undefined),
+      { immediate: true },
+    );
   }
 
   ui.bootError = "";

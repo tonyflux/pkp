@@ -376,17 +376,18 @@ func TestAppLockPasswordCooldownGrowsAndSurvivesARestart(t *testing.T) {
 	drive := lockDrive(t, config)
 	store := &memLockStore{}
 	l := lockService(drive, store)
+	const password = "1"
 
-	if r, _ := l.SetPassword(context.Background(), "", "short"); r.Result != "invalid" || drive.LocalSettings().AppLockPassword {
-		t.Fatalf("a 5-character password: %+v", r)
+	if r, _ := l.SetPassword(context.Background(), "", ""); r.Result != "invalid" || drive.LocalSettings().AppLockPassword {
+		t.Fatalf("empty password: %+v", r)
 	}
-	if r, err := l.SetPassword(context.Background(), "", "open sesame"); err != nil || !r.ok() || !r.State.HasPassword {
+	if r, err := l.SetPassword(context.Background(), "", password); err != nil || !r.ok() || !r.State.HasPassword {
 		t.Fatalf("set: %+v, %v", r, err)
 	}
 	if r, err := l.SetMethod(context.Background(), lockMethodPassword, ""); err != nil || !r.ok() {
 		t.Fatalf("method while off: %+v, %v", r, err)
 	}
-	if r, err := l.SetEnabled(context.Background(), true, "open sesame"); err != nil || !r.ok() {
+	if r, err := l.SetEnabled(context.Background(), true, password); err != nil || !r.ok() {
 		t.Fatalf("enable: %+v, %v", r, err)
 	}
 	if err := l.Lock(); err != nil {
@@ -409,7 +410,7 @@ func TestAppLockPasswordCooldownGrowsAndSurvivesARestart(t *testing.T) {
 	// Quitting and starting again keeps the count, and during the cooldown
 	// even the right password is not looked at.
 	l = lockService(lockDrive(t, config), store)
-	if r := l.UnlockWithPassword("open sesame"); r.Result != "cooldown" || !l.Locked() {
+	if r := l.UnlockWithPassword(password); r.Result != "cooldown" || !l.Locked() {
 		t.Fatalf("right password in a cooldown after a restart: %+v", r)
 	}
 
@@ -422,7 +423,7 @@ func TestAppLockPasswordCooldownGrowsAndSurvivesARestart(t *testing.T) {
 		t.Fatalf("second round: %+v", r)
 	}
 	*now = now.Add(2 * lockCooldown)
-	if r := l.UnlockWithPassword("open sesame"); !r.ok() || l.Locked() || r.State.AttemptsLeft != lockMaxFails {
+	if r := l.UnlockWithPassword(password); !r.ok() || l.Locked() || r.State.AttemptsLeft != lockMaxFails {
 		t.Fatalf("right password after the cooldown: %+v", r)
 	}
 	if got := drive.LocalSettings().AppLockThrottle; got != (LockThrottle{}) {

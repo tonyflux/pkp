@@ -19,7 +19,7 @@ vi.mock("../bindings/github.com/tonyflux/pkp/internal/services", () => {
     if (name === "List") return { entries: [...backend.rows], total: backend.rows.length, offset: 0, live: !backend.ready, nextPageToken: "" };
     return null;
   } });
-  return { DriveService: service, AppearanceService: service, MenuBarService: service, TelemetryService: service };
+  return { DriveService: service, AppearanceService: service, MenuBarService: service, TelemetryService: service, ExternalOpenService: service };
 });
 
 import { bootstrap, drive, loadIndexProgress, reload, ui } from "./store";

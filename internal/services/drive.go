@@ -268,6 +268,7 @@ type DriveService struct {
 	viewerMu      sync.Mutex
 	viewerWindows map[uint]viewerWindow
 	previewOwners map[uint]bool
+	shareImports  shareImportState
 
 	// mu guards accounts and current. A session's own fields are under its
 	// own lock, taken after this one.
@@ -320,6 +321,7 @@ type DriveService struct {
 	connectivity       ConnectivityResult
 	connectivityCancel context.CancelFunc
 	connectivityWG     sync.WaitGroup
+	lan                *LANService
 	connectivityWake   chan struct{}
 }
 
@@ -444,6 +446,11 @@ func (d *DriveService) Status() DriveStatus {
 // position it records.
 func (d *DriveService) ServiceShutdown() error {
 	d.CancelSignIn()
+	// LAN preparation shares the account queues; revoke readers and settle it
+	// before those queues are closed. Window hiding and App Lock do not call this.
+	if d.lan != nil {
+		_ = d.lan.ServiceShutdown()
+	}
 	d.connectivityMu.Lock()
 	if d.connectivityCancel != nil {
 		d.connectivityCancel()

@@ -16,8 +16,11 @@ import { WORKSPACE_QUERY, isTyping, modKey, onWindows, useMedia, useOutsideClick
 import { vSlide } from "../slide";
 import {
   accounts,
+  canPasteHere,
   clearSelection,
+  clipboard,
   copyDownloadLink,
+  copyToClipboard,
   currentAccount,
   currentFolderId,
   currentId,
@@ -42,11 +45,15 @@ import {
   openRelocate,
   openComic,
   openViewer,
+  organizeEntries,
+  pasteClipboard,
   pickAll,
+  pickAndUpload,
   pickRange,
   pickedEntries,
   play,
   player,
+  refresh,
   relocate,
   removalSize,
   rename,
@@ -55,6 +62,7 @@ import {
   select,
   setLayout,
   setScope,
+  setStarred,
   setVideoLayout,
   videoWorksShown,
   shares,
@@ -276,14 +284,18 @@ function open(entry: Entry, ev: MouseEvent) {
 const MENU_GAP = 6;
 const MENU_MARGIN = 12;
 const menu = ref<{
-  entry: Entry;
+  kind: "entry" | "batch" | "canvas";
+  entry: Entry | null;
+  entries: Entry[];
   x: number;
   top: number;
   bottom: number;
+  point: boolean;
   up: boolean;
-  room: number;
+  height: number;
   confirming: boolean;
 } | null>(null);
+const menuAllStarred = computed(() => (menu.value?.entries.length ?? 0) > 0 && menu.value!.entries.every((e) => e.starred));
 const menuEl = ref<HTMLElement>();
 const renameName = ref("");
 const renameField = ref<HTMLInputElement>();
@@ -319,36 +331,136 @@ async function submitRename() {
 
 function openMenu(entry: Entry, ev: MouseEvent) {
   if (renameWorking.value) return;
-  if (menu.value?.entry.id === entry.id) {
+  if (menu.value?.kind === "entry" && !menu.value.point && menu.value.entry?.id === entry.id) {
     menu.value = null;
     return;
   }
   const rect = (ev.currentTarget as HTMLElement).getBoundingClientRect();
   renaming.value = false;
-  menu.value = { entry, x: rect.right, top: rect.top, bottom: rect.bottom, up: false, room: 0, confirming: false };
+  menu.value = { kind: "entry", entry, entries: [entry], x: rect.right, top: rect.top, bottom: rect.bottom, point: false, up: false, height: 0, confirming: false };
+}
+
+function openContextMenu(entry: Entry, ev: MouseEvent) {
+  if (renameWorking.value) return;
+  if (!isPicked(entry)) select(entry);
+  const targets = pickedEntries.value.length > 1 ? [...pickedEntries.value] : [entry];
+  renaming.value = false;
+  menu.value = {
+    kind: targets.length > 1 ? "batch" : "entry",
+    entry: targets.length === 1 ? entry : null,
+    entries: targets,
+    x: ev.clientX,
+    top: ev.clientY,
+    bottom: ev.clientY,
+    point: true,
+    up: false,
+    height: 0,
+    confirming: false,
+  };
+}
+
+function openCanvasMenu(ev: MouseEvent) {
+  if (renameWorking.value) return;
+  const target = ev.target instanceof HTMLElement ? ev.target : null;
+  if (target?.closest("[data-entry], button, a, input, [data-menu]")) return;
+  renaming.value = false;
+  menu.value = {
+    kind: "canvas",
+    entry: null,
+    entries: [],
+    x: ev.clientX,
+    top: ev.clientY,
+    bottom: ev.clientY,
+    point: true,
+    up: false,
+    height: 0,
+    confirming: false,
+  };
+}
+
+async function startRenameFor(entry: Entry) {
+  if (renameWorking.value || inBin.value) return;
+  cardOf(entry.id)?.scrollIntoView({ block: "nearest" });
+  await nextTick();
+  const el = cardOf(entry.id);
+  const rect = el?.getBoundingClientRect();
+  const x = rect ? Math.min(rect.left + 340, rect.right) : window.innerWidth / 2 + 170;
+  const top = rect ? rect.top : window.innerHeight / 3;
+  const bottom = rect ? Math.min(rect.bottom, rect.top + 48) : top;
+  menu.value = { kind: "entry", entry, entries: [entry], x, top, bottom, point: false, up: false, height: 0, confirming: false };
+  await startRename();
+}
+
+function openKeyboardContextMenu() {
+  if (renameWorking.value) return;
+  const targets = eraseTargets();
+  if (!targets.length) {
+    const box = scroller.value?.getBoundingClientRect();
+    const x = box ? box.left + 40 : 120;
+    const y = box ? box.top + 40 : 120;
+    renaming.value = false;
+    menu.value = { kind: "canvas", entry: null, entries: [], x, top: y, bottom: y, point: true, up: false, height: 0, confirming: false };
+    return;
+  }
+  const anchorId = drive.pickAnchor || targets[0].id;
+  const entry = targets.find((e) => e.id === anchorId) ?? targets[0];
+  cardOf(entry.id)?.scrollIntoView({ block: "nearest" });
+  const rect = cardOf(entry.id)?.getBoundingClientRect();
+  const x = rect ? Math.min(rect.left + 120, rect.right - 12) : 160;
+  const y = rect ? rect.top + Math.min(rect.height / 2, 32) : 160;
+  renaming.value = false;
+  menu.value = {
+    kind: targets.length > 1 ? "batch" : "entry",
+    entry: targets.length === 1 ? entry : null,
+    entries: [...targets],
+    x,
+    top: y,
+    bottom: y,
+    point: true,
+    up: false,
+    height: 0,
+    confirming: false,
+  };
 }
 
 // Measured once drawn, and again when Delete permanently's question changes its height.
 watch(
-  () => [menu.value?.entry.id, menu.value?.confirming, renaming.value],
+  () => [menu.value?.kind, menu.value?.entry?.id, menu.value?.x, menu.value?.top, menu.value?.confirming, renaming.value],
   async () => {
     await nextTick();
     const m = menu.value;
     if (!m || !menuEl.value) return;
-    const below = window.innerHeight - m.bottom - MENU_GAP - MENU_MARGIN;
-    const above = m.top - MENU_GAP - MENU_MARGIN;
-    m.up = menuEl.value.scrollHeight > below && above > below;
-    m.room = Math.max(m.up ? above : below, 120);
+    const gap = m.point ? 2 : MENU_GAP;
+    const below = window.innerHeight - m.bottom - gap - MENU_MARGIN;
+    const above = m.top - gap - MENU_MARGIN;
+    m.height = menuEl.value.scrollHeight;
+    m.up = m.height > below && above > below;
   },
 );
 
 const menuStyle = computed(() => {
   const m = menu.value;
   if (!m) return {};
+  const width = renaming.value ? 340 : m.confirming ? 280 : 196;
+  const gap = m.point ? 2 : MENU_GAP;
+  const maxH = window.innerHeight - MENU_MARGIN * 2;
+  const pos = m.point
+    ? { left: `${Math.max(MENU_MARGIN, Math.min(m.x, window.innerWidth - width - MENU_MARGIN))}px` }
+    : { right: `${Math.max(MENU_MARGIN, Math.min(window.innerWidth - m.x, window.innerWidth - width - MENU_MARGIN))}px` };
+  if (m.point && m.height) {
+    const h = Math.min(m.height, maxH);
+    const rawTop = m.up ? m.top - gap - h : m.bottom + gap;
+    return {
+      ...pos,
+      top: `${Math.max(MENU_MARGIN, Math.min(rawTop, window.innerHeight - MENU_MARGIN - h))}px`,
+      maxHeight: `${maxH}px`,
+    };
+  }
+  const room = Math.max(m.up ? m.top - gap - MENU_MARGIN : window.innerHeight - m.bottom - gap - MENU_MARGIN, 120);
   return {
-    right: `${Math.max(MENU_MARGIN, Math.min(window.innerWidth - m.x, window.innerWidth - (renaming.value ? 340 : 168) - MENU_MARGIN))}px`,
-    ...(m.up ? { bottom: `${window.innerHeight - m.top + MENU_GAP}px` } : { top: `${m.bottom + MENU_GAP}px` }),
-    ...(m.room ? { maxHeight: `${m.room}px` } : {}),
+    ...pos,
+    ...(m.up ? { bottom: `${window.innerHeight - m.top + gap}px` } : { top: `${m.bottom + gap}px` }),
+    ...(m.height ? { maxHeight: `${room}px` } : {}),
   };
 });
 
@@ -364,6 +476,16 @@ function menuAction(fn: (entry: Entry) => unknown) {
   if (entry) void fn(entry);
 }
 
+function batchMenuAction(fn: (entries: Entry[]) => unknown) {
+  const entries = menu.value?.entries ?? [];
+  menu.value = null;
+  if (entries.length) void fn(entries);
+}
+
+function canvasMenuAction(fn: () => unknown) {
+  menu.value = null;
+  void fn();
+}
 useOutsideClick("[data-menu]", () => !!menu.value, closeMenu);
 
 /* ---------- the recycle bin ---------- */
@@ -425,6 +547,61 @@ function eraseTargets(): Entry[] {
 
 /* ---------- keyboard ---------- */
 
+function gridStep(entries: Entry[], index: number, down: boolean): number {
+  const curEl = cardOf(entries[index].id);
+  if (!curEl) return index + (down ? 1 : -1);
+  const curRect = curEl.getBoundingClientRect();
+  const curMidX = (curRect.left + curRect.right) / 2;
+  const curMidY = (curRect.top + curRect.bottom) / 2;
+  let best = -1;
+  let bestDy = Infinity;
+  let bestDx = Infinity;
+  const step = down ? 1 : -1;
+  for (let i = index + step; i >= 0 && i < entries.length; i += step) {
+    const el = cardOf(entries[i].id);
+    if (!el) continue;
+    const r = el.getBoundingClientRect();
+    const midY = (r.top + r.bottom) / 2;
+    const dy = down ? midY - curMidY : curMidY - midY;
+    if (dy <= 8) continue;
+    if (dy > bestDy + 16) break;
+    const dx = Math.abs((r.left + r.right) / 2 - curMidX);
+    if (dy < bestDy - 16 || dx < bestDx) {
+      best = i;
+      bestDy = dy;
+      bestDx = dx;
+    }
+  }
+  return best;
+}
+
+function moveSelectionByKey(key: string, extend: boolean): boolean {
+  const all = [...visibleFolders.value, ...visibleFiles.value];
+  if (!all.length) return false;
+  const currentId = (extend ? drive.picked.at(-1) : drive.pickAnchor) || drive.picked[0] || "";
+  const idx = all.findIndex((e) => e.id === currentId);
+  let next = -1;
+  if (key === "Home") {
+    next = 0;
+  } else if (key === "End") {
+    next = all.length - 1;
+  } else if (idx < 0) {
+    next = key === "ArrowUp" || key === "ArrowLeft" ? all.length - 1 : 0;
+  } else if (ui.layout === "list" || key === "ArrowLeft" || key === "ArrowRight") {
+    const delta = key === "ArrowUp" || key === "ArrowLeft" ? -1 : 1;
+    next = Math.max(0, Math.min(all.length - 1, idx + delta));
+  } else {
+    const hit = gridStep(all, idx, key === "ArrowDown");
+    next = hit >= 0 ? hit : idx;
+  }
+  if (next < 0) return false;
+  const target = all[next];
+  if (extend) pickRange(target);
+  else select(target);
+  void nextTick(() => cardOf(target.id)?.scrollIntoView({ block: "nearest" }));
+  return true;
+}
+
 function onKeydown(ev: KeyboardEvent) {
   // The Delete confirm owns the keys while it is up: Esc puts it away, the
   // rest reach its buttons.
@@ -450,9 +627,60 @@ function onKeydown(ev: KeyboardEvent) {
   const sheetUp = !!relocate.mode || !!shares.targets.length || ui.cloudAddOpen || ui.newFolderOpen || renameSheet.entries.length > 0;
   const pageKeys = ui.route === "files" && !sheetUp && !localSearchShown.value && !videoWorksShown.value;
   const mod = (ev.metaKey || ev.ctrlKey) && !ev.altKey && !ev.shiftKey;
-  if (pageKeys && mod && ev.key.toLowerCase() === "a") {
+  const key = ev.key.length === 1 ? ev.key.toLowerCase() : ev.key;
+  if (pageKeys && mod && key === "a") {
     ev.preventDefault();
     pickAll();
+    return;
+  }
+  // Copy / Cut / Paste entries within the drive when no text is selected.
+  if (pageKeys && !inBin.value && mod && (key === "c" || key === "x") && !window.getSelection()?.toString()) {
+    const targets = eraseTargets();
+    if (targets.length) {
+      ev.preventDefault();
+      copyToClipboard(key === "x" ? "move" : "copy", targets);
+    }
+    return;
+  }
+  if (pageKeys && !inBin.value && canPasteHere.value) {
+    if (mod && key === "v") {
+      ev.preventDefault();
+      void pasteClipboard();
+      return;
+    }
+    if (!onWindows && ev.metaKey && !ev.ctrlKey && ev.altKey && !ev.shiftKey && (key === "v" || ev.code === "KeyV")) {
+      ev.preventDefault();
+      void pasteClipboard("move");
+      return;
+    }
+  }
+  // F2 renames the selected entry, or opens Rename by Rule when several are picked.
+  if (pageKeys && !inBin.value && ev.key === "F2" && !ev.metaKey && !ev.ctrlKey && !ev.altKey && !ev.shiftKey) {
+    const targets = eraseTargets();
+    if (!targets.length) return;
+    ev.preventDefault();
+    if (targets.length === 1) void startRenameFor(targets[0]);
+    else renameSheet.entries = [...targets];
+    return;
+  }
+  // ContextMenu key or Shift+F10 opens the context menu for the selection (or canvas).
+  if (
+    pageKeys &&
+    ((ev.key === "ContextMenu" && !ev.metaKey && !ev.ctrlKey && !ev.altKey && !ev.shiftKey) ||
+      (ev.key === "F10" && ev.shiftKey && !ev.metaKey && !ev.ctrlKey && !ev.altKey))
+  ) {
+    ev.preventDefault();
+    openKeyboardContextMenu();
+    return;
+  }
+  // Shift+Delete or ⌥⌘⌫ deletes permanently (with confirmation), bypassing Trash.
+  const shiftDelete = ev.key === "Delete" && ev.shiftKey && !ev.metaKey && !ev.ctrlKey && !ev.altKey;
+  const optCmdBackspace = !onWindows && ev.key === "Backspace" && ev.metaKey && ev.altKey && !ev.ctrlKey && !ev.shiftKey;
+  if (pageKeys && (shiftDelete || optCmdBackspace)) {
+    const targets = eraseTargets();
+    if (!targets.length) return;
+    ev.preventDefault();
+    keyConfirm.value = [...targets];
     return;
   }
   // Delete / ⌘⌫ (Ctrl+Backspace): to the bin; in the bin, for good, after asking.
@@ -467,6 +695,29 @@ function onKeydown(ev: KeyboardEvent) {
   }
   if (pageKeys && ev.key === "Escape" && drive.picked.length) {
     clearSelection();
+    return;
+  }
+  // Arrow keys and Home/End move or extend the selection across folders and files.
+  if (
+    pageKeys &&
+    !ev.metaKey &&
+    !ev.ctrlKey &&
+    !ev.altKey &&
+    (ev.key === "ArrowUp" || ev.key === "ArrowDown" || ev.key === "ArrowLeft" || ev.key === "ArrowRight" || ev.key === "Home" || ev.key === "End")
+  ) {
+    if (document.activeElement?.closest("[data-playback]")) return;
+    if (moveSelectionByKey(ev.key, ev.shiftKey)) {
+      ev.preventDefault();
+    }
+    return;
+  }
+  // macOS Finder's ⌘↓ opens the selected item (symmetric with ⌘↑ to go up).
+  if (pageKeys && !onWindows && ev.metaKey && !ev.ctrlKey && !ev.altKey && !ev.shiftKey && ev.key === "ArrowDown") {
+    const current = selected.value;
+    if (current) {
+      ev.preventDefault();
+      activate(current);
+    }
     return;
   }
 
@@ -817,7 +1068,7 @@ watch(
         </div>
       </div>
 
-      <div v-else ref="scroller" class="scroll" :class="{ stale: refreshing, selecting: multi }" @scroll.passive="onScroll">
+      <div v-else ref="scroller" class="scroll" :class="{ stale: refreshing, selecting: multi }" @scroll.passive="onScroll" @contextmenu.prevent="openCanvasMenu">
         <template v-if="visibleFolders.length">
           <h2>{{ t("section|文件夹") }} <span class="count">({{ visibleFolders.length }})</span></h2>
           <div v-if="ui.layout === 'grid'" class="folders">
@@ -832,6 +1083,7 @@ watch(
               :aria-pressed="isPicked(folder)"
               @dblclick="open(folder, $event)"
               @click="pick(folder, $event)"
+              @contextmenu.prevent.stop="openContextMenu(folder, $event)"
             >
               <span class="check" :class="{ on: isPicked(folder) }" aria-hidden="true" @click.stop="togglePick(folder)" @dblclick.stop>
                 <Icon name="check" :size="13" />
@@ -894,6 +1146,7 @@ watch(
                 :aria-selected="isPicked(folder)"
                 @click="pick(folder, $event)"
                 @dblclick="open(folder, $event)"
+                @contextmenu.prevent.stop="openContextMenu(folder, $event)"
               >
                 <td class="name">
                   <div class="cell">
@@ -939,6 +1192,7 @@ watch(
               :class="{ picked: isPicked(file) }"
               @click="pick(file, $event)"
               @dblclick="open(file, $event)"
+              @contextmenu.prevent.stop="openContextMenu(file, $event)"
             >
               <div class="thumb">
                 <span class="check" :class="{ on: isPicked(file) }" aria-hidden="true" @click.stop="togglePick(file)" @dblclick.stop>
@@ -968,10 +1222,10 @@ watch(
                   <strong :title="file.name">{{ file.name }}</strong>
                   <button
                     class="quiet icon more"
-                    :class="{ open: menu?.entry.id === file.id }"
+                    :class="{ open: menu?.entry?.id === file.id }"
                     :title="t('更多')"
                     aria-haspopup="menu"
-                    :aria-expanded="menu?.entry.id === file.id"
+                    :aria-expanded="menu?.entry?.id === file.id"
                     data-menu
                     @click.stop="openMenu(file, $event)"
                     @dblclick.stop
@@ -999,6 +1253,7 @@ watch(
                 :aria-selected="isPicked(file)"
                 @click="pick(file, $event)"
                 @dblclick="open(file, $event)"
+                @contextmenu.prevent.stop="openContextMenu(file, $event)"
               >
                 <td class="name">
                   <div class="cell">
@@ -1036,10 +1291,10 @@ watch(
                   </template>
                   <button
                     class="quiet icon"
-                    :class="{ open: menu?.entry.id === file.id }"
+                    :class="{ open: menu?.entry?.id === file.id }"
                     :title="t('更多')"
                     aria-haspopup="menu"
-                    :aria-expanded="menu?.entry.id === file.id"
+                    :aria-expanded="menu?.entry?.id === file.id"
                     data-menu
                     @click.stop="openMenu(file, $event)"
                     @dblclick.stop
@@ -1109,15 +1364,20 @@ watch(
         data-menu
         :style="menuStyle"
         @click.stop
+        @contextmenu.prevent.stop
       >
         <ConfirmInline
           v-if="!renaming && menu.confirming"
-          :message="t('彻底删除「{name}」？无法撤销，{freed}。', { name: menu.entry.name, freed: freedText([menu.entry]) })"
+          :message="
+            menu.entries.length === 1
+              ? t('彻底删除「{name}」？无法撤销，{freed}。', { name: menu.entries[0].name, freed: freedText(menu.entries) })
+              : t('彻底删除 {n} 项？无法撤销，{freed}。', { n: menu.entries.length, freed: freedText(menu.entries) })
+          "
           :confirm-label="t('确认删除')"
           :cancel-label="t('保留')"
           danger
           @cancel="closeMenu"
-          @confirm="menuAction((e) => deleteForever([e]))"
+          @confirm="batchMenuAction((list) => deleteForever(list))"
         />
         <form v-if="renaming" class="rename-form" @submit.prevent="submitRename" @keydown.stop @keydown.esc.stop.prevent="closeMenu">
           <label for="file-rename">{{ t("新名称") }}</label>
@@ -1127,23 +1387,84 @@ watch(
             <button type="submit" class="primary" :disabled="!renameName.trim() || renameWorking"><Orbit v-if="renameWorking" :size="14" />{{ t("保存") }}</button>
           </div>
         </form>
+        <template v-else-if="!menu.confirming && menu.kind === 'canvas'">
+          <template v-if="!inBin">
+            <button v-if="ui.view === 'all' && !wholeDrive && !ui.query.trim()" class="quiet" role="menuitem" @click="canvasMenuAction(() => (ui.newFolderOpen = true))">
+              <Icon name="folderPlus" :size="17" /> {{ t("新建文件夹") }}
+            </button>
+            <button v-if="ui.view === 'all' && !wholeDrive && !ui.query.trim()" class="quiet" role="menuitem" @click="canvasMenuAction(() => pickAndUpload('files'))">
+              <Icon name="upload" :size="17" /> {{ t("上传文件") }}
+            </button>
+            <button v-if="ui.view === 'all' && !wholeDrive && !ui.query.trim()" class="quiet" role="menuitem" @click="canvasMenuAction(() => pickAndUpload('folders'))">
+              <Icon name="folderUpload" :size="17" /> {{ t("上传文件夹") }}
+            </button>
+            <button class="quiet" role="menuitem" @click="canvasMenuAction(() => (ui.cloudAddOpen = true))">
+              <Icon name="cloudAdd" :size="17" /> {{ t("云添加") }}
+            </button>
+            <button v-if="canPasteHere" class="quiet" role="menuitem" @click="canvasMenuAction(() => pasteClipboard())">
+              <Icon :name="clipboard.mode === 'move' ? 'move' : 'copy'" :size="17" />
+              {{ clipboard.mode === "move" ? t("移动 {n} 项到这里", { n: clipboard.items.length }) : t("粘贴 {n} 项到这里", { n: clipboard.items.length }) }}
+            </button>
+          </template>
+          <button class="quiet" role="menuitem" @click="canvasMenuAction(() => refresh())">
+            <Icon name="restore" :size="17" /> {{ t("刷新") }}
+          </button>
+          <button class="quiet" role="menuitem" @click="canvasMenuAction(() => setLayout(ui.layout === 'grid' ? 'list' : 'grid'))">
+            <Icon :name="ui.layout === 'grid' ? 'list' : 'grid'" :size="17" /> {{ ui.layout === "grid" ? t("列表") : t("网格") }}
+          </button>
+          <button v-if="(visibleFolders.length + visibleFiles.length) > 0" class="quiet" role="menuitem" @click="canvasMenuAction(pickAll)">
+            <Icon name="check" :size="17" /> {{ t("全选") }}
+          </button>
+        </template>
         <template v-else-if="!menu.confirming && inBin">
-          <button class="quiet" role="menuitem" @click="menuAction((e) => { select(e); showInfo(); })">
+          <button v-if="menu.entry" class="quiet" role="menuitem" @click="menuAction((e) => { select(e); showInfo(); })">
             <Icon name="info" :size="17" /> {{ t("查看信息") }}
           </button>
-          <button class="quiet" role="menuitem" @click="menuAction((e) => restore([e]))">
+          <button class="quiet" role="menuitem" @click="batchMenuAction((list) => restore(list))">
             <Icon name="restore" :size="17" /> {{ t("还原") }}
           </button>
           <button class="quiet danger" role="menuitem" @click="menu.confirming = true">
             <Icon name="trash" :size="17" /> {{ t("彻底删除") }}
           </button>
         </template>
-        <template v-else-if="!menu.confirming">
-          <button class="quiet" role="menuitem" @click="menuAction((e) => { select(e); showInfo(); })">
-            <Icon name="info" :size="17" /> {{ t("查看信息") }}
+        <template v-else-if="!menu.confirming && menu.kind === 'batch'">
+          <button class="quiet" role="menuitem" @click="batchMenuAction(organizeEntries)">
+            <Icon name="spark" :size="17" /> {{ t("整理这些") }}
           </button>
-          <button class="quiet" role="menuitem" @click="menuAction((e) => openCreateShare([e]))">
+          <button class="quiet" role="menuitem" @click="batchMenuAction((list) => (renameSheet.entries = [...list]))">
+            <Icon name="text" :size="17" /> {{ t("按规则改名") }}
+          </button>
+          <button class="quiet" role="menuitem" @click="batchMenuAction(openCreateShare)">
             <Icon name="share" :size="17" /> {{ t("分享") }}
+          </button>
+          <button class="quiet" role="menuitem" @click="batchMenuAction(downloadEntries)">
+            <Icon name="download" :size="17" /> {{ t("下载到电脑") }}
+          </button>
+          <button class="quiet" role="menuitem" @click="batchMenuAction((list) => copyToClipboard('copy', list))">
+            <Icon name="copy" :size="17" /> {{ t("复制") }}
+          </button>
+          <button class="quiet" role="menuitem" @click="batchMenuAction((list) => copyToClipboard('move', list))">
+            <Icon name="move" :size="17" /> {{ t("剪切") }}
+          </button>
+          <button class="quiet" role="menuitem" @click="batchMenuAction((list) => openRelocate('move', list))">
+            <Icon name="move" :size="17" /> {{ t("移动到…") }}
+          </button>
+          <button class="quiet" role="menuitem" @click="batchMenuAction((list) => openRelocate('copy', list))">
+            <Icon name="copy" :size="17" /> {{ t("复制到…") }}
+          </button>
+          <button class="quiet" role="menuitem" @click="batchMenuAction((list) => setStarred(list, !menuAllStarred))">
+            <Icon name="star" :size="17" :filled="menuAllStarred" /> {{ menuAllStarred ? t("取消星标") : t("action|星标") }}
+          </button>
+          <button class="quiet danger" role="menuitem" @click="batchMenuAction(trash)">
+            <Icon name="trash" :size="17" /> {{ t("移到回收站") }}
+          </button>
+        </template>
+        <template v-else-if="!menu.confirming && menu.entry">
+          <button v-if="menu.entry.folder" class="quiet" role="menuitem" @click="menuAction(openFolder)">
+            <Icon name="folder" :size="17" /> {{ t("打开") }}
+          </button>
+          <button v-if="menu.entry.playable" class="quiet" role="menuitem" @click="menuAction(play)">
+            <Icon name="play" :size="17" /> {{ t("播放") }}
           </button>
           <button v-if="menu.entry.preview" class="quiet" role="menuitem" @click="menuAction(openViewer)">
             <Icon name="eye" :size="17" /> {{ t("预览") }}
@@ -1151,20 +1472,32 @@ watch(
           <button v-if="menu.entry.folder || menu.entry.preview === 'image'" class="quiet" role="menuitem" @click="menuAction(openComic)">
             <Icon name="image" :size="17" /> {{ t("作为漫画阅读") }}
           </button>
-          <button v-if="menu.entry.playable" class="quiet" role="menuitem" @click="menuAction(play)">
-            <Icon name="play" :size="17" /> {{ t("播放") }}
-          </button>
           <button v-if="menu.entry.category === 'archive' && !menu.entry.folder" class="quiet" role="menuitem" @click="menuAction(openExtract)">
             <Icon name="archive" :size="17" /> {{ t("在线解压") }}
+          </button>
+          <button class="quiet" role="menuitem" :title="t('按文件名整理成影视文件夹结构，执行前可逐项检查')" @click="menuAction((e) => organizeEntries([e]))">
+            <Icon name="spark" :size="17" /> {{ t("整理这些") }}
+          </button>
+          <button class="quiet" role="menuitem" @click="menuAction((e) => { select(e); showInfo(); })">
+            <Icon name="info" :size="17" /> {{ t("查看信息") }}
+          </button>
+          <button class="quiet" role="menuitem" @click="menuAction((e) => openCreateShare([e]))">
+            <Icon name="share" :size="17" /> {{ t("分享") }}
           </button>
           <button class="quiet" role="menuitem" @click="menuAction(toggleStar)">
             <Icon name="star" :size="17" :filled="menu.entry.starred" /> {{ menu.entry.starred ? t("取消星标") : t("action|星标") }}
           </button>
-          <button class="quiet" role="menuitem" @click="menuAction(copyDownloadLink)">
+          <button v-if="!menu.entry.folder" class="quiet" role="menuitem" @click="menuAction(copyDownloadLink)">
             <Icon name="link" :size="17" /> {{ t("复制直链") }}
           </button>
           <button class="quiet" role="menuitem" @click="menuAction((e) => downloadEntries([e]))">
             <Icon name="download" :size="17" /> {{ t("下载到电脑") }}
+          </button>
+          <button class="quiet" role="menuitem" @click="menuAction((e) => copyToClipboard('copy', [e]))">
+            <Icon name="copy" :size="17" /> {{ t("复制") }}
+          </button>
+          <button class="quiet" role="menuitem" @click="menuAction((e) => copyToClipboard('move', [e]))">
+            <Icon name="move" :size="17" /> {{ t("剪切") }}
           </button>
           <button class="quiet" role="menuitem" @click="startRename">
             <Icon name="text" :size="17" /> {{ t("重命名") }}
@@ -1455,6 +1788,14 @@ watch(
   width: 40px;
   padding: 0;
   border-radius: 11px;
+}
+
+.segments.compact button:first-child {
+  border-radius: 18px 11px 11px 18px;
+}
+
+.segments.compact button:last-child {
+  border-radius: 11px 18px 18px 11px;
 }
 
 /* The layout toggle marks its state with a lighter chip, not the cobalt
@@ -2528,9 +2869,15 @@ h2 + .folders + h2,
   z-index: 60;
   min-width: 168px;
   overflow-y: auto;
+  scrollbar-width: none;
   overscroll-behavior: contain;
   border: 1px solid var(--glass-edge);
   animation: menu-in 0.18s var(--ease) both;
+}
+
+.menu::-webkit-scrollbar {
+  width: 0;
+  height: 0;
 }
 
 /* Above the button it grows out of the button too: up, not down. */

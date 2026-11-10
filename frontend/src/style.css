@@ -544,7 +544,8 @@ button.icon {
   transition:
     transform var(--dur) var(--ease),
     width var(--dur) var(--ease),
-    height var(--dur) var(--ease);
+    height var(--dur) var(--ease),
+    border-radius var(--dur) var(--ease);
 }
 
 [data-slide="still"]::before {
@@ -571,6 +572,12 @@ button.icon {
   gap: 2px;
   padding: 6px;
   border-radius: 14px;
+  scrollbar-width: none;
+}
+
+.menu::-webkit-scrollbar {
+  width: 0;
+  height: 0;
 }
 
 .menu > button {

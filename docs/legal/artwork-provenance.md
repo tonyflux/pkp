@@ -37,7 +37,10 @@ Current `build/appicon.png` and `build/appicon.icon/Assets/appicon.png` are byte
 
 - DMG background: drawn by tracked `build/darwin/dmg-background.swift` using AppKit gradients, text and arrows; its editable generating source is included.
 - TMDB mark: `frontend/src/assets/tmdb.svg` is an external service mark, not claimed as PKP-owned artwork. TMDB attribution remains in THIRD_PARTY.
-- Public screenshots: `assets/screenshots/*.png` are isolated running-app captures with synthetic data, Simplified Chinese UI, as described in the Chinese README. `assets/screenshots/en/*.webp` are English interface illustrations copied from https://pkpapp.cc/en on 2026-11-02 (the site labels them as redrawn from the current UI, with fictional demo data). They are website art, distinct from captures of a running build. This record does not independently clear every embedded image or establish the rights of old binary releases.
+- Public screenshots: `assets/screenshots/*.png` are isolated running-app captures with synthetic data, Simplified Chinese UI, as described in the Chinese README. The existing English website illustrations listed below were copied from https://pkpapp.cc/en on 2026-11-02 (the site labels them as redrawn from the UI with fictional demo data); they are distinct from captures of a running build. The new `workspace-0.4.0.webp` files in `assets/screenshots/` and `assets/screenshots/en/` capture the current UI in an isolated browser preview with synthetic account, folders, storage figures and bundled wallpaper previews; they do not show production cloud data. This record does not independently clear every embedded image or establish the rights of old binary releases.
+
+  - `assets/screenshots/workspace-0.4.0.webp`: SHA-256 `07a5c2500d67af191cd283cdaa0474075ae3621b764199fc182791dcc6970e70`.
+  - `assets/screenshots/en/workspace-0.4.0.webp`: SHA-256 `e9f2896b6efc68c3cc69a1daeaf92b6b85cd80f79673849480f7be0e61519a94`.
 
 | File | Source on pkpapp.cc | SHA-256 |
 | --- | --- | --- |

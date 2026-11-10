@@ -21,6 +21,7 @@ declare module "@wailsio/runtime" {
             "drive:accounts": void;
             "drive:index": services$0.IndexProgress;
             "drive:remove": services$0.RemoveProgress;
+            "external:open": void;
             "inbox:changed": services$0.InboxChanged;
             "inbox:suggestions": services$0.InboxChanged;
             "language:state": services$0.LanguageState;

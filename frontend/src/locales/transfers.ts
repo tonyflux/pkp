@@ -325,6 +325,24 @@ export default {
   },
 
   // CloudAddSheet
+  "另有 {n} 项待打开，提交或清空对应类型的内容后继续。": {
+    tw: "另有 {n} 項待開啟，提交或清空對應類型的內容後繼續。",
+    en: (p) => `${p.n} more ${plural(p.n, "item is", "items are")} waiting. Submit or clear the input of the corresponding type to continue.`,
+    ja: "ほかに {n} 件が待機中です。該当する種類の内容を送信または消去すると続行します。",
+    ko: "{n}개 항목이 더 대기 중입니다. 해당 유형의 내용을 제출하거나 지우면 계속합니다.",
+  },
+  待处理的外部打开请求: {
+    tw: "待處理的外部開啟請求",
+    en: "Pending external links or files",
+    ja: "未処理の外部リンク・ファイル",
+    ko: "대기 중인 외부 링크 또는 파일",
+  },
+  "无法读取外部打开请求：{error}": {
+    tw: "無法讀取外部開啟請求：{error}",
+    en: "Could not read external links or files: {error}",
+    ja: "外部リンク・ファイルを読み込めませんでした：{error}",
+    ko: "외부 링크 또는 파일을 읽지 못했습니다: {error}",
+  },
   重复: { tw: "重複", en: "Duplicate", ja: "重複", ko: "중복" },
   无法识别的链接格式: { tw: "無法識別的連結格式", en: "Unrecognized link format", ja: "認識できないリンク形式", ko: "인식할 수 없는 링크 형식" },
   我的文件: { tw: "我的檔案", en: "My Files", ja: "マイファイル", ko: "내 파일" },
@@ -333,6 +351,8 @@ export default {
   添加方式: { tw: "新增方式", en: "Add by", ja: "追加方法", ko: "추가 방식" },
   链接: { tw: "連結", en: "Links", ja: "リンク", ko: "링크" },
   每行一个链接: { tw: "每行一個連結", en: "One link per line", ja: "1 行に 1 リンク", ko: "한 줄에 링크 하나" },
+  清空链接: { tw: "清空連結", en: "Clear links", ja: "リンクを消去", ko: "링크 지우기" },
+  丢弃当前内容并关闭: { tw: "捨棄目前內容並關閉", en: "Discard the current input and close", ja: "現在の内容を破棄して閉じる", ko: "현재 내용을 버리고 닫기" },
   已识别: { tw: "已識別", en: "Recognized", ja: "認識済み", ko: "인식됨" },
   "每行一个链接，支持批量添加": { tw: "每行一個連結，支援批次新增", en: "One link per line; add many at once", ja: "1 行に 1 リンク、まとめて追加できます", ko: "한 줄에 링크 하나, 여러 개를 한 번에 추가할 수 있습니다" },
   "已识别 {n} 条链接": {

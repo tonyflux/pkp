@@ -82,12 +82,22 @@ func (d *DriveService) ViewerList(ctx context.Context, req ListRequest) (ListPag
 	return d.listLive(s, req)
 }
 
-func (d *DriveService) previewOwner(ctx context.Context) uint {
+type previewOwnerKey struct {
+	windowID uint
+	clientID string
+}
+
+func (d *DriveService) previewOwner(ctx context.Context) previewOwnerKey {
 	caller := callerWindow(ctx)
 	if caller == nil {
-		return 0
+		return previewOwnerKey{}
+	}
+	// Browser window IDs change on reconnect; the client ID survives registration too.
+	if browser, ok := caller.(interface{ ClientID() string }); ok {
+		return previewOwnerKey{clientID: browser.ClientID()}
 	}
 	id := caller.ID()
+	owner := previewOwnerKey{windowID: id}
 	d.viewerMu.Lock()
 	if d.previewOwners == nil {
 		d.previewOwners = make(map[uint]bool)
@@ -98,11 +108,11 @@ func (d *DriveService) previewOwner(ctx context.Context) uint {
 	if first {
 		caller.RegisterHook(events.Common.WindowClosing, func(*application.WindowEvent) {
 			if d.player != nil {
-				d.player.closePreviewWindow(id)
+				d.player.closePreviewWindow(owner)
 			}
 		})
 	}
-	return id
+	return owner
 }
 
 // OpenViewerWindow creates a detached viewer from the current file snapshot.
@@ -138,7 +148,7 @@ func (d *DriveService) OpenViewerWindow(ctx context.Context, state ViewerWindowS
 	d.viewerMu.Unlock()
 	window.RegisterHook(events.Common.WindowClosing, func(*application.WindowEvent) {
 		if d.player != nil {
-			d.player.closePreviewWindow(window.ID())
+			d.player.closePreviewWindow(previewOwnerKey{windowID: window.ID()})
 		}
 		d.viewerMu.Lock()
 		delete(d.viewerWindows, window.ID())

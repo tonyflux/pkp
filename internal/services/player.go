@@ -201,8 +201,8 @@ type PlayerService struct {
 	dirty         bool
 	seek          seekHold
 	current       stream.Handle
-	previews      map[uint]map[string]stream.Handle
-	previewClosed map[uint]bool
+	previews      map[previewOwnerKey]map[string]stream.Handle
+	previewClosed map[previewOwnerKey]bool
 	window        *application.WebviewWindow
 	attached      bool
 	headless      bool
@@ -574,7 +574,10 @@ func (p *PlayerService) lastPlayed() (account, fileID string, position, duration
 
 // openPreview publishes one window's read-only resource without touching playback.
 // Each request owns its URL, so a late response can be revoked independently.
-func (p *PlayerService) openPreview(owner uint, rawURL string, headers map[string]string, contentType string) (string, error) {
+func (p *PlayerService) openPreview(owner previewOwnerKey, rawURL string, headers map[string]string, contentType string) (string, error) {
+	if application.System.IsServer() && owner.clientID == "" {
+		return "", context.Canceled
+	}
 	if strings.TrimSpace(rawURL) == "" {
 		return "", i18n.New("没有可播放的地址")
 	}
@@ -589,7 +592,7 @@ func (p *PlayerService) openPreview(owner uint, rawURL string, headers map[strin
 		return "", context.Canceled
 	}
 	if p.previews == nil {
-		p.previews = make(map[uint]map[string]stream.Handle)
+		p.previews = make(map[previewOwnerKey]map[string]stream.Handle)
 	}
 	if p.previews[owner] == nil {
 		p.previews[owner] = make(map[string]stream.Handle)
@@ -599,7 +602,7 @@ func (p *PlayerService) openPreview(owner uint, rawURL string, headers map[strin
 }
 
 // closePreview revokes only the calling window's URL; empty revokes its whole set.
-func (p *PlayerService) closePreview(owner uint, url string) {
+func (p *PlayerService) closePreview(owner previewOwnerKey, url string) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	for key, handle := range p.previews[owner] {
@@ -613,10 +616,10 @@ func (p *PlayerService) closePreview(owner uint, url string) {
 	}
 }
 
-func (p *PlayerService) closePreviewWindow(owner uint) {
+func (p *PlayerService) closePreviewWindow(owner previewOwnerKey) {
 	p.mu.Lock()
 	if p.previewClosed == nil {
-		p.previewClosed = make(map[uint]bool)
+		p.previewClosed = make(map[previewOwnerKey]bool)
 	}
 	p.previewClosed[owner] = true
 	p.mu.Unlock()

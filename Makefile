@@ -95,6 +95,8 @@ build-go: frontend $(LIBMPV)
 	rm -rf bin/Frameworks
 	mkdir -p bin/Frameworks
 	cp build/darwin/libmpv/lib/*.*.dylib bin/Frameworks/
+	mkdir -p bin/Helpers
+	cp build/darwin/libmpv/bin/ffmpeg build/darwin/libmpv/bin/ffprobe bin/Helpers/
 
 
 # The updater must keep running after replacing the main app, without libmpv.
@@ -113,6 +115,7 @@ app-go: build-go updater-helper
 	mkdir -p bin/pkp.app/Contents/MacOS bin/pkp.app/Contents/Resources bin/pkp.app/Contents/Helpers
 	cp bin/pkp bin/pkp.app/Contents/MacOS/
 	cp bin/pkp-updater bin/pkp.app/Contents/Helpers/
+	cp bin/Helpers/ffmpeg bin/Helpers/ffprobe bin/pkp.app/Contents/Helpers/
 	cp -R bin/Frameworks bin/pkp.app/Contents/
 	cp build/darwin/Info.plist bin/pkp.app/Contents/
 	cp build/darwin/icons.icns bin/pkp.app/Contents/Resources/
@@ -174,6 +177,10 @@ windows-installer: windows $(WEBVIEW2_BOOTSTRAPPER) $(LIBMPV_WIN_KEY)
 		-DARG_WAILS_ARM64_BINARY="$(CURDIR)/bin/pkp-arm64.exe" \
 		-DARG_LIBMPV_AMD64="$(CURDIR)/$(LIBMPV_WIN_DIR)/amd64/libmpv-2.dll" \
 		-DARG_LIBMPV_ARM64="$(CURDIR)/$(LIBMPV_WIN_DIR)/arm64/libmpv-2.dll" \
+		-DARG_FFMPEG_AMD64="$(CURDIR)/$(LIBMPV_WIN_DIR)/amd64/ffmpeg.exe" \
+		-DARG_FFMPEG_ARM64="$(CURDIR)/$(LIBMPV_WIN_DIR)/arm64/ffmpeg.exe" \
+		-DARG_FFPROBE_AMD64="$(CURDIR)/$(LIBMPV_WIN_DIR)/amd64/ffprobe.exe" \
+		-DARG_FFPROBE_ARM64="$(CURDIR)/$(LIBMPV_WIN_DIR)/arm64/ffprobe.exe" \
 		-DARG_LIBMPV_LICENSES="$(CURDIR)/$(LIBMPV_WIN_DIR)/licenses" \
 		-DARG_GO_LICENSES="$(CURDIR)/bin/GO_LICENSES-windows.txt" \
 		-DARG_FRONTEND_LICENSES="$(CURDIR)/frontend/dist/THIRD_PARTY_LICENSES.txt" \

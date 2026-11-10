@@ -2,7 +2,7 @@
 // Settings · Privacy & Security · Standalone PKP Password: one sheet in three
 // modes — Set (new + repeat), Change (current + new + repeat; Remove Password while it is
 // only the backup of System Authentication) and Verify (current, to prove a change to the
-// lock). Length and repeat are checked here; Go checks the current password,
+// lock). Nonempty input and repeat are checked here; Go checks the current password,
 // counts wrong ones and keeps only a derived verifier. The fields live in this
 // component and are emptied on close: no password sits in the store.
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
@@ -10,8 +10,6 @@ import Icon from "./Icon.vue";
 import Orbit from "./Orbit.vue";
 import { appLockSheet, closeLockSheet, removeLockPassword, submitLockSheet } from "../store";
 import { t, N_ } from "../i18n";
-
-const MIN = 8;
 
 const current = ref("");
 const next = ref("");
@@ -75,8 +73,8 @@ async function submit() {
     return;
   }
   if (asksNew.value) {
-    if ([...next.value].length < MIN) {
-      local.value = t("密码至少 {n} 位", { n: MIN });
+    if (!next.value) {
+      local.value = t("请输入新密码");
       nextField.value?.focus();
       return;
     }
@@ -149,7 +147,7 @@ onBeforeUnmount(() => {
         </label>
         <template v-if="asksNew">
           <label class="field">
-            <span>{{ t("新密码（至少 {n} 位）", { n: MIN }) }}</span>
+            <span>{{ t("新密码") }}</span>
             <input
               ref="nextField"
               v-model="next"

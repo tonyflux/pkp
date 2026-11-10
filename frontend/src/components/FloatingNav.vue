@@ -72,6 +72,7 @@ const groups = computed<{ title: string; items: NavItem[] }[]>(() => [
         badgeLabel: t("同步与备份，{n} 个同步对需要处理", { n: syncAttention.value }),
       },
       { key: "shares", label: t("我的分享"), icon: "shares" },
+      { key: "lan", label: t("局域网共享"), icon: "globe" },
       { key: "trash", label: t("回收站"), icon: "trash" },
     ],
   },
@@ -79,6 +80,7 @@ const groups = computed<{ title: string; items: NavItem[] }[]>(() => [
 
 const activeKey = computed(() => {
   switch (ui.route) {
+    case "lan":
     case "history":
     case "sync":
     case "transfers":
@@ -265,7 +267,7 @@ onBeforeUnmount(() => {
           :key="item.key"
           class="item"
           :class="{ active: activeKey === item.key }"
-          :title="t('{name}（{note}）', { name: item.label, note: shortcutText(String(NAV_KEYS.indexOf(item.key) + 1)) })"
+          :title="NAV_KEYS.includes(item.key) ? t('{name}（{note}）', { name: item.label, note: shortcutText(String(NAV_KEYS.indexOf(item.key) + 1)) }) : item.label"
           :aria-label="item.badge ? item.badgeLabel : item.label"
           :aria-current="activeKey === item.key ? 'page' : undefined"
           @click="openNav(item.key)"

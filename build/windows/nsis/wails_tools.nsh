@@ -1,4 +1,4 @@
-# DO NOT EDIT - Generated automatically by `wails build`
+# Wails build helpers with PKP's non-default, per-user association registration.
 
 !include "x64.nsh"
 !include "WinVer.nsh"
@@ -14,7 +14,7 @@
     !define INFO_PRODUCTNAME "PKP"
 !endif
 !ifndef INFO_PRODUCTVERSION
-    !define INFO_PRODUCTVERSION "0.3.0"
+    !define INFO_PRODUCTVERSION "0.4.1"
 !endif
 !ifndef INFO_COPYRIGHT
     !define INFO_COPYRIGHT "Copyright (C) 2026 tonyflux"
@@ -203,59 +203,72 @@ RequestExecutionLevel "${REQUEST_EXECUTION_LEVEL}"
     ok:
 !macroend
 
-# Copy of APP_ASSOCIATE and APP_UNASSOCIATE macros from here https://gist.github.com/nikku/281d0ef126dbc215dd58bfd5b3a5cd5b
-!macro APP_ASSOCIATE EXT FILECLASS DESCRIPTION ICON COMMANDTEXT COMMAND
-  ; Backup the previously associated file class
-  ReadRegStr $R0 SHELL_CONTEXT "Software\Classes\.${EXT}" ""
-  WriteRegStr SHELL_CONTEXT "Software\Classes\.${EXT}" "${FILECLASS}_backup" "$R0"
-
-  WriteRegStr SHELL_CONTEXT "Software\Classes\.${EXT}" "" "${FILECLASS}"
-
-  WriteRegStr SHELL_CONTEXT "Software\Classes\${FILECLASS}" "" `${DESCRIPTION}`
-  WriteRegStr SHELL_CONTEXT "Software\Classes\${FILECLASS}\DefaultIcon" "" `${ICON}`
-  WriteRegStr SHELL_CONTEXT "Software\Classes\${FILECLASS}\shell" "" "open"
-  WriteRegStr SHELL_CONTEXT "Software\Classes\${FILECLASS}\shell\open" "" `${COMMANDTEXT}`
-  WriteRegStr SHELL_CONTEXT "Software\Classes\${FILECLASS}\shell\open\command" "" `${COMMAND}`
-!macroend
-
-!macro APP_UNASSOCIATE EXT FILECLASS
-  ; Backup the previously associated file class
-  ReadRegStr $R0 SHELL_CONTEXT "Software\Classes\.${EXT}" `${FILECLASS}_backup`
-  WriteRegStr SHELL_CONTEXT "Software\Classes\.${EXT}" "" "$R0"
-
-  DeleteRegKey SHELL_CONTEXT `Software\Classes\${FILECLASS}`
-!macroend
+# Advertise candidates only: Windows owns the user's default and UserChoice keys.
+!define PKP_CAPABILITIES "Software\PKP\ExternalOpen\Capabilities"
+!define PKP_REGISTERED_APP "com.pkp.desktop"
+!define PKP_TORRENT_CLASS "PKP.Torrent"
+!define PKP_MAGNET_CLASS "PKP.Magnet"
 
 !macro wails.associateFiles
-    ; Create file associations
-    
+    WriteRegStr HKCU "Software\Classes\${PKP_TORRENT_CLASS}" "" "BitTorrent document"
+    WriteRegStr HKCU "Software\Classes\${PKP_TORRENT_CLASS}\DefaultIcon" "" '$\"$INSTDIR\${PRODUCT_EXECUTABLE}$\",0'
+    WriteRegStr HKCU "Software\Classes\${PKP_TORRENT_CLASS}\shell\open\command" "" '$\"$INSTDIR\${PRODUCT_EXECUTABLE}$\" $\"%1$\"'
+    WriteRegStr HKCU "Software\Classes\.torrent\OpenWithProgids" "${PKP_TORRENT_CLASS}" ""
+    WriteRegStr HKCU "${PKP_CAPABILITIES}" "ApplicationName" "${INFO_PRODUCTNAME}"
+    WriteRegStr HKCU "${PKP_CAPABILITIES}" "ApplicationDescription" "PKP for PikPak"
+    WriteRegStr HKCU "${PKP_CAPABILITIES}" "ApplicationIcon" '$\"$INSTDIR\${PRODUCT_EXECUTABLE}$\",0'
+    WriteRegStr HKCU "${PKP_CAPABILITIES}\FileAssociations" ".torrent" "${PKP_TORRENT_CLASS}"
+    WriteRegStr HKCU "Software\RegisteredApplications" "${PKP_REGISTERED_APP}" "${PKP_CAPABILITIES}"
 !macroend
 
 !macro wails.unassociateFiles
-    ; Delete app associations
-    
-!macroend
-
-!macro CUSTOM_PROTOCOL_ASSOCIATE PROTOCOL DESCRIPTION ICON COMMAND
-  DeleteRegKey SHELL_CONTEXT "Software\Classes\${PROTOCOL}"
-  WriteRegStr SHELL_CONTEXT "Software\Classes\${PROTOCOL}" "" "${DESCRIPTION}"
-  WriteRegStr SHELL_CONTEXT "Software\Classes\${PROTOCOL}" "URL Protocol" ""
-  WriteRegStr SHELL_CONTEXT "Software\Classes\${PROTOCOL}\DefaultIcon" "" "${ICON}"
-  WriteRegStr SHELL_CONTEXT "Software\Classes\${PROTOCOL}\shell" "" ""
-  WriteRegStr SHELL_CONTEXT "Software\Classes\${PROTOCOL}\shell\open" "" ""
-  WriteRegStr SHELL_CONTEXT "Software\Classes\${PROTOCOL}\shell\open\command" "" "${COMMAND}"
-!macroend
-
-!macro CUSTOM_PROTOCOL_UNASSOCIATE PROTOCOL
-  DeleteRegKey SHELL_CONTEXT "Software\Classes\${PROTOCOL}"
+    ReadRegStr $R0 HKCU "Software\Classes\${PKP_TORRENT_CLASS}\shell\open\command" ""
+    ${If} $R0 == '$\"$INSTDIR\${PRODUCT_EXECUTABLE}$\" $\"%1$\"'
+        DeleteRegValue HKCU "Software\Classes\.torrent\OpenWithProgids" "${PKP_TORRENT_CLASS}"
+        DeleteRegKey /ifempty HKCU "Software\Classes\.torrent\OpenWithProgids"
+        DeleteRegKey /ifempty HKCU "Software\Classes\.torrent"
+        DeleteRegKey HKCU "Software\Classes\${PKP_TORRENT_CLASS}"
+        DeleteRegValue HKCU "${PKP_CAPABILITIES}\FileAssociations" ".torrent"
+        DeleteRegKey /ifempty HKCU "${PKP_CAPABILITIES}\FileAssociations"
+    ${EndIf}
 !macroend
 
 !macro wails.associateCustomProtocols
-    ; Create custom protocols associations
-    
+    WriteRegStr HKCU "Software\Classes\${PKP_MAGNET_CLASS}" "" "Magnet link"
+    WriteRegStr HKCU "Software\Classes\${PKP_MAGNET_CLASS}" "URL Protocol" ""
+    WriteRegStr HKCU "Software\Classes\${PKP_MAGNET_CLASS}\DefaultIcon" "" '$\"$INSTDIR\${PRODUCT_EXECUTABLE}$\",0'
+    WriteRegStr HKCU "Software\Classes\${PKP_MAGNET_CLASS}\shell\open\command" "" '$\"$INSTDIR\${PRODUCT_EXECUTABLE}$\" $\"%1$\"'
+    WriteRegStr HKCU "Software\Classes\magnet\OpenWithProgids" "${PKP_MAGNET_CLASS}" ""
+    WriteRegStr HKCU "${PKP_CAPABILITIES}\UrlAssociations" "magnet" "${PKP_MAGNET_CLASS}"
+    WriteRegStr HKCU "Software\Classes\pkp" "" "URL:PKP share preview"
+    WriteRegStr HKCU "Software\Classes\pkp" "URL Protocol" ""
+    WriteRegStr HKCU "Software\Classes\pkp\DefaultIcon" "" '$\"$INSTDIR\${PRODUCT_EXECUTABLE}$\",0'
+    WriteRegStr HKCU "Software\Classes\pkp\shell\open\command" "" '$\"$INSTDIR\${PRODUCT_EXECUTABLE}$\" $\"%1$\"'
+    WriteRegStr HKCU "${PKP_CAPABILITIES}\UrlAssociations" "pkp" "pkp"
+    System::Call 'shell32::SHChangeNotify(i 0x08000000, i 0, p 0, p 0)'
 !macroend
 
 !macro wails.unassociateCustomProtocols
-    ; Delete app custom protocol associations
-    
+    ReadRegStr $R0 HKCU "Software\Classes\pkp\shell\open\command" ""
+    ${If} $R0 == '$\"$INSTDIR\${PRODUCT_EXECUTABLE}$\" $\"%1$\"'
+        DeleteRegKey HKCU "Software\Classes\pkp"
+        DeleteRegValue HKCU "${PKP_CAPABILITIES}\UrlAssociations" "pkp"
+    ${EndIf}
+    ReadRegStr $R0 HKCU "Software\Classes\${PKP_MAGNET_CLASS}\shell\open\command" ""
+    ${If} $R0 == '$\"$INSTDIR\${PRODUCT_EXECUTABLE}$\" $\"%1$\"'
+        DeleteRegValue HKCU "Software\Classes\magnet\OpenWithProgids" "${PKP_MAGNET_CLASS}"
+        DeleteRegKey /ifempty HKCU "Software\Classes\magnet\OpenWithProgids"
+        DeleteRegKey /ifempty HKCU "Software\Classes\magnet"
+        DeleteRegKey HKCU "Software\Classes\${PKP_MAGNET_CLASS}"
+        DeleteRegValue HKCU "${PKP_CAPABILITIES}\UrlAssociations" "magnet"
+        DeleteRegKey /ifempty HKCU "${PKP_CAPABILITIES}\UrlAssociations"
+    ${EndIf}
+    ReadRegStr $R0 HKCU "${PKP_CAPABILITIES}" "ApplicationIcon"
+    ${If} $R0 == '$\"$INSTDIR\${PRODUCT_EXECUTABLE}$\",0'
+        DeleteRegValue HKCU "Software\RegisteredApplications" "${PKP_REGISTERED_APP}"
+        DeleteRegKey HKCU "${PKP_CAPABILITIES}"
+        DeleteRegKey /ifempty HKCU "Software\PKP\ExternalOpen"
+        DeleteRegKey /ifempty HKCU "Software\PKP"
+    ${EndIf}
+    System::Call 'shell32::SHChangeNotify(i 0x08000000, i 0, p 0, p 0)'
 !macroend

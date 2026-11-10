@@ -5,6 +5,8 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"runtime"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -198,6 +200,68 @@ func TestRelativePathsAndReplacedRootsBlockWrites(t *testing.T) {
 	}
 }
 
+func TestDarwinPersistedRootSurvivesDeviceRenumbering(t *testing.T) {
+	if runtime.GOOS != "darwin" {
+		t.Skip("Darwin device numbers are mount-session identifiers")
+	}
+	root := testRoot(t)
+	device, inode, ok := strings.Cut(root.File, ":")
+	dev, err := strconv.ParseUint(device, 10, 64)
+	if !ok || err != nil {
+		t.Fatalf("unexpected Darwin identity %q", root.File)
+	}
+	ino, err := strconv.ParseUint(inode, 10, 64)
+	if err != nil {
+		t.Fatal(err)
+	}
+	legacy := root
+	legacy.File = strconv.FormatUint(dev+1, 10) + ":" + inode
+	if err := Validate(legacy); err != nil {
+		t.Fatalf("same volume UUID and inode refused after remount: %v", err)
+	}
+	alias := legacy
+	alias.Path = filepath.Join(filepath.Dir(root.Path), "unrelated-alias")
+	if !Overlaps(root, alias) {
+		t.Fatal("old device number hid the same root from overlap detection")
+	}
+	stage, err := EnsureStage(legacy, "persisted-pair")
+	if err != nil {
+		t.Fatal(err)
+	}
+	put(t, filepath.Join(stage, "retained.part"), "retained partial bytes")
+	if _, err := EnsureStage(root, "persisted-pair"); err != nil {
+		t.Fatalf("persisted stage owner rejected the unchanged root: %v", err)
+	}
+	if _, err := EnsureStage(root, "different-pair"); !errors.Is(err, ErrStageOccupied) {
+		t.Fatalf("device renumbering weakened pair ownership: %v", err)
+	}
+	for _, changed := range []Identity{
+		{Path: root.Path, Volume: "another-volume", File: legacy.File},
+		{Path: root.Path, Volume: root.Volume, File: device + ":" + strconv.FormatUint(ino+1, 10)},
+		{Path: root.Path, Volume: root.Volume, File: "not-a-device:" + inode},
+		{Path: root.Path, Volume: root.Volume, File: legacy.File + ":extra"},
+	} {
+		changed.CaseSensitive, changed.UnicodeSensitive = root.CaseSensitive, root.UnicodeSensitive
+		if err := Validate(changed); !errors.Is(err, ErrRootChanged) {
+			t.Fatalf("different or malformed identity accepted: %+v %v", changed, err)
+		}
+	}
+	old := root.Path + "-original"
+	if err := os.Rename(root.Path, old); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.RemoveAll(old) })
+	if err := os.Mkdir(root.Path, 0700); err != nil {
+		t.Fatal(err)
+	}
+	if err := Validate(legacy); !errors.Is(err, ErrRootChanged) {
+		t.Fatalf("replacement root accepted: %v", err)
+	}
+	if got, err := os.ReadFile(filepath.Join(old, ".pkp-sync", "retained.part")); err != nil || string(got) != "retained partial bytes" {
+		t.Fatalf("root validation changed retained checkpoint: %q %v", got, err)
+	}
+}
+
 func TestRenameNeverClobbersExistingFileOrDirectory(t *testing.T) {
 	dir := t.TempDir()
 	from := filepath.Join(dir, "from")
@@ -273,6 +337,33 @@ func TestArbitrarySyncLookingUserNameIsNotExcluded(t *testing.T) {
 	entries, _, err := Scan(context.Background(), root, nil)
 	if err != nil || len(entries) != 1 || entries[0].Name != ".pkp-sync-my-notes" {
 		t.Fatalf("hid user file: %+v %v", entries, err)
+	}
+}
+
+func TestIsStagePathUsesExactComponents(t *testing.T) {
+	for _, tc := range []struct {
+		path      string
+		sensitive bool
+		internal  bool
+	}{
+		{".pkp-sync", true, true},
+		{"root/.pkp-sync/owner.json", true, true},
+		{"root/.PKP-SYNC/chunk", false, true},
+		{"root/.PKP-SYNC/chunk", true, false},
+		{".pkp-sync-my-notes", false, false},
+		{"root/.pkp-sync-my-notes/.hidden", false, false},
+		{"root/.hidden", false, false},
+		{"root/owner.json", false, false},
+	} {
+		path := filepath.FromSlash(tc.path)
+		identity := Identity{CaseSensitive: tc.sensitive}
+		if got := IsStagePath(path, identity); got != tc.internal {
+			t.Errorf("IsStagePath(%q, sensitive=%v) = %v", path, tc.sensitive, got)
+		}
+		absolute := filepath.Join(string(filepath.Separator), path)
+		if got := IsStagePath(absolute, identity); got != tc.internal {
+			t.Errorf("IsStagePath(%q, sensitive=%v) = %v", absolute, tc.sensitive, got)
+		}
 	}
 }
 

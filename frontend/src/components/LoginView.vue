@@ -243,6 +243,7 @@ function netApplied() {
       <div class="settings-links">
         <button class="quiet" type="button" @click="openSettings('privacy')">{{ t("tab|隐私与安全") }}</button>
         <button class="quiet" type="button" @click="openSettings('updates')">{{ t("关于与更新") }}</button>
+        <button class="quiet" type="button" data-lan-entry @click="ui.route = 'lan'">{{ t("局域网共享") }}</button>
       </div>
     </section>
 
@@ -262,6 +263,7 @@ function netApplied() {
   height: 100%;
   overflow-y: auto;
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   place-items: center;
   align-items: safe center;
   padding: clamp(16px, 5vw, 40px);
@@ -491,7 +493,7 @@ header p {
   border-color: var(--glass-edge);
   color: var(--fg);
 }
-.login > .quiet { min-height: 28px; padding: 4px 10px; font-size: 12px; }
+.settings-links > .quiet { min-height: 28px; padding: 4px 10px; font-size: 12px; }
 
 @media (max-height: 740px) {
   .login-wrap { padding: 16px; }

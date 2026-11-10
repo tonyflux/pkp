@@ -4,9 +4,9 @@
 
 ## 下载状态
 
-**v0.3.0** 新增扫码登录、Gemini API Key 支持及登录修复。从 [最新 Release](https://github.com/tonyflux/pkp/releases/latest) 下载：[macOS Universal](https://github.com/tonyflux/pkp/releases/download/v0.3.0/PKP-0.3.0-macos-universal.dmg) / [Windows x64 与 ARM64](https://github.com/tonyflux/pkp/releases/download/v0.3.0/PKP-0.3.0-windows-x64-arm64-setup.exe)。对照同一 Release 的 `SHA256SUMS` 并验证签名。请从本仓库的 Releases 获取安装包。
+**v0.4.1** 优化「关于与更新」顶部版本卡操作与安全 Markdown 更新说明，并包含局域网只读共享、分享转存预览、外部磁力链／种子打开、统一网格／列表选择器及文件右键菜单与快捷键。从 [最新 Release](https://github.com/tonyflux/pkp/releases/latest) 下载：[macOS Universal](https://github.com/tonyflux/pkp/releases/download/v0.4.1/PKP-0.4.1-macos-universal.dmg) / [Windows x64 与 ARM64](https://github.com/tonyflux/pkp/releases/download/v0.4.1/PKP-0.4.1-windows-x64-arm64-setup.exe)。对照同一 Release 的 `SHA256SUMS` 并验证签名。请从本仓库的 Releases 获取安装包。
 
-v0.2.0 是首个开源版本。v0.3.0 继续提供 `PKP-0.3.0-source.tar.gz`（与安装包对应的 PKP 自有源码）和 `libmpv-sources.tar.gz`（第三方对应源码，不含 PKP 自有源码）。
+v0.2.0 是首个开源版本。v0.4.1 继续提供 `PKP-0.4.1-source.tar.gz`（与安装包对应的 PKP 自有源码）和 `libmpv-sources.tar.gz`（第三方对应源码，不含 PKP 自有源码）。分享转存支持粘贴 PikPak 分享链接、显式打开 `pkp://share` 和桌面端自动识别经过校验的剪贴板分享；只读网格／列表预览后，须选择接收账号、目标目录并确认，不会自动转存。操作与限制见[使用说明](USAGE.md)。
 
 **v0.1.0 仍可下载**，作为历史版本：[macOS Universal](https://github.com/tonyflux/pkp/releases/download/v0.1.0/PKP-0.1.0-macos-universal.dmg) / [Windows x64 与 ARM64](https://github.com/tonyflux/pkp/releases/download/v0.1.0/PKP-0.1.0-windows-x64-arm64-setup.exe)。该 Release 同时提供 `libmpv-sources.tar.gz` 和当时的使用条款。v0.1.0 安装包不是由本仓库当前源码构建，仍适用[当时的闭源条款](legal/v0.1.0-proprietary.txt)。新安装请优先使用最新版本。使用统计在 v0.2.0 默认关闭，在 v0.1.0 默认开启；v0.3.0 改为默认开启每日活跃安装统计。
 
@@ -54,6 +54,8 @@ Linux 暂不承诺支持或发布安装包。
 ## 更新应用
 
 支持更新功能的版本可从「设置 → 关于与更新」检查；未登录时使用登录页同名入口，macOS 也可使用 PKP 菜单的「检查更新…」。自动检查默认开启，可单独关闭；不会自动下载或安装。发现新版后可查看说明、稍后提醒或忽略此版本，手动检查仍可查看被忽略的版本。
+
+新版信息、下载进度及下载／安装按钮集中在页面顶部的版本卡内；更新说明位于其后，长说明随页面滚动。默认窗口无需滚动即可看到主要更新操作，从更新通知或菜单进入时也会回到顶部结果区。
 
 - macOS（从 v0.2.0 起）：先点击「下载更新」，下载并校验完成后再点击「重启并更新」。准备期间 macOS 可能请求替换应用的权限；同一应用的其他 PKP 实例须先退出。确认退出后，更新助手等待当前 PKP 退出，替换原位置的应用并重新打开原配置；账号与本地设置保留。取消权限请求或退出确认不会强制关闭 PKP。请从「应用程序」中的已安装应用执行更新，不要从 DMG、只读位置或临时隔离路径运行。更新不移除隔离标记、不绕过 Gatekeeper；当前 ad hoc 签名与未公证限制仍适用，重新打开时可能需要系统确认。
 - Windows：点击「退出并运行安装程序」，按退出确认和系统管理员授权继续；取消退出或授权不会强制关闭 PKP。安装器要求退出其它 PKP 进程，沿用原安装目录，不需要先卸载；账号与本地设置保留。仍需 Windows 真机充分验收。

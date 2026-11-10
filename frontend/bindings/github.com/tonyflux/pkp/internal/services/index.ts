@@ -4,6 +4,8 @@
 import * as AppLockService from "./applockservice.js";
 import * as AppearanceService from "./appearanceservice.js";
 import * as DriveService from "./driveservice.js";
+import * as ExternalOpenService from "./externalopenservice.js";
+import * as LANService from "./lanservice.js";
 import * as MenuBarService from "./menubarservice.js";
 import * as NotifyService from "./notifyservice.js";
 import * as PlayerService from "./playerservice.js";
@@ -13,6 +15,8 @@ export {
     AppLockService,
     AppearanceService,
     DriveService,
+    ExternalOpenService,
+    LANService,
     MenuBarService,
     NotifyService,
     PlayerService,
@@ -72,6 +76,7 @@ export type {
     EmptyFolder,
     EmptyFolderPage,
     Entry,
+    ExternalOpen,
     ExtractRequest,
     ExtractStart,
     ExtractState,
@@ -123,9 +128,15 @@ export type {
     RemoveProgress,
     RemoveReport,
     RemoveResult,
+    RestoreShareRequest,
     SavedSignIn,
+    ShareEntry,
+    ShareFilePage,
+    ShareImport,
     SharePage,
+    SharePreview,
     ShareRequest,
+    ShareRestoreResult,
     ShareSummary,
     SignInRequest,
     SignInResult,

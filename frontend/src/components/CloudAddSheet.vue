@@ -2,6 +2,8 @@
 import { computed, ref, watch } from "vue";
 import Icon from "./Icon.vue";
 import Orbit from "./Orbit.vue";
+import FileViewSwitch from "./FileViewSwitch.vue";
+import PickerItems from "./PickerItems.vue";
 import {
   accountLabel,
   accounts,
@@ -13,7 +15,9 @@ import {
   currentAccount,
   currentFolderId,
   drive,
+  externalOpen,
   pickCloudAddFolder,
+  openPikPakShare,
   pickTorrent,
   relocate,
   ui,
@@ -21,6 +25,7 @@ import {
 import { bytes } from "../format";
 import type { OfflineResult, TorrentFile } from "../../bindings/github.com/tonyflux/pkp/internal/services";
 import { t } from "../i18n";
+import { shareLink } from "../sharelink";
 
 // Draft text survives closing and reopening the sheet: losing a pasted batch
 // to a stray click is the most annoying failure this panel can have. It lives
@@ -32,7 +37,7 @@ const draft = computed({
   },
 });
 const results = ref<OfflineResult[]>([]);
-const submitting = ref(false);
+const submitting = computed(() => cloudAdd.submitting);
 
 interface Line {
   index: number;
@@ -51,6 +56,7 @@ const lines = computed<Line[]>(() => {
       if (seen.has(text)) return { index: i + 1, text, valid: false, reason: t("重复") };
       seen.add(text);
       const ok =
+        !!shareLink(text) ||
         text.startsWith("magnet:?") ||
         text.startsWith("http://") ||
         text.startsWith("https://") ||
@@ -61,6 +67,7 @@ const lines = computed<Line[]>(() => {
 });
 
 const valid = computed(() => lines.value.filter((l) => l.valid));
+const incomingShare = computed(() => valid.value.find((line) => shareLink(line.text)));
 // [] is the server's own download folder: no parent goes out (drive.CreateOfflineTask).
 const destId = computed(() => cloudAdd.dest.at(-1)?.id ?? "");
 const folder = computed(() => cloudAdd.dest.at(-1)?.name ?? t("我的文件"));
@@ -94,14 +101,45 @@ function close() {
   ui.cloudAddOpen = false;
 }
 
+function clearLinks() {
+  if (submitting.value || cloudAdd.reading) return;
+  draft.value = "";
+  results.value = [];
+}
+
+function cancel() {
+  if (submitting.value || cloudAdd.reading) return;
+  externalOpen.paused = true;
+  if (cloudAdd.tab === "link") clearLinks();
+  else clearTorrent();
+  close();
+}
+
+function pasteShare(event: ClipboardEvent) {
+  const text = event.clipboardData?.getData("text/plain") ?? "";
+  if (!shareLink(text)) return;
+  const field = event.target as HTMLTextAreaElement;
+  if (draft.value.trim() && (field.selectionStart !== 0 || field.selectionEnd !== draft.value.length)) return;
+  event.preventDefault();
+  if (openPikPakShare(text)) clearLinks();
+}
+
 async function submit() {
-  submitting.value = true;
-  results.value = (await addOffline(valid.value.map((l) => l.text), destId.value)) ?? [];
-  submitting.value = false;
-  if (results.value.every((r) => r.ok)) {
-    draft.value = "";
-    results.value = [];
-    close();
+  if (incomingShare.value) {
+    const text = incomingShare.value.text;
+    if (openPikPakShare(text)) draft.value = draft.value.split("\n").filter((line) => line.trim() !== text).join("\n");
+    return;
+  }
+  cloudAdd.submitting = true;
+  try {
+    results.value = (await addOffline(valid.value.map((l) => l.text), destId.value)) ?? [];
+    if (results.value.length && results.value.every((r) => r.ok)) {
+      draft.value = "";
+      results.value = [];
+      close();
+    }
+  } finally {
+    cloudAdd.submitting = false;
   }
 }
 
@@ -139,6 +177,7 @@ function verdict(line: Line): { ok: boolean; reason: string } {
 // The torrent lives in the store beside the link draft, so switching tabs —
 // or closing the sheet — never throws away a picked file and its selection.
 const torrent = computed(() => cloudAdd.torrent);
+const filesLayout = ref<"grid" | "list">("grid");
 const files = computed<TorrentFile[]>(() => torrent.value?.files ?? []);
 const pickedFiles = computed(() => files.value.filter((f) => cloudAdd.picked.has(f.index)));
 const pickedSize = computed(() => pickedFiles.value.reduce((sum, f) => sum + f.size, 0));
@@ -172,12 +211,14 @@ function glyph(file: TorrentFile): string {
 }
 
 async function submitTorrent() {
-  submitting.value = true;
-  const ok = await addTorrent(destId.value);
-  submitting.value = false;
-  if (!ok) return;
-  clearTorrent();
-  close();
+  cloudAdd.submitting = true;
+  try {
+    if (!(await addTorrent(destId.value))) return;
+    clearTorrent();
+    close();
+  } finally {
+    cloudAdd.submitting = false;
+  }
 }
 </script>
 
@@ -198,6 +239,7 @@ async function submitTorrent() {
             role="tab"
             :class="{ on: cloudAdd.tab === 'link' }"
             :aria-selected="cloudAdd.tab === 'link'"
+            :disabled="submitting || cloudAdd.reading"
             @click="cloudAdd.tab = 'link'"
           >
             <Icon name="link" :size="17" />{{ t("链接") }}
@@ -206,11 +248,16 @@ async function submitTorrent() {
             role="tab"
             :class="{ on: cloudAdd.tab === 'torrent' }"
             :aria-selected="cloudAdd.tab === 'torrent'"
+            :disabled="submitting || cloudAdd.reading"
             @click="cloudAdd.tab = 'torrent'"
           >
             <Icon name="magnet" :size="17" />Torrent
           </button>
         </div>
+
+        <p v-if="externalOpen.pending.length && !cloudAdd.reading" class="pending" role="status">
+          {{ t("另有 {n} 项待打开，提交或清空对应类型的内容后继续。", { n: externalOpen.pending.length }) }}
+        </p>
 
         <!-- The entry well is a recessed near-opaque surface. -->
         <template v-if="cloudAdd.tab === 'link'">
@@ -221,10 +268,12 @@ async function submitTorrent() {
             <textarea
               v-model="draft"
               :rows="rows"
+              :disabled="submitting"
               wrap="off"
               spellcheck="false"
               :aria-label="t('每行一个链接')"
               placeholder="magnet:?xt=urn:btih:…&#10;https://example.com/clip.mp4"
+              @paste="pasteShare"
             />
             <div class="states">
               <span v-for="g in gutter" :key="g.key" class="state">
@@ -239,8 +288,11 @@ async function submitTorrent() {
           </div>
 
           <div class="hint">
-            <span>{{ t("每行一个链接，支持批量添加") }}</span>
-            <span class="tally">{{ t("已识别 {n} 条链接", { n: valid.length }) }}</span>
+            <span>{{ incomingShare ? t("PikPak 分享将先预览，确认后再转存") : t("每行一个链接，支持批量添加") }}</span>
+            <span class="picks">
+              <button v-if="draft" class="quiet" :disabled="submitting || cloudAdd.reading" @click="clearLinks">{{ t("清空链接") }}</button>
+              <span class="tally">{{ t("已识别 {n} 条链接", { n: valid.length }) }}</span>
+            </span>
           </div>
         </template>
 
@@ -250,7 +302,7 @@ async function submitTorrent() {
           <div v-if="!torrent" class="well empty">
             <Icon name="magnet" :size="26" />
             <p>{{ t("选择一个 .torrent 文件，挑出要保存的文件") }}</p>
-            <button class="pick" :disabled="cloudAdd.reading" @click="pickTorrent">
+            <button class="pick" :disabled="cloudAdd.reading || submitting" @click="pickTorrent">
               <Orbit v-if="cloudAdd.reading" :size="15" :label="t('读取中')" />
               {{ cloudAdd.reading ? t("读取中…") : t("选择种子文件") }}
             </button>
@@ -263,26 +315,29 @@ async function submitTorrent() {
                 <strong :title="torrent.name">{{ torrent.name }}</strong>
                 <small>{{ t("{n} 个文件 · {size}", { n: files.length, size: bytes(torrent.size) }) }}</small>
               </div>
-              <button class="quiet" :disabled="cloudAdd.reading" @click="pickTorrent">{{ t("换一个") }}</button>
+              <button class="quiet" :disabled="cloudAdd.reading || submitting" @click="clearTorrent">{{ t("移除") }}</button>
+              <button class="quiet" :disabled="cloudAdd.reading || submitting" @click="pickTorrent">{{ t("换一个") }}</button>
             </div>
 
-            <div class="well files">
-              <label v-for="f in files" :key="f.index" class="file" :class="{ on: cloudAdd.picked.has(f.index) }">
-                <input type="checkbox" :checked="cloudAdd.picked.has(f.index)" @change="toggleFile(f)" />
-                <Icon :name="glyph(f)" :size="17" />
-                <span class="path" :title="f.path">{{ f.path }}</span>
-                <span class="size">{{ bytes(f.size) }}</span>
-              </label>
-            </div>
-
-            <div class="hint">
+            <div class="files-toolbar">
               <span class="picks">
-                <button class="quiet" @click="pickAll">{{ t("全选") }}</button>
-                <button class="quiet" @click="pickNone">{{ t("全不选") }}</button>
-                <button v-if="videoCount && videoCount < files.length" class="quiet" @click="pickVideos">{{ t("只选视频") }}</button>
+                <button class="quiet" :disabled="submitting" @click="pickAll">{{ t("全选") }}</button>
+                <button class="quiet" :disabled="submitting" @click="pickNone">{{ t("全不选") }}</button>
+                <button v-if="videoCount && videoCount < files.length" class="quiet" :disabled="submitting" @click="pickVideos">{{ t("只选视频") }}</button>
               </span>
-              <span class="tally">{{ t("已选 {n} 个 · {size}", { n: pickedFiles.length, size: bytes(pickedSize) }) }}</span>
+              <div class="files-tools"><span class="tally">{{ t("已选 {n} 个 · {size}", { n: pickedFiles.length, size: bytes(pickedSize) }) }}</span><FileViewSwitch v-model="filesLayout" :disabled="submitting || cloudAdd.reading" /></div>
             </div>
+            <PickerItems :layout="filesLayout" class="files glass-well" role="group" aria-label="Torrent">
+              <label v-for="f in files" :key="f.index" class="picker-item" :class="{ 'is-picked': cloudAdd.picked.has(f.index) }">
+                <span class="picker-thumb"><Icon :name="glyph(f)" :size="17" /></span>
+                <span class="picker-copy">
+                  <span class="picker-name" :title="f.path">{{ f.path }}</span>
+                  <span class="picker-meta size">{{ bytes(f.size) }}</span>
+                </span>
+                <input class="picker-check" type="checkbox" :checked="cloudAdd.picked.has(f.index)" :disabled="submitting" @change="toggleFile(f)" />
+              </label>
+            </PickerItems>
+
           </template>
         </template>
 
@@ -295,7 +350,7 @@ async function submitTorrent() {
         </div>
 
         <footer>
-          <button @click="close">{{ t("取消") }}</button>
+          <button :disabled="submitting || cloudAdd.reading" :title="t('丢弃当前内容并关闭')" @click="cancel">{{ t("取消") }}</button>
           <button
             v-if="cloudAdd.tab === 'torrent'"
             class="primary"
@@ -308,7 +363,7 @@ async function submitTorrent() {
           </button>
           <button v-else class="primary" :class="{ working: submitting }" :disabled="!valid.length || submitting" @click="submit">
             <Orbit v-if="submitting" :size="15" :label="t('提交中')" />
-            {{ submitting ? t("提交中…") : t("添加 {n} 项", { n: valid.length }) }}
+            {{ submitting ? t("提交中…") : incomingShare ? t("预览分享") : t("添加 {n} 项", { n: valid.length }) }}
           </button>
         </footer>
       </section>
@@ -319,7 +374,7 @@ async function submitTorrent() {
 <style scoped>
 .sheet {
   width: min(700px, calc(100vw - 80px));
-  max-height: calc(100vh - 100px);
+  max-height: calc(100dvh - 48px);
   gap: 16px;
 }
 
@@ -380,6 +435,13 @@ header p {
 
 .source button:disabled {
   opacity: 0.6;
+}
+
+.pending {
+  margin: 0;
+  color: var(--fg-dim);
+  font-size: 13px;
+  line-height: 1.5;
 }
 
 /* ---------- the entry well ---------- */
@@ -552,64 +614,33 @@ header p {
   color: var(--fg-dim);
 }
 
-/* The file list is the well in list form: rows, not one text column. */
-.well.files {
-  flex-direction: column;
-  align-items: stretch;
-  gap: 2px;
-  padding: 8px;
-}
-
-.file {
+.files-toolbar {
   display: flex;
   align-items: center;
-  gap: 10px;
-  min-height: 36px;
-  padding: 0 10px;
-  border-radius: 10px;
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--fg-dim);
-  cursor: pointer;
-  transition: background var(--dur) var(--ease), color var(--dur) var(--ease);
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
-.file:hover {
-  background: color-mix(in srgb, var(--glass-control) 55%, transparent);
+.files {
+  max-height: 260px;
+  min-height: 120px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  border: 1px solid var(--line);
+  border-radius: 16px;
 }
 
-.file.on {
-  background: var(--accent-soft);
-  color: var(--fg);
-}
+.files-tools { display: flex; align-items: center; gap: 10px; }
 
-.file input {
-  flex: none;
-  margin: 0;
-  accent-color: var(--accent);
-}
-
-.file > svg {
-  flex: none;
-  opacity: 0.75;
-}
-
-.file .path {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.file .size {
-  flex: none;
+.size {
   font-variant-numeric: tabular-nums;
-  color: var(--fg-dim);
 }
 
 .picks {
   display: flex;
+  align-items: center;
   gap: 4px;
 }
 
@@ -709,5 +740,17 @@ footer button {
 
 footer button.primary {
   min-width: 196px;
+}
+@media (max-height: 700px) {
+  .sheet { padding: 20px 24px; gap: 10px; }
+  header h2 { font-size: 22px; line-height: 28px; }
+  header p { margin: 3px 0 0; font-size: 13px; }
+  .source button { min-height: 34px; }
+}
+@media (max-width: 600px) {
+  .sheet { width: calc(100vw - 32px); padding: 20px; gap: 10px; }
+  .files-tools { flex-wrap: wrap; margin-left: auto; justify-content: flex-end; }
+  .dest { flex-wrap: wrap; }
+  footer button, footer button.primary { flex: 1; min-width: 0; }
 }
 </style>
