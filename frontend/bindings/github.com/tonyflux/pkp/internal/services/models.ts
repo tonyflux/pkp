@@ -341,6 +341,19 @@ export interface AISettings {
 }
 
 /**
+ * AISubtitleQuota is the latest server snapshot for one playing account.
+ * Known distinguishes a zero allowance from a quota the server has not sent.
+ */
+export interface AISubtitleQuota {
+    "account": string;
+    "known": boolean;
+    "exceeded": boolean;
+    "limit": number;
+    "usage": number;
+    "nextResetTime": string;
+}
+
+/**
  * AISubtitleState is the AI subtitle switch as every window shows it.
  */
 export interface AISubtitleState {
@@ -349,6 +362,8 @@ export interface AISubtitleState {
      * UI then offers nothing.
      */
     "available": boolean;
+    "requiresMembership": boolean;
+    "quota": AISubtitleQuota;
 
     /**
      * On is the user's choice. It carries over to the next video, until it

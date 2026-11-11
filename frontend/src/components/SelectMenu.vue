@@ -55,7 +55,9 @@ async function show() {
   if (open.value || props.disabled) return;
   emit("open");
   spot.placed = false;
-  active.value = Math.max(0, props.options.findIndex((o) => o.value === props.modelValue));
+  await nextTick();
+  const selected = props.options.findIndex((o) => o.value === props.modelValue && !o.disabled);
+  active.value = selected >= 0 ? selected : props.options.findIndex((o) => !o.disabled);
   open.value = true;
   await nextTick();
   place();

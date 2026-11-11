@@ -16,18 +16,20 @@ const plainList = ref<InstanceType<typeof OptionList>>();
 const groupList = ref<InstanceType<typeof OptionList>>();
 
 const rows = (options: SelectOption<string>[]) =>
-  options.map((o) => ({ key: o.value, label: o.label, detail: o.detail, selected: o.value === props.value }));
+  options.map((o) => ({ key: o.value, label: o.label, detail: o.detail, disabled: o.disabled, selected: o.value === props.value }));
 const plain = computed(() => rows(props.options.filter((o) => !o.group)));
 const grouped = computed(() => rows(props.options.filter((o) => o.group)));
 const group = computed(() => props.options.find((o) => o.group)?.group);
 
 function choose(key: string) {
+  if (props.options.find((o) => o.value === key)?.disabled) return;
   emit("done");
   if (props.kind === "subtitle" || key !== props.value) emit("choose", key);
 }
 
 /** Focus the selected row in whichever list contains it. */
-const focusCurrent = () => (grouped.value.some((r) => r.selected) ? groupList : plainList).value?.focusCurrent();
+const focusCurrent = () =>
+  (grouped.value.some((r) => r.selected && !r.disabled) ? groupList : plainList).value?.focusCurrent();
 
 defineExpose({ focusCurrent });
 </script>
@@ -49,6 +51,7 @@ defineExpose({ focusCurrent });
       />
       <template v-if="grouped.length">
         <h5 :id="`${id}-group`">{{ group }}</h5>
+        <slot name="ai-status" />
         <p class="disclosure">{{ t("开启 AI 字幕会向 PikPak 发送音频和视频标识，并使用 AI 配额。") }}</p>
         <OptionList
           ref="groupList"

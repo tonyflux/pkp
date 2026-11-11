@@ -29,6 +29,8 @@ Run `make test` for the Go and frontend unit tests; `make dev` starts Wails deve
 
 AI subtitle decoding on macOS uses FFmpeg headers and dynamic libraries already exported by the libmpv build; the installed application does not need an `ffmpeg` executable. Decoder regressions use that executable to generate local synthetic fixtures. The app discovers subtitle nodes through PikPak at `https://api-drive.mypikpak.com` only after the user enables the feature. For isolated development, set `PKP_SUBSRELAY_API=http://127.0.0.1:<port>`; an explicitly empty value disables it. Custom endpoints may receive account tokens and audio, so do not use untrusted services; URL Basic Auth can replace the account token. Audio decoding currently requires Darwin+cgo, and other platforms hide the subtitle option.
 
+Account-authenticated deployments check membership with the playing account and gate nonmembers in both frontend and backend. URL Basic Auth development deployments skip PikPak membership gating and leave eligibility to that deployment. `AISubtitleState.quota` retains the latest server snapshot for the same account; `known` distinguishes unknown from a real zero allowance. `limit`/`usage` are seconds and `nextResetTime` is RFC 3339. Showing quota while off does not request a node, and obsolete or cancelled sessions cannot overwrite newer state.
+
 HTTPS subtitle deployments require encrypted nodes. Discovery and WebSocket handshakes reject redirects to plaintext; local plaintext services require an explicitly configured HTTP development address.
 
 To verify the macOS update helper:

@@ -32,7 +32,9 @@ import (
 type AISubtitleState struct {
 	// Available is false when no subsrelay deployment is configured; the
 	// UI then offers nothing.
-	Available bool `json:"available"`
+	Available          bool            `json:"available"`
+	RequiresMembership bool            `json:"requiresMembership"`
+	Quota              AISubtitleQuota `json:"quota"`
 	// On is the user's choice. It carries over to the next video, until it
 	// is turned off or a failure turns it off.
 	On bool `json:"on"`
@@ -46,6 +48,17 @@ type AISubtitleState struct {
 	Error string `json:"error"`
 	// ErrorRevision identifies each accepted failure, including identical errors.
 	ErrorRevision uint64 `json:"errorRevision"`
+}
+
+// AISubtitleQuota is the latest server snapshot for one playing account.
+// Known distinguishes a zero allowance from a quota the server has not sent.
+type AISubtitleQuota struct {
+	Account       string `json:"account"`
+	Known         bool   `json:"known"`
+	Exceeded      bool   `json:"exceeded"`
+	Limit         int64  `json:"limit"`
+	Usage         int64  `json:"usage"`
+	NextResetTime string `json:"nextResetTime"`
 }
 
 const (
@@ -104,7 +117,10 @@ type aiSubs struct {
 }
 
 func newAISubs(d *DriveService, p *PlayerService, client *subsrelay.Client) *aiSubs {
-	p.setAI(func(s *AISubtitleState) { s.Available = true })
+	p.setAI(func(s *AISubtitleState) {
+		s.Available = true
+		s.RequiresMembership = client.UsesAccount()
+	})
 	return &aiSubs{d: d, p: p, client: client, log: d.log, wake: make(chan struct{}, 1), stop: make(chan struct{})}
 }
 
@@ -114,10 +130,6 @@ func newAISubs(d *DriveService, p *PlayerService, client *subsrelay.Client) *aiS
 func (d *DriveService) SetAISubtitles(on bool, language string) error {
 	if d.ai == nil {
 		return i18n.New("AI 字幕服务未配置")
-	}
-	if on && d.player != nil {
-		// Both would be drawn at the bottom of the picture.
-		_ = d.player.SelectTrack("subtitle", 0)
 	}
 	return d.ai.set(on, language)
 }
@@ -381,6 +393,27 @@ func (r *aiRun) setStatus(status string) bool {
 	return true
 }
 
+func (r *aiRun) setQuota(quota *subsrelay.Quota) bool {
+	if quota == nil {
+		return false
+	}
+	p, a := r.a.p, r.a
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	if r.ctx.Err() != nil || !r.currentLocked() {
+		return false
+	}
+	p.setAILocked(func(s *AISubtitleState) {
+		s.Quota = AISubtitleQuota{
+			Account: r.account, Known: true, Exceeded: quota.Exceeded,
+			Limit: quota.Limit, Usage: quota.Usage, NextResetTime: quota.NextResetTime,
+		}
+	})
+	return true
+}
+
 func (a *aiSubs) begin(account, fileID, lang string, gen, target uint64, last <-chan struct{}) *aiRun {
 	ctx, cancel := context.WithCancel(context.Background())
 	r := &aiRun{a: a, account: account, fileID: fileID, lang: lang, gen: gen, target: target, ctx: ctx, cancel: cancel, done: make(chan struct{})}
@@ -414,6 +447,15 @@ func (r *aiRun) run(last <-chan struct{}) error {
 	if !r.setStatus("connecting") {
 		r.cancel()
 		return nil
+	}
+	if r.a.client.UsesAccount() {
+		membership, err := r.a.d.membership(r.ctx, r.account)
+		if err != nil {
+			return err
+		}
+		if !membership.Active {
+			return &subsrelay.Error{Code: "vip_required"}
+		}
 	}
 	src, err := r.a.d.aiSource(r.ctx, r.account, r.fileID)
 	if err != nil {
@@ -456,6 +498,7 @@ func (r *aiRun) connect(start subsrelay.Start) (*subsrelay.Session, error) {
 		}
 		ctx, cancel := context.WithTimeout(r.ctx, 15*time.Second)
 		node, err := r.a.client.Node(ctx, start.GCID, token)
+		r.setQuota(node.Quota)
 		var sess *subsrelay.Session
 		if err == nil {
 			sess, err = r.a.client.Dial(ctx, node.URL, token, start)
@@ -551,6 +594,7 @@ func (r *aiRun) stream(sess *subsrelay.Session, src aiSource) error {
 				cues.add(*m.Cue)
 			case m.Quota != nil:
 				quota = *m.Quota
+				r.setQuota(m.Quota)
 			case m.Error != nil:
 				// soniox_unavailable: the next audio retries. The rest
 				// are followed by the server's stop.

@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createApp, h, nextTick } from "vue";
-import type { AISubtitleState, Chapter, Entry, Track } from "../bindings/github.com/tonyflux/pkp/internal/services";
+import type { Account, AISubtitleState, Chapter, DriveStatus, Entry, Membership, Track } from "../bindings/github.com/tonyflux/pkp/internal/services";
 import type * as Services from "../bindings/github.com/tonyflux/pkp/internal/services";
 
 const backend = vi.hoisted(() => ({
@@ -8,6 +8,7 @@ const backend = vi.hoisted(() => ({
   chapters: vi.fn<() => Promise<Chapter[]>>(),
   select: vi.fn<(kind: string, id: number) => Promise<void>>(),
   ai: vi.fn<(on: boolean, language: string) => Promise<void>>(),
+  membership: vi.fn<(account: string) => Promise<Membership>>(),
   stage: vi.fn<() => Promise<void>>(),
   windowButtons: vi.fn<() => Promise<void>>(),
 }));
@@ -20,12 +21,20 @@ vi.mock("../bindings/github.com/tonyflux/pkp/internal/services", async (importOr
       Tracks: backend.tracks, Chapters: backend.chapters, SelectTrack: backend.select,
       SetStage: backend.stage, ShowWindowButtons: backend.windowButtons,
     },
-    DriveService: { ...services.DriveService, SetAISubtitles: backend.ai },
+    DriveService: { ...services.DriveService, SetAISubtitles: backend.ai, Membership: backend.membership },
   };
 });
 import PlayerView from "./components/PlayerView.vue";
 import StatusPill from "./components/StatusPill.vue";
-import { player, ui } from "./store";
+import OptionList from "./components/OptionList.vue";
+import { accounts, drive, memberships, player, ui } from "./store";
+import { stamp } from "./format";
+
+const member = (active = true): Membership => ({ active, expire: "2029-02-14T12:00:00Z", items: [], notice: "" });
+const account = (id: string): Account => ({
+  id, login: `${id}@example.com`, label: id, nickname: "", avatar: "", current: id === "browsing",
+  needsPassword: false, usedAt: "", aiConsent: false, aiContentConsent: false,
+});
 
 const unmounts = new Set<() => void>();
 let nativeSubtitle = 1;
@@ -55,6 +64,10 @@ async function settle() {
   await nextTick();
 }
 async function mountPlayer(windowed = false, followRoute = false) {
+  if (windowed) {
+    player.ownerInfo = account(player.owner);
+    player.owner = "";
+  }
   const host = document.createElement("div");
   document.body.append(host);
   const app = createApp({
@@ -106,7 +119,12 @@ beforeEach(() => {
   nativeSubtitle = 1;
   player.playlist = [];
   player.index = -1;
-  player.owner = "";
+  player.owner = "playing";
+  player.ownerInfo = null;
+  accounts.list = [account("browsing"), account("playing")];
+  drive.status = { ...drive.status, accountId: "browsing" } as DriveStatus;
+  for (const id of Object.keys(memberships)) delete memberships[id];
+  memberships.playing = { value: member(), loading: false, error: "" };
   player.presentation = "immersive";
   player.returnRoute = "files";
   ui.route = "player";
@@ -115,12 +133,16 @@ beforeEach(() => {
   player.state = {
     ...player.state, source: "test-video", duration: 120, position: 10, paused: true, error: "", loading: false,
     quality: { options: [], current: "", choice: "auto", switching: "", failed: "", error: "", lowered: false },
-    aiSubtitles: { available: true, on: false, language: "", status: "", error: "", errorRevision: 0 },
+    aiSubtitles: {
+      available: true, requiresMembership: true, on: false, language: "", status: "", error: "", errorRevision: 0,
+      quota: { account: "playing", known: false, exceeded: false, limit: 0, usage: 0, nextResetTime: "" },
+    },
   };
   backend.tracks.mockImplementation(async () => nativeTracks());
   backend.chapters.mockResolvedValue([]);
   backend.stage.mockResolvedValue(undefined);
   backend.windowButtons.mockResolvedValue(undefined);
+  backend.membership.mockResolvedValue(member());
   backend.select.mockImplementation(async (kind, id) => {
     if (kind === "subtitle") nativeSubtitle = id;
   });
@@ -561,5 +583,287 @@ describe("player subtitle selection after AI changes", () => {
     await settle();
     expect(host.querySelector('[role="status"]')).toBeNull();
     expect(ui.message).toBe("");
+  });
+});
+
+describe("AI subtitle access and server quota", () => {
+  it.each(["dock", "sidebar"] as Menu[])("keeps native choices usable but blocks nonmembers in %s", async (menu) => {
+    backend.membership.mockResolvedValue(member(false));
+    const host = await mountPlayer();
+    const choices = await openSubtitles(host, menu);
+    expect(host.textContent).toContain("会员专享");
+    expect(host.textContent).toContain("AI 字幕需要 PikPak 会员");
+    const english = option(choices, "English");
+    expect(english.matches(":disabled, [aria-disabled='true']")).toBe(true);
+    english.click();
+    if (menu === "dock") {
+      english.focus();
+      english.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+      english.dispatchEvent(new KeyboardEvent("keydown", { key: " ", bubbles: true }));
+    }
+    await settle();
+    expect(backend.ai).not.toHaveBeenCalled();
+    option(choices, "关").click();
+    await settle();
+    expectCurrent(host, "关");
+    option(await openSubtitles(host, menu), "Native Japanese").click();
+    await settle();
+    expectCurrent(host, "Native Japanese");
+    expect(backend.ai.mock.calls.every(([on]) => !on)).toBe(true);
+  });
+
+  it("uses the playing account and refreshes only on owner changes or relevant menu opens", async () => {
+    memberships.browsing = { value: member(false), loading: false, error: "" };
+    const host = await mountPlayer();
+    expect(backend.membership).toHaveBeenCalledExactlyOnceWith("playing");
+    let choices = await openSubtitles(host);
+    expect(backend.membership).toHaveBeenCalledTimes(2);
+    expect(option(choices, "English").hasAttribute("aria-disabled")).toBe(false);
+    option(choices, "English").click();
+    await settle();
+    expect(backend.ai).toHaveBeenCalledWith(true, "en");
+    player.state = { ...player.state, position: 20 };
+    player.playlist = player.playlist.map((entry) => ({ ...entry }));
+    accounts.list = accounts.list.map((entry) => ({ ...entry }));
+    await settle();
+    expect(backend.membership).toHaveBeenCalledTimes(2);
+
+    backend.membership.mockResolvedValue(member(false));
+    player.owner = "browsing";
+    await settle();
+    expect(backend.membership).toHaveBeenLastCalledWith("browsing");
+    choices = await openSubtitles(host);
+    expect(option(choices, "English").getAttribute("aria-disabled")).toBe("true");
+    expect(host.textContent).toContain("AI 字幕需要 PikPak 会员");
+  });
+
+  it("does not flash nonmember while membership loads and updates an open menu when eligible", async () => {
+    delete memberships.playing;
+    const reading = deferred<Membership>();
+    backend.membership.mockReturnValue(reading.promise);
+    const host = await mountPlayer();
+    const choices = await openSubtitles(host);
+    expect(host.textContent).toContain("正在读取会员状态…");
+    expect(host.textContent).not.toContain("AI 字幕需要 PikPak 会员");
+    expect(option(choices, "English").getAttribute("aria-disabled")).toBe("true");
+    expect(backend.membership).toHaveBeenCalledExactlyOnceWith("playing");
+    expect(backend.ai).not.toHaveBeenCalled();
+    reading.resolve(member());
+    await settle();
+    expect(option(choices, "English").hasAttribute("aria-disabled")).toBe(false);
+    const original = option(choices, "原文");
+    expect(original.tabIndex).toBe(0);
+    original.focus();
+    original.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }));
+    expect(document.activeElement).toBe(option(choices, "中文"));
+    expect(host.textContent).not.toContain("正在读取会员状态…");
+    option(choices, "English").click();
+    await settle();
+    expectCurrent(host, "AI English");
+  });
+
+  it("uses synchronized owner and quota in the separate player window", async () => {
+    receiveAI({ quota: { account: "playing", known: true, exceeded: false, limit: 3600, usage: 600, nextResetTime: "" } });
+    const host = await mountPlayer(true);
+    expect(player.owner).toBe("");
+    expect(backend.membership).toHaveBeenCalledExactlyOnceWith("playing");
+    const choices = await openSubtitles(host);
+    expect(choices.textContent).toContain("AI 剩余 50:00 / 1:00:00");
+    expect(option(choices, "English").hasAttribute("aria-disabled")).toBe(false);
+    backend.membership.mockResolvedValue(member(false));
+    player.ownerInfo = account("browsing");
+    await settle();
+    expect(backend.membership).toHaveBeenLastCalledWith("browsing");
+    expect(choices.textContent).not.toContain("AI 剩余");
+    expect(option(choices, "English").getAttribute("aria-disabled")).toBe("true");
+  });
+
+  it("opens sidebar keyboard navigation on an enabled row while refreshing selected AI", async () => {
+    const host = await mountPlayer();
+    nativeSubtitle = 0;
+    receiveAI({ on: true, language: "en", status: "live" });
+    await settle();
+    const reading = deferred<Membership>();
+    backend.membership.mockReturnValue(reading.promise);
+    const choices = await openSubtitles(host, "sidebar");
+    expect(option(choices, "English").matches(":disabled")).toBe(true);
+    expect(document.activeElement).toBe(option(choices, "关"));
+    document.activeElement?.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }));
+    expect(document.activeElement).toBe(option(choices, "Native English"));
+    document.activeElement?.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    await settle();
+    expect(document.querySelector("[data-select-list]")).toBeNull();
+    reading.resolve(member());
+    await settle();
+  });
+
+  it("distinguishes read failures from nonmembership and offers a working retry", async () => {
+    backend.membership.mockRejectedValue(new Error("offline"));
+    const host = await mountPlayer();
+    const choices = await openSubtitles(host);
+    expect(host.textContent).toContain("会员状态读取失败");
+    expect(host.textContent).not.toContain("AI 字幕需要 PikPak 会员");
+    expect(option(choices, "English").getAttribute("aria-disabled")).toBe("true");
+    backend.membership.mockResolvedValue(member());
+    const retry = choices.querySelector<HTMLButtonElement>(".ai-status button")!;
+    retry.focus();
+    const space = new KeyboardEvent("keydown", { key: " ", bubbles: true, cancelable: true });
+    retry.dispatchEvent(space);
+    expect(space.defaultPrevented).toBe(false);
+    retry.click(); // jsdom does not synthesize native button activation from keyboard events.
+    expect(backend.membership).toHaveBeenCalledTimes(3);
+    await settle();
+    expect(host.textContent).not.toContain("会员状态读取失败");
+    option(choices, "English").click();
+    await settle();
+    expectCurrent(host, "AI English");
+  });
+
+  it("rechecks access when a previously enabled sidebar dispatches a stale command", async () => {
+    const host = await mountPlayer();
+    const face = host.querySelector<HTMLElement>('.settings [role="combobox"][aria-label="字幕"]')!;
+    const select = (face as HTMLElement & { __vueParentComponent: { emit: (name: string, value: string) => void } }).__vueParentComponent;
+    memberships.playing.value = member(false);
+    select.emit("update:modelValue", "ai:en");
+    await settle();
+    expect(backend.ai).not.toHaveBeenCalled();
+    expect(host.querySelector(".notice")?.textContent).toContain("AI 字幕需要 PikPak 会员");
+    expectCurrent(host, "Native English");
+  });
+
+  it("keeps a Basic-auth development deployment usable without a membership lookup", async () => {
+    receiveAI({ requiresMembership: false });
+    delete memberships.playing;
+    backend.membership.mockRejectedValue(new Error("not an official account"));
+    const host = await mountPlayer();
+    const choices = await openSubtitles(host);
+    expect(backend.membership).not.toHaveBeenCalled();
+    expect(host.textContent).not.toContain("会员专享");
+    expect(option(choices, "English").hasAttribute("aria-disabled")).toBe(false);
+    option(choices, "English").click();
+    await settle();
+    expectCurrent(host, "AI English");
+  });
+
+  it("keeps quota unknown until enabling, then reflects matching server snapshots and reset without ticking", async () => {
+    const host = await mountPlayer();
+    const choices = await openSubtitles(host);
+    expect(choices.querySelector(".ai-status")?.textContent).toContain("AI 配额：开启后获取");
+    expect(host.querySelector(".settings .ai-status")?.textContent).toContain("AI 配额：开启后获取");
+    expect(host.textContent).not.toContain("AI 剩余");
+    expect(backend.ai).not.toHaveBeenCalled();
+    const reset = "2027-02-14T12:00:00Z";
+    receiveAI({ quota: { account: "playing", known: true, exceeded: false, limit: 7200, usage: 1800, nextResetTime: reset } });
+    await settle();
+    for (const status of Array.from(host.querySelectorAll(".ai-status"))) {
+      expect(status.textContent).toContain("AI 剩余 1:30:00 / 2:00:00");
+      expect(status.textContent).toContain(`配额重置：${stamp(reset)}`);
+    }
+    await vi.advanceTimersByTimeAsync(60_000);
+    expect(choices.querySelector(".quota")?.textContent).toContain("AI 剩余 1:30:00 / 2:00:00");
+    receiveAI({ on: true, language: "en", status: "live", quota: { ...player.state.aiSubtitles.quota, usage: 2400 } });
+    await settle();
+    expect(choices.querySelector(".quota")?.textContent).toContain("AI 剩余 1:20:00 / 2:00:00");
+    receiveAI({ on: false, status: "", error: "relay disconnected" });
+    await settle();
+    expect(choices.querySelector(".quota")?.textContent).toContain("AI 剩余 1:20:00 / 2:00:00");
+    expect(backend.ai).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    { exceeded: true, usage: 60 },
+    { exceeded: false, usage: 8000 },
+  ])("shows exhausted quota as zero without permanently disabling retry: %j", async ({ exceeded, usage }) => {
+    receiveAI({ quota: { account: "playing", known: true, exceeded, limit: 7200, usage, nextResetTime: "" } });
+    const host = await mountPlayer();
+    const choices = await openSubtitles(host);
+    expect(choices.querySelector(".quota")?.textContent).toContain("AI 剩余 0:00 / 2:00:00");
+    expect(option(choices, "English").hasAttribute("aria-disabled")).toBe(false);
+    option(choices, "English").click();
+    await settle();
+    expect(backend.ai).toHaveBeenCalledWith(true, "en");
+  });
+
+  it("never shows another playing owner's quota and rejects that owner's late membership response", async () => {
+    receiveAI({ quota: { account: "playing", known: true, exceeded: false, limit: 7200, usage: 60, nextResetTime: "" } });
+    const oldRead = deferred<Membership>();
+    backend.membership.mockReturnValueOnce(oldRead.promise);
+    const host = await mountPlayer();
+    player.owner = "browsing";
+    backend.membership.mockResolvedValue(member(false));
+    await settle();
+    const choices = await openSubtitles(host);
+    oldRead.resolve(member());
+    await settle();
+    expect(choices.querySelector(".quota")?.textContent).toContain("AI 配额：开启后获取");
+    expect(host.textContent).not.toContain("AI 剩余");
+    expect(option(choices, "English").getAttribute("aria-disabled")).toBe("true");
+  });
+
+  it("shows the same member requirement and quota in the overflow subtitle menu", async () => {
+    let resizeControls = () => {};
+    vi.stubGlobal("ResizeObserver", class {
+      constructor(private callback: () => void) {}
+      observe(el: HTMLElement) { if (el.classList.contains("controls")) resizeControls = this.callback; }
+      disconnect() {}
+    });
+    vi.mocked(HTMLElement.prototype.getBoundingClientRect).mockImplementation(function (this: HTMLElement) {
+      return new DOMRect(0, 0, this.classList.contains("controls") || this.classList.contains("spacer") ? 0 : 640, 40);
+    });
+    backend.membership.mockResolvedValue(member(false));
+    receiveAI({ quota: { account: "playing", known: true, exceeded: false, limit: 3600, usage: 600, nextResetTime: "" } });
+    const host = await mountPlayer();
+    resizeControls();
+    await settle();
+    host.querySelector<HTMLButtonElement>("[data-player-more] > button")!.click();
+    await settle();
+    const choices = host.querySelector<HTMLElement>(".more-pop .track-options")!;
+    expect(choices).not.toBeNull();
+    expect(choices.textContent).toContain("AI 字幕需要 PikPak 会员");
+    expect(choices.textContent).toContain("AI 剩余 50:00 / 1:00:00");
+    expect(option(choices, "English").getAttribute("aria-disabled")).toBe("true");
+  });
+});
+
+describe("player option disabled semantics", () => {
+  it("skips disabled rows with arrows/Home/End and rejects pointer, Enter and Space while keeping native rows available", async () => {
+    const choose = vi.fn();
+    const host = document.createElement("div");
+    document.body.append(host);
+    const app = createApp(OptionList, {
+      labelledby: "tracks",
+      items: [
+        { key: "ai:en", label: "AI English", selected: true, disabled: true },
+        { key: "0", label: "Off", selected: false },
+        { key: "ai:ja", label: "AI Japanese", selected: false, disabled: true },
+        { key: "1", label: "Native", selected: false },
+        { key: "ai:zh", label: "AI Chinese", selected: false, disabled: true },
+      ],
+      onChoose: choose,
+    });
+    app.mount(host);
+    const unmount = () => { app.unmount(); host.remove(); unmounts.delete(unmount); };
+    unmounts.add(unmount);
+    await settle();
+    const rows = host.querySelectorAll<HTMLElement>('[role="option"]');
+    const key = (value: string) => document.activeElement?.dispatchEvent(new KeyboardEvent("keydown", { key: value, bubbles: true }));
+    expect(rows[0].tabIndex).toBe(-1);
+    rows[1].focus();
+    key("ArrowDown");
+    expect(document.activeElement).toBe(rows[3]);
+    key("ArrowUp");
+    expect(document.activeElement).toBe(rows[1]);
+    key("End");
+    expect(document.activeElement).toBe(rows[3]);
+    key("Home");
+    expect(document.activeElement).toBe(rows[1]);
+    rows[0].click();
+    rows[0].focus();
+    key("Enter");
+    key(" ");
+    expect(choose).not.toHaveBeenCalled();
+    key("ArrowDown");
+    key("Enter");
+    expect(choose).toHaveBeenCalledExactlyOnceWith("0");
   });
 });

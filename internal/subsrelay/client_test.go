@@ -72,7 +72,7 @@ func TestNodeSendsTheAccountTokenAndReadsTheNode(t *testing.T) {
 	if got := <-rl.auth; got != "Bearer tok" {
 		t.Errorf("Authorization = %q, want the account's bearer token", got)
 	}
-	if node.URL != "wss://n/subsrelay/v1/stream" || node.SourceLanguage != "ja" || len(node.SupportedLanguages) != 1 || node.Quota.Usage != 60 {
+	if node.URL != "wss://n/subsrelay/v1/stream" || node.SourceLanguage != "ja" || len(node.SupportedLanguages) != 1 || node.Quota == nil || node.Quota.Usage != 60 {
 		t.Errorf("node = %+v", node)
 	}
 }
@@ -122,8 +122,34 @@ func TestNodeRefusals(t *testing.T) {
 		w.Write([]byte(`{"url":"","quota":{"exceeded":true,"limit":14400,"usage":14400,"next_reset_time":"2026-10-19T00:00:00+08:00"}}`))
 	}
 	node, err := c.Node(context.Background(), strings.Repeat("A", 40), "tok")
-	if !errors.Is(err, ErrQuotaUsedUp) || node.Quota.NextResetTime == "" {
+	if !errors.Is(err, ErrQuotaUsedUp) || node.Quota == nil || node.Quota.NextResetTime == "" {
 		t.Errorf("used up: %v %+v, want ErrQuotaUsedUp with the reset time", err, node.Quota)
+	}
+}
+
+func TestNodeDistinguishesOmittedAndZeroQuota(t *testing.T) {
+	for _, quota := range []string{"", `,"quota":null`, `,"quota":{"limit":0,"usage":0}`} {
+		t.Run(quota, func(t *testing.T) {
+			rl := newRelay(t)
+			rl.node = func(w http.ResponseWriter, r *http.Request) {
+				w.Write([]byte(`{"url":"ws://n"` + quota + `}`))
+			}
+			c, err := New(rl.srv.URL)
+			if err != nil {
+				t.Fatal(err)
+			}
+			node, err := c.Node(context.Background(), strings.Repeat("A", 40), "tok")
+			if err != nil {
+				t.Fatal(err)
+			}
+			known := strings.Contains(quota, `"limit"`)
+			if (node.Quota != nil) != known {
+				t.Fatalf("quota = %+v, want known=%t", node.Quota, known)
+			}
+			if known && *node.Quota != (Quota{}) {
+				t.Errorf("zero quota changed: %+v", node.Quota)
+			}
+		})
 	}
 }
 

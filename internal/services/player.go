@@ -925,6 +925,9 @@ func (p *PlayerService) State() PlayerState {
 // two renditions. Caller holds p.mu.
 func (p *PlayerService) snapshotLocked() PlayerState {
 	state := p.state
+	if state.AISubtitles.Quota.Account != p.account {
+		state.AISubtitles.Quota = AISubtitleQuota{}
+	}
 	limit := p.seek.limit
 	if limit == 0 {
 		limit = seekHoldLimit

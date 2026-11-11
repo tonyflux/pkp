@@ -8,7 +8,7 @@
 // The selected row is the one Tab and the opening menu land on. With
 // `columns` the options sit in a grid (the compact Playback Speed in More): ←/→ move by
 // one, ↑/↓ by a row.
-import { nextTick, ref } from "vue";
+import { nextTick, ref, watch } from "vue";
 
 interface OptionItem {
   key: string;
@@ -17,6 +17,7 @@ interface OptionItem {
   detail?: string;
   selected: boolean;
   pending?: boolean;
+  disabled?: boolean;
 }
 
 const props = withDefaults(defineProps<{ items: OptionItem[]; labelledby: string; busy?: boolean; columns?: number }>(), {
@@ -25,7 +26,14 @@ const props = withDefaults(defineProps<{ items: OptionItem[]; labelledby: string
 const emit = defineEmits<{ choose: [key: string]; close: [] }>();
 
 const list = ref<HTMLElement>();
-const active = ref(Math.max(0, props.items.findIndex((r) => r.selected)));
+const currentIndex = () => {
+  const selected = props.items.findIndex((r) => r.selected && !r.disabled);
+  return selected >= 0 ? selected : props.items.findIndex((r) => !r.disabled);
+};
+const active = ref(currentIndex());
+watch(() => props.items, () => {
+  if (!props.items[active.value] || props.items[active.value].disabled) active.value = currentIndex();
+});
 
 function option(i: number): HTMLElement | undefined {
   return list.value?.querySelectorAll<HTMLElement>("[role=option]")[i];
@@ -34,40 +42,44 @@ function option(i: number): HTMLElement | undefined {
 /** focusCurrent puts focus on the selected row, as the menu opens. */
 async function focusCurrent() {
   await nextTick();
-  active.value = Math.max(0, props.items.findIndex((r) => r.selected));
+  active.value = currentIndex();
   option(active.value)?.focus();
 }
 
-function move(to: number) {
-  active.value = Math.min(props.items.length - 1, Math.max(0, to));
-  option(active.value)?.focus();
+function move(from: number, step: number) {
+  for (let i = from + step; i >= 0 && i < props.items.length; i += step) {
+    if (props.items[i].disabled) continue;
+    active.value = i;
+    option(i)?.focus();
+    return;
+  }
 }
 
 function choose(item: OptionItem | undefined) {
-  if (item && !props.busy) emit("choose", item.key);
+  if (item && !item.disabled && !props.busy) emit("choose", item.key);
 }
 
 function onKey(event: KeyboardEvent) {
   switch (event.key) {
     case "ArrowDown":
-      move(active.value + props.columns);
+      move(active.value, props.columns);
       break;
     case "ArrowUp":
-      move(active.value - props.columns);
+      move(active.value, -props.columns);
       break;
     case "ArrowRight":
       if (props.columns === 1) return;
-      move(active.value + 1);
+      move(active.value, 1);
       break;
     case "ArrowLeft":
       if (props.columns === 1) return;
-      move(active.value - 1);
+      move(active.value, -1);
       break;
     case "Home":
-      move(0);
+      move(-1, 1);
       break;
     case "End":
-      move(props.items.length - 1);
+      move(props.items.length, -1);
       break;
     case "Enter":
     case " ":
@@ -102,10 +114,10 @@ defineExpose({ focusCurrent });
       :key="item.key"
       role="option"
       class="option"
-      :class="{ selected: item.selected, pending: item.pending }"
+      :class="{ selected: item.selected, pending: item.pending, disabled: item.disabled }"
       :aria-selected="item.selected"
-      :aria-disabled="busy || undefined"
-      :tabindex="i === active ? 0 : -1"
+      :aria-disabled="busy || item.disabled || undefined"
+      :tabindex="i === active && !item.disabled ? 0 : -1"
       @click="choose(item)"
       @focus="active = i"
     >
@@ -170,6 +182,11 @@ defineExpose({ focusCurrent });
 
 .option[aria-disabled="true"] {
   cursor: progress;
+}
+
+.option.disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
 }
 
 .option.selected::before {

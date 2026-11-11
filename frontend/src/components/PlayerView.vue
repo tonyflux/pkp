@@ -9,6 +9,7 @@ import QualityMenu from "./QualityMenu.vue";
 import QualityOptions from "./QualityOptions.vue";
 import SpeedOptions from "./SpeedOptions.vue";
 import TrackOptions from "./TrackOptions.vue";
+import AISubtitleStatus from "./AISubtitleStatus.vue";
 import SelectMenu, { type SelectOption } from "./SelectMenu.vue";
 import SubtitleSettings from "./SubtitleSettings.vue";
 import PlaylistQueue from "./PlaylistQueue.vue";
@@ -29,6 +30,8 @@ import {
   collapsePlayer,
   downloadPlaying,
   drive,
+  loadMembership,
+  memberships,
   nextUp,
   nowPlaying,
   playAt,
@@ -115,13 +118,35 @@ const aiLanguages = [
 ];
 const aiLanguageLabel = (label: string) => (label === "原文" ? t("原文") : label); // i18n-ignore
 const ai = computed(() => state.value.aiSubtitles);
+const subtitleAccount = computed(() => props.windowed ? player.ownerInfo?.id ?? "" : player.owner);
+const aiMembership = computed(() => memberships[subtitleAccount.value]);
+const aiAccess = computed<"ready" | "loading" | "error" | "nonmember">(() => {
+  if (!ai.value.requiresMembership) return "ready";
+  const read = aiMembership.value;
+  if (read?.loading) return "loading";
+  if (read?.error || !subtitleAccount.value) return "error";
+  if (!read?.value) return "loading";
+  return read.value.active ? "ready" : "nonmember";
+});
+function refreshAIMembership() {
+  if (ai.value.available && ai.value.requiresMembership && subtitleAccount.value) {
+    void loadMembership(subtitleAccount.value);
+  }
+}
+watch([subtitleAccount, () => ai.value.available, () => ai.value.requiresMembership], refreshAIMembership, { immediate: true });
+watch(subtitleOpen, (open) => open && refreshAIMembership());
+watch(moreOpen, (open) => open && folded.value.includes("subtitles") && refreshAIMembership());
+watch(sidebarOpen, (open) => open && !bare.value && refreshAIMembership());
 const showSubtitles = computed(() => subtitles.value.length > 0 || ai.value.available);
 const subValue = computed(() => (ai.value.on ? `ai:${ai.value.language}` : String(activeSub.value)));
 const subOptions = computed<SelectOption<string>[]>(() => [
   { value: "0", label: t("关") },
   ...subtitles.value.map((tr) => ({ value: String(tr.id), label: trackLabel(tr), detail: trackDetail(tr) })),
   ...(ai.value.available
-    ? aiLanguages.map((l) => ({ value: `ai:${l.code}`, label: aiLanguageLabel(l.label), group: t("AI 字幕") }))
+    ? aiLanguages.map((l) => ({
+        value: `ai:${l.code}`, label: aiLanguageLabel(l.label), group: t("AI 字幕"),
+        disabled: aiAccess.value !== "ready",
+      }))
     : []),
 ]);
 const subLabel = computed(() => {
@@ -256,6 +281,14 @@ function selectSubtitle(value: string) {
   subtitleQueue = subtitleQueue.then(async () => {
     if (choice !== subtitleChoice) return;
     if (value.startsWith("ai:")) {
+      if (ai.value.requiresMembership) {
+        if (aiAccess.value !== "ready" && aiAccess.value !== "nonmember") await loadMembership(subtitleAccount.value);
+        if (choice !== subtitleChoice) return;
+        if (aiAccess.value !== "ready") {
+          flash(t("AI 字幕"), aiAccess.value === "nonmember" ? t("AI 字幕需要 PikPak 会员") : t("会员状态读取失败"));
+          return;
+        }
+      }
       await playerCommands.aiSubtitles(true, value.slice(3));
       if (choice !== subtitleChoice) return;
       await refreshTracks();
@@ -279,7 +312,7 @@ function invalidateSubtitleChoices() {
 // A raw track ID belongs to this view's current file and rendition only.
 watch(
   [
-    () => player.owner,
+    subtitleAccount,
     () => player.presentation,
     () => player.index,
     () => nowPlaying.value?.id,
@@ -533,8 +566,7 @@ watch(
   () => setTimeout(refreshTracks, 600),
 );
 
-// AI disables native subtitles in either window, even if it fails before
-// the next player event reports it on.
+// Re-read native tracks when AI connects, stops or fails before a state event arrives.
 watch(
   [() => ai.value.on, () => ai.value.status, () => ai.value.errorRevision, () => ai.value.error],
   () => void refreshTracks(),
@@ -778,7 +810,11 @@ onBeforeUnmount(() => {
                     @choose="selectSubtitle"
                     @done="close"
                     @close="close"
-                  />
+                  >
+                    <template #ai-status>
+                      <AISubtitleStatus :state="ai" :account="subtitleAccount" :access="aiAccess" @retry="refreshAIMembership" />
+                    </template>
+                  </TrackOptions>
                 </template>
               </DockMenu>
 
@@ -853,7 +889,11 @@ onBeforeUnmount(() => {
                   @choose="selectSubtitle"
                   @done="closeMore"
                   @close="closeMore"
-                />
+                >
+                  <template #ai-status>
+                    <AISubtitleStatus :state="ai" :account="subtitleAccount" :access="aiAccess" @retry="refreshAIMembership" />
+                  </template>
+                </TrackOptions>
                 <TrackOptions
                   v-if="audios.length > 1 && folded.includes('audio')"
                   ref="moreAudio"
@@ -1013,6 +1053,7 @@ onBeforeUnmount(() => {
             :options="subOptions"
             allow-reselect
             @update:model-value="selectSubtitle"
+            @open="refreshAIMembership"
           >
             <Icon name="subtitles" :size="18" />
             <span>{{ t("字幕") }}</span>
@@ -1024,6 +1065,14 @@ onBeforeUnmount(() => {
             <span>{{ t("字幕") }}</span>
             <b>{{ t("无") }}</b>
           </div>
+          <AISubtitleStatus
+            v-if="ai.available"
+            class="ai-sidebar-status"
+            :state="ai"
+            :account="subtitleAccount"
+            :access="aiAccess"
+            @retry="refreshAIMembership"
+          />
           <p v-if="ai.available" class="ai-disclosure">
             {{ t("开启 AI 字幕会向 PikPak 发送音频和视频标识，并使用 AI 配额。") }}
           </p>
@@ -1068,6 +1117,12 @@ onBeforeUnmount(() => {
   color: var(--fg-dim);
   font-size: 11px;
   line-height: 1.5;
+}
+
+.ai-sidebar-status {
+  margin: 0;
+  padding: 0 14px 6px;
+  color: var(--fg-dim);
 }
 
 .player {

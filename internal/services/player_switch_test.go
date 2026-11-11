@@ -46,6 +46,10 @@ func playingDriveWith(t *testing.T, routes func(http.ResponseWriter, *http.Reque
 		if routes != nil && routes(w, r) {
 			return
 		}
+		if r.URL.Path == "/vip/v1/vip/info" {
+			io.WriteString(w, `{"data":{"status":"ok"}}`)
+			return
+		}
 		http.NotFound(w, r)
 	}))
 	t.Cleanup(api.Close)

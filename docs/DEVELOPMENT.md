@@ -29,6 +29,8 @@ Go module 是 `github.com/tonyflux/pkp`。前端绑定在 `frontend/bindings/git
 
 AI 字幕的 macOS 音频解码使用现有 libmpv 构建导出的 FFmpeg 头文件与动态库，不依赖用户安装 `ffmpeg` 命令；解码回归测试用该命令生成本地合成样本。应用默认使用 PikPak 的 `https://api-drive.mypikpak.com` 发现字幕节点，只在用户开启后发起请求。隔离开发可设置 `PKP_SUBSRELAY_API=http://127.0.0.1:<端口>`；显式设为空可禁用功能。自定义地址可能收到账号令牌与音频，不要使用不可信服务；URL Basic Auth 可替代账号令牌。当前仅 Darwin+cgo 构建支持音频解码，其他平台隐藏字幕入口。
 
+账号鉴权部署会用播放账号查询会员资格，前后端均限制非会员开启；URL Basic Auth 开发部署不执行 PikPak 会员门禁，由该部署决定资格。`AISubtitleState.quota` 保留最近同账号的服务端快照，`known` 区分未知与真实零额度；`limit`／`usage` 为秒，`nextResetTime` 为 RFC 3339。未启用时不为显示额度请求节点；过期或取消的会话不能覆盖新状态。
+
 HTTPS 字幕部署只接受加密节点，节点发现和 WebSocket 握手均拒绝降级到明文的重定向；本地明文服务须显式使用 HTTP 开发地址。
 
 macOS 更新助手验证：

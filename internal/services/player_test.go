@@ -495,3 +495,27 @@ func TestPreviewWindowIsolation(t *testing.T) {
 		t.Error("preview still served after ClosePreview")
 	}
 }
+
+func TestPlayerQuotaFollowsPlayingAccountWhileOff(t *testing.T) {
+	p := NewPlayerService(PlayerOptions{Headless: true, Logger: quiet()})
+	quota := AISubtitleQuota{Account: "owner", Known: true, Limit: 3600, Usage: 900, NextResetTime: "2026-11-09T00:00:00Z"}
+	p.account = "owner"
+	p.state.AISubtitles = AISubtitleState{Quota: quota}
+	if got := p.State().AISubtitles; got.On || got.Quota != quota {
+		t.Fatalf("quota while off = %+v, want retained owner quota", got)
+	}
+	for _, account := range []string{"other", ""} {
+		p.mu.Lock()
+		p.account = account
+		p.mu.Unlock()
+		if got := p.State().AISubtitles.Quota; got != (AISubtitleQuota{}) {
+			t.Fatalf("quota for playing account %q = %+v, want unknown", account, got)
+		}
+	}
+	p.mu.Lock()
+	p.account = "owner"
+	p.mu.Unlock()
+	if got := p.State().AISubtitles.Quota; got != quota {
+		t.Fatalf("returning to quota owner = %+v, want retained snapshot %+v", got, quota)
+	}
+}

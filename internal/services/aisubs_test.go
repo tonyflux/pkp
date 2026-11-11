@@ -273,6 +273,14 @@ func TestAISubtitlesFollowPlayback(t *testing.T) {
 	if s := p.State().AISubtitles; !s.On || s.Status != "live" || s.Language != "zh" {
 		t.Errorf("state = %+v, want on and live in zh", s)
 	}
+	if s := p.State().AISubtitles; !s.RequiresMembership || !s.Quota.Known || s.Quota.Account == "" || s.Quota.Limit != 14400 || s.Quota.Usage != 0 {
+		t.Fatalf("node quota missing from player state: %+v", s)
+	}
+	relay.send(t, `{"type":"quota","quota":{"limit":14400,"usage":90,"next_reset_time":"2026-11-09T00:00:00Z"}}`)
+	waitFor(t, time.Second, "the server quota snapshot", func() bool {
+		return p.State().AISubtitles.Quota.Usage == 90
+	})
+	serverQuota := p.State().AISubtitles.Quota
 
 	events := relay.snapshot()
 	start := events[0]
@@ -381,6 +389,9 @@ func TestAISubtitlesFollowPlayback(t *testing.T) {
 	if s := p.State().AISubtitles; s.On || s.Status != "" {
 		t.Errorf("state after off = %+v", s)
 	}
+	if got := p.State().AISubtitles.Quota; got != serverQuota {
+		t.Errorf("turning off lost or locally decremented server quota: got %+v want %+v", got, serverQuota)
+	}
 }
 
 // A refusal turns AI subtitles off and says why, in words the user can act
@@ -401,6 +412,21 @@ func TestAISubtitlesRefusalTurnsThemOff(t *testing.T) {
 		t.Fatalf("play: %v", err)
 	}
 	waitFor(t, 20*time.Second, "the video to load", func() bool { return p.State().Duration > 20 })
+	subtitle := filepath.Join(t.TempDir(), "regular.srt")
+	if err := os.WriteFile(subtitle, []byte("1\n00:00:00,000 --> 00:00:29,000\nRegular subtitles\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := p.withContext(func(ctx context.Context) error {
+		return p.mpv.Command(ctx, "sub-add", subtitle, "select")
+	}); err != nil {
+		t.Fatal(err)
+	}
+	var selected int
+	if err := p.withContext(func(ctx context.Context) error {
+		return p.mpv.GetProperty(ctx, "sid", &selected)
+	}); err != nil || selected < 1 {
+		t.Fatalf("regular subtitle not selected: %d (%v)", selected, err)
+	}
 	if err := d.SetAISubtitles(true, ""); err != nil {
 		t.Fatal(err)
 	}
@@ -414,6 +440,12 @@ func TestAISubtitlesRefusalTurnsThemOff(t *testing.T) {
 	relay.mu.Unlock()
 	if lookups != 1 || relay.find(0, "frame") >= 0 {
 		t.Errorf("refused service: %d lookups, events %+v; want one request and no audio", lookups, relay.snapshot())
+	}
+	var after int
+	if err := p.withContext(func(ctx context.Context) error {
+		return p.mpv.GetProperty(ctx, "sid", &after)
+	}); err != nil || after != selected {
+		t.Errorf("failed startup hid regular subtitle: got %d (%v), want %d", after, err, selected)
 	}
 }
 
@@ -610,11 +642,11 @@ func TestAISubtitlesRapidChangesKeepReleaseChain(t *testing.T) {
 	}
 }
 
-// Source discovery and token refresh must use the run's cancellation, not
-// merely stop waiting while the actual HTTP request keeps running.
+// Membership, source discovery and token refresh must use the run's cancellation,
+// not merely stop waiting while the actual HTTP request keeps running.
 func TestAISubtitlesCancelStartupRequests(t *testing.T) {
 	video, _ := aiVideo(t)
-	for _, phase := range []string{"metadata", "token"} {
+	for _, phase := range []string{"membership", "metadata", "token"} {
 		for _, shutdown := range []bool{false, true} {
 			t.Run(fmt.Sprintf("%s/shutdown=%t", phase, shutdown), func(t *testing.T) {
 				entered, cancelled, release := make(chan struct{}), make(chan struct{}), make(chan struct{})
@@ -638,6 +670,13 @@ func TestAISubtitlesCancelStartupRequests(t *testing.T) {
 				}
 				api := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 					switch r.URL.Path {
+					case "/vip/v1/vip/info":
+						if stall.Load() && phase == "membership" {
+							block(r)
+							return
+						}
+						fmt.Fprint(w, `{"data":{"status":"ok"}}`)
+						return
 					case "/drive/v1/files/f1":
 						if stall.Load() {
 							if phase == "metadata" {
@@ -736,6 +775,185 @@ func TestAISubtitlesCancelStartupRequests(t *testing.T) {
 				}
 			})
 		}
+	}
+}
+
+func TestAISubtitlesMembershipBeforeSource(t *testing.T) {
+	for _, tc := range []struct {
+		name                  string
+		active, failed, basic bool
+	}{
+		{name: "nonmember"},
+		{name: "membership unavailable", failed: true},
+		{name: "member", active: true},
+		{name: "basic deployment", basic: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			var membershipCalls, sourceCalls atomic.Int32
+			d := newDriveService(t, func(w http.ResponseWriter, r *http.Request) {
+				if authAndTokenRoutes(w, r) {
+					return
+				}
+				switch r.URL.Path {
+				case "/vip/v1/vip/info":
+					membershipCalls.Add(1)
+					if got := r.Header.Get("Authorization"); got != "Bearer playing-token" {
+						t.Errorf("membership checked browsing account: Authorization=%q", got)
+					}
+					if tc.failed {
+						w.WriteHeader(http.StatusBadGateway)
+						fmt.Fprint(w, `{"error":"membership_unavailable"}`)
+					} else if tc.active {
+						fmt.Fprint(w, `{"data":{"status":"ok"}}`)
+					} else {
+						fmt.Fprint(w, `{"data":{"status":"expired"}}`)
+					}
+				case "/drive/v1/files/f1":
+					sourceCalls.Add(1)
+					w.WriteHeader(http.StatusBadRequest)
+					fmt.Fprint(w, `{"error":"invalid_request"}`)
+				default:
+					http.NotFound(w, r)
+				}
+			})
+			owner, err := d.sessionFor("")
+			if err != nil {
+				t.Fatal(err)
+			}
+			token, err := owner.tokens.Token(context.Background())
+			if err != nil {
+				t.Fatal(err)
+			}
+			token.AccessToken = "playing-token"
+			if err := owner.tokens.Seed(token); err != nil {
+				t.Fatal(err)
+			}
+			seedSession(t, d, "browsing@example.com")
+			relay := newFakeRelay(t)
+			url := relay.srv.URL
+			if tc.basic {
+				url = strings.Replace(url, "http://", "http://dev:password@", 1)
+			}
+			client, err := subsrelay.New(url)
+			if err != nil {
+				t.Fatal(err)
+			}
+			// No native player: rejected startup must not even touch subtitle
+			// selection or audio discovery, let alone decode/upload anything.
+			p := &PlayerService{account: owner.key, fileID: "f1", state: PlayerState{Duration: 60}}
+			d.player = p
+			d.ai = newAISubs(d, p, client)
+			t.Cleanup(d.ai.close)
+			if err := d.SetAISubtitles(true, "zh"); err != nil {
+				t.Fatal(err)
+			}
+			aiStopped(t, d)
+			state := p.state.AISubtitles
+			if state.On || state.RequiresMembership == tc.basic || state.Error == "" {
+				t.Errorf("failed startup state = %+v", state)
+			}
+			if got := membershipCalls.Load(); tc.basic && got != 0 {
+				t.Errorf("Basic-auth deployment checked PikPak membership %d times", got)
+			}
+			wantSource := int32(0)
+			if tc.basic || tc.active {
+				wantSource = 1
+			}
+			if got := sourceCalls.Load(); got != wantSource {
+				t.Errorf("source requests = %d, want %d", got, wantSource)
+			}
+			memberMessage := aiMessage(&subsrelay.Error{Code: "vip_required"})
+			if want := !tc.basic && !tc.active && !tc.failed; (state.Error == memberMessage) != want {
+				t.Errorf("membership refusal=%t, want %t: %q", state.Error == memberMessage, want, state.Error)
+			}
+			if relay.lookups != 0 || len(relay.snapshot()) != 0 {
+				t.Errorf("failed startup reached relay: lookups=%d events=%v", relay.lookups, relay.snapshot())
+			}
+		})
+	}
+}
+
+func TestAISubtitlesQuotaCannotSupersedeCurrentRun(t *testing.T) {
+	for _, change := range []string{"off", "language", "rendition", "account", "file", "switching", "restoring", "closed", "cancelled", "current"} {
+		t.Run(change, func(t *testing.T) {
+			old := AISubtitleQuota{Account: "a", Known: true, Limit: 100, Usage: 10}
+			p := &PlayerService{
+				account: "a", fileID: "f1", gen: 5,
+				state: PlayerState{Duration: 60, AISubtitles: AISubtitleState{On: true, Quota: old}},
+			}
+			a := &aiSubs{p: p, on: true, gen: 9}
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+			r := &aiRun{a: a, account: "a", fileID: "f1", gen: 9, target: 5, ctx: ctx}
+			switch change {
+			case "off":
+				a.on = false
+			case "language":
+				a.gen++
+			case "rendition":
+				p.gen++
+			case "account":
+				p.account = "b"
+			case "file":
+				p.fileID = "f2"
+			case "switching":
+				p.state.Quality.Switching = "480"
+			case "restoring":
+				p.restoring = 1
+			case "closed":
+				a.closed = true
+			case "cancelled":
+				cancel()
+			}
+			if r.setQuota(nil) {
+				t.Fatal("omitted quota accepted as a known zero quota")
+			}
+			if got, want := r.setQuota(&subsrelay.Quota{}), change == "current"; got != want {
+				t.Errorf("quota accepted=%t, want %t", got, want)
+			}
+			want := old
+			if change == "current" {
+				want = AISubtitleQuota{Account: "a", Known: true}
+			}
+			if got := p.state.AISubtitles.Quota; got != want {
+				t.Errorf("quota = %+v, want %+v", got, want)
+			}
+		})
+	}
+}
+
+func TestAISubtitlesNodeQuotaSurvivesRefusalAndOff(t *testing.T) {
+	relay := newFakeRelay(t)
+	relay.node = func(w http.ResponseWriter) bool {
+		fmt.Fprint(w, `{"quota":{"exceeded":true,"limit":14400,"usage":14400,"next_reset_time":"2026-11-09T00:00:00Z"}}`)
+		return true
+	}
+	client, err := subsrelay.New(strings.Replace(relay.srv.URL, "http://", "http://dev:password@", 1))
+	if err != nil {
+		t.Fatal(err)
+	}
+	p := &PlayerService{account: "a", fileID: "f1", gen: 5, state: PlayerState{Duration: 60}}
+	a := newAISubs(&DriveService{log: quiet()}, p, client)
+	a.on, a.gen = true, 9
+	p.state.AISubtitles.On = true
+	r := &aiRun{a: a, account: "a", fileID: "f1", gen: 9, target: 5, ctx: context.Background()}
+	_, r.err = r.connect(subsrelay.Start{GCID: testGCID})
+	if _, ok := r.err.(*aiQuotaError); !ok {
+		t.Fatalf("connect = %v, want quota refusal", r.err)
+	}
+	want := AISubtitleQuota{
+		Account: "a", Known: true, Exceeded: true, Limit: 14400, Usage: 14400,
+		NextResetTime: "2026-11-09T00:00:00Z",
+	}
+	if got := p.state.AISubtitles.Quota; got != want {
+		t.Fatalf("node quota lost on refusal: got %+v want %+v", got, want)
+	}
+	a.fail(r)
+	if err := a.set(false, ""); err != nil {
+		t.Fatal(err)
+	}
+	if state := p.state.AISubtitles; state.On || state.Quota != want {
+		t.Errorf("failure/off lost exhausted quota: %+v", state)
 	}
 }
 

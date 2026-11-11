@@ -254,7 +254,10 @@ const emptyPlayerState: PlayerState = {
   seeking: false,
   loading: false,
   quality: { options: [], current: "", choice: "auto", switching: "", failed: "", error: "", lowered: false },
-  aiSubtitles: { available: false, on: false, language: "", status: "", error: "", errorRevision: 0 },
+  aiSubtitles: {
+    available: false, requiresMembership: true, on: false, language: "", status: "", error: "", errorRevision: 0,
+    quota: { account: "", known: false, exceeded: false, limit: 0, usage: 0, nextResetTime: "" },
+  },
   subtitleStyle: { scale: 1, raise: 0, color: "#FFFFFF" },
   subtitleDelay: 0,
   audioDelay: 0,

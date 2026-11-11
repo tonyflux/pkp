@@ -137,7 +137,7 @@ type Node struct {
 	URL                string     `json:"url"`
 	SourceLanguage     string     `json:"source_language"`
 	SupportedLanguages []Language `json:"supported_languages"`
-	Quota              Quota      `json:"quota"`
+	Quota              *Quota     `json:"quota"`
 }
 
 // Node asks which server takes the video with this GCID. token is the
@@ -166,7 +166,7 @@ func (c *Client) Node(ctx context.Context, gcid, token string) (Node, error) {
 	if err := json.Unmarshal(body, &node); err != nil {
 		return Node{}, fmt.Errorf("subsrelay: decode node: %w", err)
 	}
-	if node.Quota.Exceeded {
+	if node.Quota != nil && node.Quota.Exceeded {
 		return node, ErrQuotaUsedUp
 	}
 	if node.URL == "" {
