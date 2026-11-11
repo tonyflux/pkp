@@ -4,9 +4,9 @@
 
 ## 下载状态
 
-**v0.6.0** 为 macOS 增加可选的 PikPak AI 字幕，显示会员资格与配额信息。从 [最新 Release](https://github.com/tonyflux/pkp/releases/latest) 下载：[macOS Universal](https://github.com/tonyflux/pkp/releases/download/v0.6.0/PKP-0.6.0-macos-universal.dmg) / [Windows x64 与 ARM64](https://github.com/tonyflux/pkp/releases/download/v0.6.0/PKP-0.6.0-windows-x64-arm64-setup.exe)。对照同一 Release 的 `SHA256SUMS` 并验证签名。请从本仓库的 Releases 获取安装包。
+**v0.6.1** 为 Windows x64／ARM64 增加可选的 PikPak AI 字幕。从 [最新 Release](https://github.com/tonyflux/pkp/releases/latest) 下载：[macOS Universal](https://github.com/tonyflux/pkp/releases/download/v0.6.1/PKP-0.6.1-macos-universal.dmg) / [Windows x64 与 ARM64](https://github.com/tonyflux/pkp/releases/download/v0.6.1/PKP-0.6.1-windows-x64-arm64-setup.exe)。对照同一 Release 的 `SHA256SUMS` 并验证签名。请从本仓库的 Releases 获取安装包。
 
-v0.2.0 是首个开源版本。v0.6.0 继续提供 `PKP-0.6.0-source.tar.gz`（与安装包对应的 PKP 自有源码）和 `libmpv-sources.tar.gz`（媒体组件的对应源码；新源码构建的归档还附带 PKP 的 Windows PCM 解码辅助源码与许可证）。分享转存支持粘贴 PikPak 分享链接、显式打开 `pkp://share` 和桌面端自动识别经过校验的剪贴板分享；只读网格／列表预览后，须选择接收账号、目标目录并确认，不会自动转存。操作与限制见[使用说明](USAGE.md)。
+v0.2.0 是首个开源版本。v0.6.1 提供 `PKP-0.6.1-source.tar.gz`（与安装包对应的 PKP 自有源码）和 `libmpv-sources.tar.gz`（媒体组件对应源码，附带 PKP 的 Windows PCM 解码辅助源码与许可证）。分享转存支持粘贴 PikPak 分享链接、显式打开 `pkp://share` 和桌面端自动识别经过校验的剪贴板分享；只读网格／列表预览后，须选择接收账号、目标目录并确认，不会自动转存。操作与限制见[使用说明](USAGE.md)。
 
 **v0.1.0 仍可下载**，作为历史版本：[macOS Universal](https://github.com/tonyflux/pkp/releases/download/v0.1.0/PKP-0.1.0-macos-universal.dmg) / [Windows x64 与 ARM64](https://github.com/tonyflux/pkp/releases/download/v0.1.0/PKP-0.1.0-windows-x64-arm64-setup.exe)。该 Release 同时提供 `libmpv-sources.tar.gz` 和当时的使用条款。v0.1.0 安装包不是由本仓库当前源码构建，仍适用[当时的闭源条款](legal/v0.1.0-proprietary.txt)。新安装请优先使用最新版本。使用统计在 v0.2.0 默认关闭，在 v0.1.0 默认开启；v0.3.0 改为默认开启每日活跃安装统计。
 

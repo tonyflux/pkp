@@ -14,7 +14,7 @@
 
 PKP 是面向 PikPak 用户的**非官方桌面客户端**，用于管理自己的云盘文件、多账号传输与媒体播放。PKP 不隶属于 PikPak，也不代表其运营方；使用时仍须遵守 PikPak 的服务条款与适用法律。
 
-> **v0.6.0** 为 macOS 增加可选的 PikPak AI 字幕，显示会员资格与配额信息，提供 macOS Universal 与 Windows x64 / ARM64 安装包。从 [最新 Release](https://github.com/tonyflux/pkp/releases/latest) 下载；安装前请阅读[安装说明](docs/INSTALL.md)并校验同一 Release 的 `SHA256SUMS`。
+> **v0.6.1** 为 Windows x64／ARM64 增加可选的 PikPak AI 字幕，提供 macOS Universal 与 Windows x64 / ARM64 安装包。从 [最新 Release](https://github.com/tonyflux/pkp/releases/latest) 下载；安装前请阅读[安装说明](docs/INSTALL.md)并校验同一 Release 的 `SHA256SUMS`。
 >
 > v0.1.0 安装包仍适用当时的闭源条款，且不是由本仓库这份源码构建。原先放在文首的许可说明已原样移至 [版本许可记录](docs/legal/version-licensing.md)。v0.2.0 的八件附件与 v0.1.0 的七件附件及原有条款，以该记录为准。
 
@@ -34,7 +34,7 @@ PKP 是面向 PikPak 用户的**非官方桌面客户端**，用于管理自己�
 
 ## 播放，就在工作区
 
-内置播放器支持清晰度切换、字幕与音轨选择，记住播放进度，也能移到独立窗口继续观看。macOS 从 v0.6.0 起支持可选的 **AI 字幕**，当前未发布源码也支持 Windows x64／ARM64：从播放器字幕菜单选择原文或中／英／日／韩文，由 PikPak 根据视频音频生成；无需配置聊天模型，受会员、配额与服务可用性限制。开启前请阅读[使用与数据说明](docs/USAGE.md#播放与阅读)。
+内置播放器支持清晰度切换、字幕与音轨选择，记住播放进度，也能移到独立窗口继续观看。macOS 从 v0.6.0 起、Windows x64／ARM64 从 v0.6.1 起支持可选的 **AI 字幕**：从播放器字幕菜单选择原文或中／英／日／韩文，由 PikPak 根据视频音频生成；无需配置聊天模型，受会员、配额与服务可用性限制。开启前请阅读[使用与数据说明](docs/USAGE.md#播放与阅读)。
 
 ![PKP 内置播放器，中文控件与本地演示视频画面](assets/screenshots/player.png)
 

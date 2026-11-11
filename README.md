@@ -34,7 +34,7 @@ PKP is an independent desktop client for a PikPak account you already have. It i
 - **Native playback.** A bundled libmpv player: quality switching, subtitles, audio tracks, resume, and a separate window. Availability depends on the file, codec, and service.
 - **LAN sharing.** Share selected local or cloud folders read-only with a separate password. Devices on the same network can browse, download originals, and play supported media through a responsive browser page while PKP is running.
 - **Share Import.** Paste a PikPak share link or explicitly open `pkp://share`; desktop builds also detect validated clipboard shares at startup or when returning to PKP. Browse a read-only grid/list preview, then explicitly choose the receiving account and destination folder and confirm. Detection and preview never import automatically. See the [user guide](docs/USAGE.en.md#import-a-pikpak-share).
-- **AI subtitles.** Generate captions from the video's audio through PikPak, in the original language or Chinese, English, Japanese, or Korean. Available on macOS since v0.6.0 and on Windows x64/ARM64 in the current unreleased source. Enable them in the player's subtitle menu; PikPak membership, quota, and availability apply. No chat-model API key is needed. See [usage and data handling](docs/USAGE.en.md#playback-and-reading).
+- **AI subtitles.** Generate captions from the video's audio through PikPak, in the original language or Chinese, English, Japanese, or Korean. Available on macOS since v0.6.0 and on Windows x64/ARM64 since v0.6.1. Enable them in the player's subtitle menu; PikPak membership, quota, and availability apply. No chat-model API key is needed. See [usage and data handling](docs/USAGE.en.md#playback-and-reading).
 - **Local index search.** Each account keeps an index on this computer, with type, size, and other filters. Search does not send file names to a model. The first index takes time.
 - **Multiple accounts.** Each account has its own session, transfer queue, and index. Switching accounts leaves the others' transfers running.
 - **Privacy on this computer.** Remembered passwords and optional API keys use the macOS Keychain or Windows Credential Manager. See [Privacy](#privacy).
@@ -43,12 +43,12 @@ The interface is available in English, Simplified Chinese, Traditional Chinese, 
 
 ## Install
 
-**[PKP 0.6.0](https://github.com/tonyflux/pkp/releases/tag/v0.6.0)** adds optional PikPak AI subtitles on macOS, with membership and quota information. Download only from this repository's [latest Release](https://github.com/tonyflux/pkp/releases/latest), then check `SHA256SUMS` from the same release. Details and first-launch steps are in the [installation guide](docs/INSTALL.en.md). v0.2.0 was the first open-source release.
+**[PKP 0.6.1](https://github.com/tonyflux/pkp/releases/tag/v0.6.1)** adds optional PikPak AI subtitles on Windows x64/ARM64. Download only from this repository's [latest Release](https://github.com/tonyflux/pkp/releases/latest), then check `SHA256SUMS` from the same release. Details and first-launch steps are in the [installation guide](docs/INSTALL.en.md). v0.2.0 was the first open-source release.
 
 | Platform | Download |
 | --- | --- |
-| macOS 12 or later, Apple silicon and Intel | [PKP-0.6.0-macos-universal.dmg](https://github.com/tonyflux/pkp/releases/download/v0.6.0/PKP-0.6.0-macos-universal.dmg) |
-| Windows x64 / ARM64 preview | [PKP-0.6.0-windows-x64-arm64-setup.exe](https://github.com/tonyflux/pkp/releases/download/v0.6.0/PKP-0.6.0-windows-x64-arm64-setup.exe) |
+| macOS 12 or later, Apple silicon and Intel | [PKP-0.6.1-macos-universal.dmg](https://github.com/tonyflux/pkp/releases/download/v0.6.1/PKP-0.6.1-macos-universal.dmg) |
+| Windows x64 / ARM64 preview | [PKP-0.6.1-windows-x64-arm64-setup.exe](https://github.com/tonyflux/pkp/releases/download/v0.6.1/PKP-0.6.1-windows-x64-arm64-setup.exe) |
 
 The macOS build is ad hoc signed and is not notarized, so the system may ask you to approve the first launch. The Windows build has no Authenticode publisher signature, and playback, sync, notifications, and system authentication still need broader testing on real devices. Linux packages are not available.
 
