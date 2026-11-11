@@ -2,7 +2,7 @@
 
 [简体中文](CHANGELOG.md) · English
 
-## Unreleased
+## 0.6.0 · 2026-11-11
 
 - Restore macOS AI subtitles from the archived feature branch using PikPak's subtitle service and the playing account. Support original/Chinese/English/Japanese/Korean captions, videos without embedded subtitles, existing style/delay controls, and seeking, pauses and audio-track changes. Reuse the current proxy and media libraries without a chat-model API key. Disclose audio sending and quota use in the menu; stop with an explanation on service refusal. Drain the session before normal subtitles or app shutdown, and hide the option where audio decoding is unsupported. Do not restore legacy feature-usage telemetry.
 - Fix AI-subtitle handoffs across quality/audio changes and rapid language changes. Cancel subtitle-owned metadata, token and captcha requests or waits on Off/quit without interrupting other tasks' shared refreshes. Fix delayed menu state, obsolete selections, repeated failures and collapsed-player error feedback. Reject plaintext nodes and downgrade redirects for HTTPS subtitle deployments while retaining explicit HTTP local development. Add real-PCM, concurrent-cancellation, menu-lifecycle and credential-transport regressions.
