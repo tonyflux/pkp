@@ -421,6 +421,123 @@ func TestConcurrentCallersRefreshOnce(t *testing.T) {
 	}
 }
 
+func TestCanceledTokenStateWaiterDoesNotCancelRefreshOwner(t *testing.T) {
+	for _, method := range []string{"Token", "SignIn", "Invalidate", "CaptchaRefresh"} {
+		t.Run(method, func(t *testing.T) {
+			entered := make(chan struct{})
+			release := make(chan struct{})
+			releaseOwner := sync.OnceFunc(func() { close(release) })
+			ownerCanceled := make(chan struct{}, 1)
+			var refreshes atomic.Int32
+			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.URL.Path != "/v1/auth/token" {
+					t.Errorf("unexpected request %s", r.URL.Path)
+					w.WriteHeader(http.StatusNotFound)
+					return
+				}
+				if refreshes.Add(1) != 1 {
+					t.Error("refresh token was spent more than once")
+					w.WriteHeader(http.StatusBadRequest)
+					return
+				}
+				close(entered)
+				select {
+				case <-release:
+					writeJSON(w, map[string]any{
+						"token_type": "Bearer", "access_token": "renewed-access",
+						"refresh_token": "renewed-refresh", "expires_in": 7200, "sub": "user-1",
+					})
+				case <-r.Context().Done():
+					ownerCanceled <- struct{}{}
+				}
+			}))
+			defer srv.Close()
+			defer releaseOwner()
+			store := &MemoryStore{}
+			m := NewTokenManager(TokenManagerConfig{AuthBaseURL: srv.URL, DeviceID: "d", Store: store})
+			if err := m.Seed(Token{Username: "user@example.com", RefreshToken: "original-refresh"}); err != nil {
+				t.Fatal(err)
+			}
+			ownerCtx, cancelOwner := context.WithCancel(context.Background())
+			defer cancelOwner()
+			type result struct {
+				token Token
+				err   error
+			}
+			ownerDone := make(chan result, 1)
+			go func() {
+				token, err := m.Token(ownerCtx)
+				ownerDone <- result{token, err}
+			}()
+			select {
+			case <-entered:
+			case <-time.After(2 * time.Second):
+				t.Fatal("owner did not reach refresh")
+			}
+
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+			started := make(chan struct{})
+			waiterDone := make(chan error, 1)
+			go func() {
+				close(started)
+				var err error
+				switch method {
+				case "Token":
+					_, err = m.Token(ctx)
+				case "SignIn":
+					_, err = m.SignIn(ctx, "other@example.com", "synthetic-password")
+				case "Invalidate":
+					err = m.Invalidate(ctx, "original-access")
+				case "CaptchaRefresh":
+					err = m.Captcha().Refresh(ctx, "GET:/drive/v1/files/f1", "")
+				}
+				waiterDone <- err
+			}()
+			<-started
+			cancel()
+			select {
+			case err := <-waiterDone:
+				if !errors.Is(err, context.Canceled) {
+					t.Fatalf("waiter error = %v, want context.Canceled", err)
+				}
+			case <-time.After(2 * time.Second):
+				t.Fatal("canceled caller remained blocked behind another caller's refresh")
+			}
+			select {
+			case got := <-ownerDone:
+				t.Fatalf("owner ended before release: %+v", got)
+			case <-ownerCanceled:
+				t.Fatal("canceling the waiter canceled the owner's HTTP request")
+			default:
+			}
+
+			releaseOwner()
+			select {
+			case got := <-ownerDone:
+				if got.err != nil || got.token.AccessToken != "renewed-access" {
+					t.Fatalf("owner result = %+v", got)
+				}
+			case <-time.After(2 * time.Second):
+				t.Fatal("owner did not complete after release")
+			}
+			got, err := m.Token(context.Background())
+			if err != nil || got.AccessToken != "renewed-access" {
+				t.Fatalf("subsequent caller = %+v, %v", got, err)
+			}
+			if saved, err := store.Load(); err != nil || saved.RefreshToken != "renewed-refresh" {
+				t.Fatalf("stored successor = %+v, %v", saved, err)
+			}
+			if refreshes.Load() != 1 {
+				t.Errorf("refreshes = %d, want 1", refreshes.Load())
+			}
+			if _, err := m.Token(ctx); !errors.Is(err, context.Canceled) {
+				t.Errorf("already-canceled cached-token caller = %v, want context.Canceled", err)
+			}
+		})
+	}
+}
+
 // Every build signed in through one config directory — the desktop app, the
 // server build, a dev build — shares one credentials file, and the server
 // retires a refresh token as soon as it is spent. A process renewing with the
@@ -553,12 +670,16 @@ func TestInvalidateIgnoresStaleToken(t *testing.T) {
 		t.Fatalf("seed: %v", err)
 	}
 
-	m.Invalidate("superseded")
+	if err := m.Invalidate(context.Background(), "superseded"); err != nil {
+		t.Fatal(err)
+	}
 	if tok, _ := m.Current(); tok.AccessToken != "current" {
 		t.Errorf("a stale 401 cleared the live token: %+v", tok)
 	}
 
-	m.Invalidate("current")
+	if err := m.Invalidate(context.Background(), "current"); err != nil {
+		t.Fatal(err)
+	}
 	if tok, _ := m.Current(); tok.AccessToken != "" {
 		t.Errorf("token = %q, want it cleared", tok.AccessToken)
 	}
@@ -576,7 +697,9 @@ func TestRejectedAccessTokenIsNotTakenBackFromTheStore(t *testing.T) {
 		t.Fatalf("seed: %v", err)
 	}
 
-	m.Invalidate("revoked")
+	if err := m.Invalidate(context.Background(), "revoked"); err != nil {
+		t.Fatal(err)
+	}
 	tok, err := m.Token(context.Background())
 	if err != nil {
 		t.Fatalf("token: %v", err)
@@ -841,5 +964,118 @@ func TestSeedPersistenceFailureKeepsCurrentToken(t *testing.T) {
 	}
 	if current, err := m.Current(); err != nil || current.AccessToken != "new-access" {
 		t.Fatal("successful replacement was not published")
+	}
+}
+
+func TestCaptchaRefreshWaitersCancelWithoutBlockingSnapshots(t *testing.T) {
+	for _, signIn := range []bool{false, true} {
+		t.Run(fmt.Sprintf("concurrent-signin=%t", signIn), func(t *testing.T) {
+			entered := make(chan struct{})
+			release := make(chan struct{})
+			releaseOwner := sync.OnceFunc(func() { close(release) })
+			ownerCanceled := make(chan struct{}, 1)
+			var refreshes atomic.Int32
+			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				var body map[string]any
+				if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+					t.Errorf("decode captcha request: %v", err)
+					w.WriteHeader(http.StatusBadRequest)
+					return
+				}
+				if body["action"] == signInAction {
+					writeJSON(w, map[string]any{"captcha_token": "signin-captcha"})
+					return
+				}
+				if refreshes.Add(1) != 1 {
+					t.Error("captcha was refreshed more than once")
+					w.WriteHeader(http.StatusBadRequest)
+					return
+				}
+				close(entered)
+				select {
+				case <-release:
+					writeJSON(w, map[string]any{"captcha_token": "renewed-captcha"})
+				case <-r.Context().Done():
+					ownerCanceled <- struct{}{}
+				}
+			}))
+			defer srv.Close()
+			defer releaseOwner()
+			m := NewTokenManager(TokenManagerConfig{AuthBaseURL: srv.URL, DeviceID: "d"})
+			m.captcha.set("old-captcha")
+			ownerCtx, cancelOwner := context.WithCancel(context.Background())
+			defer cancelOwner()
+			ownerDone := make(chan error, 1)
+			go func() {
+				ownerDone <- m.Captcha().Refresh(ownerCtx, "GET:/drive/v1/files/f1", "old-captcha")
+			}()
+			select {
+			case <-entered:
+			case <-time.After(2 * time.Second):
+				t.Fatal("captcha owner did not reach HTTP")
+			}
+			snapshot := make(chan string, 1)
+			go func() { snapshot <- m.Captcha().Token() }()
+			select {
+			case got := <-snapshot:
+				if got != "old-captcha" {
+					t.Fatalf("snapshot = %q, want old-captcha", got)
+				}
+			case <-time.After(2 * time.Second):
+				t.Fatal("captcha snapshot blocked behind a network refresh")
+			}
+
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+			started := make(chan struct{})
+			waiterDone := make(chan error, 1)
+			go func() {
+				close(started)
+				waiterDone <- m.Captcha().Refresh(ctx, "GET:/drive/v1/files/f1", "old-captcha")
+			}()
+			<-started
+			cancel()
+			select {
+			case err := <-waiterDone:
+				if !errors.Is(err, context.Canceled) {
+					t.Fatalf("waiter error = %v, want context.Canceled", err)
+				}
+			case <-time.After(2 * time.Second):
+				t.Fatal("canceled captcha waiter remained blocked")
+			}
+			want := "renewed-captcha"
+			if signIn {
+				got, err := m.captcha.initForSignIn(context.Background(), "user@example.com")
+				if err != nil || got != "signin-captcha" {
+					t.Fatalf("sign-in captcha = %q, %v", got, err)
+				}
+				want = "signin-captcha"
+			}
+			select {
+			case err := <-ownerDone:
+				t.Fatalf("captcha owner ended before release: %v", err)
+			case <-ownerCanceled:
+				t.Fatal("canceling captcha waiter canceled owner HTTP")
+			default:
+			}
+			releaseOwner()
+			select {
+			case err := <-ownerDone:
+				if err != nil {
+					t.Fatalf("captcha owner: %v", err)
+				}
+			case <-time.After(2 * time.Second):
+				t.Fatal("captcha owner did not complete")
+			}
+			if got := m.Captcha().Token(); got != want {
+				t.Errorf("captcha = %q, want %q", got, want)
+			}
+			if err := m.Captcha().Refresh(context.Background(), "GET:/drive/v1/files/f1", "old-captcha"); err != nil {
+				t.Fatal(err)
+			}
+			if refreshes.Load() != 1 {
+				t.Errorf("refreshes = %d, want 1", refreshes.Load())
+			}
+		})
 	}
 }

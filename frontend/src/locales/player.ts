@@ -279,6 +279,16 @@ export default {
 
   // PlayerView
   关: { tw: "關", en: "Off", ja: "オフ", ko: "끔" },
+  原文: { tw: "原文", en: "Original", ja: "原文", ko: "원문" },
+  "AI 字幕": { tw: "AI 字幕", en: "AI subtitles", ja: "AI 字幕", ko: "AI 자막" },
+  "AI {name} · 连接中": { tw: "AI {name} · 連線中", en: "AI {name} · Connecting", ja: "AI {name} · 接続中", ko: "AI {name} · 연결 중" },
+  "AI 字幕已关闭": { tw: "AI 字幕已關閉", en: "AI subtitles turned off", ja: "AI 字幕をオフにしました", ko: "AI 자막이 꺼졌습니다" },
+  "开启 AI 字幕会向 PikPak 发送音频和视频标识，并使用 AI 配额。": {
+    tw: "開啟 AI 字幕會向 PikPak 傳送音訊和影片識別資訊，並使用 AI 配額。",
+    en: "Enabling AI subtitles sends audio and video identifiers to PikPak and uses your AI quota.",
+    ja: "AI 字幕を有効にすると、音声と動画の識別情報が PikPak に送信され、AI 利用枠を消費します。",
+    ko: "AI 자막을 켜면 오디오와 동영상 식별 정보가 PikPak으로 전송되며 AI 할당량이 사용됩니다.",
+  },
   切换轨道: { tw: "切換軌道", en: "Switch track", ja: "トラックの切り替え", ko: "트랙 전환" },
   "截图已存到「图片 › PKP」": {
     tw: "截圖已存到「圖片 › PKP」",

@@ -2,8 +2,10 @@ package services
 
 import (
 	"context"
+	"fmt"
 	"math"
 	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/tonyflux/pkp/internal/i18n"
@@ -13,9 +15,9 @@ import (
 // drawn — saved, and the same for every video — and how far the subtitles
 // and the sound are shifted against the picture, for the video playing only.
 
-// SubtitleStyle is how subtitles are drawn through mpv's options. Text
-// subtitles (SRT, WebVTT, MP4 text) take all of it. ASS tracks and picture
-// tracks (Blu-ray PGS, DVD VobSub, DVB, XSUB) take the size but keep their own colours, and only part
+// SubtitleStyle controls native subtitle tracks and the AI caption overlay.
+// Text subtitles take every setting. ASS tracks and picture tracks
+// (Blu-ray PGS, DVD VobSub, DVB, XSUB) take the size but keep their own colours, and only part
 // of them moves up: ASS lines at the bottom without positioning tags (libass
 // leaves \pos, \move, \clip, drawings and top or middle lines alone), and
 // pictures in the lower half of the frame.
@@ -150,4 +152,73 @@ func (p *PlayerService) resetShifts(ctx context.Context) {
 			p.log.Warn("player: could not reset "+property, "error", err)
 		}
 	}
+}
+
+// The overlay uses the same 720-unit canvas, font size and bottom margin
+// as mpv's text subtitles.
+const (
+	aiCaptionResY   = 720
+	aiCaptionFont   = 38
+	aiCaptionMargin = 22
+)
+
+type captionLook struct {
+	style SubtitleStyle
+	resX  int
+}
+
+// A raised caption needs the surface's proportions because sub-pos does
+// not affect OSD overlays.
+func (p *PlayerService) captionLook(shown bool) captionLook {
+	p.mu.Lock()
+	look := captionLook{style: p.state.SubtitleStyle}
+	p.mu.Unlock()
+	if !shown || look.style.Raise == 0 {
+		return look
+	}
+	var dims struct{ W, H int }
+	err := p.withContext(func(ctx context.Context) error {
+		return p.mpv.GetProperty(ctx, "osd-dimensions", &dims)
+	})
+	if err == nil && dims.W > 0 && dims.H > 0 {
+		look.resX = int(math.Round(aiCaptionResY * float64(dims.W) / float64(dims.H)))
+	}
+	return look
+}
+
+// Treat service text literally, including ASS markup and escape sequences.
+func assCaption(text string, look captionLook) string {
+	size := math.Round(aiCaptionFont*look.style.Scale*10) / 10
+	var b strings.Builder
+	b.WriteString(`{\an2`)
+	if look.resX > 0 {
+		bottom := float64(aiCaptionResY - aiCaptionMargin)
+		y := bottom - float64(look.style.Raise)/100*(bottom-size*1.25)
+		fmt.Fprintf(&b, `\pos(%d,%d)`, look.resX/2, int(math.Round(y)))
+	}
+	b.WriteString(`\fs` + strconv.FormatFloat(size, 'f', -1, 64) + `\bord2.5\shad0`)
+	if c := look.style.Color; subtitleColor.MatchString(c) && c != defaultSubtitleStyle.Color {
+		b.WriteString(`\1c&H` + c[5:7] + c[3:5] + c[1:3] + `&`)
+	}
+	b.WriteString("}")
+	lineStart := true
+	for _, r := range text {
+		switch {
+		case r == '\n':
+			b.WriteString(`\N`)
+			lineStart = true
+			continue
+		case r == ' ' && lineStart:
+			b.WriteString(`\h`)
+			continue
+		case r == '{':
+			b.WriteString(`\{`)
+		case r == '\\':
+			b.WriteString("\\\u2060")
+		default:
+			b.WriteRune(r)
+		}
+		lineStart = false
+	}
+	return b.String()
 }

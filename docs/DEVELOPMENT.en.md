@@ -27,6 +27,10 @@ The Go module is `github.com/tonyflux/pkp`. Frontend bindings are in `frontend/b
 
 Run `make test` for the Go and frontend unit tests; `make dev` starts Wails development mode with hot reload.
 
+AI subtitle decoding on macOS uses FFmpeg headers and dynamic libraries already exported by the libmpv build; the installed application does not need an `ffmpeg` executable. Decoder regressions use that executable to generate local synthetic fixtures. The app discovers subtitle nodes through PikPak at `https://api-drive.mypikpak.com` only after the user enables the feature. For isolated development, set `PKP_SUBSRELAY_API=http://127.0.0.1:<port>`; an explicitly empty value disables it. Custom endpoints may receive account tokens and audio, so do not use untrusted services; URL Basic Auth can replace the account token. Audio decoding currently requires Darwin+cgo, and other platforms hide the subtitle option.
+
+HTTPS subtitle deployments require encrypted nodes. Discovery and WebSocket handshakes reject redirects to plaintext; local plaintext services require an explicitly configured HTTP development address.
+
 To verify the macOS update helper:
 
 ```sh

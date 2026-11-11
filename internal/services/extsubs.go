@@ -215,6 +215,7 @@ func (p *PlayerService) attachExtracted() {
 		return
 	}
 	p.subs.attached = load
+	show := !p.state.AISubtitles.On
 	p.mu.Unlock()
 
 	for i, sub := range subs.items {
@@ -225,7 +226,7 @@ func (p *PlayerService) attachExtracted() {
 			return
 		}
 		flag := "auto"
-		if i == 0 {
+		if i == 0 && show {
 			flag = "select"
 		}
 		ctx, cancel := context.WithTimeout(context.Background(), commandTimeout)

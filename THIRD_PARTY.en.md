@@ -37,6 +37,7 @@ QR sign-in uses the separate public web client `YUMx5nI8ZU8Ap8pm`, without the A
 ## External Services and Names
 
 - PikPak is an external cloud storage service. Accounts, quotas, and content handling are subject to its terms. PKP is an unofficial client and does not have or imply PikPak's endorsement.
+- Optional AI subtitles use PikPak's subtitle node discovery and WebSocket service, sending audio and video identifiers with the playing account's authorization and allowance. This is separate from user-configured chat models. PKP does not guarantee accuracy, availability, or server-side retention policies; see [Privacy](PRIVACY.en.md).
 - AI model services are configured by users themselves. Their billing, data processing, and terms of use depend on the selected service.
 - TMDB is used only for title matching in user-enabled movie and TV organization, using the user's own credentials. This product uses the TMDB API but is not endorsed or certified by TMDB.
 

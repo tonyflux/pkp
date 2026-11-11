@@ -266,7 +266,9 @@ func (c *Client) attempt(ctx context.Context, req request, endpoint string, payl
 			// The token was rejected mid-flight: drop it and try once with a
 			// fresh one before surfacing the failure.
 			refreshedAuth = true
-			c.tokens.Invalidate(accessToken)
+			if err := c.tokens.Invalidate(ctx, accessToken); err != nil {
+				return err
+			}
 			continue
 		}
 

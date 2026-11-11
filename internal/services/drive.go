@@ -26,6 +26,8 @@ import (
 	"github.com/tonyflux/pkp/internal/i18n"
 	"github.com/tonyflux/pkp/internal/index"
 	"github.com/tonyflux/pkp/internal/netproxy"
+	"github.com/tonyflux/pkp/internal/pcm"
+	"github.com/tonyflux/pkp/internal/subsrelay"
 	"github.com/tonyflux/pkp/internal/torrent"
 )
 
@@ -80,6 +82,9 @@ type DriveOptions struct {
 	// Tests populate the store directly and must not race a background
 	// walk; the index is still consulted when it says it is ready.
 	NoIndexSync bool
+	// SubsrelayURL is the AI subtitle API; empty disables it. URL credentials
+	// replace account authentication for isolated development deployments.
+	SubsrelayURL string
 	// Passwords keeps remembered sign-in passwords; nil means the system's:
 	// the keychain on macOS, the Credential Manager on Windows. Without one,
 	// Remember account password and Auto login are not offered.
@@ -284,6 +289,8 @@ type DriveService struct {
 	signInMu       sync.Mutex
 	signIn         *signInAttempt
 	signInCommitMu sync.Mutex
+	// ai owns AI subtitle sessions for the playing account and file.
+	ai *aiSubs
 	// organizing and removing hold the stop of each account's Cloud Drive Organization
 	// and Delete run in flight.
 	organizing runs
@@ -363,6 +370,14 @@ func NewDriveService(opts DriveOptions, player *PlayerService) *DriveService {
 		player.onStall = d.autoStepDown
 		player.onPlayback = d.notePlayback
 		_ = player.setSubtitleStyle(d.LocalSettings().SubtitleStyle)
+		if opts.SubsrelayURL != "" && pcm.Supported {
+			if client, err := subsrelay.New(opts.SubsrelayURL); err != nil {
+				log.Warn("drive: AI subtitles are unavailable", "error", err)
+			} else {
+				d.ai = newAISubs(d, player, client)
+				player.onAudioTrack = d.ai.restart
+			}
+		}
 	}
 	return d
 }
@@ -455,6 +470,9 @@ func (d *DriveService) ServiceShutdown() error {
 		if err := d.folderSync.Close(); err != nil {
 			d.log.Error("sync: shutdown did not finish cleanly", "error", err)
 		}
+	}
+	if d.ai != nil {
+		d.ai.close()
 	}
 	if _, err := d.savePlaying(); err != nil {
 		d.log.Warn("drive: could not save where playback was left", "error", err)
@@ -788,7 +806,7 @@ func (d *DriveService) SetStarred(fileIDs []string, starred bool) error {
 	if err != nil {
 		return err
 	}
-	err = d.doIn(s, func(ctx context.Context, client *drive.Client) error {
+	err = d.doIn(context.Background(), s, func(ctx context.Context, client *drive.Client) error {
 		if starred {
 			return client.Star(ctx, fileIDs)
 		}
@@ -810,7 +828,7 @@ func (d *DriveService) MoveFiles(fileIDs []string, parentID string) error {
 	if err != nil {
 		return err
 	}
-	err = d.doIn(s, func(ctx context.Context, client *drive.Client) error {
+	err = d.doIn(context.Background(), s, func(ctx context.Context, client *drive.Client) error {
 		return client.Move(ctx, fileIDs, parentID)
 	})
 	if err != nil {
@@ -828,7 +846,7 @@ func (d *DriveService) CopyFiles(fileIDs []string, parentID string) error {
 	if err != nil {
 		return err
 	}
-	err = d.doIn(s, func(ctx context.Context, client *drive.Client) error {
+	err = d.doIn(context.Background(), s, func(ctx context.Context, client *drive.Client) error {
 		return client.Copy(ctx, fileIDs, parentID)
 	})
 	if err != nil {
@@ -968,7 +986,7 @@ func (d *DriveService) play(account, fileID string, start float64) (string, erro
 	// The link lookup is the first of the two waits a click incurs; the UI
 	// gets its loading state from the player for both.
 	d.player.setLoading(true)
-	file, err := d.getFile(s, fileID, drive.GetFileParams{Usage: drive.UsagePlay})
+	file, err := d.getFile(context.Background(), s, fileID, drive.GetFileParams{Usage: drive.UsagePlay})
 	if err != nil {
 		d.player.setLoading(false)
 		return "", err
@@ -1031,10 +1049,14 @@ func (d *DriveService) notePlay(s *accountSession, file drive.File, start float6
 }
 
 // getFile reads one entry of an account with the given usage, classified.
-func (d *DriveService) getFile(s *accountSession, fileID string, params drive.GetFileParams) (*drive.File, error) {
-	return callIn(d, s, func(ctx context.Context, client *drive.Client) (*drive.File, error) {
-		return client.GetFile(ctx, fileID, params)
+func (d *DriveService) getFile(ctx context.Context, s *accountSession, fileID string, params drive.GetFileParams) (*drive.File, error) {
+	var file *drive.File
+	err := d.doIn(ctx, s, func(ctx context.Context, client *drive.Client) error {
+		var err error
+		file, err = client.GetFile(ctx, fileID, params)
+		return err
 	})
+	return file, err
 }
 
 // activeFile is getFile on the account on screen.
@@ -1043,7 +1065,7 @@ func (d *DriveService) activeFile(fileID string, params drive.GetFileParams) (*d
 	if err != nil {
 		return nil, err
 	}
-	return d.getFile(s, fileID, params)
+	return d.getFile(context.Background(), s, fileID, params)
 }
 
 // DownloadLink resolves the plain download URL for a file.
@@ -1071,7 +1093,7 @@ func (d *DriveService) PreviewFile(ctx context.Context, fileID string) (string, 
 	if err != nil {
 		return "", err
 	}
-	file, err := d.getFile(s, fileID, drive.GetFileParams{Usage: drive.UsageFetch})
+	file, err := d.getFile(context.Background(), s, fileID, drive.GetFileParams{Usage: drive.UsageFetch})
 	if err != nil {
 		return "", err
 	}
@@ -1117,7 +1139,7 @@ func (d *DriveService) ReadText(ctx context.Context, fileID string) (TextPreview
 	if err != nil {
 		return TextPreview{}, err
 	}
-	file, err := d.getFile(s, fileID, drive.GetFileParams{Usage: drive.UsageFetch})
+	file, err := d.getFile(context.Background(), s, fileID, drive.GetFileParams{Usage: drive.UsageFetch})
 	if err != nil {
 		return TextPreview{}, err
 	}
@@ -1378,7 +1400,7 @@ func (d *DriveService) RemoveTasks(account string, taskIDs []string, deleteFiles
 	}
 	for start := 0; start < len(taskIDs); start += taskRemovalChunk {
 		chunk := taskIDs[start:min(start+taskRemovalChunk, len(taskIDs))]
-		err := d.doIn(s, func(ctx context.Context, client *drive.Client) error {
+		err := d.doIn(context.Background(), s, func(ctx context.Context, client *drive.Client) error {
 			return client.DeleteTasks(ctx, chunk, deleteFiles)
 		})
 		if err != nil {
@@ -1398,17 +1420,20 @@ func (d *DriveService) do(fn func(context.Context, *drive.Client) error) error {
 	if err != nil {
 		return err
 	}
-	return d.doIn(s, fn)
+	return d.doIn(context.Background(), s, fn)
 }
 
 // doIn runs one API call for an account: its client, one driveTimeout, and
 // the error classified for its session.
-func (d *DriveService) doIn(s *accountSession, fn func(context.Context, *drive.Client) error) error {
+func (d *DriveService) doIn(ctx context.Context, s *accountSession, fn func(context.Context, *drive.Client) error) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
 	client, err := s.api()
 	if err != nil {
 		return err
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), driveTimeout)
+	ctx, cancel := context.WithTimeout(ctx, driveTimeout)
 	defer cancel()
 	return d.classify(s, client, fn(ctx, client))
 }
@@ -1426,7 +1451,7 @@ func call[T any](d *DriveService, fn func(context.Context, *drive.Client) (T, er
 // callIn is doIn for calls that return a value.
 func callIn[T any](d *DriveService, s *accountSession, fn func(context.Context, *drive.Client) (T, error)) (T, error) {
 	var out T
-	err := d.doIn(s, func(ctx context.Context, client *drive.Client) error {
+	err := d.doIn(context.Background(), s, func(ctx context.Context, client *drive.Client) error {
 		var err error
 		out, err = fn(ctx, client)
 		return err

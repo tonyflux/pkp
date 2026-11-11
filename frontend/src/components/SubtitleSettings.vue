@@ -1,6 +1,6 @@
 <script setup lang="ts">
 // Subtitle & A/V Sync, the dock's popover body: Subtitle Style (size, height, colour —
-// saved, the same for every video) and the shifts of the
+// saved, the same for every video and AI subtitles) and the shifts of the
 // subtitles and of the sound against the picture, which hold for the video
 // playing only. Keys stay here: the player's ←/→/↑/↓ would otherwise seek
 // and change the volume while a slider has focus. Esc closes.

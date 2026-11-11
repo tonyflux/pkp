@@ -32,6 +32,7 @@ PKP is an independent desktop client for a PikPak account you already have. It i
 - **AI organizing assistant, with review before apply.** Local filename rules can draft a plan with no model. You can also connect your own model (or local Ollama) and TMDB credentials. Renames, moves, and cleanup wait until you confirm the plan.
 - **Folder sync.** Pair a local folder with a cloud folder. Two-way sync, local-to-cloud backup, or cloud-to-local download. PKP scans both sides and shows the plan before it runs. Sync works while PKP is open.
 - **Native playback.** A bundled libmpv player: quality switching, subtitles, audio tracks, resume, and a separate window. Availability depends on the file, codec, and service.
+- **AI subtitles (unreleased source, macOS).** Generate captions from the video's audio through PikPak, in the original language or Chinese, English, Japanese, or Korean. Enable them in the player's subtitle menu; PikPak membership, quota, and availability apply. No chat-model API key is needed. See [usage and data handling](docs/USAGE.en.md#playback-and-reading).
 - **Local index search.** Each account keeps an index on this computer, with type, size, and other filters. Search does not send file names to a model. The first index takes time.
 - **Multiple accounts.** Each account has its own session, transfer queue, and index. Switching accounts leaves the others' transfers running.
 - **Privacy on this computer.** Remembered passwords and optional API keys use the macOS Keychain or Windows Credential Manager. See [Privacy](#privacy).

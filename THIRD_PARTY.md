@@ -37,6 +37,7 @@ Go 依赖图及声明文件在构建时选取，不能代替对源码内声明�
 ## 外部服务与名称
 
 - PikPak 是外部云盘服务，账号、配额与内容处理受其条款约束。PKP 是非官方客户端，不获得或暗示 PikPak 的背书。
+- 可选 AI 字幕使用 PikPak 的字幕节点发现与 WebSocket 服务，发送音频及视频标识，使用当前播放账号的鉴权和额度；它不是用户配置的聊天模型服务。PKP 不承诺其准确性、可用性或服务端数据保留策略，详见[隐私说明](PRIVACY.md)。
 - AI 模型服务由用户自行配置，其计费、数据处理与使用条件取决于所选服务。
 - TMDB 仅用于用户启用的影视整理片名匹配，使用用户自己的凭据。This product uses the TMDB API but is not endorsed or certified by TMDB.
 

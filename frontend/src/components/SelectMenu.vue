@@ -32,6 +32,8 @@ const props = defineProps<{
   options: SelectOption<T>[];
   label?: string;
   disabled?: boolean;
+  /** Explicitly choosing the current value can cancel a pending subtitle change. */
+  allowReselect?: boolean;
   /** The player's fixed dark glass, for a list over the native picture. */
   dark?: boolean;
   /** Lay a long flat list (Type) out in this many columns, filled row by row. */
@@ -72,7 +74,7 @@ function hide(refocus = false) {
 function choose(option: SelectOption<T> | undefined) {
   if (!option || option.disabled) return;
   hide(true);
-  if (option.value !== props.modelValue) emit("update:modelValue", option.value);
+  if (props.allowReselect || option.value !== props.modelValue) emit("update:modelValue", option.value);
 }
 
 /** move goes `step` rows from `from`, past disabled ones; it stays put at either end. */
