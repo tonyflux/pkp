@@ -126,7 +126,7 @@ tasks:
       - cmd: make -C "{{.ROOT_DIR}}" libmpv-windows
         platforms: [darwin]
       - >-
-        {{if eq OS "windows"}}python{{else}}python3{{end}} -c "from pathlib import Path; import sys; root = Path(sys.argv[1]); paths = [root / 'build/windows/libmpv' / sys.argv[2] / f for f in ('libmpv-2.dll', 'ffmpeg.exe', 'ffprobe.exe')] + [root / 'build/windows/libmpv/licenses', root / 'frontend/dist/THIRD_PARTY_LICENSES.txt']; missing = [str(p) for p in paths if not (p.is_dir() and any(p.iterdir()) if p.name == 'licenses' else p.is_file())]; sys.exit('Missing Windows packaging artifacts: ' + ', '.join(missing) + '. Build libmpv and frontend before packaging.' if missing else 0)" "{{.ROOT_DIR}}" "{{.ARCH}}"
+        {{if eq OS "windows"}}python{{else}}python3{{end}} -c "from pathlib import Path; import sys; root = Path(sys.argv[1]); paths = [root / 'build/windows/libmpv' / sys.argv[2] / f for f in ('libmpv-2.dll', 'pkp-pcm.dll', 'ffmpeg.exe', 'ffprobe.exe')] + [root / 'build/windows/libmpv/licenses', root / 'frontend/dist/THIRD_PARTY_LICENSES.txt']; missing = [str(p) for p in paths if not (p.is_dir() and any(p.iterdir()) if p.name == 'licenses' else p.is_file())]; sys.exit('Missing Windows packaging artifacts: ' + ', '.join(missing) + '. Build libmpv and frontend before packaging.' if missing else 0)" "{{.ROOT_DIR}}" "{{.ARCH}}"
       - '{{if eq OS "windows"}}python{{else}}python3{{end}} "{{.ROOT_DIR}}/build/go-licenses.py" windows "{{.ROOT_DIR}}/{{.BIN_DIR}}/GO_LICENSES-windows.txt"'
       # Create the Microsoft WebView2 bootstrapper if it doesn't exist
       - wails3 generate webview2bootstrapper -dir "{{.ROOT_DIR}}/build/windows/nsis"
@@ -134,6 +134,7 @@ tasks:
         makensis {{if eq .INSTALL_SCOPE "user"}}-DWAILS_INSTALL_SCOPE=user -DREQUEST_EXECUTION_LEVEL=user {{end}}
         -DARG_WAILS_{{.ARG_FLAG}}_BINARY="{{.ROOT_DIR}}/{{.BIN_DIR}}/{{.APP_NAME}}.exe"
         -DARG_LIBMPV_{{.ARG_FLAG}}="{{.ROOT_DIR}}/build/windows/libmpv/{{.ARCH}}/libmpv-2.dll"
+        -DARG_PCM_{{.ARG_FLAG}}="{{.ROOT_DIR}}/build/windows/libmpv/{{.ARCH}}/pkp-pcm.dll"
         -DARG_FFMPEG_{{.ARG_FLAG}}="{{.ROOT_DIR}}/build/windows/libmpv/{{.ARCH}}/ffmpeg.exe"
         -DARG_FFPROBE_{{.ARG_FLAG}}="{{.ROOT_DIR}}/build/windows/libmpv/{{.ARCH}}/ffprobe.exe"
         -DARG_LIBMPV_LICENSES="{{.ROOT_DIR}}/build/windows/libmpv/licenses"

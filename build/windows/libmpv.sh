@@ -1,11 +1,11 @@
 #!/bin/bash
-# Builds libmpv-2.dll for Windows x64 and ARM64 from the sources pinned in
-# build/libmpv-common.sh, with llvm-mingw, into
-# build/windows/libmpv/{amd64,arm64}/libmpv-2.dll and licenses/. `make
-# windows-installer` installs the DLL of the machine's arch beside pkp.exe,
-# with the licenses. The build is LGPL (see build/libmpv-common.sh).
+# Builds libmpv-2.dll and pkp-pcm.dll for Windows x64 and ARM64 from the
+# sources pinned in build/libmpv-common.sh, with llvm-mingw, into
+# build/windows/libmpv/{amd64,arm64}/ and licenses/. `make windows-installer`
+# installs the matching DLLs beside pkp.exe. Media libraries are LGPL (see
+# build/libmpv-common.sh); PKP's PCM helper is GPL-3.0-only.
 #
-# One self-contained DLL per arch: every library is built static and linked
+# Self-contained DLLs per arch: every library is built static and linked
 # into it, the C++ runtime and winpthreads included, so it loads nothing but
 # Windows' own DLLs (checked at the end). What PKP uses: mpv's own window
 # inside the surface (--wid), drawn by gpu-next / gpu over Direct3D 11
@@ -27,11 +27,22 @@ here=$(cd "$(dirname "$0")" && pwd)
 . "$here/../libmpv-common.sh"
 
 out=$here/libmpv
+pcm_source=$here/../../internal/pcm
+pcm_key=$(cat "$pcm_source/decoder.c" "$pcm_source/decoder.h" | shasum -a 256 | cut -c1-12)
 work=$cache/win-$key
 tools=$work/tools
 toolchain=$work/llvm-mingw
 
-[ "$(cat "$out/.key" 2>/dev/null)" = "$key" ] && exit 0
+cached=true
+for dir in amd64 arm64; do
+	for file in libmpv-2.dll pkp-pcm.dll ffmpeg.exe ffprobe.exe; do
+		[ -f "$out/$dir/$file" ] || cached=false
+	done
+done
+if $cached && [ -d "$out/licenses" ] && [ "$(cat "$out/.key" 2>/dev/null)" = "$key" ] &&
+	[ "$(cat "$out/.pcm-key" 2>/dev/null)" = "$pcm_key" ]; then
+	exit 0
+fi
 
 check_host
 export PATH=$tools/bin:$toolchain/bin:$PATH
@@ -288,6 +299,15 @@ build_mpv() {
 		-Dopenal=disabled
 }
 
+# Reuse the per-arch FFmpeg installation without rebuilding media libraries
+# when only PKP's decoder changes. All runtime libraries remain static.
+build_pcm() {
+	"$triple-clang" -std=c11 -O2 -shared -static -o "$prefix/bin/pkp-pcm.dll" \
+		"$pcm_source/decoder.c" $($PKG_CONFIG --cflags --libs --static libavformat libavcodec libswresample libavutil)
+	llvm-strip "$prefix/bin/pkp-pcm.dll"
+	echo "$pcm_key" >"$prefix/bin/.pcm-key"
+}
+
 arch=host
 run tools build_tools
 run toolchain build_toolchain
@@ -297,6 +317,10 @@ for arch in $ARCHS; do
 		spirv_cross libplacebo mpv; do
 		run "$pkg" "build_$pkg"
 	done
+	if [ "$(cat "$prefix/bin/.pcm-key" 2>/dev/null)" != "$pcm_key" ] || [ ! -f "$prefix/bin/pkp-pcm.dll" ]; then
+		rm -f "$work/done/$arch-pcm"
+	fi
+	run pcm build_pcm
 done
 
 stage=$work/out
@@ -320,9 +344,15 @@ for arch in $ARCHS; do
 	done
 	mkdir -p "$stage/$dir"
 	cp "$f" "$stage/$dir/"
-	for program in ffmpeg ffprobe; do
-		f=$work/$arch/prefix/bin/$program.exe
+	for program in pkp-pcm.dll ffmpeg.exe ffprobe.exe; do
+		f=$work/$arch/prefix/bin/$program
 		grep -q "Machine: IMAGE_FILE_MACHINE_$machine" <<<"$(llvm-readobj --file-headers "$f")" || die "$f is not $machine"
+		if [ "$program" = pkp-pcm.dll ]; then
+			exports=$(llvm-readobj --coff-exports "$f")
+			for symbol in new open seek next interrupt resume close strerror; do
+				grep -q "Name: pkp_pcm_$symbol$" <<<"$exports" || die "$f does not export pkp_pcm_$symbol"
+			done
+		fi
 		for dll in $(llvm-readobj --coff-imports "$f" | awk '/^  Name:/ {print tolower($2)}'); do
 			case $dll in
 				api-ms-win-crt-* | api-ms-win-core-* | kernel32.dll | ntdll.dll | user32.dll | gdi32.dll | advapi32.dll | ole32.dll | oleaut32.dll | shell32.dll | shlwapi.dll | ws2_32.dll | bcrypt.dll | crypt32.dll | ncrypt.dll | secur32.dll | mfplat.dll | mf.dll | mfuuid.dll | propsys.dll | strmiids.dll | avrt.dll) ;;
@@ -335,6 +365,7 @@ done
 install_licenses "$stage/licenses"
 
 echo "$key" >"$stage/.key"
+echo "$pcm_key" >"$stage/.pcm-key"
 rm -rf "$out.tmp"
 cp -R "$stage" "$out.tmp"
 rm -rf "$out"
@@ -342,4 +373,4 @@ mv "$out.tmp" "$out"
 find "$cache" -mindepth 1 -maxdepth 1 -name 'win-*' ! -name "win-$key" -exec rm -rf {} +
 # The toolchain is a gigabyte; a rerun of the same key unpacks it again.
 rm -rf "$work/x86_64/src" "$work/aarch64/src" "$toolchain" "$work/done/host-toolchain"
-echo "libmpv: libmpv-2.dll for $(ls "$out" | grep -v licenses | tr '\n' ' ')in $out" >&2
+echo "libmpv: libmpv-2.dll and pkp-pcm.dll for amd64/arm64 in $out" >&2

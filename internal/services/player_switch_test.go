@@ -67,6 +67,7 @@ func playingDriveWith(t *testing.T, routes func(http.ResponseWriter, *http.Reque
 	if err := d.ServiceStartup(context.Background(), application.ServiceOptions{}); err != nil {
 		t.Fatalf("drive startup: %v", err)
 	}
+	t.Cleanup(func() { _ = d.ServiceShutdown() })
 	seedSession(t, d, "user@example.com")
 	return d, player
 }

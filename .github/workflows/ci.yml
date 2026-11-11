@@ -92,11 +92,26 @@ jobs:
             ~/Library/Caches/pkp/libmpv
             build/darwin/libmpv
             build/windows/libmpv
-          key: media-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('build/libmpv-common.sh', 'build/darwin/libmpv.sh', 'build/windows/libmpv.sh') }}
+          key: media-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('build/libmpv-common.sh', 'build/darwin/libmpv.sh', 'build/windows/libmpv.sh') }}-${{ hashFiles('internal/pcm/decoder.c', 'internal/pcm/decoder.h') }}
+          restore-keys: |
+            media-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('build/libmpv-common.sh', 'build/darwin/libmpv.sh', 'build/windows/libmpv.sh') }}-
       - run: npm ci
         working-directory: frontend
       - name: Build bundled macOS and Windows playback libraries
         run: make libmpv libmpv-windows
+      - name: Share bundled Windows runtime for regression tests
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: windows-pcm-runtime
+          path: |
+            build/windows/libmpv/amd64/libmpv-2.dll
+            build/windows/libmpv/amd64/pkp-pcm.dll
+            build/windows/libmpv/amd64/ffmpeg.exe
+            build/windows/libmpv/arm64/libmpv-2.dll
+            build/windows/libmpv/arm64/pkp-pcm.dll
+            build/windows/libmpv/arm64/ffmpeg.exe
+          if-no-files-found: error
+          retention-days: 1
       - name: Build macOS DMG and Windows NSIS installer
         run: |
           make dist windows-installer
@@ -118,3 +133,42 @@ jobs:
             [[ "$output" == *libmpv.2.dylib* ]]
             [[ "$output" == *'malformed GOMEMLIMIT'* ]]
           done
+
+  windows-pcm:
+    needs: native
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: windows-latest
+            arch: amd64
+          - runner: windows-11-arm
+            arch: arm64
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+          ref: ${{ inputs.source-ref || github.sha }}
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version-file: go.mod
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: windows-pcm-runtime
+          path: build/windows/libmpv
+      - name: Exercise bundled PCM and AI subtitle integration
+        shell: bash
+        env:
+          CGO_ENABLED: '0'
+        run: |
+          set -euo pipefail
+          runtime="$PWD/build/windows/libmpv/${{ matrix.arch }}"
+          export PATH="$runtime:$PATH"
+          ffmpeg -v error -filter_complex sine=duration=0.01 -f null -
+          go test -c -o "$runtime/pcm.test.exe" ./internal/pcm
+          go test -c -o "$runtime/services.test.exe" ./internal/services
+          "$runtime/pcm.test.exe" -test.v -test.timeout=5m
+          cd internal/services
+          "$runtime/services.test.exe" -test.v -test.timeout=5m -test.run='Test(AISubtitles|AICues|ASSCaption)'

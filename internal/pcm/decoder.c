@@ -1,6 +1,6 @@
 //go:build darwin && cgo
 
-#include "decoder_darwin.h"
+#include "decoder.h"
 
 #include <libavcodec/avcodec.h>
 #include <libavformat/avformat.h>

@@ -1,4 +1,4 @@
-//go:build darwin && cgo
+//go:build (darwin && cgo) || windows
 
 package services
 
@@ -210,8 +210,9 @@ func speechClip(t *testing.T) []byte {
 		t.Skip("ffmpeg not installed")
 	}
 	out := filepath.Join(t.TempDir(), "speech.mp4")
-	cmd := exec.Command("ffmpeg", "-v", "error", "-f", "lavfi", "-i", "testsrc=size=160x120:rate=10:duration=30",
-		"-f", "lavfi", "-i", "sine=frequency=440:duration=30", "-c:v", "libx264", "-c:a", "aac", "-movflags", "+faststart", out)
+	cmd := exec.Command("ffmpeg", "-v", "error",
+		"-filter_complex", "testsrc=size=160x120:rate=10:duration=30[v];sine=frequency=440:duration=30[a]",
+		"-map", "[v]", "-map", "[a]", "-c:v", "mpeg4", "-c:a", "aac", "-movflags", "+faststart", out)
 	if msg, err := cmd.CombinedOutput(); err != nil {
 		t.Fatalf("ffmpeg: %v\n%s", err, msg)
 	}
@@ -816,6 +817,7 @@ func TestAISubtitlesMembershipBeforeSource(t *testing.T) {
 					http.NotFound(w, r)
 				}
 			})
+			t.Cleanup(func() { _ = d.ServiceShutdown() })
 			owner, err := d.sessionFor("")
 			if err != nil {
 				t.Fatal(err)
@@ -1154,10 +1156,8 @@ func TestAISubtitlesFollowQualityAudio(t *testing.T) {
 	dir := t.TempDir()
 	original, transcode := filepath.Join(dir, "original.mkv"), filepath.Join(dir, "english.mp4")
 	commands := [][]string{
-		{"-f", "lavfi", "-i", "testsrc=size=160x120:rate=10:duration=30",
-			"-f", "lavfi", "-i", "sine=frequency=440:duration=30",
-			"-f", "lavfi", "-i", "sine=frequency=1000:duration=30",
-			"-map", "0:v", "-map", "1:a", "-map", "2:a", "-c:v", "libx264", "-c:a", "aac",
+		{"-filter_complex", "testsrc=size=160x120:rate=10:duration=30[v];sine=frequency=440:duration=30[a0];sine=frequency=1000:duration=30[a1]",
+			"-map", "[v]", "-map", "[a0]", "-map", "[a1]", "-c:v", "mpeg4", "-c:a", "aac",
 			"-metadata:s:a:0", "language=eng", "-metadata:s:a:1", "language=jpn",
 			"-disposition:a:0", "default", "-disposition:a:1", "0", original},
 		{"-i", original, "-map", "0:v", "-map", "0:a:0", "-c", "copy", "-movflags", "+faststart", transcode},

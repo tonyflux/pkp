@@ -12,6 +12,8 @@ PKP 自有源码采用 [GPL-3.0-only](LICENSE)。已发布的 v0.1.0 安装包�
 
 局域网兼容副本使用随应用分发的 `ffmpeg` / `ffprobe`，不调用系统 PATH 中的程序。macOS 随包提供通用 arm64/x86_64 工具（`Contents/Helpers`），Windows 安装对应架构的工具到应用目录。工具与播放器使用同一固定 FFmpeg 源码，明确禁用 GPL/nonfree；H.264 编码使用 macOS VideoToolbox（允许系统软件实现）或 Windows Media Foundation 软件实现，AAC 使用 FFmpeg 内置编码器，不包含 libx264。上述源码包和许可证同时覆盖这两个程序；系统编码器是否可用须在目标电脑验证，不支持时转换明确失败。
 
+Windows AI 字幕通过随包的 `pkp-pcm.dll` 解码音频，与 macOS 共用 PKP 的解码源码，静态链接同一固定版本、禁用 GPL/nonfree 的 FFmpeg。第三方对应源码包包含这些库、解码源码与构建脚本，应用目录的 `licenses` 保留相应声明；不调用系统 FFmpeg。
+
 v0.2.0 起另附 `PKP-<版本>-source.tar.gz`：包含与签名更新清单记录的 Git 提交及 tree 对应的 PKP 完整自有源码、资源、锁文件和构建脚本，以及 `third_party/` 中固定 Go 模块源码、npm 发布包和可核实的上游首选源码。清单记录校验值，并提供隔离依赖缓存的恢复说明；不包含 `.git`、账号数据或私钥。系统 SDK、编译器与打包工具仍须按开发指南安装。不能把 npm 中的可选原生构建工具二进制称为其完整源码，也不承诺逐字节可复现构建。
 
 由当前源码构建的安装包中，第三方声明位于 macOS 应用包的 `Contents/Resources/licenses/`（Finder 中选择“显示包内容”），或 Windows 安装目录的 `licenses`。`GO_LICENSES.txt` 收录 Go 工具链及 `go list` 为两个发布架构选出的生产依赖中的许可证、版权、专利与声明文件，包括 modernc 的 SQLite 和 libc 等上游继承声明。`THIRD_PARTY_LICENSES.txt` 由已安装的前端生产依赖和 pdfjs-dist 资源许可证生成；其余许可证目录用于媒体组件。PKP 自身许可证位于 Resources 或安装目录的 `LICENSE.txt`。

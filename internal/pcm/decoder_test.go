@@ -1,4 +1,4 @@
-//go:build darwin && cgo
+//go:build windows || (darwin && cgo)
 
 package pcm
 
@@ -53,13 +53,14 @@ func fixture(t *testing.T, name string, args ...string) string {
 
 // tones is 3 s of 1000 Hz then 3 s of 440 Hz, 48 kHz stereo: rate and
 // channels both need converting, and the switch marks a known position. The
-// audio is the filter's [a]; more inputs follow the two sines.
+// audio is the filter's [a], built without libavdevice's lavfi input so the
+// bundled ffmpeg can render fixtures too.
+const tonesGraph = "sine=frequency=1000:sample_rate=48000:duration=3[s0];" +
+	"sine=frequency=440:sample_rate=48000:duration=3[s1];" +
+	"[s0][s1]concat=n=2:v=0:a=1,pan=stereo|c0=c0|c1=c0[a]"
+
 func tones(more ...string) []string {
-	return append([]string{
-		"-f", "lavfi", "-i", "sine=frequency=1000:sample_rate=48000:duration=3",
-		"-f", "lavfi", "-i", "sine=frequency=440:sample_rate=48000:duration=3",
-		"-filter_complex", "[0][1]concat=n=2:v=0:a=1,pan=stereo|c0=c0|c1=c0[a]",
-	}, more...)
+	return append([]string{"-filter_complex", tonesGraph}, more...)
 }
 
 // decoded is a run of samples placed on the media timeline.
@@ -160,11 +161,25 @@ func TestStartsAtThePositionAsked(t *testing.T) {
 	}
 }
 
+// The native ABI takes int64_t, not a Windows long or a truncated Go int.
+func TestStartPositionKeepsAll64Bits(t *testing.T) {
+	url := fixture(t, "tones.mp4", tones("-map", "[a]", "-c:a", "aac")...)
+	d, err := Open(context.Background(), url, -1, 1<<32+3500)
+	if err != nil {
+		t.Fatalf("open past the end: %v", err)
+	}
+	defer d.Close()
+	if data, _, err := d.Next(context.Background()); len(data) != 0 || !errors.Is(err, io.EOF) {
+		t.Fatalf("decode past the end = %d bytes, %v, want EOF", len(data), err)
+	}
+}
+
 // PikPak's transcodes are MPEG-TS, whose timestamps do not start at 0; mpv
 // counts from the container's start, and so must the positions here.
 func TestTransportStreamPositionsCountFromItsStart(t *testing.T) {
-	url := fixture(t, "tones.ts", tones("-f", "lavfi", "-i", "testsrc=size=160x120:rate=10:duration=6",
-		"-map", "2:v", "-map", "[a]", "-c:v", "libx264", "-c:a", "aac", "-f", "mpegts")...)
+	url := fixture(t, "tones.ts",
+		"-filter_complex", tonesGraph+";testsrc=size=160x120:rate=10:duration=6[v]",
+		"-map", "[v]", "-map", "[a]", "-c:v", "mpeg2video", "-c:a", "aac", "-f", "mpegts")
 	whole := decodeAll(t, url, -1, 0)
 	if whole.first > 80 {
 		t.Fatalf("first sample at %d ms, want the stream's start at 0", whole.first)
@@ -184,9 +199,8 @@ func TestTransportStreamPositionsCountFromItsStart(t *testing.T) {
 // With two audio tracks the one the user listens to is the one decoded.
 func TestDecodesTheChosenStream(t *testing.T) {
 	url := fixture(t, "two.mkv",
-		"-f", "lavfi", "-i", "sine=frequency=1000:sample_rate=44100:duration=2",
-		"-f", "lavfi", "-i", "sine=frequency=440:sample_rate=44100:duration=2",
-		"-map", "0", "-map", "1", "-c:a", "flac")
+		"-filter_complex", "sine=frequency=1000:sample_rate=44100:duration=2[a0];sine=frequency=440:sample_rate=44100:duration=2[a1]",
+		"-map", "[a0]", "-map", "[a1]", "-c:a", "flac")
 	for _, c := range []struct {
 		stream int
 		want   float64
@@ -308,8 +322,9 @@ func TestCancelLeavesTheDecoderUsable(t *testing.T) {
 // from the same connection, with the sound that is there. FFmpeg marks its
 // I/O as ended after such a read and would never read again.
 func TestReadsOnAfterACancelMidBody(t *testing.T) {
-	data := render(t, "long.mp4", "-f", "lavfi", "-i", "sine=frequency=1000:sample_rate=48000:duration=30",
-		"-ac", "2", "-c:a", "aac", "-b:a", "256k")
+	data := render(t, "long.mp4",
+		"-filter_complex", "sine=frequency=1000:sample_rate=48000:duration=30[a]",
+		"-map", "[a]", "-ac", "2", "-c:a", "aac", "-b:a", "256k")
 	// Once armed, the next answer sends 256 KB, then nothing until released.
 	var armed atomic.Bool
 	stalled, release := make(chan struct{}), make(chan struct{})

@@ -66,13 +66,27 @@ Var installingNew
     IfErrors recoveryFailed
 !macroend
 
-## libmpv-2.dll, the player engine pkp.exe loads at run time from beside itself: one per
-## architecture, picked like the program, and the licenses of what it is built from.
-## `make windows-installer` passes ARG_LIBMPV_AMD64/ARM64 and ARG_LIBMPV_LICENSES.
+# v0.6.0 did not ship this DLL: recovery must remove a newly activated
+# helper too when there is no previous helper to restore.
+!macro pkp.restorePCM
+    ${If} ${FileExists} "$previous\.pkp-pcm-absent"
+        ${If} ${FileExists} "$INSTDIR\pkp-pcm.dll"
+            ClearErrors
+            Delete "$INSTDIR\pkp-pcm.dll"
+            IfErrors recoveryFailed
+        ${EndIf}
+    ${EndIf}
+    !insertmacro pkp.restore "pkp-pcm.dll"
+!macroend
+
+## Runtime DLLs and LAN media tools, picked like the program for its native
+## architecture, plus all bundled-library licenses. `make windows-installer`
+## passes ARG_LIBMPV_*, ARG_PCM_*, ARG_FFMPEG_* and ARG_FFPROBE_* paths.
 !macro pkp.libmpv
     !ifdef SUPPORTS_AMD64
         ${if} ${IsNativeAMD64}
             File "/oname=libmpv-2.dll" "${ARG_LIBMPV_AMD64}"
+            File "/oname=pkp-pcm.dll" "${ARG_PCM_AMD64}"
             File "/oname=ffmpeg.exe" "${ARG_FFMPEG_AMD64}"
             File "/oname=ffprobe.exe" "${ARG_FFPROBE_AMD64}"
         ${EndIf}
@@ -81,6 +95,7 @@ Var installingNew
     !ifdef SUPPORTS_ARM64
         ${if} ${IsNativeARM64}
             File "/oname=libmpv-2.dll" "${ARG_LIBMPV_ARM64}"
+            File "/oname=pkp-pcm.dll" "${ARG_PCM_ARM64}"
             File "/oname=ffmpeg.exe" "${ARG_FFMPEG_ARM64}"
             File "/oname=ffprobe.exe" "${ARG_FFPROBE_ARM64}"
         ${EndIf}
@@ -245,6 +260,7 @@ Section
     # Recover a power-loss/interrupted transaction before touching its backups.
     !insertmacro pkp.restore "${PRODUCT_EXECUTABLE}"
     !insertmacro pkp.restore "libmpv-2.dll"
+    !insertmacro pkp.restorePCM
     !insertmacro pkp.restore "ffmpeg.exe"
     !insertmacro pkp.restore "ffprobe.exe"
     !insertmacro pkp.restore "licenses"
@@ -262,9 +278,16 @@ Section
     IfErrors rollback
     CreateDirectory "$previous"
     IfErrors rollback
+    ${IfNot} ${FileExists} "$INSTDIR\pkp-pcm.dll"
+        ClearErrors
+        FileOpen $0 "$previous\.pkp-pcm-absent" w
+        IfErrors rollback
+        FileClose $0
+    ${EndIf}
     Call pkp.checkRunning
     !insertmacro pkp.backup "${PRODUCT_EXECUTABLE}"
     !insertmacro pkp.backup "libmpv-2.dll"
+    !insertmacro pkp.backup "pkp-pcm.dll"
     !insertmacro pkp.backup "ffmpeg.exe"
     !insertmacro pkp.backup "ffprobe.exe"
     !insertmacro pkp.backup "licenses"
@@ -273,6 +296,7 @@ Section
     StrCpy $installingNew 1
     !insertmacro pkp.activate "${PRODUCT_EXECUTABLE}"
     !insertmacro pkp.activate "libmpv-2.dll"
+    !insertmacro pkp.activate "pkp-pcm.dll"
     !insertmacro pkp.activate "ffmpeg.exe"
     !insertmacro pkp.activate "ffprobe.exe"
     !insertmacro pkp.activate "licenses"
@@ -301,6 +325,7 @@ rollback:
     ${If} $installingNew == 1
         Delete "$INSTDIR\${PRODUCT_EXECUTABLE}"
         Delete "$INSTDIR\libmpv-2.dll"
+        Delete "$INSTDIR\pkp-pcm.dll"
         Delete "$INSTDIR\ffmpeg.exe"
         Delete "$INSTDIR\ffprobe.exe"
         Delete "$INSTDIR\LICENSE.txt"
@@ -309,6 +334,7 @@ rollback:
     ${EndIf}
     !insertmacro pkp.restore "${PRODUCT_EXECUTABLE}"
     !insertmacro pkp.restore "libmpv-2.dll"
+    !insertmacro pkp.restorePCM
     !insertmacro pkp.restore "ffmpeg.exe"
     !insertmacro pkp.restore "ffprobe.exe"
     !insertmacro pkp.restore "licenses"
@@ -331,6 +357,7 @@ Section "uninstall"
     !insertmacro wails.setShellContext
 
     RMDir /r "$AppData\${PRODUCT_EXECUTABLE}" # Remove the WebView2 DataPath
+    Delete "$INSTDIR\pkp-pcm.dll"
 
     RMDir /r $INSTDIR
 

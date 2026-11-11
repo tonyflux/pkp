@@ -47,7 +47,7 @@ GO_BUILD := CGO_ENABLED=1 MACOSX_DEPLOYMENT_TARGET=$(MACOS_MIN) CGO_CFLAGS="-O2 
 	go build -tags production -trimpath -buildvcs=false \
 	-ldflags="-w -s -X main.version=$(VERSION) '-extldflags=-mmacosx-version-min=$(MACOS_MIN) -Wl,-rpath,@executable_path/../Frameworks -Wl,-rpath,@executable_path/Frameworks'"
 
-# Windows has no cgo code: pkp.exe loads the adjacent libmpv-2.dll at runtime.
+# Windows has no cgo code: pkp.exe loads the adjacent libmpv-2.dll and pkp-pcm.dll.
 # -H windowsgui prevents a console window when launched from Explorer.
 WIN_ARCHS := amd64 arm64
 WIN_GO_BUILD := GOOS=windows CGO_ENABLED=0 go build -tags production -trimpath -buildvcs=false -ldflags="-w -s -X main.version=$(VERSION) -H windowsgui"
@@ -57,7 +57,6 @@ WEBVIEW2_BOOTSTRAPPER := build/windows/nsis/MicrosoftEdgeWebview2Setup.exe
 # pinned LGPL build for x64 and ARM64. Dependencies are linked statically and
 # only system DLLs are loaded. Generated libraries and licenses stay untracked.
 LIBMPV_WIN_DIR := build/windows/libmpv
-LIBMPV_WIN_KEY := $(LIBMPV_WIN_DIR)/.key
 
 # Remove build output, including dangling symlinks and regular directories.
 clean:
@@ -74,9 +73,7 @@ libmpv: $(LIBMPV)
 $(LIBMPV): build/darwin/libmpv.sh build/libmpv-common.sh
 	build/darwin/libmpv.sh
 
-libmpv-windows: $(LIBMPV_WIN_KEY)
-
-$(LIBMPV_WIN_KEY): build/windows/libmpv.sh build/libmpv-common.sh
+libmpv-windows: build/windows/libmpv.sh build/libmpv-common.sh internal/pcm/decoder.c internal/pcm/decoder.h
 	build/windows/libmpv.sh
 
 # LGPL requires complete corresponding source for bundled libraries in every release.
@@ -170,13 +167,15 @@ $(WEBVIEW2_BOOTSTRAPPER):
 
 # One Windows installer carries amd64 and arm64 binaries and installs only the
 # current architecture. Bundled-library licenses go in the installer's licenses directory.
-windows-installer: windows $(WEBVIEW2_BOOTSTRAPPER) $(LIBMPV_WIN_KEY)
+windows-installer: windows $(WEBVIEW2_BOOTSTRAPPER) libmpv-windows
 	python3 build/go-licenses.py windows bin/GO_LICENSES-windows.txt
 	cd build/windows/nsis && makensis -V2 \
 		-DARG_WAILS_AMD64_BINARY="$(CURDIR)/bin/pkp-amd64.exe" \
 		-DARG_WAILS_ARM64_BINARY="$(CURDIR)/bin/pkp-arm64.exe" \
 		-DARG_LIBMPV_AMD64="$(CURDIR)/$(LIBMPV_WIN_DIR)/amd64/libmpv-2.dll" \
 		-DARG_LIBMPV_ARM64="$(CURDIR)/$(LIBMPV_WIN_DIR)/arm64/libmpv-2.dll" \
+		-DARG_PCM_AMD64="$(CURDIR)/$(LIBMPV_WIN_DIR)/amd64/pkp-pcm.dll" \
+		-DARG_PCM_ARM64="$(CURDIR)/$(LIBMPV_WIN_DIR)/arm64/pkp-pcm.dll" \
 		-DARG_FFMPEG_AMD64="$(CURDIR)/$(LIBMPV_WIN_DIR)/amd64/ffmpeg.exe" \
 		-DARG_FFMPEG_ARM64="$(CURDIR)/$(LIBMPV_WIN_DIR)/arm64/ffmpeg.exe" \
 		-DARG_FFPROBE_AMD64="$(CURDIR)/$(LIBMPV_WIN_DIR)/amd64/ffprobe.exe" \

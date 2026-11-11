@@ -6,7 +6,7 @@ package pcm
 #cgo CFLAGS: -I${SRCDIR}/../../build/darwin/libmpv/include
 #cgo LDFLAGS: -L${SRCDIR}/../../build/darwin/libmpv/lib -lavformat -lavcodec -lavutil -lswresample
 #include <stdlib.h>
-#include "decoder_darwin.h"
+#include "decoder.h"
 */
 import "C"
 

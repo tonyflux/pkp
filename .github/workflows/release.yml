@@ -79,7 +79,9 @@ jobs:
             ~/Library/Caches/pkp/libmpv
             build/darwin/libmpv
             build/windows/libmpv
-          key: media-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('build/libmpv-common.sh', 'build/darwin/libmpv.sh', 'build/windows/libmpv.sh') }}
+          key: media-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('build/libmpv-common.sh', 'build/darwin/libmpv.sh', 'build/windows/libmpv.sh') }}-${{ hashFiles('internal/pcm/decoder.c', 'internal/pcm/decoder.h') }}
+          restore-keys: |
+            media-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('build/libmpv-common.sh', 'build/darwin/libmpv.sh', 'build/windows/libmpv.sh') }}-
       - run: npm ci
         working-directory: frontend
       - name: Build, sign and verify allowlisted assets

@@ -27,7 +27,7 @@ Go module 是 `github.com/tonyflux/pkp`。前端绑定在 `frontend/bindings/git
 
 运行 `make test` 执行 Go 和前端单元测试；`make dev` 使用 Wails 启动热重载开发模式。
 
-AI 字幕的 macOS 音频解码使用现有 libmpv 构建导出的 FFmpeg 头文件与动态库，不依赖用户安装 `ffmpeg` 命令；解码回归测试用该命令生成本地合成样本。应用默认使用 PikPak 的 `https://api-drive.mypikpak.com` 发现字幕节点，只在用户开启后发起请求。隔离开发可设置 `PKP_SUBSRELAY_API=http://127.0.0.1:<端口>`；显式设为空可禁用功能。自定义地址可能收到账号令牌与音频，不要使用不可信服务；URL Basic Auth 可替代账号令牌。当前仅 Darwin+cgo 构建支持音频解码，其他平台隐藏字幕入口。
+AI 字幕在 macOS 与 Windows 共用 FFmpeg 音频解码源码：macOS 使用现有 libmpv 构建导出的头文件与动态库；Windows x64／ARM64 由固定工具链将同一源码与静态 FFmpeg 链接为 `pkp-pcm.dll`，安装在 `pkp.exe` 旁，由无 cgo 的 Go 程序按绝对路径加载，不从当前工作目录或 PATH 查找。生产解码不启动 `ffmpeg` 子进程，不依赖用户安装工具；解码回归测试用该命令生成本地合成样本。应用默认使用 PikPak 的 `https://api-drive.mypikpak.com` 发现字幕节点，只在用户开启后发起请求。隔离开发可设置 `PKP_SUBSRELAY_API=http://127.0.0.1:<端口>`；显式设为空可禁用功能。自定义地址可能收到账号令牌与音频，不要使用不可信服务；URL Basic Auth 可替代账号令牌。其他没有音频解码器的平台隐藏字幕入口。
 
 账号鉴权部署会用播放账号查询会员资格，前后端均限制非会员开启；URL Basic Auth 开发部署不执行 PikPak 会员门禁，由该部署决定资格。`AISubtitleState.quota` 保留最近同账号的服务端快照，`known` 区分未知与真实零额度；`limit`／`usage` 为秒，`nextResetTime` 为 RFC 3339。未启用时不为显示额度请求节点；过期或取消的会话不能覆盖新状态。
 
@@ -44,7 +44,9 @@ python3 build/darwin/updater-smoke-test.py bin/pkp-updater
 
 ## Windows 交叉编译
 
-上述 macOS 宿主可运行 `make windows` 生成 x64 和 ARM64 可执行文件；它们不含运行时 libmpv DLL。运行 `make windows-installer` 生成包含 DLL 的安装包，另需安装 NSIS（`makensis` 在 `PATH` 中）。DLL 构建会下载固定版本的 macOS llvm-mingw 工具链及源码，并需要上述 CMake、Python 和网络；这不是 Windows 原生构建指南。
+上述 macOS 宿主可运行 `make windows` 生成 x64 和 ARM64 可执行文件；它们不含运行时 `libmpv-2.dll` 与 `pkp-pcm.dll`。运行 `make windows-installer` 生成包含对应架构 DLL 的安装包，另需安装 NSIS（`makensis` 在 `PATH` 中）。DLL 构建会下载固定版本的 macOS llvm-mingw 工具链及源码，并需要上述 CMake、Python 和网络；这不是 Windows 原生构建指南。手工运行 Windows 二进制或解码测试时，须把同架构的 `build/windows/libmpv/<架构>/pkp-pcm.dll` 放在可执行文件旁；解码测试另需 `ffmpeg` 在 PATH 中生成样本（可直接使用同目录下的 `ffmpeg.exe`）。
+
+CI 复用 macOS 构建产物，在 Windows x64 和 ARM64 上运行同一套 PCM 时间轴、音轨、快进及取消恢复测试，以及字幕会话、会员与配额集成测试。兼容层测试不替代真机播放器界面和安装升级验收。
 
 ## 仓库语言约定
 
