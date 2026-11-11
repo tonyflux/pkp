@@ -101,12 +101,19 @@ type Membership struct {
 
 // Membership reads an account's membership ("" is the account on screen).
 func (d *DriveService) Membership(account string) (Membership, error) {
+	return d.membership(context.Background(), account)
+}
+
+func (d *DriveService) membership(ctx context.Context, account string) (Membership, error) {
 	s, err := d.sessionFor(account)
 	if err != nil {
 		return Membership{}, err
 	}
-	info, err := callIn(d, s, func(ctx context.Context, client *drive.Client) (*drive.VIPInfo, error) {
-		return client.VIPInfo(ctx)
+	var info *drive.VIPInfo
+	err = d.doIn(ctx, s, func(ctx context.Context, client *drive.Client) error {
+		var err error
+		info, err = client.VIPInfo(ctx)
+		return err
 	})
 	if err != nil {
 		return Membership{}, err

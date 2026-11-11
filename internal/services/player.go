@@ -124,6 +124,8 @@ type PlayerState struct {
 	// Quality describes the renditions of the video DriveService opened;
 	// empty for a bare Open.
 	Quality QualityState `json:"quality"`
+	// AISubtitles is the real-time caption choice and connection state.
+	AISubtitles AISubtitleState `json:"aiSubtitles"`
 	// SubtitleStyle is how subtitles are drawn, the saved preference.
 	SubtitleStyle SubtitleStyle `json:"subtitleStyle"`
 	// SubtitleDelay and AudioDelay shift the subtitles and the sound
@@ -222,9 +224,11 @@ type PlayerService struct {
 	// switches included; subs are the playing video's extracted subtitles
 	// and the load they were last added to.
 	loads uint64
-	subs  extSubs
-	held  heldFigures
-	stall stallWatch
+	// restoring is the load whose quality-switch tracks are still settling.
+	restoring uint64
+	subs      extSubs
+	held      heldFigures
+	stall     stallWatch
 	// onStall is DriveService's auto step down, called when auto playback
 	// keeps stalling. Set once, before playback starts.
 	onStall func()
@@ -233,7 +237,9 @@ type PlayerService struct {
 	// on stop, with the account it belongs to. Set once, before playback
 	// starts; track follows the file.
 	onPlayback func(account, fileID string, position, duration float64)
-	track      playTrack
+	// onAudioTrack restarts AI captions when the selected sound changes.
+	onAudioTrack func()
+	track        playTrack
 	// audio is the music page's last read of a file's tags and cover.
 	audio audioMemo
 
@@ -899,9 +905,13 @@ func (p *PlayerService) SelectTrack(kind string, id int) error {
 	if id < 1 {
 		value = "no"
 	}
-	return p.withContext(func(ctx context.Context) error {
+	err := p.withContext(func(ctx context.Context) error {
 		return p.mpv.SetProperty(ctx, property, value)
 	})
+	if err == nil && kind == "audio" && p.onAudioTrack != nil {
+		p.onAudioTrack()
+	}
+	return err
 }
 
 // State returns the latest known player state without touching mpv.
@@ -918,6 +928,9 @@ func (p *PlayerService) State() PlayerState {
 // two renditions. Caller holds p.mu.
 func (p *PlayerService) snapshotLocked() PlayerState {
 	state := p.state
+	if state.AISubtitles.Quota.Account != p.account {
+		state.AISubtitles.Quota = AISubtitleQuota{}
+	}
 	limit := p.seek.limit
 	if limit == 0 {
 		limit = seekHoldLimit

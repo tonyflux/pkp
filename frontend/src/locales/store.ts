@@ -378,6 +378,7 @@ export default {
   静音: { tw: "靜音", en: "Mute", ja: "ミュート", ko: "음소거" },
   倍速: { tw: "播放速度", en: "Speed", ja: "再生速度", ko: "재생 속도" },
   切换清晰度: { tw: "切換畫質", en: "Change quality", ja: "画質を変更", ko: "화질 변경" },
+  "AI 字幕": { tw: "AI 字幕", en: "AI subtitles", ja: "AI 字幕", ko: "AI 자막" },
   字幕样式: { tw: "字幕樣式", en: "Subtitle style", ja: "字幕スタイル", ko: "자막 스타일" },
   字幕延迟: { tw: "字幕延遲", en: "Subtitle delay", ja: "字幕の遅延", ko: "자막 지연" },
   音频延迟: { tw: "音訊延遲", en: "Audio delay", ja: "音声の遅延", ko: "오디오 지연" },

@@ -39,6 +39,8 @@ export type {
     AISearchHit,
     AISearchResult,
     AISettings,
+    AISubtitleQuota,
+    AISubtitleState,
     AITestResult,
     AITool,
     AIToolCall,

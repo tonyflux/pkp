@@ -9,6 +9,7 @@ import QualityMenu from "./QualityMenu.vue";
 import QualityOptions from "./QualityOptions.vue";
 import SpeedOptions from "./SpeedOptions.vue";
 import TrackOptions from "./TrackOptions.vue";
+import AISubtitleStatus from "./AISubtitleStatus.vue";
 import SelectMenu, { type SelectOption } from "./SelectMenu.vue";
 import SubtitleSettings from "./SubtitleSettings.vue";
 import PlaylistQueue from "./PlaylistQueue.vue";
@@ -29,6 +30,8 @@ import {
   collapsePlayer,
   downloadPlaying,
   drive,
+  loadMembership,
+  memberships,
   nextUp,
   nowPlaying,
   playAt,
@@ -42,7 +45,7 @@ import {
   stopPlayback,
   ui,
 } from "../store";
-import { t } from "../i18n";
+import { t, N_ } from "../i18n";
 
 // windowed: this is the separate player window, which is all picture — no
 // title island, docked playlist or file line, fullscreen or not. Its own
@@ -106,13 +109,52 @@ const audios = computed(() => tracks.value.filter((tr) => tr.type === "audio"));
 const activeSub = computed(() => subtitles.value.find((tr) => tr.selected)?.id ?? 0);
 const audioValue = computed(() => String(audios.value.find((tr) => tr.selected)?.id ?? 0));
 
-const showSubtitles = computed(() => subtitles.value.length > 0);
-const subValue = computed(() => String(activeSub.value));
+const aiLanguages = [
+  { code: "", label: N_("原文") },
+  { code: "zh", label: "中文" }, // i18n-ignore
+  { code: "en", label: "English" },
+  { code: "ja", label: "日本語" }, // i18n-ignore
+  { code: "ko", label: "한국어" }, // i18n-ignore
+];
+const aiLanguageLabel = (label: string) => (label === "原文" ? t("原文") : label); // i18n-ignore
+const ai = computed(() => state.value.aiSubtitles);
+const subtitleAccount = computed(() => props.windowed ? player.ownerInfo?.id ?? "" : player.owner);
+const aiMembership = computed(() => memberships[subtitleAccount.value]);
+const aiAccess = computed<"ready" | "loading" | "error" | "nonmember">(() => {
+  if (!ai.value.requiresMembership) return "ready";
+  const read = aiMembership.value;
+  if (read?.loading) return "loading";
+  if (read?.error || !subtitleAccount.value) return "error";
+  if (!read?.value) return "loading";
+  return read.value.active ? "ready" : "nonmember";
+});
+function refreshAIMembership() {
+  if (ai.value.available && ai.value.requiresMembership && subtitleAccount.value) {
+    void loadMembership(subtitleAccount.value);
+  }
+}
+watch([subtitleAccount, () => ai.value.available, () => ai.value.requiresMembership], refreshAIMembership, { immediate: true });
+watch(subtitleOpen, (open) => open && refreshAIMembership());
+watch(moreOpen, (open) => open && folded.value.includes("subtitles") && refreshAIMembership());
+watch(sidebarOpen, (open) => open && !bare.value && refreshAIMembership());
+const showSubtitles = computed(() => subtitles.value.length > 0 || ai.value.available);
+const subValue = computed(() => (ai.value.on ? `ai:${ai.value.language}` : String(activeSub.value)));
 const subOptions = computed<SelectOption<string>[]>(() => [
   { value: "0", label: t("关") },
   ...subtitles.value.map((tr) => ({ value: String(tr.id), label: trackLabel(tr), detail: trackDetail(tr) })),
+  ...(ai.value.available
+    ? aiLanguages.map((l) => ({
+        value: `ai:${l.code}`, label: aiLanguageLabel(l.label), group: t("AI 字幕"),
+        disabled: aiAccess.value !== "ready",
+      }))
+    : []),
 ]);
 const subLabel = computed(() => {
+  if (ai.value.on) {
+    const found = aiLanguages.find((l) => l.code === ai.value.language);
+    const name = found ? aiLanguageLabel(found.label) : ai.value.language;
+    return ai.value.status === "connecting" ? t("AI {name} · 连接中", { name }) : `AI ${name}`;
+  }
   const track = subtitles.value.find((x) => x.selected);
   return track ? trackLabel(track) : t("关");
 });
@@ -122,13 +164,14 @@ const subLabel = computed(() => {
 // ARIB, which the bundled FFmpeg cannot decode); the panel says how.
 const PICTURE_SUBS = new Set(["hdmv_pgs_subtitle", "dvd_subtitle", "dvb_subtitle", "xsub"]);
 const subKind = computed(() => {
+  if (ai.value.on) return undefined;
   const codec = subtitles.value.find((tr) => tr.selected)?.codec ?? "";
   if (codec === "ass") return "ass" as const;
   return PICTURE_SUBS.has(codec) ? ("picture" as const) : undefined;
 });
 // Whether Subtitle and A/V sync has anything on screen to act on.
 const subShown = computed(() =>
-  activeSub.value !== 0 ? ("on" as const) : showSubtitles.value ? ("off" as const) : ("none" as const),
+  ai.value.on || activeSub.value !== 0 ? ("on" as const) : showSubtitles.value ? ("off" as const) : ("none" as const),
 );
 const audioLabel = computed(() => {
   const track = audios.value.find((x) => x.selected);
@@ -202,11 +245,16 @@ function closeWindow() {
 // div is only the hole it shows through.
 useStage(stage, () => (bare.value ? 0 : 18));
 
+let tracksRequest = 0;
+let disposed = false;
 async function refreshTracks() {
+  if (disposed) return;
+  const request = ++tracksRequest;
   const [trackList, c] = await Promise.all([
     PlayerService.Tracks().catch(() => []),
     PlayerService.Chapters().catch(() => []),
   ]);
+  if (request !== tracksRequest) return;
   tracks.value = trackList ?? [];
   chapters.value = c ?? [];
 }
@@ -226,9 +274,56 @@ function setTrack(kind: "audio" | "subtitle", id: string) {
   });
 }
 
+let subtitleChoice = 0;
+let subtitleQueue = Promise.resolve();
 function selectSubtitle(value: string) {
-  setTrack("subtitle", value);
+  const choice = ++subtitleChoice;
+  subtitleQueue = subtitleQueue.then(async () => {
+    if (choice !== subtitleChoice) return;
+    if (value.startsWith("ai:")) {
+      if (ai.value.requiresMembership) {
+        if (aiAccess.value !== "ready" && aiAccess.value !== "nonmember") await loadMembership(subtitleAccount.value);
+        if (choice !== subtitleChoice) return;
+        if (aiAccess.value !== "ready") {
+          flash(t("AI 字幕"), aiAccess.value === "nonmember" ? t("AI 字幕需要 PikPak 会员") : t("会员状态读取失败"));
+          return;
+        }
+      }
+      await playerCommands.aiSubtitles(true, value.slice(3));
+      if (choice !== subtitleChoice) return;
+      await refreshTracks();
+      return;
+    }
+    await run(t("切换轨道"), async () => {
+      // State events lag commands; finish stopping AI before selecting a native track.
+      if (ai.value.available && !(await playerCommands.aiSubtitles(false, ""))) return;
+      if (choice !== subtitleChoice) return;
+      await PlayerService.SelectTrack("subtitle", Number(value));
+      if (choice !== subtitleChoice) return;
+      await refreshTracks();
+    });
+  });
 }
+
+function invalidateSubtitleChoices() {
+  subtitleChoice++;
+  tracksRequest++;
+}
+// A raw track ID belongs to this view's current file and rendition only.
+watch(
+  [
+    subtitleAccount,
+    () => player.presentation,
+    () => player.index,
+    () => nowPlaying.value?.id,
+    () => state.value.source,
+    () => state.value.loading,
+    () => state.value.quality.current,
+    () => state.value.quality.switching,
+  ],
+  invalidateSubtitleChoices,
+  { flush: "sync" },
+);
 
 function toggleMute() {
   void playerCommands.mute(!state.value.muted);
@@ -253,6 +348,12 @@ function flash(label: string, name: string, path?: string) {
   window.clearTimeout(noticeTimer);
   noticeTimer = window.setTimeout(() => (notice.value = null), path ? 8000 : 3000);
 }
+
+watch(
+  [() => ai.value.errorRevision, () => ai.value.error],
+  ([, error]) => error && flash(t("AI 字幕已关闭"), error),
+  { immediate: true, flush: "sync" },
+);
 
 async function screenshot() {
   try {
@@ -465,6 +566,12 @@ watch(
   () => setTimeout(refreshTracks, 600),
 );
 
+// Re-read native tracks when AI connects, stops or fails before a state event arrives.
+watch(
+  [() => ai.value.on, () => ai.value.status, () => ai.value.errorRevision, () => ai.value.error],
+  () => void refreshTracks(),
+);
+
 onMounted(() => {
   window.addEventListener("keydown", onKey);
   void refreshTracks();
@@ -473,6 +580,8 @@ onMounted(() => {
 });
 
 onBeforeUnmount(() => {
+  disposed = true;
+  invalidateSubtitleChoices();
   window.removeEventListener("keydown", onKey);
   window.clearTimeout(idleTimer);
   window.clearTimeout(noticeTimer);
@@ -701,7 +810,11 @@ onBeforeUnmount(() => {
                     @choose="selectSubtitle"
                     @done="close"
                     @close="close"
-                  />
+                  >
+                    <template #ai-status>
+                      <AISubtitleStatus :state="ai" :account="subtitleAccount" :access="aiAccess" @retry="refreshAIMembership" />
+                    </template>
+                  </TrackOptions>
                 </template>
               </DockMenu>
 
@@ -776,7 +889,11 @@ onBeforeUnmount(() => {
                   @choose="selectSubtitle"
                   @done="closeMore"
                   @close="closeMore"
-                />
+                >
+                  <template #ai-status>
+                    <AISubtitleStatus :state="ai" :account="subtitleAccount" :access="aiAccess" @retry="refreshAIMembership" />
+                  </template>
+                </TrackOptions>
                 <TrackOptions
                   v-if="audios.length > 1 && folded.includes('audio')"
                   ref="moreAudio"
@@ -934,7 +1051,9 @@ onBeforeUnmount(() => {
             :label="t('字幕')"
             :model-value="subValue"
             :options="subOptions"
+            allow-reselect
             @update:model-value="selectSubtitle"
+            @open="refreshAIMembership"
           >
             <Icon name="subtitles" :size="18" />
             <span>{{ t("字幕") }}</span>
@@ -946,6 +1065,17 @@ onBeforeUnmount(() => {
             <span>{{ t("字幕") }}</span>
             <b>{{ t("无") }}</b>
           </div>
+          <AISubtitleStatus
+            v-if="ai.available"
+            class="ai-sidebar-status"
+            :state="ai"
+            :account="subtitleAccount"
+            :access="aiAccess"
+            @retry="refreshAIMembership"
+          />
+          <p v-if="ai.available" class="ai-disclosure">
+            {{ t("开启 AI 字幕会向 PikPak 发送音频和视频标识，并使用 AI 配额。") }}
+          </p>
           <SelectMenu
             v-if="audios.length > 1"
             class="row"
@@ -981,6 +1111,20 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
+.ai-disclosure {
+  margin: 0;
+  padding: 0 14px 10px;
+  color: var(--fg-dim);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.ai-sidebar-status {
+  margin: 0;
+  padding: 0 14px 6px;
+  color: var(--fg-dim);
+}
+
 .player {
   flex: 1;
   min-width: 0;

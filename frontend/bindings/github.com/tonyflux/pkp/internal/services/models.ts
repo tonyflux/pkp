@@ -341,6 +341,60 @@ export interface AISettings {
 }
 
 /**
+ * AISubtitleQuota is the latest server snapshot for one playing account.
+ * Known distinguishes a zero allowance from a quota the server has not sent.
+ */
+export interface AISubtitleQuota {
+    "account": string;
+    "known": boolean;
+    "exceeded": boolean;
+    "limit": number;
+    "usage": number;
+    "nextResetTime": string;
+}
+
+/**
+ * AISubtitleState is the AI subtitle switch as every window shows it.
+ */
+export interface AISubtitleState {
+    /**
+     * Available is false when no subsrelay deployment is configured; the
+     * UI then offers nothing.
+     */
+    "available": boolean;
+    "requiresMembership": boolean;
+    "quota": AISubtitleQuota;
+
+    /**
+     * On is the user's choice. It carries over to the next video, until it
+     * is turned off or a failure turns it off.
+     */
+    "on": boolean;
+
+    /**
+     * Language is the caption language; "" is the language spoken.
+     */
+    "language": string;
+
+    /**
+     * Status is "connecting" until captions can flow, then "live"; "" while
+     * off or while nothing plays.
+     */
+    "status": string;
+
+    /**
+     * Error is why AI subtitles turned themselves off; turning them on
+     * again clears it.
+     */
+    "error": string;
+
+    /**
+     * ErrorRevision identifies each accepted failure, including identical errors.
+     */
+    "errorRevision": number;
+}
+
+/**
  * AITestResult is what Test Connection found. Kind is "ok", "auth" (the key was
  * refused), "unreachable", "server" (the service answered with an error) or
  * "config" (nothing to test yet); Message is the service's own words, the
@@ -2201,6 +2255,11 @@ export interface PlayerState {
     "quality": QualityState;
 
     /**
+     * AISubtitles is the real-time caption choice and connection state.
+     */
+    "aiSubtitles": AISubtitleState;
+
+    /**
      * SubtitleStyle is how subtitles are drawn, the saved preference.
      */
     "subtitleStyle": SubtitleStyle;
@@ -2749,9 +2808,9 @@ export interface SignInResult {
 }
 
 /**
- * SubtitleStyle is how subtitles are drawn through mpv's options. Text
- * subtitles (SRT, WebVTT, MP4 text) take all of it. ASS tracks and picture
- * tracks (Blu-ray PGS, DVD VobSub, DVB, XSUB) take the size but keep their own colours, and only part
+ * SubtitleStyle controls native subtitle tracks and the AI caption overlay.
+ * Text subtitles take every setting. ASS tracks and picture tracks
+ * (Blu-ray PGS, DVD VobSub, DVB, XSUB) take the size but keep their own colours, and only part
  * of them moves up: ASS lines at the bottom without positioning tags (libass
  * leaves \pos, \move, \clip, drawings and top or middle lines alone), and
  * pictures in the lower half of the frame.

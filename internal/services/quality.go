@@ -1,6 +1,7 @@
 package services
 
 import (
+	"context"
 	"slices"
 	"strconv"
 
@@ -311,5 +312,5 @@ func (d *DriveService) ownerFile(account, fileID string) (*drive.File, error) {
 	if s == nil {
 		return nil, errNoSuchAccount
 	}
-	return d.getFile(s, fileID, drive.GetFileParams{Usage: drive.UsagePlay})
+	return d.getFile(context.Background(), s, fileID, drive.GetFileParams{Usage: drive.UsagePlay})
 }

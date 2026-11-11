@@ -26,7 +26,7 @@ const id = useId();
 const entry = ref<HTMLButtonElement>();
 const popover = ref<HTMLElement>();
 
-// Focus the selected row, falling back to the first keyboard-accessible option.
+// Focus the selected row across all lists, falling back to the first accessible option.
 function focusCurrent() {
   const el = popover.value;
   (el?.querySelector<HTMLElement>('[role=option][aria-selected="true"]') ??

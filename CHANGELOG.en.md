@@ -2,6 +2,12 @@
 
 [简体中文](CHANGELOG.md) · English
 
+## Unreleased
+
+- Restore macOS AI subtitles from the archived feature branch using PikPak's subtitle service and the playing account. Support original/Chinese/English/Japanese/Korean captions, videos without embedded subtitles, existing style/delay controls, and seeking, pauses and audio-track changes. Reuse the current proxy and media libraries without a chat-model API key. Disclose audio sending and quota use in the menu; stop with an explanation on service refusal. Drain the session before normal subtitles or app shutdown, and hide the option where audio decoding is unsupported. Do not restore legacy feature-usage telemetry.
+- Fix AI-subtitle handoffs across quality/audio changes and rapid language changes. Cancel subtitle-owned metadata, token and captcha requests or waits on Off/quit without interrupting other tasks' shared refreshes. Fix delayed menu state, obsolete selections, repeated failures and collapsed-player error feedback. Reject plaintext nodes and downgrade redirects for HTTPS subtitle deployments while retaining explicit HTTP local development. Add real-PCM, concurrent-cancellation, menu-lifecycle and credential-transport regressions.
+- Gate AI subtitles by the playing account's membership: retain the entry and explanation for nonmembers, disable only AI languages, allow failed membership reads to retry, and preserve native subtitles when startup is refused. Show server remaining/total time and quota reset in subtitle menus and sidebar settings, distinguish unknown from zero, retain same-account snapshots after Off, and reject stale-session updates. Fix separate-window account ownership and keyboard focus after membership refresh, with native-playback, cancellation, account-isolation and menu regressions.
+
 ## 0.5.0 · 2026-11-10
 
 - Fix returning to the file list after opening local search from the AI assistant. The toolbar Back button and “All Files” sidebar entry now exit search while preserving the unsaved-changes prompt for saved searches.

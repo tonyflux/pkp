@@ -38,6 +38,20 @@ func init() {
 		"找不到这个文件夹，它可能已被移动或删除":    {Hant: "找不到這個資料夾，它可能已被移動或刪除", En: "Couldn't find this folder; it may have been moved or deleted", Ja: "このフォルダが見つかりません。移動または削除された可能性があります", Ko: "이 폴더를 찾을 수 없습니다. 이동되었거나 삭제되었을 수 있습니다"},
 		"一次最多查询 %d 个文件的清晰度":      {Hant: "一次最多查詢 %d 個檔案的畫質", En: "Up to %d files' quality can be checked at once", Ja: "一度に画質を確認できるのは最大 %d ファイルです", Ko: "한 번에 최대 %d개 파일의 화질을 조회할 수 있습니다"},
 
+		// AI subtitles
+		"AI 字幕服务未配置":              {Hant: "AI 字幕服務未設定", En: "The AI subtitle service isn't configured", Ja: "AI 字幕サービスが設定されていません", Ko: "AI 자막 서비스가 설정되지 않았습니다"},
+		"本期 AI 字幕时长已用完，%s 恢复":     {Hant: "本期 AI 字幕時長已用完，%s 恢復", En: "AI subtitle time for this period is used up; it resets %s", Ja: "今期の AI 字幕時間を使い切りました。%s に回復します", Ko: "이번 기간의 AI 자막 시간을 모두 사용했습니다. %s에 복구됩니다"},
+		"本期 AI 字幕时长已用完":           {Hant: "本期 AI 字幕時長已用完", En: "AI subtitle time for this period is used up", Ja: "今期の AI 字幕時間を使い切りました", Ko: "이번 기간의 AI 자막 시간을 모두 사용했습니다"},
+		"AI 字幕需要 PikPak 会员":       {Hant: "AI 字幕需要 PikPak 會員", En: "AI subtitles need PikPak Premium", Ja: "AI 字幕には PikPak プレミアムが必要です", Ko: "AI 자막을 사용하려면 PikPak 프리미엄이 필요합니다"},
+		"AI 字幕正在别处使用，同一账号同时只能开一处": {Hant: "AI 字幕正在別處使用，同一帳號同時只能開一處", En: "AI subtitles are in use elsewhere; one account can use them in one place at a time", Ja: "AI 字幕は別の場所で使用中です。1 つのアカウントで同時に使えるのは 1 か所だけです", Ko: "AI 자막이 다른 곳에서 사용 중입니다. 한 계정은 동시에 한 곳에서만 사용할 수 있습니다"},
+		"AI 字幕服务不接受这个账号的登录":       {Hant: "AI 字幕服務不接受這個帳號的登入", En: "The AI subtitle service didn't accept this account's sign-in", Ja: "AI 字幕サービスがこのアカウントのログインを受け付けません", Ko: "AI 자막 서비스가 이 계정의 로그인을 받아들이지 않았습니다"},
+		"这个视频不能生成 AI 字幕":          {Hant: "這部影片無法產生 AI 字幕", En: "AI subtitles can't be made for this video", Ja: "この動画には AI 字幕を生成できません", Ko: "이 동영상에는 AI 자막을 만들 수 없습니다"},
+		"AI 字幕服务拒绝了这个视频或语言：%s":    {Hant: "AI 字幕服務拒絕了這部影片或語言：%s", En: "The AI subtitle service refused this video or language: %s", Ja: "AI 字幕サービスがこの動画または言語を拒否しました：%s", Ko: "AI 자막 서비스가 이 동영상 또는 언어를 거부했습니다: %s"},
+		"AI 字幕服务暂时不可用（%s）":        {Hant: "AI 字幕服務暫時無法使用（%s）", En: "The AI subtitle service is temporarily unavailable (%s)", Ja: "AI 字幕サービスは一時的に利用できません（%s）", Ko: "AI 자막 서비스를 일시적으로 사용할 수 없습니다(%s)"},
+		"与 AI 字幕服务的连接中断了":         {Hant: "與 AI 字幕服務的連線中斷了", En: "The connection to the AI subtitle service was lost", Ja: "AI 字幕サービスとの接続が切れました", Ko: "AI 자막 서비스와의 연결이 끊어졌습니다"},
+		"读不到这个视频的声音":              {Hant: "讀不到這部影片的聲音", En: "Couldn't read this video's audio", Ja: "この動画の音声を読み取れません", Ko: "이 동영상의 소리를 읽을 수 없습니다"},
+		"这个视频没有声音":                {Hant: "這部影片沒有聲音", En: "This video has no audio", Ja: "この動画には音声がありません", Ko: "이 동영상에는 소리가 없습니다"},
+
 		// Player
 		"这个文件已经不在播放": {Hant: "這個檔案已不在播放", En: "This file is no longer playing", Ja: "このファイルはもう再生されていません", Ko: "이 파일은 더 이상 재생 중이 아닙니다"},
 		"该文件处于 PikPak 归档（冷）存储，暂时无法读取，请稍后再试": {Hant: "此檔案位於 PikPak 封存（冷）儲存，暫時無法讀取，請稍後再試", En: "This file is in PikPak archive (cold) storage and can't be read right now. Try again later", Ja: "このファイルは PikPak のアーカイブ（コールド）ストレージにあり、現在読み込めません。しばらくしてからもう一度お試しください", Ko: "이 파일은 PikPak 보관(콜드) 저장소에 있어 지금은 읽을 수 없습니다. 잠시 후 다시 시도하세요"},

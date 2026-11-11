@@ -407,7 +407,7 @@ func (d *DriveService) RestoreShare(account string, req RestoreShareRequest) (Sh
 	}
 	// Validate live membership and the destination before sending any mutation.
 	if req.ParentID != "" {
-		err = d.doIn(s, func(ctx context.Context, client *drive.Client) error {
+		err = d.doIn(context.Background(), s, func(ctx context.Context, client *drive.Client) error {
 			folder, err := client.GetFile(ctx, req.ParentID, drive.GetFileParams{})
 			if err != nil {
 				return err
@@ -420,7 +420,7 @@ func (d *DriveService) RestoreShare(account string, req RestoreShareRequest) (Sh
 	}
 	if err == nil {
 		for _, id := range req.FileIDs {
-			err = d.doIn(s, func(ctx context.Context, client *drive.Client) error {
+			err = d.doIn(context.Background(), s, func(ctx context.Context, client *drive.Client) error {
 				file, err := client.GetSharedFile(ctx, req.ShareID, req.PassCodeToken, id)
 				if err != nil {
 					return err
@@ -570,7 +570,7 @@ func (d *DriveService) completeShareRestore(s *accountSession, tracked *trackedS
 	d.shareImports.mu.Unlock()
 	for i := verified; i < len(ids); i++ {
 		id := ids[i]
-		err = d.doIn(s, func(ctx context.Context, client *drive.Client) error {
+		err = d.doIn(context.Background(), s, func(ctx context.Context, client *drive.Client) error {
 			file, err := client.GetFile(ctx, id, drive.GetFileParams{})
 			if err != nil {
 				return err

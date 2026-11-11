@@ -76,7 +76,7 @@ type TokenSource interface {
 	// Invalidate marks the given access token stale. The argument guards
 	// against a late 401 from an in-flight request discarding a token that
 	// was already refreshed by someone else.
-	Invalidate(accessToken string)
+	Invalidate(ctx context.Context, accessToken string) error
 }
 
 // Store persists credentials between runs.
@@ -253,11 +253,12 @@ type TokenManagerConfig struct {
 // which the server would read as a burst of device activity. Renewals also
 // hold the store lock, which does the same for the other processes sharing
 // the store.
+// Context-bearing callers can abandon their wait without canceling its owner.
 type TokenManager struct {
 	cfg     TokenManagerConfig
 	captcha *captchaManager
 
-	mu     sync.Mutex
+	mu     chan struct{}
 	token  Token
 	loaded bool
 	// rejected is the last access token the API refused. The store can still
@@ -279,7 +280,7 @@ func NewTokenManager(cfg TokenManagerConfig) *TokenManager {
 		cfg.HTTP = &http.Client{Timeout: 30 * time.Second, Transport: netproxy.NewTransport()}
 	}
 
-	m := &TokenManager{cfg: cfg}
+	m := &TokenManager{cfg: cfg, mu: make(chan struct{}, 1)}
 	m.captcha = newCaptchaManager(cfg.Profile, cfg.DeviceID, cfg.AuthBaseURL, cfg.HTTP, m.currentUserID)
 	return m
 }
@@ -294,17 +295,34 @@ func (m *TokenManager) DeviceID() string { return m.cfg.DeviceID }
 // Profile is the immutable client identity used for this session's requests.
 func (m *TokenManager) Profile() ClientProfile { return m.cfg.Profile }
 
-func (m *TokenManager) currentUserID() string {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	return m.token.UserID
+func (m *TokenManager) lock(ctx context.Context) error {
+	select {
+	case m.mu <- struct{}{}:
+		if err := ctx.Err(); err != nil {
+			m.unlock()
+			return err
+		}
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+}
+
+func (m *TokenManager) unlock() { <-m.mu }
+
+func (m *TokenManager) currentUserID(ctx context.Context) (string, error) {
+	if err := m.lock(ctx); err != nil {
+		return "", err
+	}
+	defer m.unlock()
+	return m.token.UserID, nil
 }
 
 // Seed installs credentials obtained elsewhere — a refresh token the user
 // pasted, or a session restored from another tool — and persists them.
 func (m *TokenManager) Seed(tok Token) error {
-	m.mu.Lock()
-	defer m.mu.Unlock()
+	m.mu <- struct{}{}
+	defer m.unlock()
 	if tok.ClientID != "" && tok.ClientID != m.cfg.Profile.ClientID {
 		return errors.New("drive: token belongs to a different client")
 	}
@@ -336,8 +354,8 @@ func (m *TokenManager) Seed(tok Token) error {
 // kept, with the captcha token it was granted. A nil store keeps the session
 // in memory, as a manager built without one does.
 func (m *TokenManager) Persist(store Store, password func() (string, error)) error {
-	m.mu.Lock()
-	defer m.mu.Unlock()
+	m.mu <- struct{}{}
+	defer m.unlock()
 	if store != nil {
 		ctx, cancel := context.WithTimeout(context.Background(), storeLockTimeout)
 		defer cancel()
@@ -358,8 +376,8 @@ func (m *TokenManager) Persist(store Store, password func() (string, error)) err
 
 // Current returns the cached credentials without contacting the server.
 func (m *TokenManager) Current() (Token, error) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
+	m.mu <- struct{}{}
+	defer m.unlock()
 	if err := m.loadLocked(); err != nil {
 		return Token{}, err
 	}
@@ -369,8 +387,8 @@ func (m *TokenManager) Current() (Token, error) {
 // Forget drops the session from memory and from the store, which ends it for
 // every process sharing the store.
 func (m *TokenManager) Forget() error {
-	m.mu.Lock()
-	defer m.mu.Unlock()
+	m.mu <- struct{}{}
+	defer m.unlock()
 	m.token = Token{}
 	m.loaded = true
 	if m.cfg.Store == nil {
@@ -389,8 +407,10 @@ func (m *TokenManager) Forget() error {
 // SignIn exchanges an account and password for a session. It mints a captcha
 // token first: risk control gates the sign-in endpoint itself.
 func (m *TokenManager) SignIn(ctx context.Context, username, password string) (Token, error) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
+	if err := m.lock(ctx); err != nil {
+		return Token{}, err
+	}
+	defer m.unlock()
 	release, err := m.lockStore(ctx)
 	if err != nil {
 		return Token{}, err
@@ -409,8 +429,10 @@ func (m *TokenManager) SignIn(ctx context.Context, username, password string) (T
 // the lock held and the store re-read first, the first process to get there
 // renews and the others adopt what it stored.
 func (m *TokenManager) Token(ctx context.Context) (Token, error) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
+	if err := m.lock(ctx); err != nil {
+		return Token{}, err
+	}
+	defer m.unlock()
 
 	if err := m.loadLocked(); err != nil {
 		return Token{}, err
@@ -491,15 +513,18 @@ func isSignInRefused(err error) bool {
 
 // Invalidate drops an access token the server rejected, so the next Token
 // call renews. A stale 401 naming an already-replaced token is ignored.
-func (m *TokenManager) Invalidate(accessToken string) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
+func (m *TokenManager) Invalidate(ctx context.Context, accessToken string) error {
+	if err := m.lock(ctx); err != nil {
+		return err
+	}
+	defer m.unlock()
 	if accessToken == "" || m.token.AccessToken != accessToken {
-		return
+		return nil
 	}
 	m.rejected = accessToken
 	m.token.AccessToken = ""
 	m.token.ExpiresAt = time.Time{}
+	return nil
 }
 
 func (m *TokenManager) loadLocked() error {

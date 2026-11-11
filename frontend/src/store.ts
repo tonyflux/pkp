@@ -268,6 +268,10 @@ const emptyPlayerState: PlayerState = {
   seeking: false,
   loading: false,
   quality: { options: [], current: "", choice: "auto", switching: "", failed: "", error: "", lowered: false },
+  aiSubtitles: {
+    available: false, requiresMembership: true, on: false, language: "", status: "", error: "", errorRevision: 0,
+    quota: { account: "", known: false, exceeded: false, limit: 0, usage: 0, nextResetTime: "" },
+  },
   subtitleStyle: { scale: 1, raise: 0, color: "#FFFFFF" },
   subtitleDelay: 0,
   audioDelay: 0,
@@ -9537,12 +9541,30 @@ export const playerCommands = {
   speed: (v: number) => run(t("倍速"), () => PlayerService.SetSpeed(v)),
   /** quality saves the rendition preference and applies it from the same position. */
   quality: (choice: string) => run(t("切换清晰度"), () => DriveService.SetPlaybackQuality(choice)),
+  /** AI subtitles use an empty language for the original speech. Return success for track switching. */
+  aiSubtitles: (on: boolean, language: string) =>
+    run(t("AI 字幕"), async () => {
+      await DriveService.SetAISubtitles(on, language);
+      return true;
+    }),
   /** subtitleStyle saves Subtitle Style (size, height, colour) and applies it to every video. */
   subtitleStyle: (style: SubtitleStyle) => run(t("字幕样式"), () => DriveService.SetSubtitleStyle(style)),
   /** subtitleDelay and audioDelay shift the subtitles or the sound for this video; positive is later. */
   subtitleDelay: (seconds: number) => run(t("字幕延迟"), () => PlayerService.SetSubtitleDelay(seconds)),
   audioDelay: (seconds: number) => run(t("音频延迟"), () => PlayerService.SetAudioDelay(seconds)),
 };
+
+// The immersive/separate player shows errors on its stage; browsing has no
+// PlayerView mounted, so its playback bar needs the always-live notice.
+watch(
+  [() => player.state.aiSubtitles.errorRevision, () => player.state.aiSubtitles.error],
+  ([, error]) => {
+    if (error && !inPlayerWindow && !inMenuBarWindow && !inViewerWindow && player.presentation === "bar") {
+      notify(`${t("AI 字幕已关闭")}：${error}`, "error");
+    }
+  },
+  { flush: "sync" },
+);
 
 // A quality switch is answered through the state, after the menu has closed:
 // a failure or auto's own step down would otherwise pass unnoticed.

@@ -1064,6 +1064,15 @@ export function SetAINaming(style: string, series: string, movie: string): $Canc
 }
 
 /**
+ * SetAISubtitles turns AI subtitles on in language ("" for the language
+ * spoken), or off. On, they replace the file's own subtitles, and every
+ * video after this one gets them too until they are turned off.
+ */
+export function SetAISubtitles(on: boolean, language: string): $CancellablePromise<void> {
+    return $Call.ByID(3573352598, on, language);
+}
+
+/**
  * SetAITokenLimit sets Per-conversation limit; unlimitedAITokens (0) is Unlimited.
  */
 export function SetAITokenLimit(limit: number): $CancellablePromise<$models.AISettings> {

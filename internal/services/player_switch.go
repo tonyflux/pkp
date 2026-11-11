@@ -270,7 +270,7 @@ func (p *PlayerService) beginSwitch(fileID, choice, key string, lowered bool) (u
 		return 0, i18n.New("这个视频已经不在播放了")
 	}
 	q := &p.state.Quality
-	if q.Switching != "" {
+	if q.Switching != "" || p.swap != nil || p.restoring != 0 {
 		return 0, errSwitchBusy
 	}
 	p.gen++
@@ -378,9 +378,9 @@ func (p *PlayerService) switchTo(ticket uint64, rawURL string, headers map[strin
 	return nil
 }
 
-// settleSwapLocked finishes a switch on file-loaded: the new rendition takes
-// over, or — after a failure — the old one is back. Either way the track
-// choice is put back. Caller holds p.mu.
+// settleSwapLocked takes over the loaded rendition, or the old one after a
+// fallback. The switch stays busy until its saved tracks are restored.
+// Caller holds p.mu.
 func (p *PlayerService) settleSwapLocked() {
 	s := p.swap
 	p.swap = nil
@@ -394,7 +394,6 @@ func (p *PlayerService) settleSwapLocked() {
 		p.state.Source = s.url
 		q := &p.state.Quality
 		q.Current = s.key
-		q.Switching = ""
 		q.Lowered = s.lowered
 		q.Failed, q.Error = "", ""
 		p.stall.reset(time.Now())
@@ -402,9 +401,27 @@ func (p *PlayerService) settleSwapLocked() {
 	// mpv must not be called from its own event goroutine. The extracted
 	// subtitles go back first (a reload drops them), so the subtitle chosen
 	// before the switch can be found among them.
+	load, gen := p.loads, p.gen
+	p.restoring = load
 	go func() {
-		p.attachExtracted()
-		p.restoreTracks(s.audio, s.sub)
+		p.loadMu.Lock()
+		defer p.loadMu.Unlock()
+		p.mu.Lock()
+		current := p.loads == load && p.gen == gen
+		p.mu.Unlock()
+		if current {
+			p.attachExtracted()
+			p.restoreTracks(s.audio, s.sub)
+		}
+		p.mu.Lock()
+		if p.restoring == load {
+			p.restoring = 0
+			if p.loads == load && p.gen == gen {
+				p.state.Quality.Switching = ""
+				p.dirty = true
+			}
+		}
+		p.mu.Unlock()
 	}()
 }
 

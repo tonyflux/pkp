@@ -279,6 +279,23 @@ export default {
 
   // PlayerView
   关: { tw: "關", en: "Off", ja: "オフ", ko: "끔" },
+  原文: { tw: "原文", en: "Original", ja: "原文", ko: "원문" },
+  "AI 字幕": { tw: "AI 字幕", en: "AI subtitles", ja: "AI 字幕", ko: "AI 자막" },
+  "AI {name} · 连接中": { tw: "AI {name} · 連線中", en: "AI {name} · Connecting", ja: "AI {name} · 接続中", ko: "AI {name} · 연결 중" },
+  "AI 字幕已关闭": { tw: "AI 字幕已關閉", en: "AI subtitles turned off", ja: "AI 字幕をオフにしました", ko: "AI 자막이 꺼졌습니다" },
+  会员专享: { tw: "會員專享", en: "Members only", ja: "会員限定", ko: "회원 전용" },
+  "正在读取会员状态…": { tw: "正在讀取會員狀態…", en: "Checking membership…", ja: "会員情報を確認中…", ko: "회원 상태 확인 중…" },
+  "AI 字幕需要 PikPak 会员": { tw: "AI 字幕需要 PikPak 會員", en: "AI subtitles require PikPak membership", ja: "AI 字幕には PikPak 会員資格が必要です", ko: "AI 자막은 PikPak 회원만 이용할 수 있습니다" },
+  会员状态读取失败: { tw: "會員狀態讀取失敗", en: "Could not check membership", ja: "会員情報を取得できませんでした", ko: "회원 상태를 확인하지 못했습니다" },
+  "AI 剩余 {remaining} / {total}": { tw: "AI 剩餘 {remaining} / {total}", en: "AI remaining {remaining} / {total}", ja: "AI 残り {remaining} / {total}", ko: "AI 잔여 {remaining} / {total}" },
+  "AI 配额：开启后获取": { tw: "AI 配額：開啟後取得", en: "AI quota: available after enabling", ja: "AI 利用枠：有効にすると取得します", ko: "AI 할당량: 켠 후 확인 가능" },
+  "配额重置：{time}": { tw: "配額重設：{time}", en: "Quota resets: {time}", ja: "利用枠のリセット：{time}", ko: "할당량 초기화: {time}" },
+  "开启 AI 字幕会向 PikPak 发送音频和视频标识，并使用 AI 配额。": {
+    tw: "開啟 AI 字幕會向 PikPak 傳送音訊和影片識別資訊，並使用 AI 配額。",
+    en: "Enabling AI subtitles sends audio and video identifiers to PikPak and uses your AI quota.",
+    ja: "AI 字幕を有効にすると、音声と動画の識別情報が PikPak に送信され、AI 利用枠を消費します。",
+    ko: "AI 자막을 켜면 오디오와 동영상 식별 정보가 PikPak으로 전송되며 AI 할당량이 사용됩니다.",
+  },
   切换轨道: { tw: "切換軌道", en: "Switch track", ja: "トラックの切り替え", ko: "트랙 전환" },
   "截图已存到「图片 › PKP」": {
     tw: "截圖已存到「圖片 › PKP」",

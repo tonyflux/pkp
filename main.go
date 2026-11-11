@@ -73,6 +73,17 @@ func init() {
 // http://127.0.0.1:8788 for one run by `wrangler dev`.
 const defaultTelemetryAPI = "https://telemetry.pkpapp.cc"
 
+// PikPak serves subtitle node discovery beside the drive API. A local
+// development deployment may override it without changing the account API.
+const defaultSubsrelayAPI = "https://api-drive.mypikpak.com"
+
+func subsrelayAPI() string {
+	if api, ok := os.LookupEnv("PKP_SUBSRELAY_API"); ok {
+		return api
+	}
+	return defaultSubsrelayAPI
+}
+
 // version is the app version, set by the Makefile from Info.plist
 // (-X main.version=…); a build without it reports "unknown".
 var version string
@@ -105,9 +116,10 @@ func main() {
 	library := services.NewDriveService(services.DriveOptions{
 		// The default profile is drive.AndroidProfile; see THIRD_PARTY.md for
 		// public comparison evidence and the maintainer's reuse confirmation.
-		ConfigDir:   os.Getenv("PKP_CONFIG_DIR"),
-		APIBaseURL:  os.Getenv("PKP_DRIVE_API"),
-		AuthBaseURL: os.Getenv("PKP_AUTH_API"),
+		ConfigDir:    os.Getenv("PKP_CONFIG_DIR"),
+		APIBaseURL:   os.Getenv("PKP_DRIVE_API"),
+		AuthBaseURL:  os.Getenv("PKP_AUTH_API"),
+		SubsrelayURL: subsrelayAPI(),
 	}, player)
 	// UI Language before anything Go says reaches the user.
 	library.ApplyLanguage()

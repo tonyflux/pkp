@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"io"
 	"log/slog"
 	"net/http"
@@ -32,9 +33,10 @@ func newStaticTokens(access string) *staticTokens {
 
 func (s *staticTokens) Token(context.Context) (Token, error) { return *s.token.Load(), nil }
 
-func (s *staticTokens) Invalidate(string) {
+func (s *staticTokens) Invalidate(_ context.Context, _ string) error {
 	s.invalidate.Add(1)
 	s.token.Store(&Token{AccessToken: "refreshed", ExpiresAt: time.Now().Add(time.Hour)})
+	return nil
 }
 
 // fakeCaptcha records how often the client asked for a replacement token.
@@ -691,5 +693,137 @@ func TestNonCaptchaCodeNineIsNotRetried(t *testing.T) {
 	}
 	if refreshes, _ := captcha.stats(); refreshes != 0 {
 		t.Errorf("captcha refreshes = %d, want 0", refreshes)
+	}
+}
+
+type observedTokenInvalidation struct {
+	*TokenManager
+	entered chan struct{}
+}
+
+func (s *observedTokenInvalidation) Invalidate(ctx context.Context, accessToken string) error {
+	close(s.entered)
+	return s.TokenManager.Invalidate(ctx, accessToken)
+}
+
+func TestClient401CancellationDoesNotWaitForAnotherRefresh(t *testing.T) {
+	apiEntered := make(chan struct{})
+	send401 := make(chan struct{})
+	release401 := sync.OnceFunc(func() { close(send401) })
+	refreshEntered := make(chan struct{})
+	release := make(chan struct{})
+	releaseRefresh := sync.OnceFunc(func() { close(release) })
+	var apiCalls, refreshes atomic.Int32
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/drive/v1/files/f1":
+			if apiCalls.Add(1) == 1 {
+				close(apiEntered)
+				select {
+				case <-send401:
+					w.WriteHeader(http.StatusUnauthorized)
+					writeJSON(w, map[string]any{"error": "unauthorized"})
+				case <-r.Context().Done():
+				}
+				return
+			}
+			if got := r.Header.Get("Authorization"); got != "Bearer renewed-access" {
+				t.Errorf("subsequent Authorization = %q", got)
+			}
+			writeJSON(w, map[string]any{"id": "f1"})
+		case "/v1/auth/token":
+			if refreshes.Add(1) != 1 {
+				t.Error("unexpected second refresh")
+				w.WriteHeader(http.StatusBadRequest)
+				return
+			}
+			close(refreshEntered)
+			select {
+			case <-release:
+				writeJSON(w, map[string]any{
+					"access_token": "renewed-access", "refresh_token": "renewed-refresh", "expires_in": 7200,
+				})
+			case <-r.Context().Done():
+			}
+		default:
+			t.Errorf("unexpected path %s", r.URL.Path)
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	defer srv.Close()
+	defer release401()
+	defer releaseRefresh()
+	m := NewTokenManager(TokenManagerConfig{AuthBaseURL: srv.URL, DeviceID: "d", Store: &MemoryStore{}})
+	if err := m.Seed(Token{
+		AccessToken: "old-access", RefreshToken: "old-refresh", ExpiresAt: time.Now().Add(time.Hour),
+	}); err != nil {
+		t.Fatal(err)
+	}
+	source := &observedTokenInvalidation{TokenManager: m, entered: make(chan struct{})}
+	client, err := New(Config{APIBaseURL: srv.URL, DeviceID: "d", Captcha: m.Captcha()}, source)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	requestDone := make(chan error, 1)
+	go func() {
+		_, err := client.GetFile(ctx, "f1", GetFileParams{})
+		requestDone <- err
+	}()
+	select {
+	case <-apiEntered:
+	case <-time.After(2 * time.Second):
+		t.Fatal("request did not reach API")
+	}
+	if err := m.Invalidate(context.Background(), "old-access"); err != nil {
+		t.Fatal(err)
+	}
+	ownerCtx, cancelOwner := context.WithCancel(context.Background())
+	defer cancelOwner()
+	ownerDone := make(chan error, 1)
+	go func() {
+		_, err := m.Token(ownerCtx)
+		ownerDone <- err
+	}()
+	select {
+	case <-refreshEntered:
+	case <-time.After(2 * time.Second):
+		t.Fatal("independent refresh did not reach HTTP")
+	}
+	release401()
+	select {
+	case <-source.entered:
+	case <-time.After(2 * time.Second):
+		t.Fatal("401 did not reach token invalidation")
+	}
+	cancel()
+	select {
+	case err := <-requestDone:
+		if !errors.Is(err, context.Canceled) {
+			t.Fatalf("API request error = %v, want context.Canceled", err)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("canceled API request waited for unrelated refresh")
+	}
+	select {
+	case err := <-ownerDone:
+		t.Fatalf("independent owner ended before release: %v", err)
+	default:
+	}
+	releaseRefresh()
+	select {
+	case err := <-ownerDone:
+		if err != nil {
+			t.Fatal(err)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("independent owner did not finish")
+	}
+	if _, err := client.GetFile(context.Background(), "f1", GetFileParams{}); err != nil {
+		t.Fatalf("subsequent API request: %v", err)
+	}
+	if refreshes.Load() != 1 {
+		t.Errorf("refreshes = %d, want 1", refreshes.Load())
 	}
 }

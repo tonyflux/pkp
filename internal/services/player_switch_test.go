@@ -46,6 +46,10 @@ func playingDriveWith(t *testing.T, routes func(http.ResponseWriter, *http.Reque
 		if routes != nil && routes(w, r) {
 			return
 		}
+		if r.URL.Path == "/vip/v1/vip/info" {
+			io.WriteString(w, `{"data":{"status":"ok"}}`)
+			return
+		}
 		http.NotFound(w, r)
 	}))
 	t.Cleanup(api.Close)
@@ -284,8 +288,33 @@ func TestQualitySwitchKeepsTrackChoice(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	media, _ := serveClip(t, data)
-	d, p := playingDrive(t, func() string { return videoJSON(media.URL+"/origin", media.URL+"/t480") })
+	requested, release := make(chan struct{}), make(chan struct{})
+	var requestOnce, releaseOnce sync.Once
+	unblock := func() { releaseOnce.Do(func() { close(release) }) }
+	media := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/t480" {
+			requestOnce.Do(func() { close(requested) })
+			select {
+			case <-release:
+			case <-r.Context().Done():
+				return
+			}
+		}
+		http.ServeContent(w, r, "tracks.mp4", time.Unix(0, 0), bytes.NewReader(data))
+	}))
+	t.Cleanup(media.Close)
+	t.Cleanup(unblock)
+	var metadataMu sync.Mutex
+	metadata, failMetadata := 0, false
+	d, p := playingDrive(t, func() string {
+		metadataMu.Lock()
+		defer metadataMu.Unlock()
+		metadata++
+		if failMetadata {
+			return "{" // A second request must be rejected before fetching links.
+		}
+		return videoJSON(media.URL+"/origin", media.URL+"/t480")
+	})
 
 	if _, err := d.PlayFile("", "f1"); err != nil {
 		t.Fatalf("play: %v", err)
@@ -312,7 +341,50 @@ func TestQualitySwitchKeepsTrackChoice(t *testing.T) {
 	if err := d.SetPlaybackQuality("480"); err != nil {
 		t.Fatalf("switch: %v", err)
 	}
-	waitFor(t, 20*time.Second, "the 480 rendition to take over", func() bool { return p.State().Quality.Current == "480" })
+	select {
+	case <-requested:
+	case <-time.After(5 * time.Second):
+		t.Fatal("the player did not request the transcode")
+	}
+	p.loadMu.Lock()
+	locked := true
+	defer func() {
+		if locked {
+			p.loadMu.Unlock()
+		}
+	}()
+	unblock()
+	waitFor(t, 20*time.Second, "the loaded rendition to wait for track restoration", func() bool {
+		p.mu.Lock()
+		defer p.mu.Unlock()
+		return p.state.Quality.Current == "480" && p.restoring != 0
+	})
+	p.mu.Lock()
+	gen := p.gen
+	p.mu.Unlock()
+	metadataMu.Lock()
+	before := metadata
+	failMetadata = true
+	metadataMu.Unlock()
+	if err := d.SetPlaybackQuality(OriginKey); err != errSwitchBusy {
+		t.Errorf("switch during pending restoration = %v, want busy", err)
+	}
+	metadataMu.Lock()
+	after := metadata
+	failMetadata = false
+	metadataMu.Unlock()
+	p.mu.Lock()
+	afterGen, switching := p.gen, p.state.Quality.Switching
+	p.mu.Unlock()
+	if after != before || afterGen != gen || switching != "480" {
+		t.Errorf("pending restoration was superseded: metadata=%d/%d generation=%d/%d switching=%q",
+			before, after, gen, afterGen, switching)
+	}
+	p.loadMu.Unlock()
+	locked = false
+	waitFor(t, 10*time.Second, "the quality switch to finish restoring tracks", func() bool {
+		return p.State().Quality.Switching == ""
+	})
 	waitFor(t, 10*time.Second, "the japanese track with subtitles off", func() bool {
 		tracks, err := p.Tracks()
 		if err != nil {
@@ -321,6 +393,29 @@ func TestQualitySwitchKeepsTrackChoice(t *testing.T) {
 		audio := selectedTrack(tracks, "audio")
 		return audio.lang == "jpn" && selectedID(tracks, "sub") == 0
 	})
+}
+
+func TestQualitySwitchRemainsBusyDuringRecovery(t *testing.T) {
+	for _, phase := range []string{"reverting", "restoring"} {
+		t.Run(phase, func(t *testing.T) {
+			p := &PlayerService{
+				fileID: "f1", gen: 7,
+				state: PlayerState{Quality: QualityState{Current: OriginKey, Choice: OriginKey}},
+			}
+			if phase == "reverting" {
+				p.swap = &swap{reverting: true}
+			} else {
+				p.restoring = 1
+			}
+			before := p.state.Quality
+			if _, err := p.beginSwitch("f1", "480", "480", false); err != errSwitchBusy {
+				t.Errorf("switch during %s = %v, want busy", phase, err)
+			}
+			if p.gen != 7 || p.state.Quality.Choice != before.Choice || p.state.Quality.Switching != before.Switching {
+				t.Errorf("rejected switch mutated the pending recovery: gen=%d quality=%+v", p.gen, p.state.Quality)
+			}
+		})
+	}
 }
 
 // slowReader serves at about rate bytes a second.

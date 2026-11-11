@@ -65,15 +65,16 @@ type captchaManager struct {
 	http     *http.Client
 	// userID is consulted lazily because a token is minted before sign-in,
 	// when no user id exists yet.
-	userID func() string
+	userID func(context.Context) (string, error)
 
-	mu    sync.Mutex
-	token string
+	refresh chan struct{}
+	mu      sync.Mutex
+	token   string
 }
 
-func newCaptchaManager(profile ClientProfile, deviceID, authBase string, httpClient *http.Client, userID func() string) *captchaManager {
+func newCaptchaManager(profile ClientProfile, deviceID, authBase string, httpClient *http.Client, userID func(context.Context) (string, error)) *captchaManager {
 	if userID == nil {
-		userID = func() string { return "" }
+		userID = func(context.Context) (string, error) { return "", nil }
 	}
 	return &captchaManager{
 		profile:  profile,
@@ -81,6 +82,7 @@ func newCaptchaManager(profile ClientProfile, deviceID, authBase string, httpCli
 		authBase: authBase,
 		http:     httpClient,
 		userID:   userID,
+		refresh:  make(chan struct{}, 1),
 	}
 }
 
@@ -101,21 +103,27 @@ func (m *captchaManager) set(token string) {
 // goroutine arriving after someone else's refresh would otherwise read the
 // fresh token and refresh that in turn.
 func (m *captchaManager) Refresh(ctx context.Context, action, rejected string) error {
-	// Lock order is TokenManager.mu → captchaManager.mu (exchange reads the
-	// token with its mutex held), so the user id, which takes TokenManager.mu,
-	// must be read before ours is taken.
-	uid := m.userID()
-
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	if m.token != rejected {
+	// Resolve the user before the refresh gate: sign-in owns the token-state gate.
+	uid, err := m.userID(ctx)
+	if err != nil {
+		return err
+	}
+	select {
+	case m.refresh <- struct{}{}:
+		defer func() { <-m.refresh }()
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	if m.Token() != rejected {
 		return nil
 	}
-
 	timestamp := time.Now().UnixMilli()
 	body := map[string]any{
 		"action":        action,
-		"captcha_token": m.token,
+		"captcha_token": rejected,
 		"client_id":     m.profile.ClientID,
 		"device_id":     m.deviceID,
 		"meta": map[string]any{
@@ -131,7 +139,12 @@ func (m *captchaManager) Refresh(ctx context.Context, action, rejected string) e
 	if err != nil {
 		return err
 	}
-	m.token = token
+	m.mu.Lock()
+	// A concurrent sign-in may already have installed its newer token.
+	if m.token == rejected {
+		m.token = token
+	}
+	m.mu.Unlock()
 	return nil
 }
 

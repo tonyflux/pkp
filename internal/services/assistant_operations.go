@@ -614,7 +614,7 @@ func (d *DriveService) assistantApply(s *accountSession, req AssistantOperationR
 		}
 		return nil
 	}
-	err := d.doIn(s, func(ctx context.Context, c *drive.Client) error {
+	err := d.doIn(context.Background(), s, func(ctx context.Context, c *drive.Client) error {
 		switch req.Action {
 		case "copy":
 			return c.Copy(ctx, []string{id}, req.ParentID)
