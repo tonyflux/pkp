@@ -19,11 +19,13 @@ import (
 	"sync"
 	"sync/atomic"
 	"testing"
+	"testing/synctest"
 	"time"
 
 	"github.com/coder/websocket"
 
 	"github.com/tonyflux/pkp/internal/pcm"
+	"github.com/tonyflux/pkp/internal/stream"
 	"github.com/tonyflux/pkp/internal/subsrelay"
 )
 
@@ -1332,5 +1334,54 @@ func TestASSCaptionFollowsStyle(t *testing.T) {
 	// Without the overlay's width it stays where mpv puts it.
 	if got := assCaption("x", captionLook{style: style}); strings.Contains(got, `\pos`) {
 		t.Errorf("caption without a width = %q, want no \\pos", got)
+	}
+}
+
+// On Windows, time.Now advances in coarse _INTERRUPT_TIME ticks, so decoding
+// buffered packets right after Open can emit the first frame with d.first == 0.
+// startup must treat that zero duration as measured rather than falling back to
+// elapsed play time, and must not treat idle time after a frameless EOF as
+// startup latency.
+func TestAIDecoderStartup(t *testing.T) {
+	media, _ := serveClip(t, speechClip(t))
+	src := aiSource{handle: stream.Handle{URL: media.URL + "/t480"}, stream: -1}
+
+	synctest.Test(t, func(t *testing.T) {
+		d := newAIDecoder(t.Context(), 0)
+		d.start()
+		d.mu.Lock()
+		d.flowing, d.first = true, 0
+		d.mu.Unlock()
+		time.Sleep(5500 * time.Millisecond)
+		if got := d.startup(300 * time.Millisecond); got != 0 {
+			t.Fatalf("startup after 0ms first frame = %v, want 0", got)
+		}
+
+		stopped := newAIDecoder(t.Context(), 0)
+		stopped.start()
+		time.Sleep(800 * time.Millisecond)
+		stopped.stop()
+		if got := stopped.startup(300 * time.Millisecond); got != 800*time.Millisecond {
+			t.Fatalf("startup when stopped before first frame = %v, want 800ms", got)
+		}
+	})
+
+	dec, err := pcm.Open(t.Context(), src.handle.URL, src.stream, 0)
+	if err != nil {
+		t.Fatalf("open: %v", err)
+	}
+	defer func() {
+		if dec != nil {
+			dec.Close()
+		}
+	}()
+	eofRun := newAIDecoder(t.Context(), 60_000)
+	dec = eofRun.serve(t.Context(), src, dec)
+	if _, open, ok := eofRun.poll(); ok && open {
+		t.Fatal("expected EOF without frames past the end of the 30s clip")
+	}
+	time.Sleep(80 * time.Millisecond)
+	if got := eofRun.startup(15 * time.Millisecond); got != 15*time.Millisecond {
+		t.Fatalf("startup after frameless EOF and idle wait = %v, want 15ms", got)
 	}
 }

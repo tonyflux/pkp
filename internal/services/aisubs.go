@@ -726,9 +726,11 @@ type aiDecoder struct {
 	mu     sync.Mutex
 	// ready is when the run had the decoder, open, to seek; zero before.
 	ready time.Time
-	// first is how long after ready the first frame came out; 0 before.
-	first time.Duration
-	fault error
+	// first is how long after ready the first frame came out, set with flowing.
+	first   time.Duration
+	flowing bool
+	done    bool
+	fault   error
 }
 
 // newAIDecoder is a run from media ms from on, for the session's audio
@@ -766,6 +768,14 @@ func (r *aiRun) audio(ctx context.Context, src aiSource, work <-chan *aiDecoder)
 // next run to open anew.
 func (d *aiDecoder) serve(ctx context.Context, src aiSource, dec *pcm.Decoder) *pcm.Decoder {
 	defer close(d.out)
+	var flowing bool
+	defer func() {
+		if !flowing && d.ctx.Err() == nil {
+			d.mu.Lock()
+			d.done = true
+			d.mu.Unlock()
+		}
+	}()
 	if dec == nil {
 		var err error
 		// On the session's context, not the run's: a run started over while
@@ -783,7 +793,7 @@ func (d *aiDecoder) serve(ctx context.Context, src aiSource, dec *pcm.Decoder) *
 			return d.fail(dec, err)
 		}
 	}
-	frame, flowing := aiFrame{}, false
+	var frame aiFrame
 	flush := func() bool {
 		if len(frame.pcm) == 0 {
 			return true
@@ -794,7 +804,7 @@ func (d *aiDecoder) serve(ctx context.Context, src aiSource, dec *pcm.Decoder) *
 			if !flowing {
 				flowing = true
 				d.mu.Lock()
-				d.first = time.Since(d.ready)
+				d.flowing, d.first = true, time.Since(d.ready)
 				d.mu.Unlock()
 			}
 			return true
@@ -890,9 +900,9 @@ func (d *aiDecoder) startup(was time.Duration) time.Duration {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 	switch {
-	case d.first > 0:
+	case d.flowing:
 		return d.first
-	case d.ready.IsZero():
+	case d.ready.IsZero() || d.done:
 		return was
 	}
 	return max(was, time.Since(d.ready))

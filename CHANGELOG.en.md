@@ -4,7 +4,7 @@
 
 ## 0.6.1 · 2026-11-12
 
-- Support PikPak AI subtitles on Windows x64/ARM64 with a bundled native audio-decoder DLL sharing the macOS implementation. No separate FFmpeg installation is needed. Reuse membership, quota, subtitle styles and timeline synchronization, including audio-track selection, seeking and decoding after cancellation. Installation, upgrade rollback and uninstall include the matching decoder library.
+- Support PikPak AI subtitles on Windows x64/ARM64 with a bundled native audio-decoder DLL sharing the macOS implementation. No separate FFmpeg installation is needed. Reuse membership, quota, subtitle styles and timeline synchronization, including audio-track selection, seeking and decoding after cancellation, and fix zero-duration first-frame startup under coarse clocks skipping post-seek audio. Installation, upgrade rollback and uninstall include the matching decoder library.
 
 ## 0.6.0 · 2026-11-11
 
