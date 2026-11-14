@@ -43,12 +43,12 @@ The interface is available in English, Simplified Chinese, Traditional Chinese, 
 
 ## Install
 
-**[PKP 0.6.1](https://github.com/tonyflux/pkp/releases/tag/v0.6.1)** adds optional PikPak AI subtitles on Windows x64/ARM64. Download only from this repository's [latest Release](https://github.com/tonyflux/pkp/releases/latest), then check `SHA256SUMS` from the same release. Details and first-launch steps are in the [installation guide](docs/INSTALL.en.md). v0.2.0 was the first open-source release.
+**[PKP 0.7.0](https://github.com/tonyflux/pkp/releases/tag/v0.7.0)** improves batch file operations with background tasks and per-item receipts. Download only from this repository's [latest Release](https://github.com/tonyflux/pkp/releases/latest), then check `SHA256SUMS` from the same release. Details and first-launch steps are in the [installation guide](docs/INSTALL.en.md). v0.2.0 was the first open-source release.
 
 | Platform | Download |
 | --- | --- |
-| macOS 12 or later, Apple silicon and Intel | [PKP-0.6.1-macos-universal.dmg](https://github.com/tonyflux/pkp/releases/download/v0.6.1/PKP-0.6.1-macos-universal.dmg) |
-| Windows x64 / ARM64 preview | [PKP-0.6.1-windows-x64-arm64-setup.exe](https://github.com/tonyflux/pkp/releases/download/v0.6.1/PKP-0.6.1-windows-x64-arm64-setup.exe) |
+| macOS 12 or later, Apple silicon and Intel | [PKP-0.7.0-macos-universal.dmg](https://github.com/tonyflux/pkp/releases/download/v0.7.0/PKP-0.7.0-macos-universal.dmg) |
+| Windows x64 / ARM64 preview | [PKP-0.7.0-windows-x64-arm64-setup.exe](https://github.com/tonyflux/pkp/releases/download/v0.7.0/PKP-0.7.0-windows-x64-arm64-setup.exe) |
 
 The macOS build is ad hoc signed and is not notarized, so the system may ask you to approve the first launch. The Windows build has no Authenticode publisher signature, and playback, sync, notifications, and system authentication still need broader testing on real devices. Linux packages are not available.
 
