@@ -2,7 +2,7 @@
 
 [简体中文](CHANGELOG.md) · English
 
-## Unreleased
+## 0.7.0 · 2026-11-14
 
 - Unify batch operations from Files and Cleanup with a background task strip showing queued, submitting, cloud-processing, verification, and per-item receipts. Serialize same-account file changes while keeping other accounts and download submissions independent. Stop unsent work, explicitly confirm retries of known failures, preserve newer selections, and make loaded-only select-all scope explicit. Recheck original accounts and source snapshots for move/copy/delete/restore/star, freeze Empty Trash targets, and retain successful downloads after partial submission failures. Never automatically replay writes after timeouts, transport errors, or 5xx responses; mark unverified results unknown. Window long receipts and retain queues/history only for the current window session.
 - Fix background task history cards inheriting pill-shaped corners; multiline cards now use rounded rectangles.
