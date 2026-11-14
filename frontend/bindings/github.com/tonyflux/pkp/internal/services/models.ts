@@ -746,6 +746,15 @@ export interface AudioDetails {
 }
 
 /**
+ * BatchFileItem is the source snapshot the user confirmed, not a fresh index row.
+ */
+export interface BatchFileItem {
+    "id": string;
+    "name": string;
+    "parentId": string;
+}
+
+/**
  * CategoryStat is the files of one category: video, image, audio,
  * document, archive or other, as the file page's icons class them.
  */
@@ -826,6 +835,22 @@ export interface CreatedShare {
 export interface Crumb {
     "id": string;
     "name": string;
+}
+
+export interface DownloadBatchReport {
+    "tasks": DownloadTask[] | null;
+    "items": DownloadBatchResult[] | null;
+}
+
+/**
+ * DownloadBatchResult records queue submission, not completion of the transfer.
+ * Unknown folders may already have queued children and must not be blindly retried.
+ */
+export interface DownloadBatchResult {
+    "id": string;
+    "name": string;
+    "state": string;
+    "error": string;
 }
 
 /**
@@ -1233,6 +1258,35 @@ export interface ExtractState {
      * has_sensitive_words…), "" when it gave none.
      */
     "error": string;
+}
+
+export interface FileBatchProgress {
+    "id": string;
+    "account": string;
+    "phase": string;
+    "done": number;
+    "total": number;
+}
+
+export interface FileBatchReport {
+    "items": FileBatchResult[] | null;
+    "stopped": boolean;
+}
+
+export interface FileBatchRequest {
+    "id": string;
+    "account": string;
+    "action": string;
+    "items": BatchFileItem[] | null;
+    "parentId": string;
+}
+
+export interface FileBatchResult {
+    "id": string;
+    "name": string;
+    "state": string;
+    "error": string;
+    "entry"?: Entry | null;
 }
 
 /**
@@ -2562,6 +2616,11 @@ export interface RemoveResult {
      * words (cause).
      */
     "error": string;
+
+    /**
+     * State distinguishes a known refusal from an accepted or ambiguous write.
+     */
+    "state"?: string;
 }
 
 export interface RestoreShareRequest {

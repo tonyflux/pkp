@@ -51,6 +51,8 @@ type RemoveResult struct {
 	// Error is the reason in Chinese; a server refusal is the server's own
 	// words (cause).
 	Error string `json:"error"`
+	// State distinguishes a known refusal from an accepted or ambiguous write.
+	State string `json:"state,omitempty"`
 }
 
 // RemoveReport is how a run ended.
@@ -179,6 +181,7 @@ type removeRun struct {
 	// to be looked for in the recycle bin.
 	confirming []string
 	report     RemoveReport
+	batch      *fileBatchRun
 }
 
 // beginRemove starts a run for account, refusing a second one. end drops
@@ -399,10 +402,26 @@ func (r *removeRun) name(id string) string {
 }
 
 func (r *removeRun) fail(id, why string) {
-	r.report.Failed = append(r.report.Failed, RemoveResult{ID: id, Name: r.name(id), Error: why})
+	r.report.Failed = append(r.report.Failed, RemoveResult{ID: id, Name: r.name(id), Error: why, State: "failed"})
+	if r.batch != nil {
+		r.batch.result(id, "failed", why, nil)
+	}
 }
 
-func (r *removeRun) ok(id string) { r.report.Removed = append(r.report.Removed, id) }
+func (r *removeRun) uncertain(id string) {
+	why := i18n.T("云盘尚未确认结果，请检查后再操作")
+	r.report.Failed = append(r.report.Failed, RemoveResult{ID: id, Name: r.name(id), Error: why, State: "unknown"})
+	if r.batch != nil {
+		r.batch.result(id, "unknown", why, nil)
+	}
+}
+
+func (r *removeRun) ok(id string) {
+	r.report.Removed = append(r.report.Removed, id)
+	if r.batch != nil {
+		r.batch.result(id, "done", "", nil)
+	}
+}
 
 // trashedOK records an entry confirmed in the bin; the index follows,
 // its subtree with it.
@@ -420,9 +439,17 @@ func (r *removeRun) restoredOK(id string, f drive.File) {
 		p.Name = &f.Name
 	}
 	r.d.patchIndex(r.s, []string{id}, p)
+	if r.batch != nil {
+		entry := toEntry(f)
+		r.batch.result(id, "done", "", &entry)
+	}
 }
 
 func (r *removeRun) progress() {
+	if r.batch != nil {
+		r.batch.progress(r.batch.phase)
+		return
+	}
 	if app := application.Get(); app != nil {
 		done := len(r.report.Removed) + len(r.report.Failed) + len(r.confirming)
 		app.Event.Emit(EventRemoveProgress, RemoveProgress{Account: r.s.key, Done: done, Total: r.total, Phase: r.phase})
@@ -433,6 +460,10 @@ func (r *removeRun) progress() {
 // batch's task and hands what the server took to settle. A stop is
 // honoured between batches.
 func (r *removeRun) batches(ids []string, post postBatch, settle func(sent []string)) {
+	if r.batch != nil {
+		r.batch.batches(ids, post, settle)
+		return
+	}
 	for start := 0; start < len(ids); start += moveBatch {
 		if r.ctx.Err() != nil {
 			r.report.Stopped = true
@@ -440,7 +471,13 @@ func (r *removeRun) batches(ids []string, post postBatch, settle func(sent []str
 		}
 		batch := ids[start:min(start+moveBatch, len(ids))]
 		var sent, tasks []string
-		for _, t := range r.d.sendSplit(r.s, batch, post, func(id string, err error) { r.fail(id, cause(err)) }) {
+		for _, t := range r.d.sendSplit(r.s, batch, post, func(id string, err error) {
+			if knownWriteRefusal(err) {
+				r.fail(id, cause(err))
+			} else {
+				r.uncertain(id)
+			}
+		}) {
 			sent = append(sent, t.ids...)
 			tasks = append(tasks, t.task)
 		}
@@ -455,9 +492,19 @@ func (r *removeRun) batches(ids []string, post postBatch, settle func(sent []str
 func (r *removeRun) trash(ids []string) {
 	r.batches(ids, batchTrash, func(sent []string) {
 		got, answered := r.d.readBack(r.s, sent)
+		var binned map[string]bool
+		if r.batch != nil {
+			binned = map[string]bool{}
+			bin, err := r.d.binAll(r.s)
+			if err == nil {
+				for _, f := range bin {
+					binned[f.ID] = true
+				}
+			}
+		}
 		for _, id := range sent {
-			if f, ok := got[id]; !answered[id] || (ok && !f.Trashed) {
-				r.fail(id, probUnconfirmed())
+			if f, ok := got[id]; !answered[id] || (ok && !f.Trashed) || (r.batch != nil && !binned[id]) {
+				r.uncertain(id)
 				continue
 			}
 			r.trashedOK(id)
@@ -474,7 +521,7 @@ func (r *removeRun) restore(ids []string) {
 				r.restoredOK(id, f)
 				continue
 			}
-			r.fail(id, probUnconfirmed())
+			r.uncertain(id)
 		}
 	})
 }
@@ -492,7 +539,7 @@ func (r *removeRun) destroy(ids []string) {
 		got, answered := r.d.readBack(r.s, sent)
 		for _, id := range sent {
 			if f, ok := got[id]; !answered[id] || (ok && !f.Trashed) {
-				r.fail(id, probUnconfirmed())
+				r.uncertain(id)
 				continue
 			}
 			r.confirming = append(r.confirming, id)
@@ -507,7 +554,7 @@ func (r *removeRun) destroy(ids []string) {
 	if err != nil {
 		r.d.log.Warn("remove: recycle bin unreadable, deletes unconfirmed", "error", err)
 		for _, id := range pending {
-			r.fail(id, probUnconfirmed())
+			r.uncertain(id)
 		}
 		r.progress()
 		return
@@ -519,7 +566,7 @@ func (r *removeRun) destroy(ids []string) {
 	var gone []string
 	for _, id := range pending {
 		if still[id] {
-			r.fail(id, probUnconfirmed())
+			r.uncertain(id)
 			continue
 		}
 		gone = append(gone, id)

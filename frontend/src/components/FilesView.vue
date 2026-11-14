@@ -531,6 +531,7 @@ watch(keyConfirm, async (entries) => {
 });
 watch([() => drive.picked, () => ui.view], () => (keyConfirm.value = null));
 
+
 function confirmKeyDelete() {
   const entries = keyConfirm.value;
   keyConfirm.value = null;
@@ -622,6 +623,8 @@ function onKeydown(ev: KeyboardEvent) {
     return;
   }
   if (isTyping(ev)) return;
+  // Task controls own their keys, not the file selection behind them.
+  if (document.activeElement?.closest("[data-file-tasks], [data-file-task-entry]")) return;
   // Selection keys belong to the page only while it is in front and no
   // sheet is up; the page also sits, hidden, under the viewer.
   const sheetUp = !!relocate.mode || !!shares.targets.length || ui.cloudAddOpen || ui.newFolderOpen || renameSheet.entries.length > 0;
@@ -1353,6 +1356,7 @@ watch(
     </template>
     </template>
 
+
     <Teleport to="body">
       <div
         v-if="menu"
@@ -1413,7 +1417,7 @@ watch(
             <Icon :name="ui.layout === 'grid' ? 'list' : 'grid'" :size="17" /> {{ ui.layout === "grid" ? t("列表") : t("网格") }}
           </button>
           <button v-if="(visibleFolders.length + visibleFiles.length) > 0" class="quiet" role="menuitem" @click="canvasMenuAction(pickAll)">
-            <Icon name="check" :size="17" /> {{ t("全选") }}
+            <Icon name="check" :size="17" /> {{ t("全选已加载的 {n} 项", { n: visibleFolders.length + visibleFiles.length }) }}
           </button>
         </template>
         <template v-else-if="!menu.confirming && inBin">
@@ -3012,6 +3016,7 @@ h2 + .folders + h2,
   border-radius: var(--radius-pill);
   box-shadow: var(--shadow-sheet);
 }
+
 
 .key-confirm .confirm {
   flex-direction: row;

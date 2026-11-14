@@ -8,6 +8,7 @@ import BatchBar from "./BatchBar.vue";
 import Icon from "./Icon.vue";
 import ConfirmInline from "./ConfirmInline.vue";
 import { t } from "../i18n";
+import type { Entry } from "../../bindings/github.com/tonyflux/pkp/internal/services";
 import {
   clearSelection,
   deleteForever,
@@ -27,7 +28,7 @@ import {
   visibleFolders,
 } from "../store";
 
-const confirming = ref(false);
+const confirming = ref<Entry[] | null>(null);
 const count = computed(() => pickedEntries.value.length);
 const allPicked = computed(() => count.value === visibleFolders.value.length + visibleFiles.value.length);
 // Star the set unless every one already is; then the same button clears it.
@@ -54,28 +55,36 @@ function fromMore(action: () => void) {
   action();
 }
 
-// A different set is a different question.
-watch(count, () => {
-  confirming.value = false;
+watch(pickedEntries, () => {
+  confirming.value = null;
   moreAt.value = null;
 });
+
+function confirmDelete() {
+  const entries = confirming.value;
+  confirming.value = null;
+  if (entries) void deleteForever(entries);
+}
 </script>
 
 <template>
-  <BatchBar :count="count" :all-picked="allPicked" @pick-all="pickAll" @clear="clearSelection">
+  <BatchBar :count="count" :all-picked="allPicked"
+    :pick-all-label="t('全选已加载的 {n} 项', { n: visibleFolders.length + visibleFiles.length })"
+    :pick-all-title="t('仅选择当前列表中已加载且符合筛选条件的项目，不包含尚未加载的结果。')"
+    :scope-label="t('仅已加载项目')" @pick-all="pickAll" @clear="clearSelection">
     <ConfirmInline
       v-if="confirming"
-      :message="t('彻底删除 {n} 项？无法撤销，{freed}。', { n: count, freed: freedText(pickedEntries) })"
+      :message="t('彻底删除 {n} 项？无法撤销，{freed}。', { n: confirming.length, freed: freedText(confirming) })"
       :confirm-label="t('确认删除')"
       :cancel-label="t('保留')"
       danger
-      @cancel="confirming = false"
-      @confirm="confirming = false; deleteForever(pickedEntries)"
+      @cancel="confirming = null"
+      @confirm="confirmDelete"
     />
 
     <template v-else-if="ui.view === 'trash'">
       <button class="quiet" @click="restore(pickedEntries)"><Icon name="restore" :size="17" />{{ t("还原") }}</button>
-      <button class="quiet warn-hover" @click="confirming = true"><Icon name="trash" :size="17" />{{ t("彻底删除") }}</button>
+      <button class="quiet warn-hover" @click="confirming = [...pickedEntries]"><Icon name="trash" :size="17" />{{ t("彻底删除") }}</button>
     </template>
 
     <template v-else>

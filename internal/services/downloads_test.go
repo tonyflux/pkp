@@ -62,6 +62,11 @@ func newDownloadDrive(t *testing.T) (*DriveService, *accountSession) {
 				fmt.Fprintf(w, `{"files":[%s,%s]}`, file("B", "b.mkv", "PHASE_TYPE_RUNNING"), folder("S2", "S2"))
 			case "S1|":
 				fmt.Fprintf(w, `{"files":[%s]}`, file("C", "c.mkv", "PHASE_TYPE_COMPLETE"))
+			case "Broken|":
+				fmt.Fprintf(w, `{"files":[%s],"next_page_token":"p2"}`, file("held-read", "partial.bin", "PHASE_TYPE_COMPLETE"))
+			case "Broken|p2":
+				w.WriteHeader(http.StatusForbidden)
+				io.WriteString(w, `{"error":"permission_denied","error_description":"folder read refused"}`)
 			default:
 				io.WriteString(w, `{"files":[]}`)
 			}
@@ -163,6 +168,102 @@ func TestDownloadFilesWalksFolders(t *testing.T) {
 	}
 	if _, err := svc.DownloadFiles(s.key, []DownloadItem{{ID: "X", Name: "x.bin"}}); err != nil {
 		t.Errorf("downloading a finished file again: %v", err)
+	}
+}
+
+func TestQueueDownloadsPreservesPartialFolderTasks(t *testing.T) {
+	for _, test := range []struct {
+		name   string
+		folder string
+		files  []string
+	}{
+		{name: "refused child", folder: "F1", files: []string{"A", "C", "X"}},
+		{name: "read failure", folder: "Broken", files: []string{"held-read", "X"}},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			home := t.TempDir()
+			t.Setenv("HOME", home)
+			svc, s := newDownloadDrive(t)
+			useDownloadDir(t, svc, home)
+
+			report, err := svc.QueueDownloads(s.key, []DownloadItem{
+				{ID: test.folder, Name: "partial", Folder: true},
+				{ID: "X", Name: "x.bin"},
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(report.Items) != 2 || report.Items[0].ID != test.folder ||
+				report.Items[0].Name != "partial" || report.Items[0].State != "unknown" ||
+				report.Items[0].Error == "" || report.Items[1].State != "done" || report.Items[1].Error != "" {
+				t.Fatalf("submission receipts = %+v", report.Items)
+			}
+			if len(report.Tasks) != len(test.files) || len(svc.Downloads()) != len(test.files) {
+				t.Fatalf("queued tasks lost: report %+v, queue %+v", report.Tasks, svc.Downloads())
+			}
+			queued := map[string]bool{}
+			for _, task := range report.Tasks {
+				queued[task.FileID] = true
+			}
+			for _, id := range test.files {
+				if !queued[id] {
+					t.Errorf("successful task %s missing from report", id)
+				}
+			}
+		})
+	}
+}
+
+func TestQueueDownloadsReportsKnownRefusedFile(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	svc, s := newDownloadDrive(t)
+	useDownloadDir(t, svc, home)
+	if _, err := svc.DownloadFiles(s.key, []DownloadItem{{ID: "held1", Name: "held.bin"}}); err != nil {
+		t.Fatal(err)
+	}
+	report, err := svc.QueueDownloads(s.key, []DownloadItem{
+		{ID: "held1", Name: "held.bin"},
+		{ID: "X", Name: "x.bin"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(report.Items) != 2 || report.Items[0].ID != "held1" ||
+		report.Items[0].State != "failed" || !strings.Contains(report.Items[0].Error, "已在下载列表里") ||
+		report.Items[1].State != "done" {
+		t.Fatalf("submission receipts = %+v", report.Items)
+	}
+	if len(report.Tasks) != 1 || report.Tasks[0].FileID != "X" || len(svc.Downloads()) != 2 {
+		t.Fatalf("refused submission duplicated or successful task lost: %+v", report.Tasks)
+	}
+}
+
+func TestQueueDownloadsUsesExplicitAccount(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	svc, original := newDownloadDrive(t)
+	useDownloadDir(t, svc, home)
+	current := seedSession(t, svc, "other@example.com")
+
+	report, err := svc.QueueDownloads(original.key, []DownloadItem{{ID: "X", Name: "x.bin"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(report.Tasks) != 1 || report.Tasks[0].Account != original.key ||
+		len(report.Items) != 1 || report.Items[0].State != "done" {
+		t.Fatalf("submission used the wrong account: %+v", report)
+	}
+	if active, err := svc.active(); err != nil || active != current {
+		t.Fatalf("submission changed the current account: %v", err)
+	}
+	if q := current.downloadQueue(); q != nil && len(q.List()) != 0 {
+		t.Fatalf("submission reached the current account's queue: %+v", q.List())
+	}
+	for _, account := range []string{"", "missing-account"} {
+		if report, err := svc.QueueDownloads(account, []DownloadItem{{ID: "Y", Name: "y.bin"}}); err == nil || len(report.Tasks) != 0 {
+			t.Errorf("invalid account %q submitted downloads: %+v, %v", account, report, err)
+		}
 	}
 }
 

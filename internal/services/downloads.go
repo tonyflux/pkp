@@ -42,6 +42,20 @@ type DownloadItem struct {
 	ParentID string `json:"parentId"`
 }
 
+// DownloadBatchResult records queue submission, not completion of the transfer.
+// Unknown folders may already have queued children and must not be blindly retried.
+type DownloadBatchResult struct {
+	ID    string `json:"id"`
+	Name  string `json:"name"`
+	State string `json:"state"`
+	Error string `json:"error"`
+}
+
+type DownloadBatchReport struct {
+	Tasks []DownloadTask        `json:"tasks"`
+	Items []DownloadBatchResult `json:"items"`
+}
+
 func toDownloadTask(account string, t download.Task) DownloadTask {
 	saved := filepath.Dir(t.Path)
 	if home, err := os.UserHomeDir(); err == nil && home != "" {
@@ -78,19 +92,38 @@ func (d *DriveService) Downloads() []DownloadTask {
 // drive is still saving are skipped. The rest go in when one is refused, and
 // the error names every one that was.
 func (d *DriveService) DownloadFiles(account string, items []DownloadItem) ([]DownloadTask, error) {
-	s, err := d.sessionFor(account)
+	report, errs, err := d.queueDownloads(account, items)
 	if err != nil {
 		return nil, err
 	}
+	return report.Tasks, errors.Join(errs...)
+}
+
+// QueueDownloads submits items to the existing transfer queue using the original,
+// explicit account. Only failures before submission are returned as an error;
+// individual outcomes, including partial folders, are retained in the report.
+func (d *DriveService) QueueDownloads(account string, items []DownloadItem) (DownloadBatchReport, error) {
+	if account == "" {
+		return DownloadBatchReport{}, errNoSuchAccount
+	}
+	report, _, err := d.queueDownloads(account, items)
+	return report, err
+}
+
+func (d *DriveService) queueDownloads(account string, items []DownloadItem) (DownloadBatchReport, []error, error) {
+	s, err := d.sessionFor(account)
+	if err != nil {
+		return DownloadBatchReport{}, nil, err
+	}
 	q, err := s.liveDownloads()
 	if err != nil {
-		return nil, err
+		return DownloadBatchReport{}, nil, err
 	}
 	// Not made when missing: an unplugged disk would get a stand-in folder
 	// on the system disk.
 	dir := d.LocalSettings().DownloadDir
 	if info, err := os.Stat(dir); err != nil || !info.IsDir() {
-		return nil, i18n.Errorf("下载文件夹「%s」不可用，请在「设置 · 传输」里重新选择", dir)
+		return DownloadBatchReport{}, nil, i18n.Errorf("下载文件夹「%s」不可用，请在「设置 · 传输」里重新选择", dir)
 	}
 
 	// Where the items come from is named once per drive folder.
@@ -110,10 +143,9 @@ func (d *DriveService) DownloadFiles(account string, items []DownloadItem) ([]Do
 		labels[parentID] = l
 		return l
 	}
-	var (
-		added []DownloadTask
-		errs  []error
-	)
+	report := DownloadBatchReport{Tasks: []DownloadTask{}, Items: make([]DownloadBatchResult, 0, len(items))}
+	var errs []error
+	var incomplete bool
 	add := func(src download.Source) bool {
 		task, err := q.Add(src)
 		switch {
@@ -122,7 +154,7 @@ func (d *DriveService) DownloadFiles(account string, items []DownloadItem) ([]Do
 		case err != nil:
 			errs = append(errs, err)
 		default:
-			added = append(added, toDownloadTask(s.key, task))
+			report.Tasks = append(report.Tasks, toDownloadTask(s.key, task))
 			return true
 		}
 		return false
@@ -132,6 +164,7 @@ func (d *DriveService) DownloadFiles(account string, items []DownloadItem) ([]Do
 	walk = func(id, local, origin string, depth int) int {
 		if depth > 64 {
 			errs = append(errs, i18n.Errorf("「%s」下的文件夹太深，更深的部分已跳过", origin))
+			incomplete = true
 			return 0
 		}
 		n := 0
@@ -143,6 +176,7 @@ func (d *DriveService) DownloadFiles(account string, items []DownloadItem) ([]Do
 			})
 			if err != nil {
 				errs = append(errs, err)
+				incomplete = true
 				return n
 			}
 			for _, f := range list.Files {
@@ -164,25 +198,36 @@ func (d *DriveService) DownloadFiles(account string, items []DownloadItem) ([]Do
 		}
 	}
 	for _, it := range items {
+		firstTask, firstErr := len(report.Tasks), len(errs)
+		incomplete = false
 		origin := label(it.ParentID)
 		if !it.Folder {
 			add(download.Source{FileID: it.ID, Name: it.Name, Size: it.Size, Dir: dir, Origin: origin})
-			continue
+		} else {
+			root, err := download.FreeDir(dir, download.SafeName(it.Name, runtime.GOOS))
+			if err != nil {
+				errs = append(errs, err)
+			} else {
+				if origin != "" {
+					origin += " / "
+				}
+				if walk(it.ID, root, origin+it.Name, 0) == 0 {
+					// Nothing to download: no empty folder is left behind.
+					_ = os.Remove(root)
+				}
+			}
 		}
-		root, err := download.FreeDir(dir, download.SafeName(it.Name, runtime.GOOS))
-		if err != nil {
-			errs = append(errs, err)
-			continue
+		result := DownloadBatchResult{ID: it.ID, Name: it.Name, State: "done"}
+		if len(errs) > firstErr {
+			result.State = "failed"
+			result.Error = errors.Join(errs[firstErr:]...).Error()
+			if it.Folder && (incomplete || len(report.Tasks) > firstTask) {
+				result.State = "unknown"
+			}
 		}
-		if origin != "" {
-			origin += " / "
-		}
-		if walk(it.ID, root, origin+it.Name, 0) == 0 {
-			// Nothing to download: no empty folder is left behind.
-			_ = os.Remove(root)
-		}
+		report.Items = append(report.Items, result)
 	}
-	return added, errors.Join(errs...)
+	return report, errs, nil
 }
 
 // PauseDownload stops one of an account's downloads and keeps what it has on

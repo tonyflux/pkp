@@ -42,6 +42,7 @@ func init() {
 	application.RegisterEvent[application.Void](services.EventAccounts)
 	application.RegisterEvent[services.OrganizeProgress](services.EventOrganizeProgress)
 	application.RegisterEvent[services.RemoveProgress](services.EventRemoveProgress)
+	application.RegisterEvent[services.FileBatchProgress](services.EventFileBatchProgress)
 	// Organize on Import: an account's arrivals changed.
 	application.RegisterEvent[services.InboxChanged](services.EventInboxChanged)
 	application.RegisterEvent[services.InboxChanged](services.EventArrivalSuggestionsChanged)

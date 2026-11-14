@@ -19,6 +19,7 @@ declare module "@wailsio/runtime" {
             "applock:state": services$0.AppLockState;
             "download:state": services$0.DownloadTask;
             "drive:accounts": void;
+            "drive:batch": services$0.FileBatchProgress;
             "drive:index": services$0.IndexProgress;
             "drive:remove": services$0.RemoveProgress;
             "external:open": void;

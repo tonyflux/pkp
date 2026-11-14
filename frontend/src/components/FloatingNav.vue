@@ -8,6 +8,7 @@ import SavedSearches from "./SavedSearches.vue";
 import { RAIL_QUERY, WORKSPACE_QUERY, modKey, shortcutText, useMedia, useOutsideClick } from "../dom";
 import { bytes, maskLogin } from "../format";
 import { t } from "../i18n";
+import { fileTaskActiveCount, fileTaskUnseen, fileTasks, taskFinished } from "../filetasks";
 import { syncAttention } from "../syncstore";
 import {
   NAV_KEYS,
@@ -94,6 +95,24 @@ const activeKey = computed(() => {
       return ui.view;
   }
 });
+
+const taskLabel = computed(() => {
+  if (fileTaskUnseen.value.length) return t("filetask|文件任务，{n} 条回执待查看", { n: fileTaskUnseen.value.length });
+  if (fileTaskActiveCount.value) return t("filetask|文件任务，{n} 项进行中", { n: fileTaskActiveCount.value });
+  return t("filetask|文件任务");
+});
+
+function toggleTaskHistory() {
+  if (fileTasks.visible && fileTasks.open) {
+    fileTasks.open = false;
+    if (!fileTaskActiveCount.value) fileTasks.visible = false;
+    return;
+  }
+  const selected = fileTaskUnseen.value.at(-1) ?? [...fileTasks.items].reverse().find((task) => !taskFinished(task));
+  if (selected) fileTasks.selectedId = selected.id;
+  fileTasks.visible = true;
+  fileTasks.open = true;
+}
 
 /* ---------- the account trigger ---------- */
 
@@ -262,6 +281,14 @@ onBeforeUnmount(() => {
     <nav class="groups">
       <section v-for="group in groups" :key="group.title">
         <h3>{{ group.title }}</h3>
+        <button v-if="group.title === t('工具与服务') && fileTasks.items.length" class="item task-entry"
+          data-file-task-entry :class="{ active: fileTasks.visible && fileTasks.open, attention: fileTaskUnseen.length }"
+          :title="taskLabel" :aria-label="taskLabel" aria-controls="file-task-details"
+          :aria-expanded="fileTasks.visible && fileTasks.open" @click="toggleTaskHistory">
+          <Icon name="list" :size="20" />
+          <span class="label">{{ t("filetask|文件任务") }}</span>
+          <em v-if="fileTaskUnseen.length || fileTaskActiveCount" aria-hidden="true">{{ fileTaskUnseen.length || fileTaskActiveCount }}</em>
+        </button>
         <button
           v-for="item in group.items"
           :key="item.key"
@@ -587,6 +614,12 @@ onBeforeUnmount(() => {
     height var(--dur) var(--ease),
     padding var(--dur) var(--ease),
     font-size var(--dur) var(--ease);
+}
+
+.task-entry.attention em {
+  color: var(--warning);
+  background: color-mix(in srgb, var(--warning) 18%, var(--canvas-flat));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--warning) 55%, transparent);
 }
 
 .foot {

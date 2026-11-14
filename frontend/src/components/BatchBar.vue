@@ -7,7 +7,7 @@ import { computed } from "vue";
 import Icon from "./Icon.vue";
 import { t } from "../i18n";
 
-const props = defineProps<{ count: number; allPicked: boolean }>();
+const props = defineProps<{ count: number; allPicked: boolean; pickAllLabel?: string; pickAllTitle?: string; scopeLabel?: string }>();
 // The count stays bold inside a sentence whose word order differs by language.
 const countParts = computed(() => t("已选 {n} 项", { n: "\u0000" }).split("\u0000"));
 defineEmits<{ pickAll: []; clear: [] }>();
@@ -15,8 +15,8 @@ defineEmits<{ pickAll: []; clear: [] }>();
 
 <template>
   <div class="bar glass glass-sheet" role="toolbar" :aria-label="t('批量操作')">
-    <span class="count">{{ countParts[0] }}<strong>{{ props.count }}</strong>{{ countParts[1] }}</span>
-    <button v-if="!allPicked" class="quiet text" @click="$emit('pickAll')">{{ t("全选") }}</button>
+    <span class="count" :title="pickAllTitle">{{ countParts[0] }}<strong>{{ props.count }}</strong>{{ countParts[1] }}<small v-if="scopeLabel">{{ scopeLabel }}</small></span>
+    <button v-if="!allPicked" class="quiet text" :title="pickAllTitle" @click="$emit('pickAll')">{{ pickAllLabel ?? t("全选") }}</button>
     <span class="divider" aria-hidden="true" />
     <slot />
     <span class="divider" aria-hidden="true" />
@@ -67,6 +67,13 @@ defineEmits<{ pickAll: []; clear: [] }>();
   color: var(--fg);
   font-weight: 600;
   font-variant-numeric: tabular-nums;
+}
+
+.count small {
+  display: block;
+  margin-top: 2px;
+  font-size: 11px;
+  color: var(--fg-dim);
 }
 
 .divider {

@@ -2,6 +2,12 @@
 
 [简体中文](CHANGELOG.md) · English
 
+## Unreleased
+
+- Unify batch operations from Files and Cleanup with a background task strip showing queued, submitting, cloud-processing, verification, and per-item receipts. Serialize same-account file changes while keeping other accounts and download submissions independent. Stop unsent work, explicitly confirm retries of known failures, preserve newer selections, and make loaded-only select-all scope explicit. Recheck original accounts and source snapshots for move/copy/delete/restore/star, freeze Empty Trash targets, and retain successful downloads after partial submission failures. Never automatically replay writes after timeouts, transport errors, or 5xx responses; mark unverified results unknown. Window long receipts and retain queues/history only for the current window session.
+- Fix background task history cards inheriting pill-shaped corners; multiline cards now use rounded rectangles.
+- Automatically hide the file task strip after successful completion. Reopen receipts from the sidebar; unseen failed, unknown, and stopped results remain marked. Hiding the panel no longer removes a receipt or leaves a completed strip alongside playback.
+
 ## 0.6.1 · 2026-11-12
 
 - Support PikPak AI subtitles on Windows x64/ARM64 with a bundled native audio-decoder DLL sharing the macOS implementation. No separate FFmpeg installation is needed. Reuse membership, quota, subtitle styles and timeline synchronization, including audio-track selection, seeking and decoding after cancellation, and fix zero-duration first-frame startup under coarse clocks skipping post-seek audio. Installation, upgrade rollback and uninstall include the matching decoder library.

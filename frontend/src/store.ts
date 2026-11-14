@@ -7,6 +7,7 @@
 import { computed, markRaw, nextTick, onBeforeUnmount, onMounted, reactive, watch } from "vue";
 import { Browser, Clipboard, Dialogs, Events, Window } from "@wailsio/runtime";
 import { applyLanguage, i18n, isLocale, N_, t, type LanguagePref } from "./i18n";
+import { enqueueFileTask, fileTasks, settleFileTask, stopFileTask, taskCounts, taskFinished, type FileTask, type FileTaskItemState } from "./filetasks";
 import { playFinished } from "./plays";
 import { closeShareImport, openShareImport, shareImport, shareImportBusy, shareImportPending } from "./shareimport";
 import { shareLink } from "./sharelink";
@@ -40,6 +41,8 @@ import type {
   Entry,
   ExternalOpen,
   FileDetail,
+  FileBatchReport,
+  FileBatchProgress,
   FolderChoice,
   IndexProgress,
   ListRequest,
@@ -3330,25 +3333,19 @@ function ids(entries: Entry[]): string[] {
 }
 
 function applyStarred(targets: string[], starred: boolean) {
-  for (const id of targets) patchEntry(id, { starred });
+  const selected = new Set(targets);
+  for (const row of drive.entries) if (selected.has(row.id)) row.starred = starred;
+  if (drive.detail && selected.has(drive.detail.id)) drive.detail.starred = starred;
   if (localSearch.account === currentId.value) {
-    for (const hit of localSearch.result?.hits ?? []) if (targets.includes(hit.id)) hit.starred = starred;
+    for (const hit of localSearch.result?.hits ?? []) if (selected.has(hit.id)) hit.starred = starred;
   }
   if (ui.view === "starred" && !starred) {
     removeEntries(targets);
-    clearSelection();
   }
 }
 
-export async function setStarred(entries: Entry[], starred: boolean) {
-  if (!entries.length) return;
-  const ok = await run(starred ? t("加星标") : t("取消星标"), async () => {
-    await DriveService.SetStarred(ids(entries), starred);
-    return true;
-  });
-  if (!ok) return;
-  applyStarred(ids(entries), starred);
-  if (entries.length > 1) notify(starred ? t("已加星标 {n} 项", { n: entries.length }) : t("已取消星标 {n} 项", { n: entries.length }), "success");
+export function setStarred(entries: Entry[], starred: boolean) {
+  return queueFileAction(starred ? "star" : "unstar", entries);
 }
 
 export function toggleStar(entry: Entry) {
@@ -3361,24 +3358,6 @@ export async function rename(entry: Entry, name: string) {
   return !!updated;
 }
 
-/**
- * removalNotice words a RemoveReport the eachTransfer way: how many went
- * through, and which did not and why — a batch never claims a success it did
- * not have.
- */
-function removalNotice(done: (n: number) => string, report: RemoveReport): { text: string; tone: "success" | "error" | "info" } {
-  const removed = report.removed?.length ?? 0;
-  const failed = (report.failed ?? []).map((f) => t("{name}（{reason}）", { name: f.name, reason: reasonOf(f.error) }));
-  let text = failed.length ? failedText(done(removed), failed) : done(removed);
-  if (report.stopped) text = t("{text}，其余已停止", { text });
-  return { text, tone: failed.length ? "error" : report.stopped ? "info" : "success" };
-}
-
-/** notifyRemoval reports a remove run item by item; done words what went through. */
-export function notifyRemoval(done: (n: number) => string, report: RemoveReport): void {
-  const { text, tone } = removalNotice(done, report);
-  notify(text, tone);
-}
 
 /** removalSize is what deleting `entries` for good frees, as far as the list knows. */
 export function removalSize(entries: Entry[]): number {
@@ -3391,62 +3370,82 @@ export function freedText(entries: Entry[]): string {
   return size > 0 ? t("立即释放 {size}", { size: bytes(size) }) : t("立即释放它们占用的空间");
 }
 
-type Removal = "trash" | "restore" | "delete";
-const REMOVAL_LABEL: Record<Removal, string> = { trash: N_("移到回收站"), restore: N_("还原"), delete: N_("彻底删除") };
-const REMOVAL_DONE: Record<Removal, (n: number) => string> = {
-  trash: (n) => t("已移到回收站 {n} 项", { n }),
-  restore: (n) => t("已还原 {n} 项", { n }),
-  delete: (n) => t("已彻底删除 {n} 项", { n }),
-};
-const REMOVAL_ONE: Record<Removal, (name: string) => string> = {
-  trash: (name) => t("已把「{name}」移到回收站", { name }),
-  restore: (name) => t("已还原「{name}」", { name }),
-  delete: (name) => t("已彻底删除「{name}」", { name }),
+type FileAction = "trash" | "restore" | "delete" | "empty" | "move" | "copy" | "star" | "unstar";
+const FILE_ACTION_LABEL: Record<FileAction, string> = {
+  trash: N_("移到回收站"), restore: N_("还原"), delete: N_("彻底删除"), empty: N_("清空回收站"),
+  move: N_("移动"), copy: N_("复制"), star: N_("加星标"), unstar: N_("取消星标"),
 };
 
-/**
- * removeEntriesVia runs one remove call for the account on screen. Only what
- * the report confirms leaves the list, and only if that screen is still up;
- * a result for an account switched away from names it. A refused call goes
- * through run()'s error path. Trashing frees nothing, so only a
- * permanent delete refreshes the quota.
- */
-async function removeEntriesVia(kind: Removal, entries: Entry[], call: (account: string, ids: string[]) => Promise<RemoveReport>) {
-  if (!entries.length) return;
-  const account = currentId.value;
-  const screen = accountKey();
-  const report = await run(t(REMOVAL_LABEL[kind]), () => call(account, ids(entries)));
-  if (!report) return;
-  const removed = report.removed ?? [];
-  if (screen === accountKey()) {
-    removeEntries(removed);
-    clearSelection();
-    if (ui.view === "trash") void loadTrashSummary();
-  }
-  if (kind === "delete" && removed.length) refreshQuotaSoon();
+function fileScreenKey(): string {
+  return JSON.stringify([accountKey(), ui.view, ui.scope, currentFolderId.value, ui.query, localSearch.range?.folderId ?? ""]);
+}
 
-  const notice = removalNotice(REMOVAL_DONE[kind], report);
-  const tone = notice.tone;
-  let text = notice.text;
-  if (tone === "success" && entries.length === 1 && removed.length === 1) text = REMOVAL_ONE[kind](entries[0].name);
-  if (removed.length && !report.failed?.length) {
-    if (kind === "trash") text = t("{text}，空间要等彻底删除后才释放", { text });
-    else if (kind === "delete" && report.freed > 0) text = t("{text}，释放 {size}", { text, size: bytes(report.freed) });
+function fileResultState(state: string): FileTaskItemState {
+  switch (state) {
+    case "done": case "failed": case "unprocessed": return state;
+    default: return "unknown";
   }
-  if (account !== currentId.value) text = t("「{account}」{text}", { account: accountName(account), text });
-  notify(text, tone);
+}
+
+function fileTaskNotice(task: FileTask) {
+  const counts = taskCounts(task);
+  let text = t("「{action}」已结束：{done} / {total} 项成功", { action: task.label, done: counts.done, total: counts.total });
+  if (task.account !== currentId.value) text = t("「{account}」{text}", { account: task.accountName, text });
+  notify(text, counts.failed ? "error" : counts.unknown || counts.unprocessed ? "info" : "success");
+}
+
+/** The queue holds immutable source/destination snapshots, never the live selection. */
+async function queueFileAction(action: FileAction, entries: Entry[], parentId = "", destination = "", account = currentId.value): Promise<FileTask | undefined> {
+  if (action !== "empty" && entries.length > REMOVE_LIMIT) {
+    notify(t("一次最多处理 {n} 项，请缩小范围或取消部分勾选", { n: REMOVE_LIMIT }), "info");
+    return;
+  }
+  if (!entries.length || !account) return;
+  const snapshot = entries.map((entry) => ({ ...entry }));
+  const screen = fileScreenKey();
+  const submission = enqueueFileTask({
+    account, accountName: accountName(account), action, label: t(FILE_ACTION_LABEL[action]), destination, target: parentId,
+    items: snapshot, errorText,
+    stop: () => DriveService.StopRemove(account),
+    retry: (failed) => { void queueFileAction(action, snapshot.filter((entry) => failed.includes(entry.id)), parentId, destination, account); },
+    run: async (task) => {
+      const report: FileBatchReport = await DriveService.RunFileBatch({
+        id: task.id, account, action, parentId,
+        items: snapshot.map((entry) => ({ id: entry.id, name: entry.name, parentId: entry.parentId })),
+      });
+      const results = report.items ?? [];
+      settleFileTask(task, results.map((item) => ({ id: item.id, state: fileResultState(item.state), error: item.error ? errorText(item.error) : "" })));
+      if (account !== currentId.value) return;
+      const done = results.filter((item) => item.state === "done");
+      const doneIds = done.map((item) => item.id);
+      if (action === "star" || action === "unstar") {
+        applyStarred(doneIds, action === "star");
+      } else if (screen === fileScreenKey()) {
+        if (action === "trash" || action === "delete" || action === "empty" || (action === "restore" && ui.view === "trash") ||
+          (action === "move" && ui.view === "all" && !wholeDrive.value && !ui.query.trim())) {
+          removeEntries(doneIds);
+        } else {
+          for (const item of done) if (item.entry) patchEntry(item.id, item.entry);
+        }
+      }
+      if ((action === "delete" || action === "empty") && doneIds.length) refreshQuotaSoon();
+      if (ui.view === "trash") void loadTrashSummary();
+    },
+  });
+  if (submission.created) void submission.finished.then(fileTaskNotice);
+  return submission.finished;
 }
 
 export function trash(entries: Entry[]) {
-  return removeEntriesVia("trash", entries, (account, list) => DriveService.RemoveFiles(account, list, false));
+  return queueFileAction("trash", entries);
 }
 
 export function restore(entries: Entry[]) {
-  return removeEntriesVia("restore", entries, (account, list) => DriveService.RestoreFiles(account, list));
+  return queueFileAction("restore", entries);
 }
 
 export function deleteForever(entries: Entry[]) {
-  return removeEntriesVia("delete", entries, (account, list) => DriveService.RemoveFiles(account, list, true));
+  return queueFileAction("delete", entries);
 }
 
 /**
@@ -3466,28 +3465,11 @@ export async function loadTrashSummary() {
   Object.assign(trashSummary, { count: summary.count, size: summary.size, ready: summary.ready });
 }
 
-/** emptyTrash deletes everything in the account's recycle bin for good. */
+/** Snapshot the confirmed bin now; a queued run must not include later arrivals. */
 export async function emptyTrash() {
   const account = currentId.value;
-  const screen = accountKey();
-  const report = await run(t("清空回收站"), () => DriveService.EmptyTrash(account));
-  if (!report) return;
-  if (report.removed?.length) refreshQuotaSoon();
-
-  const notice = removalNotice(REMOVAL_DONE.delete, report);
-  const tone = notice.tone;
-  let text = notice.text;
-  if (tone === "success") text = t("已清空回收站 {n} 项", { n: report.removed?.length ?? 0 });
-  if (report.freed > 0) text = t("{text}，释放 {size}", { text, size: bytes(report.freed) });
-  if (account !== currentId.value) text = t("「{account}」{text}", { account: accountName(account), text });
-  notify(text, tone);
-
-  if (screen !== accountKey()) return;
-  void loadTrashSummary();
-  if (ui.route === "files" && ui.view === "trash") {
-    clearSelection();
-    await reload(false);
-  }
+  const entries = await run(t("正在读取回收站快照…"), () => DriveService.TrashSnapshot(account));
+  if (entries) return queueFileAction("empty", entries, "", "", account);
 }
 
 /* ---------------- move & copy, and the folder to organize ---------------- */
@@ -3699,38 +3681,10 @@ export async function confirmRelocate() {
   const target = relocate.trail.at(-1);
   const targetId = target?.id ?? "";
   const where = target?.name ?? t("全部文件");
-  relocate.working = true;
-  try {
-    const ok = await run(mode === "move" ? t("移动") : t("复制"), async () => {
-      if (mode === "move") await DriveService.MoveFiles(ids(items), targetId);
-      else await DriveService.CopyFiles(ids(items), targetId);
-      return true;
-    });
-    if (!ok) return;
-    closeRelocate();
-    if (mode === "move") {
-      // Out of this folder: the rows go. Anywhere else (Starred, search) the
-      // rows stay but their location changed, so the page is refetched.
-      if (ui.view === "all" && !wholeDrive.value && !(ui.query.trim() && indexReady.value)) removeEntries(ids(items));
-      else void reload(false);
-      clearSelection();
-      notify(
-        items.length === 1
-          ? t("已把「{name}」移动到「{where}」", { name: items[0].name, where })
-          : t("已把 {n} 项移动到「{where}」", { n: items.length, where }),
-        "success",
-      );
-    } else {
-      notify(
-        items.length === 1
-          ? t("已开始把「{name}」复制到「{where}」，完成后会出现在目标文件夹", { name: items[0].name, where })
-          : t("已开始把 {n} 项复制到「{where}」，完成后会出现在目标文件夹", { n: items.length, where }),
-        "success",
-      );
-    }
-  } finally {
-    relocate.working = false;
-  }
+  const account = relocate.account;
+  const snapshot = items.map((entry) => ({ ...entry }));
+  closeRelocate();
+  await queueFileAction(mode, snapshot, targetId, where, account);
 }
 
 /* ---------------- clipboard (copy / cut / paste) ---------------- */
@@ -3739,7 +3693,6 @@ export const clipboard = reactive({
   mode: "" as "" | "move" | "copy",
   account: "",
   items: [] as Entry[],
-  working: false,
 });
 
 /** copyToClipboard records entries in the drive clipboard for pasting into a folder. */
@@ -3774,11 +3727,12 @@ export const canPasteHere = computed(
 
 /** pasteClipboard copies or moves the clipboard's entries into the current folder. */
 export async function pasteClipboard(modeOverride?: "move" | "copy") {
-  if (!canPasteHere.value || clipboard.working) return;
+  if (!canPasteHere.value) return;
   const mode = modeOverride ?? clipboard.mode;
+  if (mode !== "move" && mode !== "copy") return;
   const items = [...clipboard.items];
   const targetId = currentFolderId.value;
-  const where = currentFolderName.value;
+  const where = trailPath(drive.trail);
   const pickedIds = new Set(items.map((e) => e.id));
   if (pickedIds.has(targetId) || drive.trail.some((c) => pickedIds.has(c.id))) {
     notify(mode === "move" ? t("不能移动到所选文件夹自身") : t("不能复制到所选文件夹自身"), "error");
@@ -3788,35 +3742,18 @@ export async function pasteClipboard(modeOverride?: "move" | "copy") {
     notify(t("所选项目已在这个文件夹里，请选择其他位置"), "info");
     return;
   }
-  clipboard.working = true;
-  try {
-    const ok = await run(mode === "move" ? t("移动") : t("复制"), async () => {
-      if (mode === "move") await DriveService.MoveFiles(ids(items), targetId);
-      else await DriveService.CopyFiles(ids(items), targetId);
-      return true;
-    });
-    if (!ok) return;
-    if (mode === "move") {
-      clipboard.mode = "";
-      clipboard.items = [];
-      void reload(false);
-      notify(
-        items.length === 1
-          ? t("已把「{name}」移动到「{where}」", { name: items[0].name, where })
-          : t("已把 {n} 项移动到「{where}」", { n: items.length, where }),
-        "success",
-      );
-    } else {
-      void reload(false);
-      notify(
-        items.length === 1
-          ? t("已开始把「{name}」复制到「{where}」，完成后会出现在目标文件夹", { name: items[0].name, where })
-          : t("已开始把 {n} 项复制到「{where}」，完成后会出现在目标文件夹", { n: items.length, where }),
-        "success",
-      );
-    }
-  } finally {
-    clipboard.working = false;
+  const account = clipboard.account;
+  const snapshot = items.map((entry) => ({ ...entry }));
+  // Submission closes the clipboard transaction; failures remain in its receipt.
+  if (mode === "move") {
+    clipboard.mode = "";
+    clipboard.items = [];
+  }
+  await queueFileAction(mode, snapshot, targetId, where, account);
+  // The pasted entries are new rows here: the queue removes the source rows
+  // of a move and never adds a copy, so the destination is read again.
+  if (account === currentId.value && currentFolderId.value === targetId && ui.route === "files" && ui.view === "all" && !ui.query.trim()) {
+    await reload(false);
   }
 }
 
@@ -7306,6 +7243,7 @@ export const cleanup = reactive({
   /** The removal in flight: which tab, for which account. */
   running: "" as "" | CleanupTab,
   runAccount: "",
+  taskId: "",
   stopping: false,
   progress: { done: 0, total: 0, phase: "" },
 });
@@ -7508,9 +7446,9 @@ export function keepDupCopy(group: DupGroupView, id: string) {
 /** The copies of the page on screen that are ticked: only what the user sees goes. */
 export const dupPicked = computed(() => {
   const d = cleanup.dup;
-  const out: { id: string; size: number }[] = [];
+  const out: { id: string; name: string; size: number }[] = [];
   for (const group of d.page?.groups ?? []) {
-    for (const copy of group.copies) if (d.picked[copy.id]) out.push({ id: copy.id, size: copy.size });
+    for (const copy of group.copies) if (d.picked[copy.id]) out.push({ id: copy.id, name: copy.name, size: copy.size });
   }
   return out;
 });
@@ -7551,7 +7489,64 @@ export function closeCleanupConfirm() {
 export function stopCleanup() {
   if (!cleanup.running || cleanup.stopping) return;
   cleanup.stopping = true;
-  void DriveService.StopRemove(cleanup.runAccount).catch(() => undefined);
+  const id = cleanup.taskId;
+  void stopFileTask(id).then(() => {
+    if (cleanup.taskId === id) cleanup.stopping = fileTasks.items.find((task) => task.id === id)?.stopping ?? false;
+  });
+}
+
+const cleanupTaskRuns = new Map<string, string>();
+
+function queueCleanupRemoval(account: string, tab: CleanupTab, entries: readonly { id: string; name: string }[], call: (ids: string[]) => Promise<RemoveReport>, phase: string) {
+  const snapshot = entries.map((entry) => ({ ...entry }));
+  let report: RemoveReport | null = null;
+  const screen = fileScreenKey();
+  const action = phase === "delete" ? "delete" : "trash";
+  const submission = enqueueFileTask({
+    account, accountName: accountName(account), action, target: `cleanup:${tab}`,
+    label: `${tab === "dup" ? t("filetask|重复文件清理") : t("filetask|空文件夹清理")} · ${t(FILE_ACTION_LABEL[action])}`,
+    items: snapshot, errorText,
+    stop: () => DriveService.StopRemove(account),
+    retry: (failed) => { queueCleanupRemoval(account, tab, snapshot.filter((entry) => failed.includes(entry.id)), call, phase); },
+    run: async (task) => {
+      cleanupTaskRuns.set(account, task.id);
+      task.phase = "processing";
+      try {
+        report = await call(snapshot.map((entry) => entry.id));
+        const removed = new Set(report.removed ?? []);
+        const failed = new Map((report.failed ?? []).map((item) => [item.id, item]));
+        const stopped = report.stopped;
+        settleFileTask(task, snapshot.map((entry) => {
+          const failure = failed.get(entry.id);
+          return { id: entry.id, state: removed.has(entry.id) ? "done" : failure ? fileResultState(failure.state ?? "unknown") : stopped ? "unprocessed" : "unknown", error: failure ? errorText(failure.error) : "" };
+        }));
+        if (account === currentId.value) {
+          if (screen === fileScreenKey()) removeEntries(report.removed ?? []);
+          if (phase === "delete" && report.removed?.length) refreshQuotaSoon();
+        }
+      } finally {
+        if (cleanupTaskRuns.get(account) === task.id) cleanupTaskRuns.delete(account);
+      }
+    },
+  });
+  if (submission.created) void submission.finished.then(fileTaskNotice);
+  return {
+    task: submission.task,
+    // A coalesced submission never ran here, and a failed one may never have
+    // reached its report: the shared task's settled items are the receipt.
+    finished: submission.finished.then((task) => report ?? settledCleanupReport(task)),
+  };
+}
+
+/** settledCleanupReport restates a task's settled items as the legacy report Cleanup reads. */
+function settledCleanupReport(task: FileTask): RemoveReport {
+  const removed: string[] = [];
+  const failed: RemoveResult[] = [];
+  for (const item of task.items) {
+    if (item.state === "done") removed.push(item.id);
+    else if (item.state === "failed" || item.state === "unknown") failed.push({ id: item.id, name: item.name, error: item.error, state: item.state });
+  }
+  return { removed, failed, freed: 0, stopped: task.phase === "stopped" };
 }
 
 /**
@@ -7559,20 +7554,20 @@ export function stopCleanup() {
  * was scanned for and reports what happened; returns the report, or null
  * when nothing was done.
  */
-async function runRemoval(tab: CleanupTab, ids: string[], call: () => Promise<RemoveReport>, phase: string) {
+async function runRemoval(tab: CleanupTab, entries: readonly { id: string; name: string }[], call: (ids: string[]) => Promise<RemoveReport>, phase: string) {
   const account = cleanup.account;
   const state = cleanup[tab];
   cleanup.confirming = "";
   cleanup.running = tab;
   cleanup.runAccount = account;
   cleanup.stopping = false;
-  cleanup.progress = { done: 0, total: ids.length, phase };
+  cleanup.progress = { done: 0, total: entries.length, phase };
   state.stage = "running";
   let report: RemoveReport | null = null;
+  const submission = queueCleanupRemoval(account, tab, entries, call, phase);
+  cleanup.taskId = submission.task.id;
   try {
-    report = await call();
-  } catch (err) {
-    if (!(await sessionLost())) notify(t("没能处理：{error}", { error: errorText(err) }), "error");
+    report = await submission.finished;
   } finally {
     cleanup.running = "";
     cleanup.stopping = false;
@@ -7588,22 +7583,16 @@ export async function removeDuplicates() {
   const picked = dupPicked.value;
   if (cleanup.running || !picked.length || picked.length > REMOVE_LIMIT) return;
   const permanent = cleanup.permanent;
-  const ids = picked.map((c) => c.id);
   const size = new Map(picked.map((c) => [c.id, c.size]));
   const account = cleanup.account;
   const { report, here } = await runRemoval(
     "dup",
-    ids,
-    () => DriveService.RemoveDuplicates(account, ids, permanent),
+    picked,
+    (ids) => DriveService.RemoveDuplicates(account, ids, permanent),
     permanent ? "delete" : "trash",
   );
   if (!report) return;
   const removed = report.removed ?? [];
-  notifyRemoval(permanent ? (n) => t("已彻底删除 {n} 项", { n }) : (n) => t("已移到回收站 {n} 项", { n }), report);
-  if (account === currentId.value) {
-    removeEntries(removed);
-    if (permanent) refreshQuotaSoon();
-  }
   if (!here) return;
   const d = cleanup.dup;
   const gone = new Set(removed);
@@ -7633,7 +7622,7 @@ export async function removeDuplicates() {
   }
   for (const id of removed) delete d.picked[id];
   d.touched = false;
-  d.receipt = { permanent, removed: removed.length, failed: report.failed ?? [], bytes: permanent ? report.freed : bytes, stopped: report.stopped };
+  d.receipt = { permanent, removed: removed.length, failed: report.failed ?? [], bytes: permanent ? report.freed || bytes : bytes, stopped: report.stopped };
   d.stage = "receipt";
 }
 
@@ -7641,14 +7630,11 @@ export async function removeDuplicates() {
 export async function removeEmptyFolders() {
   const picked = emptyPicked.value;
   if (cleanup.running || !picked.length || picked.length > REMOVE_LIMIT) return;
-  const ids = picked.map((f) => f.id);
   const nested = new Map(picked.map((f) => [f.id, f.nested]));
   const account = cleanup.account;
-  const { report, here } = await runRemoval("empty", ids, () => DriveService.RemoveEmptyFolders(account, ids), "check");
+  const { report, here } = await runRemoval("empty", picked, (ids) => DriveService.RemoveEmptyFolders(account, ids), "check");
   if (!report) return;
   const removed = report.removed ?? [];
-  notifyRemoval((n) => t("已移到回收站 {n} 个空文件夹", { n }), report);
-  if (account === currentId.value) removeEntries(removed);
   if (!here) return;
   const e = cleanup.empty;
   const gone = new Set(removed);
@@ -8902,7 +8888,7 @@ export async function loadDownloads() {
 let newDownloads = 0;
 let newDownloadsTimer = 0;
 
-function applyDownload(task: DownloadTask) {
+function applyDownload(task: DownloadTask, announce = true) {
   if (removedAccounts.has(task.account)) return;
   const i = drive.downloads.findIndex((t) => isTransfer(t, task));
   if (i >= 0) {
@@ -8910,6 +8896,7 @@ function applyDownload(task: DownloadTask) {
     return;
   }
   drive.downloads.push(task);
+  if (!announce) return;
   newDownloads += 1;
   window.clearTimeout(newDownloadsTimer);
   newDownloadsTimer = window.setTimeout(() => {
@@ -8923,14 +8910,25 @@ function applyDownload(task: DownloadTask) {
  * folder; a folder comes whole, read on the Go side first. The page stays
  * where it is: the toast and the nav badge say what happened.
  */
-export async function downloadEntries(entries: Entry[]) {
-  if (!entries.length) return;
-  const account = currentId.value;
-  if (entries.some((e) => e.folder)) {
-    notify(entries.length === 1 ? t("正在读取「{name}」里的文件…", { name: entries[0].name }) : t("正在读取 {n} 项里的文件…", { n: entries.length }));
-  }
-  const added = await run(t("下载"), () => DriveService.DownloadFiles(account, entries.map(downloadItem)));
-  for (const task of added ?? []) applyDownload(task);
+export async function downloadEntries(entries: Entry[], account = currentId.value): Promise<FileTask | undefined> {
+  if (!entries.length || !account) return;
+  const snapshot = entries.map((entry) => ({ ...entry }));
+  const submission = enqueueFileTask({
+    account, accountName: accountName(account), action: "download", label: t("加入下载队列"), lane: "downloads",
+    items: snapshot, errorText,
+    retry: (failed) => { void downloadEntries(snapshot.filter((entry) => failed.includes(entry.id)), account); },
+    run: async (task) => {
+      for (const entry of snapshot) {
+        if (task.stopping) break;
+        task.phase = "submitting";
+        const report = await DriveService.QueueDownloads(account, [downloadItem(entry)]);
+        for (const added of report.tasks ?? []) applyDownload(added, false);
+        settleFileTask(task, (report.items ?? []).map((item) => ({ id: item.id, state: fileResultState(item.state), error: item.error ? errorText(item.error) : "" })));
+      }
+    },
+  });
+  if (submission.created) void submission.finished.then(fileTaskNotice);
+  return submission.finished;
 }
 
 const downloadItem = (e: Entry) => ({ id: e.id, name: e.name, size: e.size, folder: e.folder, parentId: e.parentId });
@@ -9689,10 +9687,28 @@ export async function bootstrap() {
       const p = event.data;
       if (assistant.running && p.account === assistant.runAccount) assistant.progress = { done: p.done, total: p.total };
     });
-    // A removal (Cleanup or the file page) as its batches finish; only a Cleanup run draws it.
+    // Match progress to an active call, never to whichever account is on screen.
     Events.On(RemoveProgressEvent, (event: { data: RemoveProgress }) => {
       const p = event.data;
+      const task = fileTasks.items.find((item) => item.id === cleanupTaskRuns.get(p.account));
+      if (task && !taskFinished(task)) {
+        // The checking phase counts re-confirmations, not settled entries, and
+        // that count is cleared when trashing starts: it must not move the
+        // receipt's processed figure backwards.
+        if (p.phase === "delete" && p.done === p.total) task.phase = "verifying";
+        else if (p.phase !== "check") {
+          task.phase = "processing";
+          task.processed = Math.max(task.processed, Math.min(p.done, task.items.length));
+        }
+      }
       if (cleanup.running && p.account === cleanup.runAccount) cleanup.progress = { done: p.done, total: p.total, phase: p.phase };
+    });
+    Events.On("drive:batch", (event: { data: FileBatchProgress }) => {
+      const p = event.data;
+      const task = fileTasks.items.find((item) => item.id === p.id && item.account === p.account);
+      if (!task || taskFinished(task) || task.phase === "queued") return;
+      if (p.phase === "submitting" || p.phase === "processing" || p.phase === "verifying") task.phase = p.phase;
+      task.processed = Math.max(task.processed, Math.min(p.done, task.items.length));
     });
     watch(
       [() => player.playlist, () => player.index, () => player.mode, () => player.presentation, () => playingOwner.value, () => player.source],

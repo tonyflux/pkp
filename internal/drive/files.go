@@ -541,6 +541,11 @@ func (c *Client) Copy(ctx context.Context, ids []string, parentID string) error 
 	return c.batchIDs(ctx, "/drive/v1/files:batchCopy", ids, map[string]any{"parent_id": parentID})
 }
 
+// BatchCopy returns the server task that creates the copies.
+func (c *Client) BatchCopy(ctx context.Context, ids []string, parentID string) (string, error) {
+	return c.batchTask(ctx, "/drive/v1/files:batchCopy", ids, map[string]any{"parent_id": parentID})
+}
+
 func (c *Client) batchIDs(ctx context.Context, path string, ids []string, to map[string]any) error {
 	if len(ids) == 0 {
 		return errors.New("drive: at least one id is required")

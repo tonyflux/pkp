@@ -7,6 +7,7 @@ import Icon from "./Icon.vue";
 import Orbit from "./Orbit.vue";
 import { bytes } from "../format";
 import { t, num } from "../i18n";
+import { fileTasks } from "../filetasks";
 import {
   backToCleanupResult,
   cleanup,
@@ -23,17 +24,24 @@ const props = defineProps<{ tab: CleanupTab }>();
 const state = computed(() => cleanup[props.tab]);
 const dup = computed(() => props.tab === "dup");
 const receipt = computed(() => state.value.receipt);
+const task = computed(() => fileTasks.items.find((item) => item.id === cleanup.taskId));
 
 const runTitle = computed(() => {
+  if (task.value?.phase === "queued") return t("filetask|已排队，尚未提交");
+  if (task.value?.phase === "verifying") return t("filetask|正在核对结果");
   if (!dup.value) return t("正在检查并移走空文件夹");
   return cleanup.progress.phase === "delete" ? t("正在彻底删除重复文件") : t("正在移到回收站");
 });
+// The checking phase counts re-confirmations, not settled entries, so the
+// receipt's processed figure is not used until removal starts.
+const settled = computed(() => (cleanup.progress.phase === "check" ? cleanup.progress.done : (task.value?.processed ?? cleanup.progress.done)));
 const runLine = computed(() => {
-  const { done, total, phase } = cleanup.progress;
-  if (phase === "check") return t("正在逐个确认仍然是空的 · {done} / {total}", { done, total });
-  return t("已完成 {done} / {total} 项", { done, total });
+  if (task.value?.phase === "queued") return t("filetask|已排队，尚未提交");
+  const { total, phase } = cleanup.progress;
+  if (phase === "check") return t("正在逐个确认仍然是空的 · {done} / {total}", { done: cleanup.progress.done, total });
+  return t("已完成 {done} / {total} 项", { done: settled.value, total });
 });
-const ratio = computed(() => (cleanup.progress.total ? Math.min(1, cleanup.progress.done / cleanup.progress.total) : 0));
+const ratio = computed(() => cleanup.progress.total ? Math.min(1, settled.value / cleanup.progress.total) : 0);
 
 const receiptTitle = computed(() => {
   if (!dup.value) return t("空文件夹已移到回收站");
@@ -67,7 +75,7 @@ function scan() {
       <div
         class="track"
         role="progressbar"
-        :aria-valuenow="cleanup.progress.done"
+        :aria-valuenow="settled"
         :aria-valuemax="cleanup.progress.total"
         :aria-label="t('处理进度')"
       >

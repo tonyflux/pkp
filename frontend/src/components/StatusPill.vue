@@ -20,13 +20,18 @@ import { computed, onBeforeUnmount, ref, watch } from "vue";
 import Icon from "./Icon.vue";
 import Orbit from "./Orbit.vue";
 import { cleanup, dismiss, drive, indexText, ui } from "../store";
+import { fileTasks } from "../filetasks";
 import { t } from "../i18n";
 
-// The compact playback bar is a row under the canvas: the pill stays over the
-// canvas's corner, above the bar, never over its controls.
+// The compact playback bar and the file-task strip are rows under the canvas:
+// the pill stays over the canvas's corner, above both, never over their
+// controls.
 defineProps<{ aboveBar?: boolean }>();
 
 const building = computed(() => drive.indexProgress?.phase === "full" && !drive.indexProgress.ready);
+// A hidden receipt no longer occupies a row in the stack.
+const tasksUp = computed(() => fileTasks.visible && fileTasks.items.length > 0);
+const tasksExpanded = computed(() => tasksUp.value && fileTasks.open);
 // Cleanup's submit dock spans the canvas's foot: the pill sits above it, never over its button.
 const lifted = computed(() => ui.route === "cleanup" && cleanup[cleanup.tab].stage === "result");
 
@@ -84,7 +89,7 @@ function leave() {
     v-if="ui.message || building"
     ref="pill"
     class="pill glass"
-    :class="{ alert: ui.message && ui.messageTone === 'error', lifted, 'above-bar': aboveBar, mini }"
+    :class="{ alert: ui.message && ui.messageTone === 'error', lifted, 'above-bar': aboveBar, 'above-tasks': tasksUp, 'expanded-tasks': tasksExpanded, mini }"
     role="status"
     :tabindex="progressOnly ? 0 : undefined"
     :title="mini ? indexText(drive.indexProgress) : undefined"
@@ -145,13 +150,32 @@ function leave() {
   bottom: calc(112px + var(--foot));
 }
 
+/* Expanded receipts can occupy up to 440px; keep notices off their controls. */
+.pill.expanded-tasks {
+  top: 112px;
+  bottom: auto;
+}
+
 .pill.above-bar {
   --foot: 80px;
+}
+
+/* The task strip (collapsed about 52px) sits below the bar when both are up. */
+.pill.above-tasks {
+  --foot: 62px;
+}
+
+.pill.above-bar.above-tasks {
+  --foot: 136px;
 }
 
 @media (max-width: 959px) {
   .pill.above-bar {
     --foot: 76px;
+  }
+
+  .pill.above-bar.above-tasks {
+    --foot: 132px;
   }
 }
 

@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { nextTick } from "vue";
 import type * as Services from "../bindings/github.com/tonyflux/pkp/internal/services";
 import type { Entry, FileDetail } from "../bindings/github.com/tonyflux/pkp/internal/services";
-import { clearSelection, drive, select, togglePick, ui } from "./store";
+import { clearSelection, drive, pickAll, select, togglePick, ui } from "./store";
 
 // FileDetail answers when the test says so, to stage a slow answer for one
 // entry arriving after a fast one for the next. (vi.mock is hoisted above the
@@ -82,5 +82,16 @@ describe("the context column follows the selection", () => {
     await nextTick();
     expect(drive.picked).toEqual(["c"]);
     expect(ui.panelTab).toBe("overview");
+  });
+
+  it("selects only loaded matching rows and never silently expands to later results", async () => {
+    drive.total = 500;
+    ui.category = "video";
+    pickAll();
+    await nextTick();
+    expect(drive.picked).toEqual(["a", "b"]);
+    drive.entries = [...drive.entries, entry("later")];
+    await nextTick();
+    expect(drive.picked).toEqual(["a", "b"]);
   });
 });

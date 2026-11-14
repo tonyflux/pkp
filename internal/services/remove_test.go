@@ -427,7 +427,7 @@ func TestStopRemoveAfterTheBatchInFlight(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !errors.Is(second, errRemoving) || second.Error() != "这个账号还有删除操作在进行，请等这一次完成" {
+	if !errors.Is(second, errRemoving) {
 		t.Errorf("second run = %v, want errRemoving", second)
 	}
 	if !rep.Stopped || len(rep.Removed) != 100 || len(rep.Failed) != 0 {

@@ -1172,15 +1172,19 @@ type sentTask struct {
 	task string
 }
 
-// sendSplit posts one batch for an account. A refused batch is sent again
-// entry by entry, so one entry's refusal does not cost the others; refused
-// reports each one the server would not take.
+// sendSplit posts one batch for an account. Only a definite refusal is split
+// entry by entry. An ambiguous write is returned as sent with no task: the
+// caller's read-back settles it, and nothing is resent or recorded as not
+// applied.
 func (d *DriveService) sendSplit(s *accountSession, ids []string, post postBatch, refused func(id string, err error)) []sentTask {
 	task, err := callIn(d, s, func(ctx context.Context, client *drive.Client) (string, error) {
 		return post(ctx, client, ids)
 	})
 	if err == nil {
 		return []sentTask{{ids: ids, task: task}}
+	}
+	if !knownWriteRefusal(err) {
+		return []sentTask{{ids: ids}}
 	}
 	if len(ids) == 1 {
 		refused(ids[0], err)
@@ -1197,7 +1201,8 @@ func (d *DriveService) sendSplit(s *accountSession, ids []string, post postBatch
 // finish: taskWait plus a second per entry at most, capped at taskWaitCap.
 // A task that cannot be read or fails ends its wait; the caller reads the
 // entries back either way.
-func (d *DriveService) awaitTasks(s *accountSession, tasks []string, n int) {
+func (d *DriveService) awaitTasks(s *accountSession, tasks []string, n int) map[string]string {
+	states := make(map[string]string, len(tasks))
 	deadline := time.Now().Add(min(taskWait+time.Duration(n)*time.Second, taskWaitCap))
 	for _, task := range tasks {
 		for task != "" && time.Now().Before(deadline) {
@@ -1205,11 +1210,20 @@ func (d *DriveService) awaitTasks(s *accountSession, tasks []string, n int) {
 				return client.GetTask(ctx, task)
 			})
 			if err != nil || t.Done() {
+				if err == nil {
+					states[task] = t.Phase
+					for _, status := range t.Statuses {
+						if status.Phase != "" && status.Phase != drive.PhaseComplete {
+							states[task] = drive.PhaseError
+						}
+					}
+				}
 				break
 			}
 			time.Sleep(taskPoll)
 		}
 	}
+	return states
 }
 
 // readBack reads an account's entries by id, a batchGet at a time: got

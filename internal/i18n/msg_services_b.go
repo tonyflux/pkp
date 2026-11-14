@@ -149,6 +149,11 @@ func init() {
 		"新文件还没进入本地索引，请稍后再试":         {Hant: "新檔案尚未進入本機索引，請稍後再試", En: "New files aren't in the local index yet; try again later", Ja: "新しいファイルはまだローカルインデックスにありません。しばらくしてからもう一度お試しください", Ko: "새 파일이 아직 로컬 인덱스에 없습니다. 잠시 후 다시 시도하세요"},
 		"所选的文件不在这个文件夹里，可能已被移动或删除":   {Hant: "所選的檔案不在這個資料夾中，可能已被移動或刪除", En: "The selected files aren't in this folder; they may have been moved or deleted", Ja: "選択したファイルはこのフォルダにありません。移動または削除された可能性があります", Ko: "선택한 파일이 이 폴더에 없습니다. 이동되었거나 삭제되었을 수 있습니다"},
 
+		// Background file batches
+		"文件任务缺少账号或来源快照":    {Hant: "檔案工作缺少帳號或來源快照", En: "The file task is missing its account or source snapshot", Ja: "ファイル操作のアカウントまたは元のスナップショットがありません", Ko: "파일 작업에 계정 또는 원본 스냅샷이 없습니다"},
+		"已经在目标文件夹，未处理":     {Hant: "已在目標資料夾，未處理", En: "Already in the destination folder; skipped", Ja: "すでに移動先のフォルダにあるため、未処理", Ko: "이미 대상 폴더에 있어 처리하지 않음"},
+		"云盘尚未确认结果，请检查后再操作": {Hant: "雲端硬碟尚未確認結果，請檢查後再操作", En: "The drive hasn't confirmed the result; check before acting again", Ja: "クラウドドライブで結果を確認できません。確認してから再操作してください", Ko: "클라우드 드라이브에서 결과를 확인하지 못했습니다. 확인 후 다시 작업하세요"},
+
 		// Remove (cleanup)
 		"一次最多处理 %d 项，请缩小范围":     {Hant: "一次最多處理 %d 項，請縮小範圍", En: "Up to %d items at once; narrow the scope", Ja: "一度に処理できるのは最大 %d 項目です。範囲を狭めてください", Ko: "한 번에 최대 %d개 항목만 처리할 수 있습니다. 범위를 줄이세요"},
 		"这个账号还有删除操作在进行，请等这一次完成": {Hant: "這個帳號還有刪除操作在進行，請等這次完成", En: "A delete is still running for this account; wait for it to finish", Ja: "このアカウントでは削除処理が進行中です。完了までお待ちください", Ko: "이 계정에서 삭제 작업이 진행 중입니다. 완료될 때까지 기다리세요"},

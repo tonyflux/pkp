@@ -22,6 +22,18 @@ The file grid and filters adapt to the space available in the window. In short w
 
 In-app file and folder selection sheets share a grid/list switch, including move/copy, cloud sync folders, cleanup scope, Cloud Add destinations, Share Import, torrent files, and archive contents/extraction destinations. The grid uses thumbnails or type icons; the list emphasizes names and paths. Switching views changes presentation only: selections, account, location, and authorization scope remain unchanged, and nothing is submitted. Native system file/folder dialogs retain the system's own views.
 
+### Batch File Operations
+
+- Moves, copies, starring, Move to Trash, restore, permanent deletion, Cleanup, and download submissions appear in the bottom task strip while running. Successful results briefly remain before the strip hides. Reopen session history and per-item receipts from File tasks in the sidebar. Failed, unknown, or stopped receipts stay marked until each is viewed. Hiding the panel does not delete receipts; remove the current receipt from its details to delete that record. Continue selecting files or changing pages after submission.
+- “Select all N loaded items” covers only loaded entries matching the current list filters, not unloaded results. Local search's “Select all results on this page” does not select the complete search catalog. Selecting a folder still includes its contents.
+- File changes for one account run in submission order; other accounts and download submissions remain independent. Each queued task captures its original account, sources, and destination. File-page operations recheck names, locations, and the destination, refusing a source that changed rather than acting on a newer selection. Cleanup follows its scan results: a copy renamed or moved while queued is still processed as selected.
+- Tasks distinguish queued, submitting, cloud processing, and result verification. Receipts distinguish success, known unapplied failures, unknown results, and unsent items. Only confirmed successes leave the original list; failures and newer selections are preserved.
+- Retry individual or all known unapplied failures only after one confirmation of the original account, operation, and destination. Permanent deletion retains its irreversible-action warning. Timeouts, lost replies, and unconfirmed cloud results may already have applied and cannot be directly retried; inspect the actual result first.
+- “Stop remaining submissions” cancels queued tasks or prevents later batches of an active task. Submitted operations still settle and are not rolled back. Ordinary file changes allow up to 5,000 items per task and 100 per batch. Empty Trash processes only the snapshot read at submission, excluding later arrivals while queued.
+- A completed download receipt means submission to the existing transfer queue, not completed file bytes. A partially read or queued folder retains successful downloads and has an unknown result. View actual download progress in Transfers.
+- The batch queue and receipts are window-session-only, not restored after quitting or reloading. Operations already accepted by the cloud may continue. Do not resubmit an uncertain operation just to discover whether it completed.
+
+
 ## Uploads, Downloads, and Cloud Add
 
 - Use “New” to upload files, upload folders, or create a cloud folder. You can also drag local files onto the Files page.

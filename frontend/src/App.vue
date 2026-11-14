@@ -4,6 +4,7 @@ import SceneBackdrop from "./components/SceneBackdrop.vue";
 import FloatingNav from "./components/FloatingNav.vue";
 import FloatingToolbar from "./components/FloatingToolbar.vue";
 import FilesView from "./components/FilesView.vue";
+import FileTasks from "./components/FileTasks.vue";
 import TransfersView from "./components/TransfersView.vue";
 import SharesView from "./components/SharesView.vue";
 import SettingsView from "./components/SettingsView.vue";
@@ -197,6 +198,7 @@ onMounted(() => {
         <ContextPanel v-if="showPanel" :page="narrow" />
       </div>
 
+      <FileTasks v-if="!immersive && !appLocked" />
       <CompactPlaybackBar v-if="bar" />
     </main>
 

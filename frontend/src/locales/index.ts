@@ -9,6 +9,7 @@ import assistant from "./assistant";
 import cleanup from "./cleanup";
 import core from "./core";
 import files from "./files";
+import filetasks from "./filetasks";
 import history from "./history";
 import panels from "./panels";
 import player from "./player";
@@ -32,7 +33,7 @@ import medialibrary from "./medialibrary";
 import lan from "./lan";
 import shareimport from "./shareimport";
 
-const areas: Messages[] = [core, shell, accounts, store, settings, ai, assistant, search, files, history, player, transfers, panels, cleanup, shares, sync, updates, readerCore, readerBook, readerComic, readerTable, readerOffice, readerPdf, readerTimed, savedsearches, medialibrary, lan, shareimport];
+const areas: Messages[] = [core, shell, accounts, store, settings, ai, assistant, search, files, filetasks, history, player, transfers, panels, cleanup, shares, sync, updates, readerCore, readerBook, readerComic, readerTable, readerOffice, readerPdf, readerTimed, savedsearches, medialibrary, lan, shareimport];
 
 const catalog: Messages = Object.assign({}, ...areas);
 

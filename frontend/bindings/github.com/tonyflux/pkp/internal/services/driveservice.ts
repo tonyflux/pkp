@@ -704,6 +704,15 @@ export function ProxySettings(): $CancellablePromise<$models.ProxySettings> {
 }
 
 /**
+ * QueueDownloads submits items to the existing transfer queue using the original,
+ * explicit account. Only failures before submission are returned as an error;
+ * individual outcomes, including partial folders, are retained in the report.
+ */
+export function QueueDownloads(account: string, items: $models.DownloadItem[] | null): $CancellablePromise<$models.DownloadBatchReport> {
+    return $Call.ByID(4096879569, account, items);
+}
+
+/**
  * Quota reads the account's storage usage, split by kind of file when the
  * local index agrees with the server.
  */
@@ -957,6 +966,14 @@ export function RevealSyncLocalFolder(path: string): $CancellablePromise<void> {
  */
 export function RevokeSessions(sessionIDs: string[] | null): $CancellablePromise<void> {
     return $Call.ByID(3756402970, sessionIDs);
+}
+
+/**
+ * RunFileBatch serializes writes for the explicitly captured account. Only
+ * known refusals are safe to retry; accepted or ambiguous writes are read back.
+ */
+export function RunFileBatch(req: $models.FileBatchRequest): $CancellablePromise<$models.FileBatchReport> {
+    return $Call.ByID(4269546404, req);
 }
 
 /**
@@ -1416,6 +1433,14 @@ export function TransferPreferences(): $CancellablePromise<$models.TransferPrefe
  */
 export function TransferQuota(): $CancellablePromise<$models.TransferQuota> {
     return $Call.ByID(3389958350);
+}
+
+/**
+ * TrashSnapshot captures only entries already in the recycle bin, so a queued
+ * empty-trash task never grows to include entries trashed after confirmation.
+ */
+export function TrashSnapshot(account: string): $CancellablePromise<$models.Entry[] | null> {
+    return $Call.ByID(3432081021, account);
 }
 
 /**

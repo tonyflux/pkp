@@ -198,8 +198,8 @@ function clearConditions() {
         <div v-else class="fs-list" :class="{ dim: stale }">
           <div class="fs-list-head">
             <label class="fs-pick">
-              <input type="checkbox" :checked="allPicked" :aria-label="t('全选结果')" @change="pickAll" />
-              <span>{{ localSearch.picked.length ? t("已选 {n} 项", { n: localSearch.picked.length }) : t("全选") }}</span>
+              <input type="checkbox" :checked="allPicked" :aria-label="t('全选本页结果')" :title="t('仅选择当前列表中已加载且符合筛选条件的项目，不包含尚未加载的结果。')" @change="pickAll" />
+              <span>{{ localSearch.picked.length ? t("已选 {n} 项", { n: localSearch.picked.length }) : t("全选本页结果") }}</span>
             </label>
             <button v-if="localSearch.picked.length" class="fs-organize" @click="organizeEntries(localSearchPicked)">
               <Icon name="spark" :size="15" />{{ t("整理这些") }}
