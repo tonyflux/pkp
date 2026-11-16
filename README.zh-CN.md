@@ -138,3 +138,7 @@ Copyright (C) 2026 tonyflux。本仓库中的 PKP 自有源码、构建脚本和
 | [参与贡献](CONTRIBUTING.md) · [安全政策](SECURITY.md) | 贡献方式与安全问题报告方式。 |
 
 欢迎通过 [Issues](https://github.com/tonyflux/pkp/issues) 报告问题或提出建议。**不要公开密码、令牌、API Key、分享口令、完整账号信息或未经脱敏的日志与截图，也不要上传整个配置目录。**
+
+## 友情链接
+
+- [LINUX DO](https://linux.do/)

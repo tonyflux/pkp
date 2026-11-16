@@ -167,3 +167,7 @@ The sign-in code uses identity parameters and signing constants associated with 
 | [Contributing](CONTRIBUTING.en.md) · [Security](SECURITY.en.md) | How to propose a change, and how to report a vulnerability. |
 
 When you [open an issue](https://github.com/tonyflux/pkp/issues), remove passwords, tokens, API keys, share codes, and full account details from logs and screenshots. Do not upload the configuration directory.
+
+## Friends
+
+- [LINUX DO](https://linux.do/)
