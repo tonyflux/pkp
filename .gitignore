@@ -31,5 +31,6 @@ credentials*.json
 accounts.json
 settings.json
 telemetry.json
+crash-feedback.json
 *.sqlite
 *.sqlite-*

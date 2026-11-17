@@ -234,7 +234,7 @@ static NSView *pkp_find_webview(NSView *content) {
 
 int pkp_surface_attach(void *nsWindow, mpv_handle *mpv, char **err) {
 	__block int rc = 0;
-	__block NSString *message = nil;
+	__block char *message = NULL;
 
 	pkp_main_sync(^{
 	  if (gLayer != nil) {
@@ -244,7 +244,7 @@ int pkp_surface_attach(void *nsWindow, mpv_handle *mpv, char **err) {
 	  NSView *content = [window contentView];
 	  if (content == nil) {
 		  rc = -1;
-		  message = @"window has no content view yet";
+		  message = strdup("window has no content view yet");
 		  return;
 	  }
 
@@ -260,7 +260,7 @@ int pkp_surface_attach(void *nsWindow, mpv_handle *mpv, char **err) {
 			  [webview setValue:@NO forKey:@"drawsBackground"];
 		  } @catch (NSException *exception) {
 			  rc = -1;
-			  message = [NSString stringWithFormat:@"webview stays opaque: %@", exception.reason];
+			  message = strdup([[NSString stringWithFormat:@"webview stays opaque: %@", exception.reason] UTF8String]);
 			  return;
 		  }
 	  }
@@ -294,7 +294,9 @@ int pkp_surface_attach(void *nsWindow, mpv_handle *mpv, char **err) {
 
 	if (rc != 0) {
 		if (err != NULL) {
-			*err = strdup(message != nil ? [message UTF8String] : "surface attach failed");
+			*err = message != NULL ? message : strdup("surface attach failed");
+		} else {
+			free(message);
 		}
 		return rc;
 	}
@@ -317,19 +319,19 @@ int pkp_surface_attach(void *nsWindow, mpv_handle *mpv, char **err) {
 
 int pkp_surface_move(void *nsWindow, char **err) {
 	__block int rc = 0;
-	__block NSString *message = nil;
+	__block char *message = NULL;
 
 	pkp_main_sync(^{
 	  if (gHost == nil) {
 		  rc = -1;
-		  message = @"no video surface to move";
+		  message = strdup("no video surface to move");
 		  return;
 	  }
 	  NSWindow *window = (NSWindow *)nsWindow;
 	  NSView *content = [window contentView];
 	  if (content == nil) {
 		  rc = -1;
-		  message = @"window has no content view yet";
+		  message = strdup("window has no content view yet");
 		  return;
 	  }
 	  // Same reason as attach: the target window's webview paints the window
@@ -340,7 +342,7 @@ int pkp_surface_move(void *nsWindow, char **err) {
 			  [webview setValue:@NO forKey:@"drawsBackground"];
 		  } @catch (NSException *exception) {
 			  rc = -1;
-			  message = [NSString stringWithFormat:@"webview stays opaque: %@", exception.reason];
+			  message = strdup([[NSString stringWithFormat:@"webview stays opaque: %@", exception.reason] UTF8String]);
 			  return;
 		  }
 	  }
@@ -360,8 +362,12 @@ int pkp_surface_move(void *nsWindow, char **err) {
 	  gLayer.contentsScale = window.backingScaleFactor;
 	});
 
-	if (rc != 0 && err != NULL) {
-		*err = strdup(message != nil ? [message UTF8String] : "surface move failed");
+	if (rc != 0) {
+		if (err != NULL) {
+			*err = message != NULL ? message : strdup("surface move failed");
+		} else {
+			free(message);
+		}
 	}
 	return rc;
 }

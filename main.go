@@ -15,6 +15,7 @@ import (
 	"crypto/sha256"
 	"embed"
 	"encoding/hex"
+	"errors"
 	"log"
 	"log/slog"
 	"os"
@@ -23,6 +24,7 @@ import (
 	"github.com/wailsapp/wails/v3/pkg/application"
 	"github.com/wailsapp/wails/v3/pkg/events"
 
+	"github.com/tonyflux/pkp/internal/crashlog"
 	"github.com/tonyflux/pkp/internal/foldersync"
 	"github.com/tonyflux/pkp/internal/services"
 	"github.com/tonyflux/pkp/internal/winframe"
@@ -68,10 +70,8 @@ func init() {
 	application.RegisterEvent[application.Void](services.EventExternalOpen)
 }
 
-// defaultTelemetryAPI is where a release build sends Anonymous Usage Statistics: the
-// Worker in cloudflare/telemetry, at its own Custom Domain.
-// PKP_TELEMETRY_API overrides it in any build, e.g.
-// http://127.0.0.1:8788 for one run by `wrangler dev`.
+// defaultTelemetryAPI hosts usage statistics and optional crash feedback.
+// PKP_TELEMETRY_API and PKP_CRASH_API override them independently.
 const defaultTelemetryAPI = "https://telemetry.pkpapp.cc"
 
 // PikPak serves subtitle node discovery beside the drive API. A local
@@ -96,6 +96,16 @@ func telemetryAPI() string {
 	return defaultTelemetryAPI
 }
 
+func crashFeedbackAPI() string {
+	if api, ok := os.LookupEnv("PKP_CRASH_API"); ok {
+		return api
+	}
+	if releaseBuild {
+		return defaultTelemetryAPI
+	}
+	return ""
+}
+
 // instanceID names the one PKP process allowed per config dir: the bundle id
 // plus a digest of the dir, or the bare bundle id when there is none.
 func instanceID(configDir string) string {
@@ -107,8 +117,18 @@ func instanceID(configDir string) string {
 }
 
 func main() {
+	if crashlog.RunMonitor() {
+		return
+	}
+	crashes, crashErr := crashlog.Start(cmp.Or(version, "unknown"))
+	if crashErr != nil {
+		log.Printf("crash reporting unavailable: %v", crashErr)
+	}
+	defer crashes.Close()
+
 	releaseInstallLock, err := holdUpdateInstallLock()
 	if err != nil {
+		crashes.Record("update install lock", err)
 		log.Fatal(err)
 	}
 	defer releaseInstallLock()
@@ -136,6 +156,7 @@ func main() {
 	notify := services.NewNotifyService(library, menu, lock)
 	// Anonymous Usage Statistics: default-on daily active installations with opt-out, never feature activity.
 	telemetry := services.NewTelemetryService(library, telemetryAPI(), cmp.Or(version, "unknown"))
+	crashFeedback := services.NewCrashFeedbackService(library, crashFeedbackAPI())
 	updates := services.NewUpdateService(library, menu, lock, cmp.Or(version, "unknown"), releaseBuild)
 	external := services.NewExternalOpenService()
 	workingDir, _ := os.Getwd()
@@ -149,6 +170,13 @@ func main() {
 	app := application.New(application.Options{
 		Name:        "pkp",
 		Description: "High-performance PikPak desktop client",
+		ErrorHandler: func(err error) {
+			var fatal *application.FatalError
+			if errors.As(err, &fatal) {
+				crashes.Record("Wails fatal error", err)
+			}
+			slog.Error("wails", "error", err)
+		},
 		Services: []application.Service{
 			application.NewService(player),
 			application.NewService(library),
@@ -158,6 +186,7 @@ func main() {
 			application.NewService(lock),
 			application.NewService(notify),
 			application.NewService(telemetry),
+			application.NewService(crashFeedback),
 			application.NewService(updates),
 			application.NewService(external),
 			application.NewService(lan),
@@ -270,6 +299,7 @@ func main() {
 	external.OpenArgs(os.Args, workingDir)
 
 	if err := app.Run(); err != nil {
+		crashes.Record("application run", err)
 		log.Fatal(err)
 	}
 }

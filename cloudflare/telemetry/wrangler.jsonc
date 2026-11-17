@@ -5,11 +5,12 @@
 	"compatibility_date": "2026-10-18",
 	"upload_source_maps": true,
 	// The app's address (main.go defaultTelemetryAPI): this Worker's own
-	// Custom Domain, so every path on the host comes here and anything but
-	// POST /v1/usage is answered 404.
+	// Custom Domain: POST /v1/usage and POST /v1/crashes are the only public routes.
 	"routes": [{ "pattern": "telemetry.pkpapp.cc", "custom_domain": true }],
 	"workers_dev": false,
 	"preview_urls": false,
+	// Purge crash reports daily, independently of dashboard traffic.
+	"triggers": { "crons": ["0 0 * * *"] },
 	"d1_databases": [
 		{
 			"binding": "DB",

@@ -27,6 +27,8 @@ Go module 是 `github.com/tonyflux/pkp`。前端绑定在 `frontend/bindings/git
 
 运行 `make test` 执行 Go 和前端单元测试；`make dev` 使用 Wails 启动热重载开发模式。
 
+崩溃反馈接收端位于 `cloudflare/telemetry`。本地运行 `npm ci && npm run dev`，使用隔离测试报告并设置 `PKP_CRASH_API=http://127.0.0.1:8788` 启动桌面开发构建；服务端构建不读取宿主机崩溃日志。上线前在该目录运行 `npm run deploy`，先执行 D1 迁移再部署采集 Worker 和后台 Worker；确认后台的 Cloudflare Access 策略实际启用，并验证每日 cron。开发者在 `https://pkp-telemetry-admin.pkpapp.cc/crashes` 查看或删除报告。应用发布本身不会部署这两个 Worker；未部署或不可达时发送会失败并允许手动重试。
+
 AI 字幕在 macOS 与 Windows 共用 FFmpeg 音频解码源码：macOS 使用现有 libmpv 构建导出的头文件与动态库；Windows x64／ARM64 由固定工具链将同一源码与静态 FFmpeg 链接为 `pkp-pcm.dll`，安装在 `pkp.exe` 旁，由无 cgo 的 Go 程序按绝对路径加载，不从当前工作目录或 PATH 查找。生产解码不启动 `ffmpeg` 子进程，不依赖用户安装工具；解码回归测试用该命令生成本地合成样本。应用默认使用 PikPak 的 `https://api-drive.mypikpak.com` 发现字幕节点，只在用户开启后发起请求。隔离开发可设置 `PKP_SUBSRELAY_API=http://127.0.0.1:<端口>`；显式设为空可禁用功能。自定义地址可能收到账号令牌与音频，不要使用不可信服务；URL Basic Auth 可替代账号令牌。其他没有音频解码器的平台隐藏字幕入口。
 
 账号鉴权部署会用播放账号查询会员资格，前后端均限制非会员开启；URL Basic Auth 开发部署不执行 PikPak 会员门禁，由该部署决定资格。`AISubtitleState.quota` 保留最近同账号的服务端快照，`known` 区分未知与真实零额度；`limit`／`usage` 为秒，`nextResetTime` 为 RFC 3339。未启用时不为显示额度请求节点；过期或取消的会话不能覆盖新状态。

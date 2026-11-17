@@ -15,6 +15,7 @@ interface FakeStatement {
 export function database(): DatabaseSync {
 	const db = new DatabaseSync(":memory:");
 	db.exec(readFileSync(join(import.meta.dirname, "../migrations/0001_daily.sql"), "utf8"));
+	db.exec(readFileSync(join(import.meta.dirname, "../migrations/0002_crashes.sql"), "utf8"));
 	return db;
 }
 

@@ -38,6 +38,7 @@ import AccountScreen from "./components/AccountScreen.vue";
 import LockScreen from "./components/LockScreen.vue";
 import AppLockPasswordSheet from "./components/AppLockPasswordSheet.vue";
 import TelemetryNoticeSheet from "./components/TelemetryNoticeSheet.vue";
+import CrashFeedbackSheet from "./components/CrashFeedbackSheet.vue";
 import ConnectivityNotice from "./components/ConnectivityNotice.vue";
 import UpdateSettings from "./components/UpdateSettings.vue";
 import PrivacySettings from "./components/PrivacySettings.vue";
@@ -47,7 +48,7 @@ import { watchConnectivity } from "./connectivity";
 import { WORKSPACE_QUERY, useMedia } from "./dom";
 import { t } from "./i18n";
 import { installShortcuts } from "./shortcuts";
-import { accounts, appLocked, bootstrap, drive, nowPlaying, openSettings, player, settingsFocus, telemetry, ui, useTelemetryActivity, videoWorksShown, watchAppLock } from "./store";
+import { accounts, appLocked, bootstrap, drive, notify, nowPlaying, openSettings, player, settingsFocus, telemetry, ui, useTelemetryActivity, videoWorksShown, watchAppLock } from "./store";
 
 // The shell stays up while there is an account on screen, signed in or not:
 // an account whose session ended shows Log In Again in place, and
@@ -67,6 +68,8 @@ const bar = computed(() => !immersive.value && (player.presentation === "bar" ||
 // of content. The scene alone would be a blank window on a slow link.
 const booting = computed(() => drive.status === null);
 const showTelemetryNotice = computed(() => !!telemetry.state?.needsNotice && !booting.value && !appLocked.value);
+const crashSheetOpen = ref(false);
+const crashSheetActive = computed(() => !accounts.switching && !booting.value && !appLocked.value && !!telemetry.state && !showTelemetryNotice.value && ui.route !== "player");
 
 // File browsing — the list, or the viewer on top of it — has the context
 // column on its right. Under 960px the files and the column take
@@ -220,7 +223,8 @@ onMounted(() => {
   </div>
   <AppLockPasswordSheet v-if="!signedIn" />
   <TelemetryNoticeSheet v-if="showTelemetryNotice" />
-  <UpdateNotice v-if="!booting && !appLocked && !showTelemetryNotice && ui.route !== 'player' && ui.route !== 'settings'" />
+  <CrashFeedbackSheet :active="crashSheetActive" @open-change="crashSheetOpen = $event" @sent="notify(t('崩溃报告已发送'), 'success')" />
+  <UpdateNotice v-if="!booting && !appLocked && !showTelemetryNotice && !crashSheetOpen && ui.route !== 'player' && ui.route !== 'settings'" />
 
   <!-- App Lock: replaces whatever is above, the player included. -->
   <LockScreen v-if="appLocked" />

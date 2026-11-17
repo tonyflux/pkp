@@ -6,6 +6,7 @@
  * not authenticate: without Access turned on, every request is refused.
  */
 import page from "./page.html";
+import crashesPage from "./crashes.html";
 import { shiftDay, stats } from "./stats";
 
 const DAY = /^[0-9]{4}-[0-9]{2}-[0-9]{2}$/;
@@ -37,14 +38,22 @@ export default {
 				? problem(403, "access_required", "Sign in through Cloudflare Access.")
 				: new Response(REFUSED, { status: 403, headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" } });
 		}
+		const match = /^\/api\/crashes\/([0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})$/.exec(url.pathname);
+		if (request.method === "DELETE" && match) {
+			if (request.headers.get("Origin") !== url.origin || request.headers.get("Sec-Fetch-Site") !== "same-origin") {
+				return problem(403, "forbidden", "Same-origin request required.");
+			}
+			await env.DB.batch([env.DB.prepare("DELETE FROM crashes WHERE id = ?").bind(match[1])]);
+			return new Response(null, { status: 204, headers: { "Cache-Control": "no-store" } });
+		}
 		if (request.method !== "GET") {
 			return problem(405, "method_not_allowed", "Only GET is served.");
 		}
 
-		if (url.pathname === "/") {
+		if (url.pathname === "/" || url.pathname === "/crashes") {
 			// Inline script and style run only with this response's nonce.
 			const nonce = crypto.randomUUID().replaceAll("-", "");
-			return new Response(page.replaceAll("{{nonce}}", nonce), {
+			return new Response((url.pathname === "/crashes" ? crashesPage : page).replaceAll("{{nonce}}", nonce), {
 				headers: {
 					"Content-Type": "text/html; charset=utf-8",
 					"Cache-Control": "no-store",
@@ -53,6 +62,17 @@ export default {
 					"Referrer-Policy": "no-referrer",
 				},
 			});
+		}
+		if (url.pathname === "/api/crashes") {
+			const raw = url.searchParams.get("page") ?? "0";
+			if (!/^(0|[1-9][0-9]{0,5})$/.test(raw)) return problem(400, "bad_page", "Invalid page.");
+			const [result] = await env.DB.batch([env.DB.prepare("SELECT id, received_at FROM crashes ORDER BY received_at DESC, id DESC LIMIT 21 OFFSET ?").bind(Number(raw) * 20)]);
+			return Response.json({ reports: result.results.slice(0, 20), more: result.results.length > 20 }, { headers: { "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" } });
+		}
+		if (match) {
+			const [result] = await env.DB.batch([env.DB.prepare("SELECT id, report, received_at FROM crashes WHERE id = ?").bind(match[1])]);
+			if (!result.results.length) return problem(404, "not_found", "Report not found.");
+			return Response.json(result.results[0], { headers: { "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" } });
 		}
 
 		if (url.pathname === "/api/stats") {

@@ -208,24 +208,28 @@ func (p *PlayerService) notePicture(w, h int) {
 	p.shapePopout(false)
 }
 
-// shapePopout fits the separate window to the picture: when force, or when
-// the proportions differ from the ones it has. AppKit is called outside the
-// lock — the window's closing hook takes it on the main thread.
+// shapePopout applies the latest picture dimensions on the UI thread, after
+// checking that the window is still current. Shutdown must not wait for it.
 func (p *PlayerService) shapePopout(force bool) {
-	p.popoutMu.Lock()
-	popout, w, h := p.popout, p.picture[0], p.picture[1]
-	if popout == nil || p.popoutAudio || w <= 0 || h <= 0 {
-		p.popoutMu.Unlock()
+	if application.Get() == nil {
 		return
 	}
-	ratio := float64(w) / float64(h)
-	if !force && math.Abs(ratio-p.shaped) < 0.01*ratio {
+	application.InvokeAsync(func() {
+		p.popoutMu.Lock()
+		popout, w, h := p.popout, p.picture[0], p.picture[1]
+		if popout == nil || p.popoutAudio || w <= 0 || h <= 0 {
+			p.popoutMu.Unlock()
+			return
+		}
+		ratio := float64(w) / float64(h)
+		if !force && math.Abs(ratio-p.shaped) < 0.01*ratio {
+			p.popoutMu.Unlock()
+			return
+		}
+		p.shaped = ratio
 		p.popoutMu.Unlock()
-		return
-	}
-	p.shaped = ratio
-	p.popoutMu.Unlock()
-	videowin.Fit(popout.NativeWindow(), w, h)
+		videowin.Fit(popout.NativeWindow(), w, h)
+	})
 }
 
 // HostVideo moves the video surface into the calling window. The separate

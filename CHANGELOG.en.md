@@ -2,6 +2,16 @@
 
 [简体中文](CHANGELOG.md) · English
 
+## 0.7.1 · 2026-11-18
+
+- Improve the usage-statistics dashboard on phones: adapt date filters, cards, charts and tables to narrow screens, support touch inspection and keep chart tooltips within the page.
+
+- Improve the crash-report dashboard on phones: scroll the report list independently, open details on selection, and keep long identifiers, stack traces, pagination and deletion usable on narrow screens.
+
+- On next launch, review and edit a crash report before choosing whether to send it to the developer. Only an explicit send uploads it; declining keeps the local file and a failed send can be retried. Cloudflare stores feedback separately from usage statistics with Access-protected review/deletion and scheduled cleanup; the receiver must be deployed separately.
+
+- Save local crash reports on the desktop for unhandled Go panics, runtime fatal errors and startup/Wails fatal errors; fall back to the system cache if the desktop is not writable, with no automatic upload. Fix a native-window lifetime race when resizing the separate player during close/shutdown, and the lifetime of macOS video-surface error messages crossing threads. Reports may contain sensitive information; redact them before sharing.
+
 ## 0.7.0 · 2026-11-14
 
 - Unify batch operations from Files and Cleanup with a background task strip showing queued, submitting, cloud-processing, verification, and per-item receipts. Serialize same-account file changes while keeping other accounts and download submissions independent. Stop unsent work, explicitly confirm retries of known failures, preserve newer selections, and make loaded-only select-all scope explicit. Recheck original accounts and source snapshots for move/copy/delete/restore/star, freeze Empty Trash targets, and retain successful downloads after partial submission failures. Never automatically replay writes after timeouts, transport errors, or 5xx responses; mark unverified results unknown. Window long receipts and retain queues/history only for the current window session.

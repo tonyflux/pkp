@@ -32,8 +32,9 @@ import savedsearches from "./savedsearches";
 import medialibrary from "./medialibrary";
 import lan from "./lan";
 import shareimport from "./shareimport";
+import crashfeedback from "./crashfeedback";
 
-const areas: Messages[] = [core, shell, accounts, store, settings, ai, assistant, search, files, filetasks, history, player, transfers, panels, cleanup, shares, sync, updates, readerCore, readerBook, readerComic, readerTable, readerOffice, readerPdf, readerTimed, savedsearches, medialibrary, lan, shareimport];
+const areas: Messages[] = [core, shell, accounts, store, settings, ai, assistant, search, files, filetasks, history, player, transfers, panels, cleanup, shares, sync, updates, readerCore, readerBook, readerComic, readerTable, readerOffice, readerPdf, readerTimed, savedsearches, medialibrary, lan, shareimport, crashfeedback];
 
 const catalog: Messages = Object.assign({}, ...areas);
 

@@ -187,4 +187,8 @@ Before signing in, open Privacy from the login page to turn off Send anonymous u
 On macOS, closing the main window only hides it; menu bar residency and background transfers for each account may continue. Use “Quit PKP” or `⌘Q` to fully quit. App lock is disabled by default. Locking does not stop already authorized background transfers or sync, nor does it encrypt downloaded files or the entire local data directory.
 The standalone App Lock password also has no minimum length or complexity requirement: enter a nonempty password twice when setting or changing it. Short passwords are easier to guess. Both password types retain their existing input-size limits and failed-attempt throttling.
 
+After a crash or startup failure, PKP asks on the next launch whether to share an available report with the developer, after unlock and even before sign-in. Review and remove sensitive content first; nothing is sent unless you click Send report. Don't send or closing preserves the local file and stops reminders for that report. Retry manually if sending fails. Find originals on the desktop as `PKP-Crash-*.log`, or in `~/Library/Caches/pkp/crash-reports` (macOS) or `%LocalAppData%\pkp\crash-reports` (Windows) if the desktop is not writable. Not all native crashes or forced terminations produce a report; see the [privacy notice](../PRIVACY.en.md#signing-out-deletion-and-issue-reporting) for collection, retention and limitations.
+
+If the app locks or leaves the main view during review, unsent edits are cleared; review the original log again after returning.
+
 Before reporting an issue, redact account information, filenames, paths, share links, tokens, and API keys. Do not upload the entire configuration directory or raw logs.

@@ -85,7 +85,7 @@ export function parseReport(body: unknown, now: number): Report | string {
 }
 
 /** The body as text, or null once it passes MAX_BODY_BYTES. */
-async function readLimited(body: ReadableStream<Uint8Array> | null): Promise<string | null> {
+async function readLimited(body: ReadableStream<Uint8Array> | null, max = MAX_BODY_BYTES): Promise<string | null> {
 	if (!body) return "";
 	const reader = body.getReader();
 	const chunks: Uint8Array[] = [];
@@ -94,7 +94,7 @@ async function readLimited(body: ReadableStream<Uint8Array> | null): Promise<str
 		const { done, value } = await reader.read();
 		if (done) break;
 		size += value.byteLength;
-		if (size > MAX_BODY_BYTES) {
+		if (size > max) {
 			await reader.cancel();
 			return null;
 		}
@@ -106,7 +106,7 @@ async function readLimited(body: ReadableStream<Uint8Array> | null): Promise<str
 		all.set(c, at);
 		at += c.byteLength;
 	}
-	return new TextDecoder().decode(all);
+	return new TextDecoder("utf-8", { fatal: true, ignoreBOM: false }).decode(all);
 }
 
 const UPSERT = `INSERT INTO daily (install_id, day, version, os, arch, locale, counts, updated_at)
@@ -128,7 +128,8 @@ export async function store(db: D1Database, r: Report, now: number): Promise<voi
 export default {
 	async fetch(request, env): Promise<Response> {
 		const url = new URL(request.url);
-		if (url.pathname !== "/v1/usage") {
+		const crash = url.pathname === "/v1/crashes";
+		if (url.pathname !== "/v1/usage" && !crash) {
 			return problem(404, "not_found", "Nothing is served here.");
 		}
 		if (request.method !== "POST") {
@@ -138,11 +139,20 @@ export default {
 		if (!success) {
 			return problem(429, "rate_limited", "Too many reports; try again later.", { "Retry-After": "60" });
 		}
+		if (crash && !/^application\/json\s*(?:;\s*charset\s*=\s*(?:utf-8|"utf-8")\s*)?$/i.test(request.headers.get("content-type") ?? "")) {
+			return problem(415, "unsupported_media_type", "Use application/json.");
+		}
+		const max = crash ? 128 * 1024 : MAX_BODY_BYTES;
 		const declared = Number(request.headers.get("content-length") ?? "0");
-		if (declared > MAX_BODY_BYTES) {
+		if (declared > max) {
 			return problem(413, "too_large", "The report is too large.");
 		}
-		const text = await readLimited(request.body);
+		let text: string | null;
+		try {
+			text = await readLimited(request.body, max);
+		} catch {
+			return problem(400, "bad_json", "The body is not valid UTF-8.");
+		}
 		if (text === null) {
 			return problem(413, "too_large", "The report is too large.");
 		}
@@ -151,6 +161,25 @@ export default {
 			body = JSON.parse(text);
 		} catch {
 			return problem(400, "bad_json", "The body is not JSON.");
+		}
+		if (crash) {
+			if (!isObject(body) || Object.keys(body).length !== 2 || typeof body.id !== "string" || !INSTALL.test(body.id) ||
+				typeof body.report !== "string" || !body.report.trim().length || !body.report.isWellFormed()) {
+				return problem(400, "bad_report", "The crash report is not valid.");
+			}
+			if (new TextEncoder().encode(body.report).byteLength > 120 * 1024) {
+				return problem(413, "too_large", "The report is too large.");
+			}
+			try {
+				const results = await env.DB.batch<{ report: string }>([
+					env.DB.prepare("INSERT OR IGNORE INTO crashes (id, report, received_at) VALUES (?, ?, ?)").bind(body.id, body.report, Math.floor(Date.now() / 1000)),
+					env.DB.prepare("SELECT report FROM crashes WHERE id = ?").bind(body.id),
+				]);
+				if (results[1].results[0]?.report !== body.report) return problem(409, "conflict", "This report ID is already in use.");
+			} catch {
+				return problem(503, "unavailable", "The report was not kept; send it again later.");
+			}
+			return new Response(null, { status: 204, headers: { "Cache-Control": "no-store" } });
 		}
 		const now = Date.now();
 		const report = parseReport(body, now);
@@ -164,5 +193,9 @@ export default {
 			return problem(503, "unavailable", "The report was not kept; send it again later.");
 		}
 		return new Response(null, { status: 204 });
+	},
+	async scheduled(_event, env): Promise<void> {
+		// Daily execution plus 29 days ensures deletion within 30 days of receipt.
+		await env.DB.batch([env.DB.prepare("DELETE FROM crashes WHERE received_at <= ?").bind(Math.floor(Date.now() / 1000) - 29 * 86400)]);
 	},
 } satisfies ExportedHandler<Env>;
