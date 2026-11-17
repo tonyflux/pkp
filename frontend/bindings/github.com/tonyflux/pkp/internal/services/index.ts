@@ -3,6 +3,7 @@
 
 import * as AppLockService from "./applockservice.js";
 import * as AppearanceService from "./appearanceservice.js";
+import * as CrashFeedbackService from "./crashfeedbackservice.js";
 import * as DriveService from "./driveservice.js";
 import * as ExternalOpenService from "./externalopenservice.js";
 import * as LANService from "./lanservice.js";
@@ -14,6 +15,7 @@ import * as UpdateService from "./updateservice.js";
 export {
     AppLockService,
     AppearanceService,
+    CrashFeedbackService,
     DriveService,
     ExternalOpenService,
     LANService,
@@ -67,6 +69,7 @@ export type {
     ConnectivityResult,
     ConnectivityTarget,
     ConversationInfo,
+    CrashFeedbackReport,
     CreatedShare,
     Crumb,
     DownloadBatchReport,

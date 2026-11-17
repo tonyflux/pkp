@@ -820,6 +820,16 @@ export interface ConversationInfo {
 }
 
 /**
+ * CrashFeedbackReport is a local report awaiting an explicit user decision.
+ */
+export interface CrashFeedbackReport {
+    "id": string;
+    "text": string;
+    "path": string;
+    "truncated": boolean;
+}
+
+/**
  * CreatedShare is the result of CreateShare: the link, and the code when one
  * was requested.
  */
