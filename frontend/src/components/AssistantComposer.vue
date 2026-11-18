@@ -148,14 +148,14 @@ function submit() {
   padding: 0;
   border: 0;
   border-radius: 11px;
-  background: var(--accent);
-  color: var(--on-accent);
+  background: var(--primary);
+  color: var(--on-primary);
 }
 
 .send:hover:not(:disabled) {
   border: 0;
-  background: var(--accent);
-  filter: brightness(1.08);
+  background: var(--primary);
+  filter: brightness(0.94);
 }
 
 .send svg {

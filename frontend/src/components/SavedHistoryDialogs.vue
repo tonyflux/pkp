@@ -153,6 +153,6 @@ onBeforeUnmount(() => {
 .actions button:hover:not(:disabled) { background: var(--glass-inset); }
 .actions button:active:not(:disabled) { transform: scale(.98); }
 .actions button:disabled { opacity: .5; cursor: default; }
-.actions .primary { border-color: transparent; background: var(--accent); color: var(--on-accent); }
-.actions .primary:hover:not(:disabled) { background: var(--accent); filter: brightness(1.08); }
+.actions .primary { border-color: transparent; background: var(--primary); color: var(--on-primary); }
+.actions .primary:hover:not(:disabled) { background: var(--primary); filter: brightness(0.94); }
 </style>

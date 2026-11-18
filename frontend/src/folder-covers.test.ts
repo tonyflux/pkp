@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createApp, nextTick, type App } from "vue";
 import type { DriveStatus, Entry, IndexProgress } from "../bindings/github.com/tonyflux/pkp/internal/services";
 import FilesView from "./components/FilesView.vue";
-import { drive, folderCovers, ui } from "./store";
+import { drive, folderCovers, select, ui } from "./store";
 
 let app: App;
 let host: HTMLElement;
@@ -70,5 +70,45 @@ describe("folder cover thumbnails", () => {
     expect(cover.querySelectorAll("img")).toHaveLength(0);
     expect(cover.querySelectorAll(".cover-tile-placeholder")).toHaveLength(3);
     expect(cover.textContent).not.toContain("子目录");
+  });
+});
+
+describe("file card actions", () => {
+  it("opens the selected file's menu with Enter instead of starting playback", async () => {
+    const entry = { id: "video", name: "很长的示例文件名 - 第一集.mp4", folder: false, category: "video", playable: true, size: 1, modifiedTime: "", path: "", thumbnail: "" } as Entry;
+    drive.entries = [entry];
+    select(entry);
+    await nextTick();
+    const card = host.querySelector<HTMLElement>('[data-entry="video"]')!;
+    expect(card.title).toBe(entry.name);
+    const more = card.querySelector<HTMLButtonElement>('.more')!;
+    more.focus();
+    const key = new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true });
+    more.dispatchEvent(key);
+    expect(key.defaultPrevented).toBe(false);
+    more.click();
+    await nextTick();
+    expect(document.querySelector('[role="menu"]')).not.toBeNull();
+    expect(ui.route).toBe("files");
+  });
+
+  it("keeps the recycle-bin confirmation actionable and cancelable", async () => {
+    ui.view = "trash";
+    drive.entries = [{ id: "trash-item", name: "待删除.mp3", folder: false, category: "audio", size: 1, modifiedTime: "", path: "", thumbnail: "" } as Entry];
+    await nextTick();
+    host.querySelector<HTMLButtonElement>('[data-entry="trash-item"] .more')!.click();
+    await nextTick();
+    const entry = Array.from(document.querySelectorAll<HTMLButtonElement>('[role="menuitem"]')).find((button) => button.textContent?.includes("彻底删除"));
+    expect(entry).toBeDefined();
+    entry!.click();
+    await nextTick();
+    const confirm = document.querySelector<HTMLButtonElement>('.confirm-go')!;
+    expect(confirm.textContent).toBe("确认删除");
+    expect(confirm.classList.contains("irreversible")).toBe(true);
+    const keep = Array.from(document.querySelectorAll<HTMLButtonElement>('.confirm button')).find((button) => button.textContent === "保留")!;
+    keep.click();
+    await nextTick();
+    expect(document.querySelector('.confirm-go')).toBeNull();
+    expect(drive.entries.map((item) => item.id)).toEqual(["trash-item"]);
   });
 });

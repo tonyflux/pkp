@@ -29,14 +29,18 @@
   --success: #286d55;
   --warning: #875d14;
   --danger: #b33d53;
-  /* Action colors are separate from error/status colors; never a solid alert fill. */
-  --danger-action: #963e4b;
-  --danger-action-bg: #f8edef;
-  --danger-action-hover: #f2dfe3;
-  --danger-action-active: #ebd2d8;
-  --danger-action-border: #d9b4bc;
-  --danger-action-border-hover: #bc8995;
-  --danger-action-wash: rgba(150, 62, 75, 0.09);
+  /* Destructive action colors stay distinct from error/status colors. */
+  --danger-action: #a83232;
+  --danger-action-bg: #fbeeee;
+  --danger-action-hover: #f7e0e0;
+  --danger-action-active: #f0cfcf;
+  --danger-action-border: #ddb8b8;
+  --danger-action-border-hover: #c78989;
+  --danger-action-wash: rgba(168, 50, 50, 0.09);
+  --danger-confirm: #a32d2d;
+  --danger-confirm-hover: #8f2525;
+  --danger-confirm-active: #7d2020;
+  --danger-confirm-text: #ffffff;
   /* Starred: the mark on starred entries; ≥ 3:1 on the light canvas. */
   --star: #b47b00;
   /* Second tile tint (archives, documents) beside the accent. */
@@ -111,13 +115,17 @@
   --success: #95ddc0;
   --warning: #f3c878;
   --danger: #ff9bac;
-  --danger-action: #efb7bf;
-  --danger-action-bg: #382e3a;
-  --danger-action-hover: #483542;
-  --danger-action-active: #553c49;
-  --danger-action-border: #735361;
-  --danger-action-border-hover: #a37888;
-  --danger-action-wash: rgba(239, 183, 191, 0.12);
+  --danger-action: #ffb4ab;
+  --danger-action-bg: #3b2426;
+  --danger-action-hover: #4d2b2c;
+  --danger-action-active: #5b3030;
+  --danger-action-border: #805354;
+  --danger-action-border-hover: #b17472;
+  --danger-action-wash: rgba(255, 180, 171, 0.12);
+  --danger-confirm: #a32d2d;
+  --danger-confirm-hover: #8f2525;
+  --danger-confirm-active: #7d2020;
+  --danger-confirm-text: #ffffff;
   --star: #ffcf5a;
   --tint-violet: #b3a6ff;
   --account-1: #83c7ff;
@@ -419,7 +427,7 @@ button.primary {
 button.primary:hover:not(:disabled) {
   background: var(--primary);
   border-color: transparent;
-  filter: brightness(1.08);
+  filter: brightness(0.94);
   box-shadow: none;
 }
 
@@ -516,6 +524,22 @@ button.icon {
   color: var(--fg);
 }
 
+.menu > .danger-separated {
+  position: relative;
+  margin-top: 8px;
+}
+
+.menu > .danger-separated::before {
+  content: "";
+  position: absolute;
+  top: -5px;
+  left: 8px;
+  right: 8px;
+  height: 1px;
+  background: var(--line);
+  pointer-events: none;
+}
+
 /* All destructive actions share states. Theme + state specificity also beats
    scoped neutral hover rules without !important or changing button geometry. */
 :root[data-theme] body button:is(.danger, .destructive, .confirm-danger, .danger-action, .purge):is(:enabled, :disabled) {
@@ -543,6 +567,33 @@ button.icon {
 :root[data-theme] body button:is(.danger, .destructive, .confirm-danger, .danger-action, .purge):active:not(:disabled) {
   background: var(--danger-action-active);
   border-color: var(--danger-action-border-hover);
+}
+
+/* A solid treatment is reserved for the final irreversible confirmation. */
+:root[data-theme] body button.irreversible:is(:enabled, :disabled) {
+  color: var(--danger-confirm-text);
+  background: var(--danger-confirm);
+  border-color: transparent;
+  box-shadow: none;
+  filter: none;
+}
+
+:root[data-theme] body button.irreversible:hover:not(:disabled),
+:root[data-theme] body button.irreversible:focus-visible:not(:disabled) {
+  color: var(--danger-confirm-text);
+  background: var(--danger-confirm-hover);
+  border-color: transparent;
+  box-shadow: none;
+  filter: none;
+}
+
+:root[data-theme] body button.irreversible:active:not(:disabled) {
+  background: var(--danger-confirm-active);
+}
+
+:root[data-theme] body button.irreversible:focus-visible {
+  outline: 2px solid var(--danger-action);
+  outline-offset: 3px;
 }
 
 :root[data-theme] body button:is(.danger, .danger-action):is(.quiet, .link, [role="menuitem"]):is(:enabled, :disabled) {
@@ -582,13 +633,13 @@ button.icon {
 
 /* The lock screen stays dark even when the application's theme is light. */
 .lock-screen {
-  --danger-action: #efb7bf;
-  --danger-action-bg: #382e3a;
-  --danger-action-hover: #483542;
-  --danger-action-active: #553c49;
-  --danger-action-border: #735361;
-  --danger-action-border-hover: #a37888;
-  --danger-action-wash: rgba(239, 183, 191, 0.12);
+  --danger-action: #ffb4ab;
+  --danger-action-bg: #3b2426;
+  --danger-action-hover: #4d2b2c;
+  --danger-action-active: #5b3030;
+  --danger-action-border: #805354;
+  --danger-action-border-hover: #b17472;
+  --danger-action-wash: rgba(255, 180, 171, 0.12);
 }
 
 /* A modal sheet centred over a dimmed, faintly blurred page. The blur sits

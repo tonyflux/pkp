@@ -239,8 +239,8 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onKey));
               {{ t("来自你的云端收藏") }}
               <span class="num">{{ two(player.index + 1) }} — {{ two(count) }}</span>
             </p>
-            <h1 :title="entry?.name">{{ title }}</h1>
-            <p class="byline">{{ byline }}</p>
+            <h1 :title="title">{{ title }}</h1>
+            <p class="byline" :title="byline">{{ byline }}</p>
             <span class="info-line" aria-hidden="true" />
 
             <div v-if="state.error" class="problem" role="alert">
@@ -539,7 +539,7 @@ button {
   background: #262628;
 }
 
-/* The cover, blurred far out, tints the room: only when there is one. */
+/* Keep the blurred backdrop unscaled: transforms enlarge the scrollable area in WebKit. */
 .listening.art::before {
   content: "";
   position: absolute;
@@ -548,7 +548,6 @@ button {
   background: var(--art) center 38% / cover no-repeat;
   filter: blur(80px) saturate(0.7);
   opacity: 0.06;
-  transform: scale(1.2);
   pointer-events: none;
 }
 
@@ -652,6 +651,7 @@ button {
   min-width: 0;
   max-width: 440px;
 }
+
 
 .side-rule {
   display: block;
@@ -1373,7 +1373,8 @@ h1 {
 
 .windowed .listening {
   justify-content: flex-start;
-  overflow: auto;
+  overflow-x: hidden;
+  overflow-y: auto;
   padding: 14px;
   gap: 12px;
   border-radius: 14px;

@@ -34,6 +34,8 @@ On wide windows, Files, AI Assistant, Transfers, Sync, Shares and other standard
 
 In-app file and folder selection sheets share a grid/list switch, including move/copy, cloud sync folders, cleanup scope, Cloud Add destinations, Share Import, torrent files, and archive contents/extraction destinations. The grid uses thumbnails or type icons; the list emphasizes names and paths. Switching views changes presentation only: selections, account, location, and authorization scope remain unchanged, and nothing is submitted. Native system file/folder dialogs retain the system's own views.
 
+Destructive actions use red cues; items moved to Trash can still be restored. Final confirmation for permanent deletion and clearing local data is more prominent. Read the confirmation text for the precise effect.
+
 ### Batch File Operations
 
 - Moves, copies, starring, Move to Trash, restore, permanent deletion, Cleanup, and download submissions appear in the bottom task strip while running. Successful results briefly remain before the strip hides. Reopen session history and per-item receipts from File tasks in the sidebar. Failed, unknown, or stopped receipts stay marked until each is viewed. Hiding the panel does not delete receipts; remove the current receipt from its details to delete that record. Continue selecting files or changing pages after submission.

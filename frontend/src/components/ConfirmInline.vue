@@ -7,6 +7,7 @@ defineProps<{
   confirmLabel: string;
   cancelLabel?: string;
   danger?: boolean;
+  irreversible?: boolean;
 }>();
 
 defineEmits<{ confirm: []; cancel: [] }>();
@@ -17,7 +18,7 @@ defineEmits<{ confirm: []; cancel: [] }>();
     <p>{{ message }}</p>
     <div class="confirm-actions">
       <button class="quiet" @click="$emit('cancel')">{{ cancelLabel ?? t("取消") }}</button>
-      <button class="confirm-go" :class="{ danger }" @click="$emit('confirm')">{{ confirmLabel }}</button>
+      <button class="confirm-go" :class="{ danger: danger || irreversible, irreversible }" @click="$emit('confirm')">{{ confirmLabel }}</button>
     </div>
   </div>
 </template>
@@ -55,8 +56,8 @@ defineEmits<{ confirm: []; cancel: [] }>();
 
 /* Hover keeps the fill: the plain button:hover outranks this rule and would
    swap it for flat glass. border-box: see button.primary in style.css. */
-.confirm-go:not(.danger),
-.confirm-go:not(.danger):hover:not(:disabled) {
+.confirm-go:not(.danger):not(.irreversible),
+.confirm-go:not(.danger):not(.irreversible):hover:not(:disabled) {
   background: var(--primary) border-box;
   border-color: transparent;
   color: var(--on-primary);

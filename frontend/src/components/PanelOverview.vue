@@ -463,8 +463,8 @@ h2 {
 
 .note {
   margin: 8px 0 0;
-  font-size: 11px;
-  line-height: 16px;
+  font-size: 12px;
+  line-height: 18px;
   color: var(--fg-dim);
 }
 

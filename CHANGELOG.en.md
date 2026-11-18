@@ -4,6 +4,12 @@
 
 ## Unreleased
 
+- Align primary, neutral and destructive button colors and hover states. Reversible actions retain restrained red cues; final confirmation of permanent file deletion and local-data clearing is more prominent, without changing confirmation flows.
+
+- Fix spurious scrollbars in the separate music window when cover art is present; expose long track and artist text on hover while retaining queue and error scrolling.
+
+- Refine the file workspace with two-line names and full-name hover, clearer supporting text, improved light-theme card contrast, and fewer repeated folder icons; retain file actions and keyboard controls.
+
 - Align expanded and collapsed playback buttons and clarify the pause icon in light and dark themes.
 
 - Simplify folder covers with one placeholder when thumbnails are unavailable, retain thumbnails and type hints in mixed folders, and keep card heights consistent.

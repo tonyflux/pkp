@@ -78,6 +78,7 @@ function confirmDelete() {
       :confirm-label="t('确认删除')"
       :cancel-label="t('保留')"
       danger
+      irreversible
       @cancel="confirming = null"
       @confirm="confirmDelete"
     />

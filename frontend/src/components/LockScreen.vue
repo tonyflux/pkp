@@ -247,7 +247,7 @@ onBeforeUnmount(() => clearInterval(tick));
         <p v-if="forgetError" class="forget-error" role="alert"><Icon name="alert" :size="15" />{{ forgetError }}</p>
         <div class="forget-actions">
           <button ref="forgetCancel" type="button" :disabled="forgetWorking" @click="closeForget">{{ t("返回锁屏") }}</button>
-          <button type="button" class="danger" :disabled="forgetWorking" @click="confirmForget">
+          <button type="button" class="danger irreversible" :disabled="forgetWorking" @click="confirmForget">
             {{ forgetWorking ? t("正在清除…") : t("退出登录并清除本机数据") }}
           </button>
         </div>

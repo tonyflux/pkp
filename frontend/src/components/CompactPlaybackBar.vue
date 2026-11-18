@@ -189,8 +189,8 @@ const ownerTitle = computed(() =>
   gap: 8px;
   min-width: 0;
   color: var(--fg-dim);
-  font-size: 12px;
-  line-height: 1.3;
+  font-size: 13px;
+  line-height: 1.35;
 }
 
 .status,

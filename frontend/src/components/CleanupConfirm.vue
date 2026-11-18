@@ -81,7 +81,7 @@ onBeforeUnmount(() => {
         </dl>
         <footer>
           <button ref="keepButton" @click="closeCleanupConfirm">{{ t("保留文件") }}</button>
-          <button ref="goButton" class="primary" :class="{ danger }" @click="confirm">
+          <button ref="goButton" class="primary" :class="{ danger, irreversible: danger }" @click="confirm">
             {{ danger ? t("确认彻底删除") : t("确认移到回收站") }}
           </button>
         </footer>

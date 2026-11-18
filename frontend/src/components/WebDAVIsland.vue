@@ -246,7 +246,7 @@ async function confirmAction(client: WebDAVClient) {
         <div v-if="menuFor === client.username" class="menu glass glass-sheet">
           <button class="quiet" @click="startRename(client)">{{ t("重命名") }}</button>
           <button class="quiet" @click="closeMenus(); confirming = { username: client.username, action: 'renew' }">{{ t("更换密码") }}</button>
-          <button class="quiet danger" @click="closeMenus(); confirming = { username: client.username, action: 'remove' }">{{ t("删除客户端") }}</button>
+          <button class="quiet danger danger-separated" @click="closeMenus(); confirming = { username: client.username, action: 'remove' }">{{ t("删除客户端") }}</button>
         </div>
       </div>
       <ConfirmInline

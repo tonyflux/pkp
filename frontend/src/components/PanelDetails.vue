@@ -337,6 +337,7 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onEscape, true));
       :confirm-label="t('确认删除')"
       :cancel-label="t('保留')"
       danger
+      irreversible
       @cancel="confirming = false"
       @confirm="confirming = false; deleteForever([shown])"
     />
@@ -372,7 +373,7 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onEscape, true));
               <Icon name="copy" :size="16" />{{ t("复制到…") }}
             </button>
             <button
-              class="quiet danger"
+              class="quiet danger danger-separated"
               role="menuitem"
               :title="t('可以在回收站还原；空间要等彻底删除后才释放')"
               @click="menuAction(() => trash([shown!]))"
@@ -426,6 +427,7 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onEscape, true));
       :confirm-label="t('确认删除')"
       :cancel-label="t('保留')"
       danger
+      irreversible
       @cancel="confirming = false"
       @confirm="confirming = false; deleteForever(many)"
     />

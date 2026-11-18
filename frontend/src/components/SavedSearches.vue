@@ -160,7 +160,7 @@ onBeforeUnmount(() => {
       <div v-if="menu" ref="menuPanel" class="menu glass saved-history-menu" role="menu" :aria-label="t('管理搜索：{name}', { name: menu.name })" :style="menuPosition" data-saved-searches data-saved-history-menu @keydown.stop="onMenuKey">
         <button type="button" role="menuitem" @click="act('edit')"><Icon name="search" :size="15" />{{ t("编辑条件") }}</button>
         <button type="button" role="menuitem" @click="act('rename')"><Icon name="font" :size="15" />{{ t("重命名") }}</button>
-        <button type="button" role="menuitem" class="danger" @click="act('delete')"><Icon name="trash" :size="15" />{{ t("删除") }}</button>
+        <button type="button" role="menuitem" class="danger danger-separated" @click="act('delete')"><Icon name="trash" :size="15" />{{ t("删除") }}</button>
       </div>
     </Teleport>
   </section>

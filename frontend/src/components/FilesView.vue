@@ -591,8 +591,8 @@ function onKeydown(ev: KeyboardEvent) {
     return;
   }
   if (isTyping(ev)) return;
-  // Task controls own their keys, not the file selection behind them.
-  if (document.activeElement?.closest("[data-file-tasks], [data-file-task-entry]")) return;
+  // Focused task and card buttons own their keys, not the selection behind them.
+  if (document.activeElement?.closest("[data-file-tasks], [data-file-task-entry], .card button")) return;
   // Selection keys belong to the page only while it is in front and no
   // sheet is up; the page also sits, hidden, under the viewer.
   const sheetUp = !!relocate.mode || !!shares.targets.length || ui.cloudAddOpen || ui.newFolderOpen || renameSheet.entries.length > 0;
@@ -982,6 +982,7 @@ watch(
       :confirm-label="t('清空回收站')"
       :cancel-label="t('保留')"
       danger
+      irreversible
       @cancel="emptying = false"
       @confirm="confirmEmptyTrash"
     />
@@ -1143,6 +1144,7 @@ watch(
               :data-entry="file.id"
               class="card"
               :class="{ picked: isPicked(file) }"
+              :title="file.name"
               @click="pick(file, $event)"
               @dblclick="open(file, $event)"
               @contextmenu.prevent.stop="openContextMenu(file, $event)"
@@ -1150,10 +1152,10 @@ watch(
               <span class="check" :class="{ on: isPicked(file) }" aria-hidden="true" @click.stop="togglePick(file)" @dblclick.stop>
                 <Icon name="check" :size="13" />
               </span>
-              <span v-if="file.starred" class="star-mark" role="img" :aria-label="t('已加星标')" :title="t('已加星标')">
-                <Icon name="star" :size="12" filled />
-              </span>
               <div class="thumb" :class="`type-${file.category}`">
+                <span v-if="file.starred" class="star-mark" role="img" :aria-label="t('已加星标')" :title="t('已加星标')">
+                  <Icon name="star" :size="12" filled />
+                </span>
                 <Thumb :src="file.thumbnail" :alt="file.name" lazy>
                   <span class="file-fallback" aria-hidden="true">
                     <Icon :name="file.category" :size="21" />
@@ -1167,29 +1169,30 @@ watch(
               <div class="meta">
                 <div class="name-row">
                   <strong :title="file.name">{{ file.name }}</strong>
-                  <button
-                    class="quiet icon more"
-                    :class="{ open: menu?.entry?.id === file.id }"
-                    :title="t('更多')"
-                    aria-haspopup="menu"
-                    :aria-expanded="menu?.entry?.id === file.id"
-                    data-menu
-                    @click.stop="openMenu(file, $event)"
-                    @dblclick.stop
-                  >
-                    <Icon name="more" :size="18" filled />
-                  </button>
                 </div>
                 <!-- The whole drive: the line under the name says where it lives. -->
                 <small v-if="wholeDrive && file.path" class="path" :title="shownPath(file.path)">{{ shownPath(file.path) }}</small>
                 <small v-else :title="file.path">{{ bytes(file.size) }} · {{ when(file, true) }}</small>
-                <button v-if="!inBin && file.playable" class="quiet icon play" :title="t('播放')" @click.stop="play(file)">
+                <button v-if="!inBin && file.playable" class="quiet icon play" :title="t('播放')" :aria-label="t('播放')" @click.stop="play(file)" @dblclick.stop>
                   <Icon name="play" :size="15" filled />
                 </button>
-                <button v-else-if="!inBin && file.preview" class="quiet icon play" :title="t('预览')" @click.stop="openViewer(file)">
+                <button v-else-if="!inBin && file.preview" class="quiet icon play" :title="t('预览')" :aria-label="t('预览')" @click.stop="openViewer(file)" @dblclick.stop>
                   <Icon name="eye" :size="15" />
                 </button>
               </div>
+              <button
+                class="quiet icon more"
+                :class="{ open: menu?.entry?.id === file.id }"
+                :title="t('更多')"
+                :aria-label="t('更多')"
+                aria-haspopup="menu"
+                :aria-expanded="menu?.entry?.id === file.id"
+                data-menu
+                @click.stop="openMenu(file, $event)"
+                @dblclick.stop
+              >
+                <Icon name="more" :size="18" filled />
+              </button>
             </article>
           </div>
 
@@ -1286,6 +1289,7 @@ watch(
           :confirm-label="t('确认删除')"
           :cancel-label="t('保留')"
           danger
+          irreversible
           @cancel="keyConfirm = null"
           @confirm="confirmKeyDelete"
         />
@@ -1330,6 +1334,7 @@ watch(
           :confirm-label="t('确认删除')"
           :cancel-label="t('保留')"
           danger
+          irreversible
           @cancel="closeMenu"
           @confirm="batchMenuAction((list) => deleteForever(list))"
         />
@@ -1377,7 +1382,7 @@ watch(
           <button class="quiet" role="menuitem" @click="batchMenuAction((list) => restore(list))">
             <Icon name="restore" :size="17" /> {{ t("还原") }}
           </button>
-          <button class="quiet danger" role="menuitem" @click="menu.confirming = true">
+          <button class="quiet danger danger-separated" role="menuitem" @click="menu.confirming = true">
             <Icon name="trash" :size="17" /> {{ t("彻底删除") }}
           </button>
         </template>
@@ -1409,7 +1414,7 @@ watch(
           <button class="quiet" role="menuitem" @click="batchMenuAction((list) => setStarred(list, !menuAllStarred))">
             <Icon name="star" :size="17" :filled="menuAllStarred" /> {{ menuAllStarred ? t("取消星标") : t("action|星标") }}
           </button>
-          <button class="quiet danger" role="menuitem" @click="batchMenuAction(trash)">
+          <button class="quiet danger danger-separated" role="menuitem" @click="batchMenuAction(trash)">
             <Icon name="trash" :size="17" /> {{ t("移到回收站") }}
           </button>
         </template>
@@ -1463,7 +1468,7 @@ watch(
             <Icon name="copy" :size="17" /> {{ t("复制到…") }}
           </button>
           <button
-            class="quiet danger"
+            class="quiet danger danger-separated"
             role="menuitem"
             :title="t('可以在回收站还原；空间要等彻底删除后才释放（{key}）', { key: onMac ? `${modKey}⌫` : 'Delete' })"
             @click="menuAction((e) => trash([e]))"
@@ -1480,6 +1485,7 @@ watch(
 .files {
   --surface: color-mix(in srgb, var(--canvas-flat) 96%, var(--fg) 4%);
   --surface-hover: color-mix(in srgb, var(--canvas-flat) 92%, var(--fg) 8%);
+  --card-fill: color-mix(in srgb, var(--fg) 3%, transparent);
   flex: 1;
   min-width: 0;
   display: flex;
@@ -1488,6 +1494,10 @@ watch(
   padding: 20px 24px 0;
   overflow: hidden;
   container: files / inline-size;
+}
+
+:root[data-theme="light"] .files {
+  --card-fill: color-mix(in srgb, var(--fg) 5%, transparent);
 }
 
 /* The canvas foot: counts on the left, the selection on the right. */
@@ -1656,7 +1666,7 @@ watch(
   flex-wrap: wrap;
   align-items: center;
   gap: 8px 12px;
-  margin: 12px 0 16px;
+  margin: 14px 0 16px;
   transition: padding-right var(--dur) var(--ease);
 }
 
@@ -2078,7 +2088,7 @@ h2 + .folders + h2,
   padding: 8px;
   border-radius: 11px;
   border: 1px solid transparent;
-  background: color-mix(in srgb, var(--fg) 3%, transparent);
+  background: var(--card-fill);
   box-shadow: none;
   text-align: left;
   transition: background var(--dur) var(--ease), border-color var(--dur) var(--ease);
@@ -2188,6 +2198,10 @@ h2 + .folders + h2,
   background: var(--accent-soft);
 }
 
+.folder-cover:not(:has(:deep(.thumb-img.loaded, .thumb-img.skel))) ~ .folder-meta .folder-mark {
+  display: none;
+}
+
 .folder-meta {
   display: flex;
   align-items: center;
@@ -2250,8 +2264,8 @@ h2 + .folders + h2,
 
 .folder-text small {
   margin-top: 1px;
-  font-size: 12px;
-  line-height: 18px;
+  font-size: 13px;
+  line-height: 19px;
   color: var(--fg-dim);
 }
 
@@ -2329,8 +2343,19 @@ h2 + .folders + h2,
 .media-grid .card > .check { left: 8px; }
 .media-grid .card > .star-mark { right: 8px; }
 
+.media-grid .thumb > .star-mark {
+  top: 8px;
+  right: 42px;
+}
+
 .media-grid .card:has(.play) .meta {
   padding-right: 48px;
+}
+
+.media-grid .more {
+  top: 8px;
+  right: 8px;
+  bottom: auto;
 }
 
 @media (hover: none) {
@@ -2347,11 +2372,11 @@ h2 + .folders + h2,
   align-items: center;
   gap: 12px;
   min-width: 0;
-  min-height: 70px;
+  min-height: 80px;
   padding: 9px 10px;
   border: 1px solid transparent;
   border-radius: 10px;
-  background: color-mix(in srgb, var(--fg) 3%, transparent);
+  background: var(--card-fill);
   cursor: pointer;
   transition: background var(--dur) var(--ease), border-color var(--dur) var(--ease);
 }
@@ -2490,7 +2515,7 @@ h2 + .folders + h2,
 
 .name-row {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 6px;
   min-width: 0;
 }
@@ -2501,17 +2526,20 @@ h2 + .folders + h2,
   font-size: 14px;
   line-height: 20px;
   font-weight: 600;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
+  white-space: normal;
 }
 
 .meta small {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 12px;
-  line-height: 18px;
+  font-size: 13px;
+  line-height: 19px;
   color: var(--fg-dim);
 }
 
@@ -2523,18 +2551,49 @@ h2 + .folders + h2,
 }
 
 .more {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  z-index: 2;
   width: 28px;
   height: 28px;
   min-height: 28px;
-  margin-right: -4px;
   color: var(--fg-dim);
-  opacity: 1;
+  border-color: transparent;
+  background: var(--glass-panel);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.card:hover .name-row,
+.card:focus-within .name-row,
+.card:has(.more.open) .name-row {
+  padding-right: 26px;
+}
+
+.media-grid .card:hover .name-row,
+.media-grid .card:focus-within .name-row,
+.media-grid .card:has(.more.open) .name-row {
+  padding-right: 0;
+}
+
+@media (hover: none) {
+  .more {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .grid:not(.media-grid) .name-row {
+    padding-right: 26px;
+  }
 }
 
 .card:hover .more,
 .card:focus-within .more,
 .more.open {
   opacity: 1;
+  pointer-events: auto;
 }
 
 .more.open,
