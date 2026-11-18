@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
+import AggregateFiles from "./AggregateFiles.vue";
 import ConfirmInline from "./ConfirmInline.vue";
 import FilesSearch from "./FilesSearch.vue";
 import SaveSearch from "./SaveSearch.vue";
@@ -14,6 +15,7 @@ import { t } from "../i18n";
 import { WORKSPACE_QUERY, isTyping, modKey, onMac, useMedia, useOutsideClick } from "../dom";
 import { vSlide } from "../slide";
 import {
+  accounts,
   canPasteHere,
   clearSelection,
   clipboard,
@@ -80,6 +82,8 @@ import {
   type FilesAnchor,
 } from "../store";
 import type { Entry } from "../../bindings/github.com/tonyflux/pkp/internal/services";
+const multiAccount = computed(() => accounts.list.length > 1);
+const aggregate = computed(() => ui.view === "all" && ui.scope === "accounts");
 
 const selected = computed(() => drive.entries.find((e) => e.id === drive.selectedId) ?? null);
 // Two or more picked: checkboxes stay up and the batch bar floats over the list.
@@ -101,18 +105,19 @@ const chips: { key: CategoryFilter; label: string }[] = [
 ];
 
 // Browse scope: first where to look, then the kind of file.
-const scopes: { key: FilesScope; label: string }[] = [
-  { key: "folder", get label() { return t("当前文件夹"); } },
-  { key: "drive", get label() { return t("整个云盘"); } },
-];
-// Only All files has one; a search across the drive replaces both.
-const scopeShown = computed(() => ui.view === "all" && !(ui.query.trim() && indexReady.value));
+const scopes = computed<{ key: FilesScope; label: string }[]>(() => [
+  { key: "folder", label: t("当前文件夹") },
+  { key: "drive", label: t("整个云盘") },
+  ...(multiAccount.value ? [{ key: "accounts" as const, label: t("所有账号") }] : []),
+]);
+const scopeShown = computed(() => ui.view === "all" && (aggregate.value || !(ui.query.trim() && indexReady.value)));
 const scopeWarning = computed(() => ui.scope === "drive" && !indexReady.value);
 
 const sortLabel = computed(() => sorts.find((s) => s.key === ui.sortKey)?.label ?? sorts[0].label);
 
 const heading = computed(() => {
   const query = ui.query.trim();
+  if (aggregate.value) return { title: query ? t("搜索结果") : t("全部文件"), sub: t("所有账号") };
   if (query && indexReady.value) return { title: t("搜索结果"), sub: t("“{query}” · 全盘", { query }) };
   if (ui.view === "starred") return { title: t("星标"), sub: t("你标记过的文件与文件夹") };
   if (ui.view === "trash") return { title: t("回收站"), sub: t("删除的内容会保留一段时间") };
@@ -121,7 +126,7 @@ const heading = computed(() => {
   return crumb ? { title: crumb.name, sub: "" } : { title: t("全部文件"), sub: "" };
 });
 
-const folderPath = computed(() => ui.view === "all" && drive.trail.length > 0 && !wholeDrive.value && !(ui.query.trim() && indexReady.value));
+const folderPath = computed(() => ui.view === "all" && drive.trail.length > 0 && !wholeDrive.value && !aggregate.value && !(ui.query.trim() && indexReady.value));
 
 // Rows that carry where they live (search, the whole drive from the
 // index) show it in place of the date.
@@ -596,7 +601,7 @@ function onKeydown(ev: KeyboardEvent) {
   // Selection keys belong to the page only while it is in front and no
   // sheet is up; the page also sits, hidden, under the viewer.
   const sheetUp = !!relocate.mode || !!shares.targets.length || ui.cloudAddOpen || ui.newFolderOpen || renameSheet.entries.length > 0;
-  const pageKeys = ui.route === "files" && !sheetUp && !localSearchShown.value && !videoWorksShown.value;
+  const pageKeys = ui.route === "files" && !sheetUp && !localSearchShown.value && !videoWorksShown.value && !aggregate.value;
   const mod = (onMac ? ev.metaKey && !ev.ctrlKey : ev.ctrlKey && !ev.metaKey) && !ev.altKey && !ev.shiftKey;
   const key = ev.key.length === 1 ? ev.key.toLowerCase() : ev.key;
   if (pageKeys && mod && key === "a") {
@@ -693,7 +698,7 @@ function onKeydown(ev: KeyboardEvent) {
   }
 
   // Space and Enter open what the list has picked: only while it is in front.
-  if (ui.route !== "files") return;
+  if (ui.route !== "files" || aggregate.value) return;
   if (ev.key !== " " && ev.key !== "Enter") return;
   if (ev.metaKey || ev.ctrlKey || ev.altKey || localSearchShown.value || videoWorksShown.value) return;
   if (document.activeElement?.closest("[data-playback]")) return;
@@ -834,11 +839,12 @@ async function revealEntry(id: string) {
   cardOf(id)?.scrollIntoView({ block: "nearest" });
 }
 
-onMounted(() => {
+watch(aggregate, (combined) => {
+  if (combined) return;
   filesPlace.save = savePlace;
   filesPlace.restore = (place) => void restorePlace(place);
   filesPlace.reveal = (id) => void revealEntry(id);
-});
+}, { immediate: true, flush: "sync" });
 onBeforeUnmount(() => {
   filesPlace.save = () => null;
   filesPlace.restore = () => {};
@@ -891,7 +897,7 @@ watch(
     </header>
 
     <div class="controls">
-      <div v-if="scopeShown" class="scope-row">
+    <div v-if="scopeShown" class="scope-row">
         <div v-slide class="segments scope glass-well" role="group" :aria-label="t('浏览范围')">
           <button
             v-for="s in scopes"
@@ -904,7 +910,8 @@ watch(
           </button>
         </div>
         <span v-if="scopeWarning" class="scope-hint" role="status">{{ t("本地索引建立中，结果可能不完整") }}</span>
-      </div>
+    </div>
+    <template v-if="!aggregate">
       <!-- Category filters share a compact control. -->
       <div v-slide class="segments kinds glass-well" role="tablist" :aria-label="t('分类')">
         <button
@@ -966,7 +973,10 @@ watch(
       >
         <Icon name="trash" :size="17" />{{ t("清空回收站") }}
       </button>
+    </template>
     </div>
+    <AggregateFiles v-if="aggregate" />
+    <template v-else>
 
     <VideoWorksView
       v-if="videoWorksShown"
@@ -1309,6 +1319,7 @@ watch(
     </footer>
     </template>
     </template>
+    </template>
 
 
     <Teleport to="body">
@@ -1626,6 +1637,7 @@ watch(
   max-width: 100%;
   flex: 0 1 auto;
 }
+
 
 .segments.scope {
   flex: 0 1 auto;

@@ -41,6 +41,7 @@
 - Add panel background opacity (0–100%) under Settings → General, defaulting to 80% when no preference is saved while preserving existing settings. App or system reduce-transparency overrides take precedence; restoring defaults removes the custom wallpaper and resets panel opacity to 80%.
 
 - Refine the desktop workspace with thumbnail-focused image and video grids, compact cards for other files, and clearer filters, navigation and privacy settings. List view, file actions, light and dark modes, accent colors and custom wallpapers remain available.
+- Browse files across all accounts, including filtering, search, playback and downloads, while keeping drives isolated. Unready indexes and sync failures are marked as potentially incomplete.
 
 ## 0.7.1 · 2026-11-18
 

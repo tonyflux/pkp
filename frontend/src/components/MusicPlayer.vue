@@ -23,6 +23,7 @@ import {
   audioDetails,
   canPlayNextTrack,
   collapsePlayer,
+  entryKey,
   nowPlaying,
   playAt,
   player,
@@ -347,7 +348,7 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onKey));
         <span class="queue-divider" aria-hidden="true" />
 
         <ol ref="queueList">
-          <li v-for="(e, i) in player.playlist" :key="e.id">
+          <li v-for="(e, i) in player.playlist" :key="entryKey(e)">
             <button
               class="queue-track"
               :class="{ active: i === player.index }"

@@ -523,6 +523,33 @@ export interface Account {
 }
 
 /**
+ * AggregateAccount describes whether an account contributed to the page.
+ */
+export interface AggregateAccount {
+    "account": string;
+    "state": string;
+    "error": string;
+}
+
+/**
+ * AggregateEntry associates an indexed file with the account that owns it.
+ */
+export interface AggregateEntry {
+    "account": string;
+    "entry": Entry;
+}
+
+/**
+ * AggregatePage is a globally ordered page of files from ready accounts.
+ */
+export interface AggregatePage {
+    "entries": AggregateEntry[] | null;
+    "accounts": AggregateAccount[] | null;
+    "total": number;
+    "next": string;
+}
+
+/**
  * AppLockResult is how a request that had to prove the owner ended. Result
  * is "ok"; "cancelled", "failed", "unavailable" or "busy" (a dialog is up
  * already) from the system; "wrong" (the standalone password is not that), "cooldown"

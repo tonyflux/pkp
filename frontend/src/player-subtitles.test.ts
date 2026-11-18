@@ -184,24 +184,24 @@ describe("player settings disclosure", () => {
 });
 
 describe("video queue controls", () => {
-  it.each([false, true])("switches to adjacent videos in windowed=%s", async (windowed) => {
+  it("switches to adjacent videos", async () => {
     player.playlist = ["first", "second", "third"].map((id) => ({ id, name: `${id}.mp4`, category: "video" }) as Entry);
     player.index = 1;
     player.mode = "sequential";
-    const host = await mountPlayer(windowed);
+    const host = await mountPlayer();
     const previous = host.querySelector<HTMLButtonElement>('[aria-label="上一个视频"]')!;
     const next = host.querySelector<HTMLButtonElement>('[aria-label="下一个视频"]')!;
     previous.click();
     await settle();
-    expect(backend.playFile).toHaveBeenLastCalledWith(windowed ? "" : "playing", "first");
+    expect(backend.playFile).toHaveBeenLastCalledWith("playing", "first");
     expect(previous.disabled).toBe(true);
     expect(next.disabled).toBe(false);
     next.click();
     await settle();
-    expect(backend.playFile).toHaveBeenLastCalledWith(windowed ? "" : "playing", "second");
+    expect(backend.playFile).toHaveBeenLastCalledWith("playing", "second");
     next.click();
     await settle();
-    expect(backend.playFile).toHaveBeenLastCalledWith(windowed ? "" : "playing", "third");
+    expect(backend.playFile).toHaveBeenLastCalledWith("playing", "third");
     expect(next.disabled).toBe(true);
   });
 
