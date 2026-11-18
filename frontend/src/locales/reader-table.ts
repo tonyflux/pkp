@@ -38,10 +38,10 @@ export default {
   "无法读取此工作簿，文件可能损坏、加密或包含不支持的结构。": {
     tw: "無法讀取此工作簿，檔案可能損毀、加密或包含不支援的結構。", en: "Cannot read this workbook. It may be damaged, encrypted, or contain unsupported structures.", ja: "このブックを読み込めません。破損、暗号化、または未対応の構造が含まれている可能性があります。", ko: "이 통합 문서를 읽을 수 없습니다. 손상되었거나 암호화되었거나 지원하지 않는 구조가 포함되었을 수 있습니다.",
   },
-  "表格超过安全读取上限：文本 16 MiB、工作簿 20 MiB、展开 32 MiB、10 万行、512 列或 100 万个网格单元；未截断显示。请用电子表格应用打开。": {
-    tw: "表格超過安全讀取上限：文字 16 MiB、工作簿 20 MiB、展開 32 MiB、10 萬列、512 欄或 100 萬個網格儲存格；未截斷顯示。請用試算表應用程式開啟。",
-    en: "Table exceeds safe limits: 16 MiB text, 20 MiB workbook, 32 MiB expanded, 100,000 rows, 512 columns, or 1,000,000 grid cells. No truncated data is shown. Open in a spreadsheet app.",
-    ja: "安全な読み込み上限（テキスト 16 MiB、ブック 20 MiB、展開後 32 MiB、10 万行、512 列、または 100 万セル）を超えています。途中までのデータは表示しません。表計算アプリで開いてください。",
-    ko: "안전한 읽기 한도(텍스트 16 MiB, 통합 문서 20 MiB, 압축 해제 32 MiB, 10만 행, 512열 또는 100만 격자 셀)를 초과했습니다. 잘린 데이터는 표시하지 않습니다. 스프레드시트 앱에서 여세요.",
+  "表格太大，超出了预览限制（文本 16 MiB、表格文件 20 MiB／展开 32 MiB、10 万行、512 列或 100 万单元格）；这里不截断显示，请用电子表格应用打开。": {
+    tw: "表格太大，超出了預覽限制（文字 16 MiB、表格檔案 20 MiB／展開 32 MiB、10 萬列、512 欄或 100 萬儲存格）；這裡不截斷顯示，請用試算表應用程式開啟。",
+    en: "This table is too large to preview (over 16 MiB text, 20 MiB workbook / 32 MiB expanded, 100,000 rows, 512 columns, or 1,000,000 cells). To avoid showing cut-off data, open it in a spreadsheet app.",
+    ja: "表が大きすぎてプレビュー上限（テキスト 16 MiB、ブック 20 MiB／展開 32 MiB、10 万行、512 列、100 万セル）を超えています。途中の切り捨て表示は行わないため、表計算アプリで開いてください。",
+    ko: "표가 너무 커서 미리보기 제한(텍스트 16 MiB, 통합 문서 20 MiB / 해제 32 MiB, 10만 행, 512열, 100만 셀)을 초과했습니다. 잘린 데이터를 보여 주지 않으므로 스프레드시트 앱에서 여세요.",
   },
 } satisfies Messages;

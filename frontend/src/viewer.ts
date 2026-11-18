@@ -134,7 +134,7 @@ export function unsupportedCopy(entry: { category: string; phase: string }): {
     return {
       kicker: "NOT READY",
       title: t("文件还没有准备好"),
-      body: t("云添加或上传完成后才能查看内容。文件信息和能做的操作在「详情」里。"),
+      body: t("等上传或云添加完成后，就能查看内容了。文件信息可以在「详情」里看。"),
       note: t("文件尚未就绪"),
     };
   }
@@ -148,7 +148,7 @@ export function unsupportedCopy(entry: { category: string; phase: string }): {
   return {
     kicker: kicker[entry.category] ?? "FILE",
     title: t("此格式暂不支持预览"),
-    body: t("PKP 不会伪造它的内容。文件信息和能做的操作在「详情」里。"),
-    note: entry.category === "archive" ? t("不伪造压缩包内容") : t("不伪造文件内容"),
+    body: t("这种文件暂时不支持直接预览，具体信息和能做的操作都在「详情」里。"),
+    note: entry.category === "archive" ? t("暂不支持预览压缩包") : t("暂不支持直接预览"),
   };
 }

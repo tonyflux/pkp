@@ -54,7 +54,7 @@ type FileBatchProgress struct {
 // empty-trash task never grows to include entries trashed after confirmation.
 func (d *DriveService) TrashSnapshot(account string) ([]Entry, error) {
 	if account == "" {
-		return nil, i18n.New("文件任务缺少账号或来源快照")
+		return nil, i18n.New("这个文件任务缺少账号或来源信息")
 	}
 	s, err := d.sessionFor(account)
 	if err != nil {
@@ -75,7 +75,7 @@ func (d *DriveService) TrashSnapshot(account string) ([]Entry, error) {
 // known refusals are safe to retry; accepted or ambiguous writes are read back.
 func (d *DriveService) RunFileBatch(req FileBatchRequest) (FileBatchReport, error) {
 	if req.ID == "" || req.Account == "" || len(req.Items) == 0 {
-		return FileBatchReport{}, i18n.New("文件任务缺少账号或来源快照")
+		return FileBatchReport{}, i18n.New("这个文件任务缺少账号或来源信息")
 	}
 	switch req.Action {
 	case "trash", "delete", "empty", "restore", "move", "copy", "star", "unstar":
@@ -90,7 +90,7 @@ func (d *DriveService) RunFileBatch(req FileBatchRequest) (FileBatchReport, erro
 	report := FileBatchReport{Items: make([]FileBatchResult, len(req.Items))}
 	for i, it := range req.Items {
 		if _, exists := positions[it.ID]; exists || it.ID == "" || it.Name == "" {
-			return FileBatchReport{}, i18n.New("文件任务缺少账号或来源快照")
+			return FileBatchReport{}, i18n.New("这个文件任务缺少账号或来源信息")
 		}
 		positions[it.ID] = i
 		ids = append(ids, it.ID)

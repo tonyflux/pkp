@@ -19,7 +19,7 @@ async function responseBytes(response: Response, maxBytes: number): Promise<Uint
   if (!response.ok) throw new Error(t("读取文件失败（HTTP {status}）", { status: response.status }));
   if (Number(response.headers.get("Content-Length")) > maxBytes) {
     await response.body?.cancel();
-    throw new Error(t("内容超过安全读取上限"));
+    throw new Error(t("文件太大，超出了预览限制"));
   }
   const reader = response.body?.getReader();
   if (!reader) return new Uint8Array();
@@ -30,7 +30,7 @@ async function responseBytes(response: Response, maxBytes: number): Promise<Uint
       const { done, value } = await reader.read();
       if (done) break;
       size += value.byteLength;
-      if (size > maxBytes) throw new Error(t("内容超过安全读取上限"));
+      if (size > maxBytes) throw new Error(t("文件太大，超出了预览限制"));
       parts.push(value);
     }
   } catch (error) { await reader.cancel().catch(() => undefined); throw error; }
@@ -85,7 +85,7 @@ export class DocumentArchive {
           constructor() { super(url); this.size = size; }
           async readUint8Array(offset: number, length: number) {
             if (length === 0) return new Uint8Array();
-            if (length > 64 * MiB || offset < 0 || offset + length > size) throw new Error(t("内容超过安全读取上限"));
+            if (length > 64 * MiB || offset < 0 || offset + length > size) throw new Error(t("文件太大，超出了预览限制"));
             const response = await fetch(url, { headers: { Range: `bytes=${offset}-${offset + length - 1}` }, signal: archive.controller.signal });
             const expected = `bytes ${offset}-${offset + length - 1}/${size}`;
             if (response.status !== 206 || response.headers.get("Content-Range") !== expected) {
@@ -104,13 +104,13 @@ export class DocumentArchive {
       let expanded = 0;
       let entries = 0;
       for await (const entry of archive.zip.getEntriesGenerator()) {
-        if (++entries > 20000) throw new Error(t("压缩容器中的项目过多"));
+        if (++entries > 20000) throw new Error(t("压缩包里的文件过多，无法阅读"));
         const name = entry.filename;
         if (entry.directory) continue;
-        if (!name || name.length > 2048 || name.startsWith("/") || /[\\\u0000-\u001f]/.test(name) || /^[a-z][a-z\d+.-]*:/i.test(name) || name.split("/").some(p => p === ".." || p === ".") || archive.files.has(name)) throw new Error(t("压缩容器包含不安全的路径"));
+        if (!name || name.length > 2048 || name.startsWith("/") || /[\\\u0000-\u001f]/.test(name) || /^[a-z][a-z\d+.-]*:/i.test(name) || name.split("/").some(p => p === ".." || p === ".") || archive.files.has(name)) throw new Error(t("压缩包里包含异常路径"));
         expanded += entry.uncompressedSize;
-        if (!Number.isSafeInteger(expanded) || expanded > 2 * 1024 * MiB || entry.uncompressedSize > 256 * MiB || (entry.uncompressedSize > MiB && entry.uncompressedSize / Math.max(entry.compressedSize, 1) > 1000)) throw new Error(t("压缩容器超过安全展开上限"));
-        if (entry.encrypted) throw new Error(t("不支持加密的压缩容器"));
+        if (!Number.isSafeInteger(expanded) || expanded > 2 * 1024 * MiB || entry.uncompressedSize > 256 * MiB || (entry.uncompressedSize > MiB && entry.uncompressedSize / Math.max(entry.compressedSize, 1) > 1000)) throw new Error(t("压缩包解压后体积太大，超出了预览限制"));
+        if (entry.encrypted) throw new Error(t("暂不支持带密码的压缩包"));
         archive.files.set(name, entry);
       }
       return archive;
@@ -121,12 +121,12 @@ export class DocumentArchive {
     if (this.closed) throw new DOMException("Aborted", "AbortError");
     const entry = this.files.get(path);
     if (!entry) throw new Error(t("文档资源不存在：{path}", { path }));
-    if (entry.uncompressedSize > maxBytes) throw new Error(t("内容超过安全读取上限"));
+    if (entry.uncompressedSize > maxBytes) throw new Error(t("文件太大，超出了预览限制"));
     const parts: Uint8Array[] = [];
     let count = 0;
     const writer = new WritableStream<Uint8Array>({ write(chunk) {
       count += chunk.byteLength;
-      if (count > maxBytes) throw new Error(t("内容超过安全读取上限"));
+      if (count > maxBytes) throw new Error(t("文件太大，超出了预览限制"));
       parts.push(chunk);
     } });
     await entry.getData({ writable: writer }, { signal: this.controller.signal, checkSignature: true });
@@ -144,7 +144,7 @@ export class DocumentArchive {
     const pending = (async () => {
       const bytes = await this.read(path, 32 * MiB);
       const mime = rasterMime(bytes);
-      if (!mime) throw new Error(t("此图片格式不能安全预览"));
+      if (!mime) throw new Error(t("这种图片格式暂时无法预览"));
       if (this.closed) throw new DOMException("Aborted", "AbortError");
       const url = URL.createObjectURL(new Blob([bytes], { type: mime }));
       this.images.set(path, url);

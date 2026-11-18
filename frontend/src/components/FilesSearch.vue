@@ -139,9 +139,9 @@ function clearConditions() {
 <template>
   <div class="files-search" aria-labelledby="files-search-title">
     <div class="fs-inner">
-      <span class="fs-eyebrow">{{ currentSavedSearch ? t("已保存历史") : t("全部文件") }} <span aria-hidden="true">/</span> {{ t("本地搜索") }}</span>
+      <span class="fs-eyebrow">{{ currentSavedSearch ? t("已保存搜索") : t("全部文件") }} <span aria-hidden="true">/</span> {{ t("本地搜索") }}</span>
       <h1 id="files-search-title">{{ currentSavedSearch?.name ?? title }}</h1>
-      <p class="fs-lede">{{ t("筛选直接在本地索引完成，不需要模型，也不发送文件名。") }}</p>
+      <p class="fs-lede">{{ t("只在本地索引里筛选，不联网也不动用 AI。") }}</p>
 
       <div class="fs-chips" role="group" :aria-label="t('搜索条件')">
         <span class="fs-chip scope"><Icon name="folder" :size="14" />{{ scopeLabel }}</span>
@@ -230,7 +230,7 @@ function clearConditions() {
 
       <div class="fs-help">
         <Icon name="shield" :size="16" />
-        <span>{{ t("这只是本地筛选。想进一步按意思找，可以选择「问 AI」，发送前先确认数据范围。") }}</span>
+        <span>{{ t("这里是按条件精确筛选；想按意思找，可以试试「问 AI」（发送前会先让你确认内容）。") }}</span>
         <button class="fs-ask" @click="askAssistant(ui.query.trim())"><Icon name="spark" :size="14" />{{ t("问 AI") }}</button>
       </div>
     </div>

@@ -126,7 +126,7 @@ async function act(run: () => Promise<void>) {
       <button
         class="quiet"
         :disabled="!plan.retry.length"
-        :title="title(plan.retry.length ? t('保留了进度的从中断处继续，其余从头开始') : t('所选的下载里没有暂停、失败、取消或中断的'))"
+        :title="title(plan.retry.length ? t('有进度记录的会接着传，其余从头开始') : t('所选的下载里没有暂停、失败、取消或中断的'))"
         @click="act(() => resumeDownloads(plan.retry))"
       >
         <Icon name="restore" :size="17" />{{ label(retryText(plan.retry), plan.retry) }}
@@ -154,7 +154,7 @@ async function act(run: () => Promise<void>) {
       <button
         class="quiet"
         :disabled="!plan.retry.length"
-        :title="title(plan.retry.length ? t('保留了进度的从中断处继续，其余从头开始') : t('所选的上传里没有失败、取消或中断的'))"
+        :title="title(plan.retry.length ? t('有进度记录的会接着传，其余从头开始') : t('所选的上传里没有失败、取消或中断的'))"
         @click="act(() => retryUploads(plan.retry))"
       >
         <Icon name="restore" :size="17" />{{ label(retryText(plan.retry), plan.retry) }}

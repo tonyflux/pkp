@@ -219,7 +219,7 @@ func (n *NotifyService) ServiceStartup(context.Context, application.ServiceOptio
 
 func unavailableWhy(err error) string {
 	if strings.Contains(err.Error(), "bundle identifier") {
-		return i18n.T("PKP 不是从应用程序包打开的，系统不让它发通知：请打开 PKP.app")
+		return i18n.T("请从「应用程序」里的 PKP.app 打开，系统才允许发通知")
 	}
 	return i18n.T("这台电脑不支持系统通知")
 }
@@ -296,7 +296,7 @@ func (n *NotifyService) SendTest() error {
 	return n.center.send(notifications.NotificationOptions{
 		ID:       noticeID("test"),
 		Title:    i18n.T("PKP 通知已开启"),
-		Body:     i18n.T("下载、上传、云添加完成或失败时，会像这样告诉你。"),
+		Body:     i18n.T("下载、上传或云添加完成、失败时，会像这样提醒你。"),
 		ThreadID: "test",
 		Data:     map[string]any{"target": "app"},
 	})

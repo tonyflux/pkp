@@ -52,11 +52,11 @@ type Skipped struct {
 }
 
 var (
-	ErrRootChanged   = i18n.New("同步根目录身份已改变，请重新配对")
+	ErrRootChanged   = i18n.New("同步的根目录对不上了，请重新关联")
 	ErrUnavailable   = i18n.New("同步磁盘或目录不可用")
 	ErrPermission    = i18n.New("没有同步目录的访问权限")
-	ErrUnsupported   = i18n.New("此文件系统不支持安全同步操作")
-	ErrUnsafePath    = i18n.New("同步路径不安全或包含符号链接")
+	ErrUnsupported   = i18n.New("当前磁盘的文件系统不支持可靠同步")
+	ErrUnsafePath    = i18n.New("同步路径里包含符号链接或不太安全，没法同步")
 	ErrUnstable      = i18n.New("文件正在变化，请稍后重新扫描")
 	ErrStageOccupied = i18n.New(".pkp-sync 已被用户文件占用，不能用于同步暂存")
 	ErrCollision     = i18n.New("文件名与现有名称冲突")
@@ -684,7 +684,7 @@ func Scan(ctx context.Context, root Identity, cache map[string]Entry) ([]Entry, 
 				continue
 			}
 			if excluded(name) {
-				skipped = append(skipped, Skipped{sub, i18n.T("已识别的临时或系统控制文件")})
+				skipped = append(skipped, Skipped{sub, i18n.T("临时文件或系统文件")})
 				continue
 			}
 			if err := NameError(name, runtime.GOOS); err != nil {

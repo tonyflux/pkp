@@ -5,7 +5,7 @@ package i18n
 func init() {
 	add(map[string]Msg{
 		// AI
-		"整理建议的保留记录无效":                   {Hant: "整理建議的保留記錄無效", En: "The saved keep decision is invalid", Ja: "整理提案の現状維持記録が無効です", Ko: "정리 제안의 유지 기록이 잘못되었습니다"},
+		"之前选好的保留记录无效":                   {Hant: "之前選好的保留記錄無效", En: "The saved keep decision is invalid", Ja: "保存された現状維持の記録が無効です", Ko: "저장된 유지 기록이 잘못되었습니다"},
 		"还没有配置模型":                       {Hant: "尚未設定模型", En: "No model is set up yet", Ja: "モデルがまだ設定されていません", Ko: "아직 모델이 설정되지 않았습니다"},
 		"还没有填写模型":                       {Hant: "尚未填寫模型", En: "No model name entered yet", Ja: "モデル名がまだ入力されていません", Ko: "아직 모델 이름을 입력하지 않았습니다"},
 		"还没有保存 API Key":                 {Hant: "尚未儲存 API Key", En: "No API key saved yet", Ja: "API キーがまだ保存されていません", Ko: "아직 API 키를 저장하지 않았습니다"},
@@ -20,7 +20,7 @@ func init() {
 		"单个对话上限需在 1,000 到 2,000,000 tokens 之间，或选择不限制": {Hant: "單一對話上限需介於 1,000 到 2,000,000 tokens 之間，或選擇不限制", En: "The per-conversation limit must be between 1,000 and 2,000,000 tokens, or choose no limit", Ja: "1 会話あたりの上限は 1,000〜2,000,000 トークンにするか、無制限を選んでください", Ko: "대화당 한도는 1,000~2,000,000 토큰 사이이거나 제한 없음이어야 합니다"},
 		"请选择 Plex 风格、中文风格或自定义命名":                      {Hant: "請選擇 Plex 風格、中文風格或自訂命名", En: "Choose Plex style, Chinese style or custom naming", Ja: "Plex 形式、中国語形式、カスタム命名のいずれかを選んでください", Ko: "Plex 스타일, 중국어 스타일 또는 사용자 지정 이름을 선택하세요"},
 		"已取消":       {Hant: "已取消", En: "Canceled", Ja: "キャンセルしました", Ko: "취소됨"},
-		"这次请求已经在进行": {Hant: "這次請求已在進行中", En: "This request is already running", Ja: "このリクエストはすでに実行中です", Ko: "이 요청은 이미 진행 중입니다"},
+		"上一个请求还没结束": {Hant: "上一個請求還沒結束", En: "This request is already running", Ja: "このリクエストはすでに実行中です", Ko: "이 요청은 이미 진행 중입니다"},
 		// Matched by the webview (NO_TOOLS_MESSAGE in agent.ts).
 		"这个模型不支持工具调用": {Hant: "這個模型不支援工具呼叫", En: "This model doesn't support tool calls", Ja: "このモデルはツール呼び出しに対応していません", Ko: "이 모델은 도구 호출을 지원하지 않습니다"},
 		// The start is matched by the webview (CONTENT_REFUSED in agent.ts).
@@ -49,7 +49,7 @@ func init() {
 		"AI 字幕服务拒绝了这个视频或语言：%s":    {Hant: "AI 字幕服務拒絕了這部影片或語言：%s", En: "The AI subtitle service refused this video or language: %s", Ja: "AI 字幕サービスがこの動画または言語を拒否しました：%s", Ko: "AI 자막 서비스가 이 동영상 또는 언어를 거부했습니다: %s"},
 		"AI 字幕服务暂时不可用（%s）":        {Hant: "AI 字幕服務暫時無法使用（%s）", En: "The AI subtitle service is temporarily unavailable (%s)", Ja: "AI 字幕サービスは一時的に利用できません（%s）", Ko: "AI 자막 서비스를 일시적으로 사용할 수 없습니다(%s)"},
 		"与 AI 字幕服务的连接中断了":         {Hant: "與 AI 字幕服務的連線中斷了", En: "The connection to the AI subtitle service was lost", Ja: "AI 字幕サービスとの接続が切れました", Ko: "AI 자막 서비스와의 연결이 끊어졌습니다"},
-		"读不到这个视频的声音":              {Hant: "讀不到這部影片的聲音", En: "Couldn't read this video's audio", Ja: "この動画の音声を読み取れません", Ko: "이 동영상의 소리를 읽을 수 없습니다"},
+		"识别不到这个视频里的声音":            {Hant: "辨識不到這部影片裡的聲音", En: "Couldn't read audio from this video", Ja: "この動画の音声を読み取れません", Ko: "이 동영상의 소리를 읽을 수 없습니다"},
 		"这个视频没有声音":                {Hant: "這部影片沒有聲音", En: "This video has no audio", Ja: "この動画には音声がありません", Ko: "이 동영상에는 소리가 없습니다"},
 
 		// Player
@@ -80,23 +80,23 @@ func init() {
 		"调整幅度需在 ±%d 秒之内":                    {Hant: "調整幅度需在 ±%d 秒之內", En: "The shift must be within ±%d seconds", Ja: "調整幅は ±%d 秒以内にしてください", Ko: "조정 폭은 ±%d초 이내여야 합니다"},
 
 		// Downloads, transfers, torrents
-		"不支持的传输设置「%s」":                     {Hant: "不支援的傳輸設定「%s」", En: "Unsupported transfer setting \"%s\"", Ja: "未対応の転送設定「%s」", Ko: "지원하지 않는 전송 설정 ‘%s’"},
-		"下载文件夹「%s」不可用，请在「设置 · 传输」里重新选择":    {Hant: "下載資料夾「%s」無法使用，請在「設定 · 傳輸」中重新選擇", En: "Download folder \"%s\" isn't available; choose it again in \"Settings · Transfers\"", Ja: "ダウンロードフォルダ「%s」を使用できません。「設定 · 転送」で選び直してください", Ko: "다운로드 폴더 ‘%s’을(를) 사용할 수 없습니다. ‘설정 · 전송’에서 다시 선택하세요"},
-		"「%s」已在下载列表里":                      {Hant: "「%s」已在下載清單中", En: "\"%s\" is already in the download list", Ja: "「%s」はすでにダウンロードリストにあります", Ko: "‘%s’은(는) 이미 다운로드 목록에 있습니다"},
-		"「%s」下的文件夹太深，更深的部分已跳过":             {Hant: "「%s」下的資料夾太深，更深的部分已略過", En: "Folders under \"%s\" are nested too deep; deeper parts were skipped", Ja: "「%s」以下のフォルダ階層が深すぎるため、深い部分はスキップしました", Ko: "‘%s’ 아래 폴더가 너무 깊어 더 깊은 부분은 건너뛰었습니다"},
-		"「%s」还没有保存完成，已跳过":                  {Hant: "「%s」尚未儲存完成，已略過", En: "\"%s\" isn't fully saved yet; skipped", Ja: "「%s」はまだ保存が完了していないため、スキップしました", Ko: "‘%s’은(는) 아직 저장이 끝나지 않아 건너뛰었습니다"},
-		"下载还没有完成":                          {Hant: "下載尚未完成", En: "The download isn't finished yet", Ja: "ダウンロードはまだ完了していません", Ko: "다운로드가 아직 끝나지 않았습니다"},
-		"文件已被移动或删除":                        {Hant: "檔案已被移動或刪除", En: "The file has been moved or deleted", Ja: "ファイルは移動または削除されました", Ko: "파일이 이동되었거나 삭제되었습니다"},
-		"无法交给系统打开":                         {Hant: "無法交給系統開啟", En: "Couldn't open it with the system", Ja: "システムで開けませんでした", Ko: "시스템으로 열 수 없습니다"},
-		"保存到的文件夹已经不在了":                     {Hant: "儲存目的地資料夾已不存在", En: "The destination folder no longer exists", Ja: "保存先のフォルダはもう存在しません", Ko: "저장할 폴더가 더 이상 없습니다"},
-		"没有选择种子文件":                         {Hant: "沒有選擇種子檔案", En: "No torrent file selected", Ja: "トレントファイルが選択されていません", Ko: "토렌트 파일을 선택하지 않았습니다"},
-		"打不开种子文件：%w":                       {Hant: "無法開啟種子檔案：%w", En: "Couldn't open the torrent file: %w", Ja: "トレントファイルを開けません：%w", Ko: "토렌트 파일을 열 수 없습니다: %w"},
-		"种子文件超过 %d MB，不像是种子":               {Hant: "種子檔案超過 %d MB，不像是種子", En: "The file is over %d MB; it doesn't look like a torrent", Ja: "ファイルが %d MB を超えています。トレントではないようです", Ko: "파일이 %d MB를 넘어 토렌트가 아닌 것 같습니다"},
-		"读不了种子文件：%w":                       {Hant: "無法讀取種子檔案：%w", En: "Couldn't read the torrent file: %w", Ja: "トレントファイルを読み込めません：%w", Ko: "토렌트 파일을 읽을 수 없습니다: %w"},
-		"这是 BitTorrent v2 种子，云盘只认 v1 磁力链接": {Hant: "這是 BitTorrent v2 種子，雲端硬碟只支援 v1 磁力連結", En: "This is a BitTorrent v2 torrent; the drive only accepts v1 magnet links", Ja: "これは BitTorrent v2 のトレントです。クラウドドライブは v1 のマグネットリンクにのみ対応しています", Ko: "BitTorrent v2 토렌트입니다. 클라우드 드라이브는 v1 마그넷 링크만 지원합니다"},
-		"这个文件不是种子，或者已经损坏":                  {Hant: "這個檔案不是種子，或已經損毀", En: "This file isn't a torrent, or it's damaged", Ja: "このファイルはトレントではないか、破損しています", Ko: "이 파일은 토렌트가 아니거나 손상되었습니다"},
-		"这个种子里没有文件":                        {Hant: "這個種子裡沒有檔案", En: "This torrent has no files", Ja: "このトレントにはファイルがありません", Ko: "이 토렌트에는 파일이 없습니다"},
-		"种子里没有第 %d 个文件":                    {Hant: "種子裡沒有第 %d 個檔案", En: "The torrent has no file #%d", Ja: "トレントに %d 番目のファイルはありません", Ko: "토렌트에 %d번째 파일이 없습니다"},
+		"不支持的传输设置「%s」":                       {Hant: "不支援的傳輸設定「%s」", En: "Unsupported transfer setting \"%s\"", Ja: "未対応の転送設定「%s」", Ko: "지원하지 않는 전송 설정 ‘%s’"},
+		"下载文件夹「%s」不可用，请在「设置 · 传输」里重新选择":      {Hant: "下載資料夾「%s」無法使用，請在「設定 · 傳輸」中重新選擇", En: "Download folder \"%s\" isn't available; choose it again in \"Settings · Transfers\"", Ja: "ダウンロードフォルダ「%s」を使用できません。「設定 · 転送」で選び直してください", Ko: "다운로드 폴더 ‘%s’을(를) 사용할 수 없습니다. ‘설정 · 전송’에서 다시 선택하세요"},
+		"「%s」已在下载列表里":                        {Hant: "「%s」已在下載清單中", En: "\"%s\" is already in the download list", Ja: "「%s」はすでにダウンロードリストにあります", Ko: "‘%s’은(는) 이미 다운로드 목록에 있습니다"},
+		"「%s」下的文件夹太深，更深的部分已跳过":               {Hant: "「%s」下的資料夾太深，更深的部分已略過", En: "Folders under \"%s\" are nested too deep; deeper parts were skipped", Ja: "「%s」以下のフォルダ階層が深すぎるため、深い部分はスキップしました", Ko: "‘%s’ 아래 폴더가 너무 깊어 더 깊은 부분은 건너뛰었습니다"},
+		"「%s」还没有保存完成，已跳过":                    {Hant: "「%s」尚未儲存完成，已略過", En: "\"%s\" isn't fully saved yet; skipped", Ja: "「%s」はまだ保存が完了していないため、スキップしました", Ko: "‘%s’은(는) 아직 저장이 끝나지 않아 건너뛰었습니다"},
+		"下载还没有完成":                            {Hant: "下載尚未完成", En: "The download isn't finished yet", Ja: "ダウンロードはまだ完了していません", Ko: "다운로드가 아직 끝나지 않았습니다"},
+		"文件已被移动或删除":                          {Hant: "檔案已被移動或刪除", En: "The file has been moved or deleted", Ja: "ファイルは移動または削除されました", Ko: "파일이 이동되었거나 삭제되었습니다"},
+		"无法交给系统打开":                           {Hant: "無法交給系統開啟", En: "Couldn't open it with the system", Ja: "システムで開けませんでした", Ko: "시스템으로 열 수 없습니다"},
+		"保存到的文件夹已经不在了":                       {Hant: "儲存目的地資料夾已不存在", En: "The destination folder no longer exists", Ja: "保存先のフォルダはもう存在しません", Ko: "저장할 폴더가 더 이상 없습니다"},
+		"没有选择种子文件":                           {Hant: "沒有選擇種子檔案", En: "No torrent file selected", Ja: "トレントファイルが選択されていません", Ko: "토렌트 파일을 선택하지 않았습니다"},
+		"打不开这个种子文件：%w":                       {Hant: "打不開這個種子檔案：%w", En: "Couldn't open this torrent file: %w", Ja: "このトレントファイルを開けません：%w", Ko: "이 토렌트 파일을 열 수 없습니다: %w"},
+		"这个文件超过 %d MB，看起来不像种子文件":             {Hant: "這個檔案超過 %d MB，看起來不像種子檔案", En: "This file is over %d MB—doesn't look like a torrent", Ja: "このファイルは %d MB を超えており、トレントではないようです", Ko: "이 파일은 %d MB가 넘어 토렌트 파일이 아닌 것 같습니다"},
+		"读取种子文件失败：%w":                        {Hant: "讀取種子檔案失敗：%w", En: "Couldn't read the torrent file: %w", Ja: "トレントファイルを読み込めません：%w", Ko: "토렌트 파일을 읽을 수 없습니다: %w"},
+		"这是 BitTorrent v2 种子，云盘目前只认 v1 磁力链接": {Hant: "這是 BitTorrent v2 種子，雲端硬碟目前只認 v1 磁力連結", En: "This is a BitTorrent v2 torrent; the drive currently only accepts v1 magnet links", Ja: "これは BitTorrent v2 のトレントです。クラウドドライブは現在 v1 のマグネットリンクのみ対応しています", Ko: "BitTorrent v2 토렌트입니다. 클라우드 드라이브는 현재 v1 마그넷 링크만 지원합니다"},
+		"这个文件不是种子，或者已经损坏":                    {Hant: "這個檔案不是種子，或已經損毀", En: "This file isn't a torrent, or it's damaged", Ja: "このファイルはトレントではないか、破損しています", Ko: "이 파일은 토렌트가 아니거나 손상되었습니다"},
+		"这个种子里没有文件":                          {Hant: "這個種子裡沒有檔案", En: "This torrent has no files", Ja: "このトレントにはファイルがありません", Ko: "이 토렌트에는 파일이 없습니다"},
+		"种子里没有第 %d 个文件":                      {Hant: "種子裡沒有第 %d 個檔案", En: "The torrent has no file #%d", Ja: "トレントに %d 番目のファイルはありません", Ko: "토렌트에 %d번째 파일이 없습니다"},
 
 		// Duplicates
 		"索引还没建完，建完才能扫描": {Hant: "索引尚未建立完成，完成後才能掃描", En: "The index isn't built yet; scan once it's done", Ja: "インデックスの作成が完了していません。完了後にスキャンできます", Ko: "인덱스가 아직 완성되지 않았습니다. 완료된 후 검사할 수 있습니다"},
@@ -114,7 +114,7 @@ func init() {
 
 		// Organize
 		"单个计划不能超过 %d 项":             {Hant: "單一計畫不能超過 %d 項", En: "A plan can't have more than %d items", Ja: "1 つのプランは %d 項目までです", Ko: "한 계획에 항목이 %d개를 넘을 수 없습니다"},
-		"这个账号正在整理，请等这一次完成":          {Hant: "這個帳號正在整理，請等這次完成", En: "This account is already organizing; wait for it to finish", Ja: "このアカウントは整理中です。完了までお待ちください", Ko: "이 계정은 정리 중입니다. 완료될 때까지 기다리세요"},
+		"这个账号还在整理中，等这一轮弄完吧":         {Hant: "這個帳號還在整理中，請等這輪完成", En: "This account is already organizing; wait for it to finish", Ja: "このアカウントは整理中です。完了までお待ちください", Ko: "이 계정은 정리 중입니다. 끝날 때까지 기다려 주세요"},
 		"已被移动或删除，未处理":               {Hant: "已被移動或刪除，未處理", En: "Moved or deleted; skipped", Ja: "移動または削除されたため、未処理", Ko: "이동되었거나 삭제되어 처리하지 않음"},
 		"已被改名，未处理":                  {Hant: "已被改名，未處理", En: "Renamed; skipped", Ja: "名前が変更されたため、未処理", Ko: "이름이 바뀌어 처리하지 않음"},
 		"不支持的操作，未处理":                {Hant: "不支援的操作，未處理", En: "Unsupported action; skipped", Ja: "未対応の操作のため、未処理", Ko: "지원하지 않는 작업이라 처리하지 않음"},
@@ -131,9 +131,9 @@ func init() {
 		"「%s」已被同名文件占用，未处理":          {Hant: "「%s」已被同名檔案佔用，未處理", En: "\"%s\" is taken by a file with the same name; skipped", Ja: "「%s」は同名のファイルが使用しているため、未処理", Ko: "‘%s’을(를) 같은 이름의 파일이 쓰고 있어 처리하지 않음"},
 		"这里有多个「%s」，未处理":             {Hant: "這裡有多個「%s」，未處理", En: "There are several \"%s\" here; skipped", Ja: "ここに「%s」が複数あるため、未処理", Ko: "여기에 ‘%s’이(가) 여러 개 있어 처리하지 않음"},
 		"没能新建「%s」：%s":               {Hant: "無法新建「%s」：%s", En: "Couldn't create \"%s\": %s", Ja: "「%s」を作成できませんでした：%s", Ko: "‘%s’을(를) 만들지 못했습니다: %s"},
-		"读不出「%s」里有什么：%s":            {Hant: "讀不出「%s」裡有什麼：%s", En: "Couldn't read what's in \"%s\": %s", Ja: "「%s」の中身を読み取れませんでした：%s", Ko: "‘%s’의 내용을 읽지 못했습니다: %s"},
+		"打不开「%s」查看里面有什么：%s":         {Hant: "打不開「%s」查看裡面有什麼：%s", En: "Couldn't read what's inside \"%s\": %s", Ja: "「%s」の中身を開けませんでした：%s", Ko: "‘%s’ 안의 내용을 읽지 못했습니다: %s"},
 		"目标名称已被占用，云盘改名为「%s」":        {Hant: "目標名稱已被佔用，雲端硬碟改名為「%s」", En: "The name was taken; the drive renamed it to \"%s\"", Ja: "名前が使用済みのため、クラウドドライブが「%s」に変更しました", Ko: "이름이 이미 쓰여 클라우드 드라이브가 ‘%s’(으)로 바꿨습니다"},
-		"没能写下整理记录，未执行：%w":           {Hant: "無法寫入整理紀錄，未執行：%w", En: "Couldn't write the organize record, so nothing ran: %w", Ja: "整理の記録を書き込めなかったため、実行しませんでした：%w", Ko: "정리 기록을 쓰지 못해 실행하지 않았습니다: %w"},
+		"保存整理记录失败，操作没执行：%w":         {Hant: "儲存整理紀錄失敗，操作未執行：%w", En: "Couldn't save the organize record, so nothing ran: %w", Ja: "整理の記録を保存できなかったため、実行しませんでした：%w", Ko: "정리 기록을 저장하지 못해 실행하지 않았습니다: %w"},
 		"有文件夹超过 %d 项，无法核对，请选择更小的范围": {Hant: "有資料夾超過 %d 項，無法核對，請選擇較小的範圍", En: "A folder has more than %d items and can't be checked; choose a smaller scope", Ja: "%d 項目を超えるフォルダがあり確認できません。範囲を狭めてください", Ko: "항목이 %d개를 넘는 폴더가 있어 확인할 수 없습니다. 더 작은 범위를 선택하세요"},
 		"找不到这次整理的记录":                {Hant: "找不到這次整理的紀錄", En: "Couldn't find the record of this organize run", Ja: "この整理の記録が見つかりません", Ko: "이번 정리의 기록을 찾을 수 없습니다"},
 		"这次整理已经撤销过了":                {Hant: "這次整理已經復原過了", En: "This organize run has already been undone", Ja: "この整理はすでに元に戻されています", Ko: "이번 정리는 이미 실행 취소되었습니다"},
@@ -143,26 +143,26 @@ func init() {
 		"回收站里已经没有这一项":               {Hant: "垃圾桶裡已經沒有這一項", En: "No longer in the Trash", Ja: "ゴミ箱にもうありません", Ko: "휴지통에 더 이상 없음"},
 		"原来的文件夹没有恢复，未恢复":            {Hant: "原本的資料夾沒有還原，未還原", En: "Its original folder wasn't restored; not restored", Ja: "元のフォルダが復元されなかったため、復元しませんでした", Ko: "원래 폴더가 복원되지 않아 복원하지 않음"},
 		"里面还有其他内容，已保留":              {Hant: "裡面還有其他內容，已保留", En: "Still holds other content; kept", Ja: "他の内容が残っているため、残しました", Ko: "다른 내용이 남아 있어 유지함"},
-		"读不到这一项，未处理":                {Hant: "讀不到這一項，未處理", En: "Couldn't read this item; skipped", Ja: "この項目を読み取れないため、未処理", Ko: "이 항목을 읽을 수 없어 처리하지 않음"},
+		"读取这一项失败，已跳过":               {Hant: "讀取這一項失敗，已略過", En: "Couldn't read this item; skipped", Ja: "この項目を読み取れないため、スキップしました", Ko: "이 항목을 읽지 못해 건너뛰었습니다"},
 		"已恢复；原位置已有同名项，云盘改名为「%s」":    {Hant: "已還原；原位置已有同名項目，雲端硬碟改名為「%s」", En: "Restored; the name was taken, so the drive renamed it to \"%s\"", Ja: "復元しました。元の場所に同名の項目があったため、クラウドドライブが「%s」に変更しました", Ko: "복원함. 원래 위치에 같은 이름이 있어 클라우드 드라이브가 ‘%s’(으)로 바꿨습니다"},
-		"没能写下整理记录，未撤销：%w":           {Hant: "無法寫入整理紀錄，未復原：%w", En: "Couldn't write the organize record, so nothing was undone: %w", Ja: "整理の記録を書き込めなかったため、元に戻しませんでした：%w", Ko: "정리 기록을 쓰지 못해 실행 취소하지 않았습니다: %w"},
+		"保存整理记录失败，撤销没执行：%w":         {Hant: "儲存整理紀錄失敗，復原未執行：%w", En: "Couldn't save the organize record, so nothing was undone: %w", Ja: "整理の記録を保存できなかったため、元に戻しませんでした：%w", Ko: "정리 기록을 저장하지 못해 실행 취소하지 않았습니다: %w"},
 		"新文件还没进入本地索引，请稍后再试":         {Hant: "新檔案尚未進入本機索引，請稍後再試", En: "New files aren't in the local index yet; try again later", Ja: "新しいファイルはまだローカルインデックスにありません。しばらくしてからもう一度お試しください", Ko: "새 파일이 아직 로컬 인덱스에 없습니다. 잠시 후 다시 시도하세요"},
 		"所选的文件不在这个文件夹里，可能已被移动或删除":   {Hant: "所選的檔案不在這個資料夾中，可能已被移動或刪除", En: "The selected files aren't in this folder; they may have been moved or deleted", Ja: "選択したファイルはこのフォルダにありません。移動または削除された可能性があります", Ko: "선택한 파일이 이 폴더에 없습니다. 이동되었거나 삭제되었을 수 있습니다"},
 
 		// Background file batches
-		"文件任务缺少账号或来源快照":    {Hant: "檔案工作缺少帳號或來源快照", En: "The file task is missing its account or source snapshot", Ja: "ファイル操作のアカウントまたは元のスナップショットがありません", Ko: "파일 작업에 계정 또는 원본 스냅샷이 없습니다"},
+		"这个文件任务缺少账号或来源信息":  {Hant: "這個檔案任務缺少帳號或來源資訊", En: "This file task is missing its account or source info", Ja: "このファイル操作のアカウントまたは元の情報がありません", Ko: "이 파일 작업에 계정 또는 원본 정보가 없습니다"},
 		"已经在目标文件夹，未处理":     {Hant: "已在目標資料夾，未處理", En: "Already in the destination folder; skipped", Ja: "すでに移動先のフォルダにあるため、未処理", Ko: "이미 대상 폴더에 있어 처리하지 않음"},
 		"云盘尚未确认结果，请检查后再操作": {Hant: "雲端硬碟尚未確認結果，請檢查後再操作", En: "The drive hasn't confirmed the result; check before acting again", Ja: "クラウドドライブで結果を確認できません。確認してから再操作してください", Ko: "클라우드 드라이브에서 결과를 확인하지 못했습니다. 확인 후 다시 작업하세요"},
 
 		// Remove (cleanup)
-		"一次最多处理 %d 项，请缩小范围":     {Hant: "一次最多處理 %d 項，請縮小範圍", En: "Up to %d items at once; narrow the scope", Ja: "一度に処理できるのは最大 %d 項目です。範囲を狭めてください", Ko: "한 번에 최대 %d개 항목만 처리할 수 있습니다. 범위를 줄이세요"},
-		"这个账号还有删除操作在进行，请等这一次完成": {Hant: "這個帳號還有刪除操作在進行，請等這次完成", En: "A delete is still running for this account; wait for it to finish", Ja: "このアカウントでは削除処理が進行中です。完了までお待ちください", Ko: "이 계정에서 삭제 작업이 진행 중입니다. 완료될 때까지 기다리세요"},
-		"云盘里已经没有这一项，未处理":        {Hant: "雲端硬碟裡已經沒有這一項，未處理", En: "No longer in the drive; skipped", Ja: "クラウドドライブにもうないため、未処理", Ko: "클라우드 드라이브에 더 이상 없어 처리하지 않음"},
-		"已被移到别的文件夹，未处理":         {Hant: "已被移到別的資料夾，未處理", En: "Moved to another folder; skipped", Ja: "別のフォルダに移動されたため、未処理", Ko: "다른 폴더로 이동되어 처리하지 않음"},
-		"特殊文件夹，未处理":             {Hant: "特殊資料夾，未處理", En: "Special folder; skipped", Ja: "特別なフォルダのため、未処理", Ko: "특수 폴더라 처리하지 않음"},
-		"已经不是空的，未处理":            {Hant: "已經不是空的，未處理", En: "No longer empty; skipped", Ja: "空ではなくなったため、未処理", Ko: "더 이상 비어 있지 않아 처리하지 않음"},
-		"里面的文件夹太多，没能确认是空的，未处理":  {Hant: "裡面的資料夾太多，無法確認是空的，未處理", En: "Too many folders inside to confirm it's empty; skipped", Ja: "中のフォルダが多すぎて空か確認できないため、未処理", Ko: "안에 폴더가 너무 많아 비어 있는지 확인하지 못해 처리하지 않음"},
-		"没能读到这些文件的最新状态：%w":      {Hant: "無法讀取這些檔案的最新狀態：%w", En: "Couldn't read the latest state of these files: %w", Ja: "これらのファイルの最新の状態を読み取れませんでした：%w", Ko: "이 파일들의 최신 상태를 읽지 못했습니다: %w"},
-		"没能读到回收站：%w":            {Hant: "無法讀取垃圾桶：%w", En: "Couldn't read the Trash: %w", Ja: "ゴミ箱を読み取れませんでした：%w", Ko: "휴지통을 읽지 못했습니다: %w"},
+		"一次最多处理 %d 项，请缩小范围":    {Hant: "一次最多處理 %d 項，請縮小範圍", En: "Up to %d items at once; narrow the scope", Ja: "一度に処理できるのは最大 %d 項目です。範囲を狭めてください", Ko: "한 번에 최대 %d개 항목만 처리할 수 있습니다. 범위를 줄이세요"},
+		"这个账号还有删除在进行，等这一次弄完吧":  {Hant: "這個帳號還有刪除在進行，請等這次完成", En: "A delete is still running for this account; wait for it to finish", Ja: "このアカウントでは削除処理が進行中です。完了までお待ちください", Ko: "이 계정에서 삭제 작업이 진행 중입니다. 끝날 때까지 기다려 주세요"},
+		"云盘里已经没有这一项，未处理":       {Hant: "雲端硬碟裡已經沒有這一項，未處理", En: "No longer in the drive; skipped", Ja: "クラウドドライブにもうないため、未処理", Ko: "클라우드 드라이브에 더 이상 없어 처리하지 않음"},
+		"已被移到别的文件夹，未处理":        {Hant: "已被移到別的資料夾，未處理", En: "Moved to another folder; skipped", Ja: "別のフォルダに移動されたため、未処理", Ko: "다른 폴더로 이동되어 처리하지 않음"},
+		"特殊文件夹，未处理":            {Hant: "特殊資料夾，未處理", En: "Special folder; skipped", Ja: "特別なフォルダのため、未処理", Ko: "특수 폴더라 처리하지 않음"},
+		"已经不是空的，未处理":           {Hant: "已經不是空的，未處理", En: "No longer empty; skipped", Ja: "空ではなくなったため、未処理", Ko: "더 이상 비어 있지 않아 처리하지 않음"},
+		"里面的文件夹太多，没能确认是空的，未处理": {Hant: "裡面的資料夾太多，無法確認是空的，未處理", En: "Too many folders inside to confirm it's empty; skipped", Ja: "中のフォルダが多すぎて空か確認できないため、未処理", Ko: "안에 폴더가 너무 많아 비어 있는지 확인하지 못해 처리하지 않음"},
+		"获取这些文件的最新状态失败：%w":     {Hant: "取得這些檔案的最新狀態失敗：%w", En: "Couldn't get the latest status of these files: %w", Ja: "これらのファイルの最新状態を取得できませんでした：%w", Ko: "이 파일들의 최신 상태를 가져오지 못했습니다: %w"},
+		"读取回收站失败：%w":           {Hant: "讀取垃圾桶失敗：%w", En: "Couldn't read the Trash: %w", Ja: "ゴミ箱を読み取れませんでした：%w", Ko: "휴지통을 읽지 못했습니다: %w"},
 	})
 }

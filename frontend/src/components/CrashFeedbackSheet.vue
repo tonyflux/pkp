@@ -76,16 +76,16 @@ watch(() => props.active && (!!report.value || (busy.value && !checked.value)), 
   <AssistantSheet v-if="active && report" labelledby="crash-feedback-title" :dismissable="!busy" @close="finish(false)">
     <span class="sheet-eyebrow">{{ t("崩溃反馈") }}</span>
     <h2 id="crash-feedback-title">{{ t("上次运行时发生了崩溃") }}</h2>
-    <p class="sheet-lede">{{ t("未经您的明确同意不会上传。点击发送后，报告将由 Cloudflare 处理并发送给开发者。") }}</p>
-    <p class="sheet-small">{{ t("报告可能包含路径、账号信息或其他敏感内容。请先审阅并删除不想分享的信息；下方内容可以修改，发送的正是修改后的文本。") }}</p>
-    <p class="sheet-small">{{ t("崩溃反馈与匿名使用统计无关，即使关闭统计也可主动发送。") }}</p>
-    <p class="sheet-small">{{ t("开发者可查看并删除报告；服务端计划每日清理超过 29 天的报告，发送后无法自动撤回。") }}</p>
-    <p v-if="report.truncated" class="sheet-small">{{ t("原始日志过长，此预览已截取；本地原始日志不受影响。") }}</p>
+    <p class="sheet-lede">{{ t("放心，没点发送前什么都不会传；点击后报告会经由 Cloudflare 发给开发者。") }}</p>
+    <p class="sheet-small">{{ t("报告里可能带有文件路径、账号之类的隐私信息；下面文本框可以直接删改，只会发出你改完后的内容。") }}</p>
+    <p class="sheet-small">{{ t("这是手动反馈通道，跟匿名统计无关，关掉统计后也一样能发。") }}</p>
+    <p class="sheet-small">{{ t("报告只给开发者排查问题用，服务端会在 29 天后自动清理；发出去后没法单方面撤回。") }}</p>
+    <p v-if="report.truncated" class="sheet-small">{{ t("原始日志太长，这里只截了一部分显示；你电脑上的完整日志不会变。") }}</p>
     <label for="crash-feedback-text">{{ t("要发送的报告") }}</label>
     <textarea id="crash-feedback-text" v-model="text" :disabled="busy" spellcheck="false" />
     <p v-if="tooLarge" class="sheet-error" role="alert">{{ t("报告或编码后的请求过大，请删减后再发送（报告最多 120 KiB，请求最多 128 KiB）。") }}</p>
     <p v-if="error" class="sheet-error" role="alert">{{ error }}</p>
-    <p class="sheet-small">{{ t("不发送或关闭将保留本地原始日志，并且不再提示此报告。") }}</p>
+    <p class="sheet-small">{{ t("不发或直接关闭不会删掉本地日志，下次也不会再弹这条提醒。") }}</p>
     <div class="sheet-actions">
       <button class="sheet-btn" type="button" data-autofocus :disabled="busy" @click="finish(false)">{{ t("不发送") }}</button>
       <button class="sheet-btn primary" type="button" :disabled="busy || tooLarge || !text.trim()" @click="finish(true)">{{ t("发送报告") }}</button>

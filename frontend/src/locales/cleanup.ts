@@ -5,21 +5,21 @@ const plural = (n: string, one: string, many: string) => (n === "1" ? one : many
 export default {
   // CleanupView
   清理: { tw: "清理", en: "Cleanup", ja: "クリーンアップ", ko: "클린업" },
-  "找回被重复副本占用的空间，再整理留下的空文件夹。": {
-    tw: "找回被重複副本占用的空間，再整理留下的空資料夾。",
-    en: "Reclaim space taken by duplicate copies, then tidy up the empty folders left behind.",
-    ja: "重複コピーが占める容量を取り戻し、残った空のフォルダも片付けます。",
-    ko: "중복 사본이 차지한 공간을 되찾고, 남은 빈 폴더도 정리합니다.",
+  "找出占地方的重复文件，顺手把空文件夹也清一清。": {
+    tw: "找出佔空間的重複檔案，順便把空資料夾也清一清。",
+    en: "Find space-wasting duplicates and clear out empty folders left behind.",
+    ja: "容量を取る重複ファイルを見つけて、残った空のフォルダもまとめて片付けます。",
+    ko: "공간을 차지하는 중복 파일을 찾고 남은 빈 폴더도 함께 정리합니다.",
   },
   清理类型: { tw: "清理類型", en: "Cleanup type", ja: "クリーンアップの種類", ko: "클린업 유형" },
   重复文件: { tw: "重複檔案", en: "Duplicates", ja: "重複ファイル", ko: "중복 파일" },
   空文件夹: { tw: "空資料夾", en: "Empty folders", ja: "空のフォルダ", ko: "빈 폴더" },
   建完索引才能扫描: { tw: "建完索引才能掃描", en: "Scanning needs a finished index", ja: "インデックスの作成後にスキャンできます", ko: "인덱스를 다 만든 후 스캔할 수 있습니다" },
-  "清理只读这台电脑上的本地索引，不请求云端。": {
-    tw: "清理只讀取這台電腦上的本機索引，不會請求雲端。",
-    en: "Cleanup reads only the local index on this computer and never asks the cloud.",
-    ja: "クリーンアップはこのコンピュータのローカルインデックスだけを読み、クラウドには問い合わせません。",
-    ko: "클린업은 이 컴퓨터의 로컬 인덱스만 읽으며 클라우드에 요청하지 않습니다.",
+  "只读本地索引，不额外请求云端。": {
+    tw: "只讀取本機索引，不額外請求雲端。",
+    en: "Reads only your local index without extra cloud requests.",
+    ja: "ローカルインデックスだけを読み、クラウドへの余分な問い合わせはしません。",
+    ko: "로컬 인덱스만 읽으며 클라우드에 추가 요청을 보내지 않습니다.",
   },
   "本地索引 · {state}": { tw: "本機索引 · {state}", en: "Local index · {state}", ja: "ローカルインデックス · {state}", ko: "로컬 인덱스 · {state}" },
 
@@ -48,8 +48,8 @@ export default {
     ja: "{n} 件をゴミ箱に移動しますか？",
     ko: "{n}개 항목을 휴지통으로 이동할까요?",
   },
-  "里面套着的 {n} 个空文件夹会一起进去，可以在回收站还原。": {
-    tw: "裡面巢狀的 {n} 個空資料夾會一併移入，可以在垃圾桶還原。",
+  "里面嵌套的 {n} 个空文件夹也会一起移进去，之后还能在回收站找回。": {
+    tw: "裡面巢狀的 {n} 個空資料夾也會一併移入，之後還能在垃圾桶復原。",
     en: (p) => `${plural(p.n, "The 1 empty folder", `The ${p.n} empty folders`)} nested inside go too. You can restore them from Trash.`,
     ja: "中にある {n} 個の空のフォルダも一緒に移動します。ゴミ箱から復元できます。",
     ko: "안에 있는 빈 폴더 {n}개도 함께 이동하며, 휴지통에서 복원할 수 있습니다.",
@@ -100,11 +100,11 @@ export default {
     ja: "ゴミ箱で最上位フォルダを復元すると、中の空のフォルダも戻ります。",
     ko: "휴지통에서 최상위 폴더를 복원하면 안의 빈 폴더도 함께 돌아옵니다.",
   },
-  "已核对删除结果，释放 {size}，容量会随后刷新。": {
-    tw: "已核對刪除結果，釋放 {size}，容量稍後會更新。",
-    en: "Deletion verified. Freed {size}; storage will refresh shortly.",
-    ja: "削除結果を確認しました。{size} を解放しました。容量は後で更新されます。",
-    ko: "삭제 결과를 확인했습니다. {size}를 확보했으며 저장 공간은 곧 새로 고쳐집니다.",
+  "已删掉，释放了 {size}，剩余空间马上会更新。": {
+    tw: "已刪除，釋放了 {size}，剩餘空間稍後會更新。",
+    en: "Deleted. Freed {size}; storage will refresh shortly.",
+    ja: "削除しました。{size} を解放しました。容量はまもなく更新されます。",
+    ko: "삭제했습니다. {size}를 확보했으며 저장 공간이 곧 새로 고쳐집니다.",
   },
   "{size} 可以从回收站还原；彻底删除后空间才会释放。": {
     tw: "{size} 可以從垃圾桶還原；永久刪除後才會釋放空間。",
@@ -114,44 +114,44 @@ export default {
   },
   扫描中: { tw: "掃描中", en: "Scanning", ja: "スキャン中", ko: "스캔 중" },
   正在读取本地索引: { tw: "正在讀取本機索引", en: "Reading the local index", ja: "ローカルインデックスを読み込んでいます", ko: "로컬 인덱스를 읽는 중" },
-  "只在这台电脑上计算结果，不会修改文件。范围：{scope}": {
-    tw: "只在這台電腦上計算結果，不會修改檔案。範圍：{scope}",
-    en: "Results are worked out on this computer only; no files are changed. Scope: {scope}",
-    ja: "結果はこのコンピュータ上だけで計算し、ファイルは変更しません。範囲：{scope}",
-    ko: "이 컴퓨터에서만 결과를 계산하며 파일을 수정하지 않습니다. 범위: {scope}",
+  "只在本地算一下，不会动你的文件。范围：{scope}": {
+    tw: "只在本機計算，不會更動你的檔案。範圍：{scope}",
+    en: "Calculated locally only; none of your files will be touched. Scope: {scope}",
+    ja: "ローカルで計算するだけで、ファイルには触れません。範囲：{scope}",
+    ko: "로컬에서만 계산하며 파일은 건드리지 않습니다. 범위: {scope}",
   },
-  "每批处理 100 项；停止只影响还没发出的批次。": {
-    tw: "每批處理 100 項；停止只會影響尚未送出的批次。",
-    en: "Items go in batches of 100; stopping affects only batches not yet sent.",
-    ja: "100 件ずつ処理します。停止はまだ送信していないバッチにのみ影響します。",
-    ko: "100개씩 묶어 처리하며, 중지는 아직 보내지 않은 묶음에만 영향을 줍니다.",
+  "每 100 项一批处理；点停止的话，还没发出的就不会继续。": {
+    tw: "每 100 項為一批處理；按停止的話，尚未送出的就不會繼續。",
+    en: "Processed in batches of 100; stopping skips any batches not sent yet.",
+    ja: "100 件ずつまとめて処理します。停止しても、まだ送信していない分だけが止まります。",
+    ko: "100개씩 나누어 처리하며, 중지하면 아직 보내지 않은 묶음만 멈춥니다.",
   },
   处理进度: { tw: "處理進度", en: "Progress", ja: "処理の進捗", ko: "처리 진행률" },
   "正在停止…": { tw: "正在停止…", en: "Stopping…", ja: "停止しています…", ko: "중지하는 중…" },
   停止后续批次: { tw: "停止後續批次", en: "Stop remaining batches", ja: "残りのバッチを停止", ko: "남은 묶음 중지" },
   项成功: { tw: "項成功", en: "succeeded", ja: "件成功", ko: "개 성공" },
   项未处理: { tw: "項未處理", en: "not processed", ja: "件未処理", ko: "개 미처리" },
-  "已停止：还没发出的批次没有处理，也不算失败。": {
-    tw: "已停止：尚未送出的批次沒有處理，也不算失敗。",
-    en: "Stopped: batches not yet sent were skipped and don't count as failures.",
-    ja: "停止しました。未送信のバッチは処理されておらず、失敗にも含まれません。",
-    ko: "중지했습니다. 아직 보내지 않은 묶음은 처리되지 않았으며 실패로 간주하지 않습니다.",
+  "已停止：还没发出的项目没有动过，也不算失败。": {
+    tw: "已停止：尚未送出的項目沒有動過，也不算失敗。",
+    en: "Stopped: items not sent yet were left untouched and don't count as failures.",
+    ja: "停止しました。未送信の項目は手付かずのままで、失敗にもなりません。",
+    ko: "중지했습니다. 아직 보내지 않은 항목은 건드리지 않았으며 실패로 치지 않습니다.",
   },
   未处理的项: { tw: "未處理的項目", en: "Items not processed", ja: "未処理の項目", ko: "처리되지 않은 항목" },
   返回结果: { tw: "返回結果", en: "Back to results", ja: "結果に戻る", ko: "결과로 돌아가기" },
   打开回收站: { tw: "開啟垃圾桶", en: "Open Trash", ja: "ゴミ箱を開く", ko: "휴지통 열기" },
   从本地索引开始: { tw: "從本機索引開始", en: "Start from the local index", ja: "ローカルインデックスから始める", ko: "로컬 인덱스에서 시작" },
-  "扫描{scope}的内容重复文件；无需 AI，也不会下载文件或请求云端。": {
-    tw: "掃描{scope}內容重複的檔案；不需要 AI，也不會下載檔案或請求雲端。",
-    en: "Scope: {scope}. Finds files with identical content; no AI needed, nothing is downloaded and the cloud isn't asked.",
-    ja: "{scope}の内容が重複するファイルをスキャンします。AI は不要で、ファイルのダウンロードやクラウドへの問い合わせも行いません。",
-    ko: "{scope}에서 내용이 중복된 파일을 스캔합니다. AI가 필요 없으며 파일을 다운로드하거나 클라우드에 요청하지 않습니다.",
+  "在{scope}里查找内容重复的文件；纯本地比对，不用 AI 也不会下载文件。": {
+    tw: "在{scope}裡尋找內容重複的檔案；純本機比對，不用 AI 也不會下載檔案。",
+    en: "Looks for identical files in {scope} locally — no AI, no downloads.",
+    ja: "{scope}内で内容が重複するファイルをローカルで探します。AI もダウンロードも使いません。",
+    ko: "{scope}에서 내용이 중복된 파일을 로컬에서 찾습니다. AI나 다운로드를 쓰지 않습니다.",
   },
-  "扫描{scope}的空文件夹；无需 AI，也不会下载文件或请求云端。": {
-    tw: "掃描{scope}的空資料夾；不需要 AI，也不會下載檔案或請求雲端。",
-    en: "Scope: {scope}. Finds empty folders; no AI needed, nothing is downloaded and the cloud isn't asked.",
-    ja: "{scope}の空のフォルダをスキャンします。AI は不要で、ファイルのダウンロードやクラウドへの問い合わせも行いません。",
-    ko: "{scope}에서 빈 폴더를 스캔합니다. AI가 필요 없으며 파일을 다운로드하거나 클라우드에 요청하지 않습니다.",
+  "在{scope}里查找空文件夹；纯本地扫描，不用 AI 也不会下载文件。": {
+    tw: "在{scope}裡尋找空資料夾；純本機掃描，不用 AI 也不會下載檔案。",
+    en: "Looks for empty folders in {scope} locally — no AI, no downloads.",
+    ja: "{scope}内の空のフォルダをローカルで探します。AI もダウンロードも使いません。",
+    ko: "{scope}에서 빈 폴더를 로컬에서 찾습니다. AI나 다운로드를 쓰지 않습니다.",
   },
   "没能扫描：{error}": { tw: "無法掃描：{error}", en: "Couldn't scan: {error}", ja: "スキャンできませんでした：{error}", ko: "스캔하지 못했습니다: {error}" },
   开始扫描: { tw: "開始掃描", en: "Start scan", ja: "スキャン開始", ko: "스캔 시작" },
@@ -173,14 +173,14 @@ export default {
     ja: "一度に処理できるのは {n} 件までです。範囲を絞るか、一部の選択を外してください",
     ko: "한 번에 최대 {n}개까지 처리할 수 있습니다. 범위를 줄이거나 일부 선택을 해제하세요",
   },
-  "空文件夹不占空间，只能移到回收站；发送前会逐个重新确认。": {
-    tw: "空資料夾不占空間，只能移至垃圾桶；送出前會逐一重新確認。",
+  "空文件夹不占空间，只能移到回收站；提交前会再逐个核对一遍。": {
+    tw: "空資料夾不占空間，只能移至垃圾桶；送出前會再逐一確認。",
     en: "Empty folders take no space and can only go to Trash; each is rechecked before sending.",
     ja: "空のフォルダは容量を使わず、ゴミ箱への移動のみ可能です。送信前に 1 つずつ再確認します。",
     ko: "빈 폴더는 공간을 차지하지 않으며 휴지통으로만 이동할 수 있습니다. 보내기 전에 하나씩 다시 확인합니다.",
   },
   "文件夹整理 · 不释放空间": { tw: "資料夾整理 · 不釋放空間", en: "Folder tidy-up · frees no space", ja: "フォルダ整理 · 容量は解放されません", ko: "폴더 정리 · 공간 확보 없음" },
-  "留下的空壳，也一起收好。": { tw: "留下的空殼，也一起收好。", en: "Clear away the empty shells, too.", ja: "残った空の入れ物も片付けましょう。", ko: "남은 빈 껍데기도 함께 정리하세요." },
+  "空文件夹也顺手清理掉": { tw: "空資料夾也順便清掉", en: "Tidy up the empty folders left behind", ja: "空のフォルダもまとめて整理", ko: "남은 빈 폴더도 함께 정리" },
   "只显示最外层空文件夹；移走一项，里面的空文件夹也会一起进入回收站。": {
     tw: "只顯示最外層空資料夾；移走一項，裡面的空資料夾也會一起移入垃圾桶。",
     en: "Only the outermost empty folders are listed; moving one sends the empty folders inside it to Trash too.",
@@ -196,11 +196,11 @@ export default {
   全选: { tw: "全選", en: "Select all", ja: "すべて選択", ko: "모두 선택" },
   全不选: { tw: "全不選", en: "Select none", ja: "選択解除", ko: "모두 해제" },
   "没能读取：{error}": { tw: "無法讀取：{error}", en: "Couldn't load: {error}", ja: "読み込めませんでした：{error}", ko: "불러오지 못했습니다: {error}" },
-  "空文件夹指整棵子树里没有任何未回收的文件；「My Pack」等特殊文件夹和根目录不算在内。": {
-    tw: "空資料夾指整個子樹中沒有任何未刪除的檔案；「My Pack」等特殊資料夾和根目錄不算在內。",
-    en: 'An empty folder has no files outside Trash anywhere below it; special folders like "My Pack" and the root don\'t count.',
-    ja: "空のフォルダとは、配下全体にゴミ箱以外のファイルが 1 つもないフォルダです。「My Pack」などの特殊フォルダとルートは含みません。",
-    ko: "빈 폴더란 하위 전체에 휴지통에 없는 파일이 하나도 없는 폴더입니다. “My Pack” 같은 특수 폴더와 루트는 포함하지 않습니다.",
+  "只要文件夹和它下级里面都没有文件（不算回收站里的），就算空文件夹；「My Pack」等特殊文件夹和根目录除外。": {
+    tw: "只要資料夾和它下層裡面都沒有檔案（不算垃圾桶裡的），就算空資料夾；「My Pack」等特殊資料夾和根目錄除外。",
+    en: 'An empty folder has no non-Trash files anywhere inside it; special folders like "My Pack" and the root don\'t count.',
+    ja: "配下のどこにもゴミ箱以外のファイルがないフォルダが空の対象です。「My Pack」などの特殊フォルダとルートは含みません。",
+    ko: "하위 어느 곳에도 휴지통 밖 파일이 없는 폴더가 대상입니다. “My Pack” 같은 특수 폴더와 루트는 제외됩니다.",
   },
   "选择「{name}」": { tw: "選擇「{name}」", en: 'Select "{name}"', ja: "「{name}」を選択", ko: "“{name}” 선택" },
   "里面还套着 {n} 个空文件夹": {
@@ -246,17 +246,17 @@ export default {
     ja: "{n} 件を処理 · 約 {size} を回収",
     ko: "{n}개 항목 처리 · 약 {size} 확보 예상",
   },
-  "无法撤销；只对本页勾选的副本彻底删除，每组至少保留一份。": {
-    tw: "無法復原；只永久刪除本頁勾選的副本，每組至少保留一份。",
+  "无法撤销，只彻底删除本页勾选的副本，每组至少留一份。": {
+    tw: "無法復原，只永久刪除本頁勾選的副本，每組至少留一份。",
     en: "Can't be undone. Only ticked copies on this page are deleted permanently; each group keeps at least one.",
     ja: "元に戻せません。このページでチェックしたコピーだけを完全に削除し、各グループに少なくとも 1 つ残します。",
     ko: "되돌릴 수 없습니다. 이 페이지에서 선택한 사본만 영구 삭제하며 그룹마다 최소 하나를 남깁니다.",
   },
-  "至少保留每组一份。先移到回收站，空间尚不会释放。": {
-    tw: "每組至少保留一份。先移至垃圾桶，空間暫時不會釋放。",
-    en: "Each group keeps at least one copy. Moving to Trash doesn't free space yet.",
-    ja: "各グループに少なくとも 1 つ残します。ゴミ箱に移動しただけでは容量は解放されません。",
-    ko: "그룹마다 최소 하나를 남깁니다. 휴지통으로 옮기는 것만으로는 아직 공간이 확보되지 않습니다.",
+  "每组至少留一份。移到回收站后，要等彻底清空才会腾出空间。": {
+    tw: "每組至少留一份。移至垃圾桶後，要等永久清空才會騰出空間。",
+    en: "Each group keeps at least one copy. Moving to Trash won't free space until it's emptied.",
+    ja: "各グループに少なくとも 1 つ残します。ゴミ箱に移したあと、完全に削除するまで容量は空きません。",
+    ko: "그룹마다 최소 하나를 남깁니다. 휴지통으로 옮긴 뒤 영구 삭제해야 공간이 비워집니다.",
   },
   彻底删除: { tw: "永久刪除", en: "Delete permanently", ja: "完全に削除", ko: "영구 삭제" },
   可回收空间: { tw: "可回收空間", en: "Reclaimable space", ja: "回収できる容量", ko: "확보 가능한 공간" },
@@ -274,20 +274,20 @@ export default {
   },
   最小文件: { tw: "最小檔案", en: "Min size", ja: "最小サイズ", ko: "최소 크기" },
   排序: { tw: "排序", en: "Sort", ja: "並べ替え", ko: "정렬" },
-  "所有副本都在同一个文件夹里的组，最没有争议，适合先清理": {
-    tw: "所有副本都在同一個資料夾裡的組最沒有爭議，適合先清理",
-    en: "Groups whose copies all sit in one folder are the safest to clean first",
-    ja: "すべてのコピーが同じフォルダにあるグループは迷う余地が少なく、最初の整理に向いています",
-    ko: "모든 사본이 한 폴더에 있는 그룹은 가장 논란이 적어 먼저 정리하기 좋습니다",
+  "所有副本都在同一个文件夹里，误存的可能性最大，建议先清理": {
+    tw: "所有副本都在同一個資料夾裡，誤存的可能性最大，建議先清理",
+    en: "Groups whose copies all sit in one folder are usually accidental duplicates and the easiest to clean first",
+    ja: "すべてのコピーが同じフォルダにあるグループは誤って重複した可能性が高く、最初に整理しやすくなっています",
+    ko: "모든 사본이 같은 폴더에 있는 그룹은 실수로 중복 저장된 경우가 많아 먼저 정리하기 좋습니다",
   },
   只看同一文件夹: { tw: "只看同一資料夾", en: "Same folder only", ja: "同じフォルダのみ", ko: "같은 폴더만" },
   没有同一文件夹里的重复: { tw: "沒有同一資料夾裡的重複", en: "No duplicates within one folder", ja: "同じフォルダ内の重複はありません", ko: "같은 폴더 안의 중복 없음" },
   没有找到重复文件: { tw: "沒有找到重複檔案", en: "No duplicates found", ja: "重複ファイルは見つかりませんでした", ko: "중복 파일을 찾지 못했습니다" },
-  "只按内容判断：同一指纹、同样大小才算重复。": {
-    tw: "只依內容判斷：同一指紋、同樣大小才算重複。",
-    en: "Judged by content only: same fingerprint and same size count as duplicates.",
-    ja: "内容だけで判断します。指紋とサイズが同じものだけが重複です。",
-    ko: "내용으로만 판단합니다. 지문과 크기가 같아야 중복으로 봅니다.",
+  "只按内容判断：大小和内容指纹都一样才算重复。": {
+    tw: "只依內容判斷：大小和內容指紋都一樣才算重複。",
+    en: "Matched by content only: identical fingerprint and size.",
+    ja: "内容だけで判断します。指紋とサイズが一致するものだけが重複です。",
+    ko: "내용만으로 판단합니다. 지문과 크기가 모두 같아야 중복입니다.",
   },
   可回收: { tw: "可回收", en: "Reclaimable", ja: "回収可能", ko: "확보 가능" },
   "收起「{name}」的 {n} 份副本": {
@@ -334,11 +334,11 @@ export default {
   原压缩包保持不变: { tw: "原壓縮檔保持不變", en: "The archive is left untouched", ja: "元のアーカイブはそのままです", ko: "원본 압축 파일은 그대로입니다" },
   云端操作: { tw: "雲端操作", en: "Cloud action", ja: "クラウド操作", ko: "클라우드 작업" },
   在线解压: { tw: "線上解壓縮", en: "Extract online", ja: "オンライン解凍", ko: "온라인 압축 해제" },
-  "直接解压到云盘，不占用电脑的本地空间": {
-    tw: "直接解壓縮到雲端硬碟，不占用電腦的本機空間",
-    en: "Extract straight into your drive without using space on this computer",
-    ja: "クラウドドライブに直接解凍し、コンピュータの容量を使いません",
-    ko: "클라우드 드라이브에 바로 압축을 풀어 컴퓨터 공간을 쓰지 않습니다",
+  "直接解压到云盘，不占电脑空间": {
+    tw: "直接解壓縮到雲端硬碟，不佔電腦空間",
+    en: "Extract straight to your drive without using computer space",
+    ja: "クラウドドライブに直接解凍し、パソコンの容量を使いません",
+    ko: "클라우드 드라이브에 바로 압축을 풀어 컴퓨터 공간을 차지하지 않습니다",
   },
   "正在读取位置…": { tw: "正在讀取位置…", en: "Loading location…", ja: "場所を読み込んでいます…", ko: "위치를 불러오는 중…" },
   浏览云盘中的文件夹: { tw: "瀏覽雲端硬碟中的資料夾", en: "Browse folders in your drive", ja: "クラウドドライブのフォルダを参照", ko: "클라우드 드라이브의 폴더 탐색" },
@@ -382,19 +382,19 @@ export default {
   关闭在线解压: { tw: "關閉線上解壓縮", en: "Close Extract online", ja: "オンライン解凍を閉じる", ko: "온라인 압축 해제 닫기" },
   正在读取压缩包: { tw: "正在讀取壓縮檔", en: "Reading archive", ja: "アーカイブを読み込み中", ko: "압축 파일을 읽는 중" },
   "正在获取文件列表…": { tw: "正在取得檔案清單…", en: "Getting the file list…", ja: "ファイル一覧を取得しています…", ko: "파일 목록을 가져오는 중…" },
-  "先尝试读取内容；只有云端要求密码时才会请你输入。": {
-    tw: "先嘗試讀取內容；只有雲端要求密碼時才會請你輸入。",
-    en: "Contents are read first; you'll be asked for a password only if the cloud needs one.",
-    ja: "まず内容の読み込みを試します。クラウドがパスワードを求めた場合だけ入力をお願いします。",
-    ko: "먼저 내용을 읽어 봅니다. 클라우드가 암호를 요구할 때만 입력을 요청합니다.",
+  "会先试着打开看看，真要密码了再请你输入。": {
+    tw: "會先試著開啟看看，真的需要密碼再請你輸入。",
+    en: "Tries opening it first; you'll only be asked for a password if needed.",
+    ja: "まず開いてみて、必要なときだけパスワードをお聞きします。",
+    ko: "먼저 열어 보고 암호가 필요할 때만 입력을 요청합니다.",
   },
   需要密码: { tw: "需要密碼", en: "Password required", ja: "パスワードが必要", ko: "암호 필요" },
   这个压缩包需要密码: { tw: "這個壓縮檔需要密碼", en: "This archive needs a password", ja: "このアーカイブにはパスワードが必要です", ko: "이 압축 파일에는 암호가 필요합니다" },
-  "输入密码后重新读取文件列表；读取成功才能选择要解压的内容。": {
-    tw: "輸入密碼後重新讀取檔案清單；讀取成功才能選擇要解壓縮的內容。",
-    en: "Enter the password to read the file list again; once it loads you can choose what to extract.",
-    ja: "パスワードを入力するとファイル一覧を読み直します。読み込めたら解凍する内容を選べます。",
-    ko: "암호를 입력하면 파일 목록을 다시 읽습니다. 읽기에 성공해야 압축을 풀 항목을 선택할 수 있습니다.",
+  "输入密码后就能读取文件列表，再挑要解压的内容。": {
+    tw: "輸入密碼後就能讀取檔案清單，再挑選要解壓縮的內容。",
+    en: "Enter the password to load the file list, then pick what to extract.",
+    ja: "パスワードを入れるとファイル一覧を読み込めるので、解凍する項目を選んでください。",
+    ko: "암호를 입력하면 파일 목록을 불러오며, 그다음 풀 항목을 고를 수 있습니다.",
   },
   压缩包密码: { tw: "壓縮檔密碼", en: "Archive password", ja: "アーカイブのパスワード", ko: "압축 파일 암호" },
   输入解压密码: { tw: "輸入解壓縮密碼", en: "Enter password", ja: "パスワードを入力", ko: "암호 입력" },
@@ -403,11 +403,11 @@ export default {
   隐藏: { tw: "隱藏", en: "Hide", ja: "隠す", ko: "숨기기" },
   显示: { tw: "顯示", en: "Show", ja: "表示", ko: "표시" },
   用密码重试读取: { tw: "用密碼重新讀取", en: "Retry with password", ja: "パスワードで再読み込み", ko: "암호로 다시 읽기" },
-  "密码只用于这次读取和解压，不会保存。": {
-    tw: "密碼只用於這次讀取和解壓縮，不會儲存。",
-    en: "The password is used only for this read and extraction, and isn't saved.",
-    ja: "パスワードは今回の読み込みと解凍にだけ使い、保存しません。",
-    ko: "암호는 이번 읽기와 압축 해제에만 쓰이며 저장되지 않습니다.",
+  "密码只用这一次，不会保存。": {
+    tw: "密碼只用這一次，不會儲存。",
+    en: "This password is only used once and won't be saved.",
+    ja: "パスワードは今回限りで使い、保存しません。",
+    ko: "암호는 이번에만 사용되며 저장되지 않습니다.",
   },
   读取失败: { tw: "讀取失敗", en: "Couldn't read", ja: "読み込み失敗", ko: "읽기 실패" },
   源文件: { tw: "來源檔案", en: "Source", ja: "元ファイル", ko: "원본 파일" },
@@ -421,17 +421,17 @@ export default {
   解压所选: { tw: "解壓縮所選項目", en: "Extract selected", ja: "選択項目を解凍", ko: "선택 항목 압축 해제" },
   云端任务进行中: { tw: "雲端任務進行中", en: "Cloud task in progress", ja: "クラウドタスク進行中", ko: "클라우드 작업 진행 중" },
   正在解压所选内容: { tw: "正在解壓縮所選內容", en: "Extracting the selection", ja: "選択した内容を解凍しています", ko: "선택한 항목의 압축을 푸는 중" },
-  "{what}将保存到 {place} 下的新文件夹「{folder}」。现在可以继续浏览文件，完成后会在页面底部提示。": {
-    tw: "{what}將儲存到 {place} 下的新資料夾「{folder}」。現在可以繼續瀏覽檔案，完成後會在頁面底部提示。",
-    en: '{what} will be saved to a new folder "{folder}" in {place}. Keep browsing; you\'ll see a notice at the bottom when it\'s done.',
-    ja: "{what}は {place} 内の新しいフォルダ「{folder}」に保存されます。このままファイルを参照でき、完了するとページ下部でお知らせします。",
-    ko: "{what}은(는) {place} 아래의 새 폴더 “{folder}”에 저장됩니다. 계속 파일을 탐색할 수 있으며, 완료되면 페이지 하단에 알려 드립니다.",
+  "{what}会解压到 {place} 下的「{folder}」里，现在可以继续逛别的文件，弄好了底部会有提示。": {
+    tw: "{what}會解壓縮到 {place} 下的「{folder}」裡，現在可以繼續逛別的檔案，用好了底部會有提示。",
+    en: '{what} will be extracted into "{folder}" in {place}. Keep browsing; we\'ll let you know at the bottom when it\'s done.',
+    ja: "{what}は {place} 内の「{folder}」に解凍されます。このままほかのファイルを見られますし、終わったら下部でお知らせします。",
+    ko: "{what}은(는) {place} 아래 ‘{folder}’에 풀립니다. 다른 파일을 계속 둘러보셔도 되며, 끝나면 화면 아래에 알려 드립니다.",
   },
-  "这个压缩包已有解压任务在云端进行。现在可以继续浏览文件，完成后会在页面底部提示。": {
-    tw: "這個壓縮檔已有解壓縮任務在雲端進行。現在可以繼續瀏覽檔案，完成後會在頁面底部提示。",
-    en: "This archive is already being extracted in the cloud. Keep browsing; you'll see a notice at the bottom when it's done.",
-    ja: "このアーカイブはすでにクラウドで解凍中です。このままファイルを参照でき、完了するとページ下部でお知らせします。",
-    ko: "이 압축 파일은 이미 클라우드에서 압축 해제 중입니다. 계속 파일을 탐색할 수 있으며, 완료되면 페이지 하단에 알려 드립니다.",
+  "这个压缩包已经在云端解压了，可以先看别的文件，弄好了底部会有提示。": {
+    tw: "這個壓縮檔已經在雲端解壓縮了，可以先看別的檔案，用好了底部會有提示。",
+    en: "This archive is already extracting in the cloud. Keep browsing; we'll let you know at the bottom when it's done.",
+    ja: "このアーカイブはすでにクラウドで解凍中です。このままほかのファイルを見られますし、終わったら下部でお知らせします。",
+    ko: "이 압축 파일은 이미 클라우드에서 압축 해제 중입니다. 다른 파일을 보셔도 되며, 끝나면 화면 아래에 알려 드립니다.",
   },
   正在处理: { tw: "正在處理", en: "Processing", ja: "処理中", ko: "처리 중" },
   "暂时读不到云端进度，正在重试": {
@@ -440,7 +440,7 @@ export default {
     ja: "クラウドの進捗を取得できません。再試行しています",
     ko: "클라우드 진행률을 잠시 읽을 수 없어 다시 시도하는 중",
   },
-  进度以云端任务实际返回为准: { tw: "進度以雲端任務實際回傳為準", en: "Progress as reported by the cloud task", ja: "進捗はクラウドタスクの報告に基づきます", ko: "진행률은 클라우드 작업이 실제로 보고한 값을 따릅니다" },
+  进度以云端返回为准: { tw: "進度以雲端回傳為準", en: "Progress as reported by the cloud", ja: "進捗はクラウドの返答に準じます", ko: "진행률은 클라우드 응답을 따릅니다" },
   解压进度: { tw: "解壓縮進度", en: "Extraction progress", ja: "解凍の進捗", ko: "압축 해제 진행률" },
   云端任务已完成: { tw: "雲端任務已完成", en: "Cloud task complete", ja: "クラウドタスク完了", ko: "클라우드 작업 완료" },
   所选内容已解压: { tw: "所選內容已解壓縮", en: "Selection extracted", ja: "選択した内容を解凍しました", ko: "선택한 항목의 압축을 풀었습니다" },
@@ -461,11 +461,11 @@ export default {
 
   // extract.ts
   读取压缩包超时: { tw: "讀取壓縮檔逾時", en: "Reading the archive timed out", ja: "アーカイブの読み込みがタイムアウトしました", ko: "압축 파일 읽기 시간이 초과되었습니다" },
-  "云端一时没有读完文件列表，稍后再试通常就好。": {
-    tw: "雲端一時沒有讀完檔案清單，稍後再試通常就沒問題。",
-    en: "The cloud didn't finish reading the file list. Trying again later usually works.",
-    ja: "クラウドがファイル一覧を読み切れませんでした。しばらくして再試行すると通常は解決します。",
-    ko: "클라우드가 파일 목록을 다 읽지 못했습니다. 잠시 후 다시 시도하면 대개 해결됩니다.",
+  "云端读取列表超时了，稍等再试一次通常就行。": {
+    tw: "雲端讀取清單逾時了，稍等再試一次通常就行。",
+    en: "Reading the file list timed out. Wait a moment and try again.",
+    ja: "クラウドでの一覧読み込みがタイムアウトしました。少し待ってからもう一度お試しください。",
+    ko: "클라우드에서 목록을 읽다 시간이 초과되었습니다. 잠시 후 다시 시도하면 대개 해결됩니다.",
   },
   无法读取这个压缩包: { tw: "無法讀取這個壓縮檔", en: "Can't read this archive", ja: "このアーカイブを読み込めません", ko: "이 압축 파일을 읽을 수 없습니다" },
   "格式不受支持，或者文件已经损坏。在线解压支持 ZIP、RAR、7Z、TAR 等常见格式。": {
@@ -475,18 +475,18 @@ export default {
     ko: "지원하지 않는 형식이거나 파일이 손상되었습니다. 온라인 압축 해제는 ZIP, RAR, 7Z, TAR 등 일반 형식을 지원합니다.",
   },
   压缩包里的文件太多: { tw: "壓縮檔裡的檔案太多", en: "Too many files in the archive", ja: "アーカイブ内のファイルが多すぎます", ko: "압축 파일 안의 파일이 너무 많습니다" },
-  "超过在线解压的文件数上限，可以下载到电脑后再解压。": {
-    tw: "超過線上解壓縮的檔案數上限，可以下載到電腦後再解壓縮。",
-    en: "It exceeds the file limit for Extract online. Download it to your computer and extract it there.",
-    ja: "オンライン解凍のファイル数上限を超えています。コンピュータにダウンロードしてから解凍してください。",
-    ko: "온라인 압축 해제의 파일 수 한도를 넘었습니다. 컴퓨터로 다운로드한 후 압축을 푸세요.",
+  "里面的文件太多，超出了在线解压的限制，可以下载到电脑后再解压。": {
+    tw: "裡面的檔案太多，超出了線上解壓縮的限制，可以下載到電腦後再解壓縮。",
+    en: "Too many files inside for Extract online. Download it to your computer and extract it there.",
+    ja: "中のファイル数がオンライン解凍の上限を超えています。パソコンにダウンロードしてから解凍してください。",
+    ko: "안의 파일이 너무 많아 온라인 압축 해제 한도를 넘었습니다. 컴퓨터에 내려받은 뒤 압축을 푸세요.",
   },
   压缩包太大: { tw: "壓縮檔太大", en: "The archive is too large", ja: "アーカイブが大きすぎます", ko: "압축 파일이 너무 큽니다" },
-  "超过在线解压的大小上限，可以下载到电脑后再解压。": {
-    tw: "超過線上解壓縮的大小上限，可以下載到電腦後再解壓縮。",
-    en: "It exceeds the size limit for Extract online. Download it to your computer and extract it there.",
-    ja: "オンライン解凍のサイズ上限を超えています。コンピュータにダウンロードしてから解凍してください。",
-    ko: "온라인 압축 해제의 크기 한도를 넘었습니다. 컴퓨터로 다운로드한 후 압축을 푸세요.",
+  "压缩包太大，超出了在线解压的限制，可以下载到电脑后再解压。": {
+    tw: "壓縮檔太大，超出了線上解壓縮的限制，可以下載到電腦後再解壓縮。",
+    en: "Too large for Extract online. Download it to your computer and extract it there.",
+    ja: "ファイルサイズがオンライン解凍の上限を超えています。パソコンにダウンロードしてから解凍してください。",
+    ko: "크기가 너무 커서 온라인 압축 해제 한도를 넘었습니다. 컴퓨터에 내려받은 뒤 압축을 푸세요.",
   },
   当前账号不能在线解压: { tw: "目前帳號無法線上解壓縮", en: "This account can't extract online", ja: "このアカウントではオンライン解凍できません", ko: "현재 계정으로는 온라인 압축 해제를 할 수 없습니다" },
   "这个压缩包需要会员权益才能在线解压。": {
@@ -518,11 +518,11 @@ export default {
   },
   没有读到压缩包: { tw: "無法讀取壓縮檔", en: "Couldn't read the archive", ja: "アーカイブを読み込めませんでした", ko: "압축 파일을 읽지 못했습니다" },
   "请检查网络后重试。": { tw: "請檢查網路後重試。", en: "Check your network and try again.", ja: "ネットワークを確認して再試行してください。", ko: "네트워크를 확인한 후 다시 시도하세요." },
-  "云端没有说明原因，可以稍后再试。": {
-    tw: "雲端沒有說明原因，可以稍後再試。",
-    en: "The cloud gave no reason. You can try again later.",
-    ja: "クラウドから理由の説明はありません。しばらくして再試行できます。",
-    ko: "클라우드가 이유를 알려 주지 않았습니다. 잠시 후 다시 시도할 수 있습니다.",
+  "云端没说具体原因，可以过会儿再试。": {
+    tw: "雲端沒說明原因，可以過一會兒再試。",
+    en: "The cloud didn't say why. Try again in a bit.",
+    ja: "クラウドから詳しい理由が返りませんでした。少し時間を置いてもう一度お試しください。",
+    ko: "클라우드가 구체적인 이유를 알려 주지 않았습니다. 잠시 후 다시 시도해 보세요.",
   },
   "云盘空间不足，解压出的文件放不下。": {
     tw: "雲端硬碟空間不足，解壓縮出的檔案放不下。",

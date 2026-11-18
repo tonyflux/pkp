@@ -42,7 +42,7 @@ const conversation = computed(() => assistant.conversation);
     <div class="receipt-scroll">
       <div v-if="record && counts" class="receipt-inner">
         <span class="receipt-icon" :class="{ undone: !!record.undo }"><Icon :name="record.undo ? 'restore' : 'check'" :size="27" /></span>
-        <span class="eyebrow">{{ t("{account} · 回执", { account }) }}</span>
+        <span class="eyebrow">{{ t("{account} · 操作结果", { account }) }}</span>
         <h1>{{ headline }}</h1>
         <p class="lede">{{ lede }}</p>
 
@@ -112,7 +112,7 @@ const conversation = computed(() => assistant.conversation);
           </span>
         </div>
       </div>
-      <p v-else class="none">{{ t("这份回执已不在这台电脑上。") }}</p>
+      <p v-else class="none">{{ t("这份操作结果记录已经不在了。") }}</p>
     </div>
   </div>
 </template>

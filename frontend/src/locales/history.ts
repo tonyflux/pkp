@@ -27,17 +27,17 @@ export default {
     ja: "履歴を読み込み中です。このあと結果が増える場合があります。",
     ko: "기록을 계속 불러오고 있습니다. 잠시 후 더 많은 결과가 표시될 수 있습니다.",
   },
-  "继续未完的观看，或重温看过的视频。": {
-    tw: "繼續未完的觀看，或重溫看過的影片。",
-    en: "Pick up where you left off, or watch a favorite again.",
-    ja: "途中の動画の続きを見たり、見終わった動画をもう一度楽しめます。",
-    ko: "보던 동영상을 이어 보거나 다시 감상하세요.",
+  "接着看没看完的视频，或重温看过的那几部。": {
+    tw: "接著看沒看完的影片，或重溫看過的那幾部。",
+    en: "Pick up where you left off, or rewatch something you liked.",
+    ja: "途中の動画の続きを見たり、お気に入りをもう一度再生したりできます。",
+    ko: "보던 동영상을 이어 보거나 봤던 영상을 다시 찾아보세요.",
   },
-  "仅在这台电脑上隐藏当前账号的已有播放记录，不删除文件，也不删除云端播放记录。": {
-    tw: "僅在這台電腦上隱藏目前帳號的既有播放紀錄，不刪除檔案，也不刪除雲端播放紀錄。",
-    en: "Hide this account's existing playback history on this computer only. Files and cloud playback records are not deleted.",
-    ja: "このコンピュータで現在のアカウントの既存の再生履歴のみを非表示にします。ファイルやクラウドの再生履歴は削除しません。",
-    ko: "이 컴퓨터에서 현재 계정의 기존 재생 기록만 숨깁니다. 파일과 클라우드 재생 기록은 삭제하지 않습니다.",
+  "只清掉这台电脑上的播放记录，不删云盘文件，也不删云端记录。": {
+    tw: "只清掉這台電腦上的播放紀錄，不刪雲端硬碟檔案，也不刪雲端紀錄。",
+    en: "Clears playback history on this computer only. Files and cloud playback history stay untouched.",
+    ja: "このコンピュータ上の再生履歴だけを消去します。ファイルやクラウドの履歴は削除しません。",
+    ko: "이 컴퓨터의 재생 기록만 지우며 클라우드 파일과 클라우드 기록은 삭제하지 않습니다.",
   },
   未看完: { tw: "未看完", en: "Unfinished", ja: "視聴途中", ko: "시청 중" },
   已看完: { tw: "已看完", en: "Finished", ja: "視聴済み", ko: "시청 완료" },

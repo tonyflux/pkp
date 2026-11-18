@@ -73,7 +73,7 @@ describe("menu bar panel", () => {
 
   it("names the owner when several accounts are here and counts the others", () => {
     const card = inboxCard(state({ inbox: 3, inboxItem: arrival({}) }), name, true);
-    expect(card).toMatchObject({ detail: "影视收藏 · 待整理 · 来自云添加", extra: "另有 2 项新入库待整理" });
+    expect(card).toMatchObject({ detail: "影视收藏 · 待整理 · 来自云添加", extra: "另有 2 个新文件待整理" });
   });
 
   it("no arrival, no inbox card, and the transfer card is unchanged by one", () => {

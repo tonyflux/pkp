@@ -23,7 +23,7 @@ describe("i18n", () => {
   it("translates with params and falls back to the source", () => {
     try {
       applyLanguage("en", "en");
-      expect(t("跟随这台电脑的语言设置，当前为{name}。", { name: "English" })).toBe("Follows this computer's language settings; currently English.");
+      expect(t("跟随系统当前语言（{name}）", { name: "English" })).toBe("Follows your system language (English)");
       expect(t("没有这条文字 {n}", { n: 12345 })).toBe("没有这条文字 12,345");
       expect(t("ctx|没有这条文字")).toBe("没有这条文字");
     } finally {

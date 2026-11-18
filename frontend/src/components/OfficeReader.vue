@@ -142,10 +142,10 @@ onBeforeUnmount(() => { generation++; close(); });
         <button type="submit" :disabled="!query.trim()">{{ t("office|查找下一处") }}</button>
       </form>
     </div>
-    <p class="office-status" v-if="loading" role="status">{{ t("office|正在安全解析文档") }}</p>
+    <p class="office-status" v-if="loading" role="status">{{ t("office|正在打开文档…") }}</p>
     <div class="office-status" v-else-if="error" role="alert"><p>{{ error }}</p><button type="button" @click="load">{{ t("重试") }}</button></div>
     <template v-else>
-      <p class="office-limits">{{ t("只读本地预览，不连接外部网络。使用本机字体，分页与复杂版式可能不同。不显示图表、动画、影音、宏、嵌入对象和外部内容。上限：压缩 32 MB／展开 96 MB，DOCX 300 页；需整份排版。") }}</p>
+      <p class="office-limits">{{ t("只在本地只读预览，不联网，用的是本机字体，分页和复杂排版可能和原文件略有差别；图表、动画、音视频、宏和外部内容不显示（支持压缩 32 MB／展开 96 MB、DOCX 300 页以内）。") }}</p>
       <p v-if="result" class="office-search-result" role="status">{{ result }}</p>
       <div class="office-workspace">
         <aside v-if="thumbnails" ref="thumbRail" class="office-thumbnails" :aria-label="t('office|缩略图')">

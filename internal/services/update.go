@@ -245,10 +245,10 @@ func (u *UpdateService) check(manual bool) error {
 
 func (u *UpdateService) canStartLocked() error {
 	if u.closing || !u.state.Supported {
-		return i18n.New("此构建不支持应用内更新")
+		return i18n.New("当前版本不支持在应用里直接更新")
 	}
 	if u.cancel != nil || u.state.Phase == "installing" {
-		return i18n.New("更新操作正在进行")
+		return i18n.New("已经在更新中了")
 	}
 	return nil
 }
@@ -261,7 +261,7 @@ func (u *UpdateService) Download() error {
 	}
 	if u.manifest == nil || u.state.Info == nil || !u.state.Info.Compatible {
 		u.mu.Unlock()
-		return i18n.New("没有适用于此系统的更新")
+		return i18n.New("没有适合当前系统的更新")
 	}
 	if u.path != "" {
 		u.state.Phase = "ready"

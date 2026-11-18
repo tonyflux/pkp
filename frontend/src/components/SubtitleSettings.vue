@@ -214,10 +214,10 @@ function onKey(event: KeyboardEvent) {
         />
       </div>
       <p v-if="kind === 'ass'" class="note">
-        {{ t("这条是 ASS 特效字幕：颜色以字幕文件为准；位置只挪底部的普通对白，定位过的特效和顶部、居中的行不动。") }}
+        {{ t("这是 ASS 特效字幕：颜色跟原字幕走，调位置只挪底部的普通台词，定位特效和顶部、居中字幕不动。") }}
       </p>
       <p v-else-if="kind === 'picture'" class="note">
-        {{ t("这条是图形字幕（蓝光 PGS、DVD 等）：颜色改不了；位置只挪画面下半部分的字幕。") }}
+        {{ t("这是图形字幕（蓝光 PGS、DVD 等）：改不了颜色，调位置只挪画面下半部分的字幕。") }}
       </p>
     </section>
 

@@ -11,7 +11,7 @@ const groups = computed(() => shortcutGroups());
 <template>
   <div class="shortcuts">
     <h2>{{ t("快捷键") }}</h2>
-    <p class="lead">{{ t("在输入框里打字时，方向键和单个字母留给输入框；带修饰键的快捷键照常可用。") }}</p>
+    <p class="lead">{{ t("在输入框里打字时，方向键和单字母留给你正常输入；带修饰键的快捷键照常能用。") }}</p>
 
     <div class="groups">
       <section v-for="group in groups" :key="group.title" class="group" :aria-label="group.title">

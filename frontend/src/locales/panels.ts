@@ -64,22 +64,22 @@ export default {
     ko: "파일 내용을 읽지 못했습니다. 잠시 후 다시 시도하세요",
   },
   文件还没有准备好: { tw: "檔案還沒有準備好", en: "The file isn't ready yet", ja: "ファイルはまだ準備できていません", ko: "파일이 아직 준비되지 않았습니다" },
-  "云添加或上传完成后才能查看内容。文件信息和能做的操作在「详情」里。": {
-    tw: "雲端新增或上傳完成後才能檢視內容。檔案資訊和可用的操作在「詳細資料」裡。",
-    en: 'You can view the content once the Cloud Add or upload finishes. File info and actions are in "Details".',
-    ja: "クラウド追加またはアップロードが完了すると内容を表示できます。ファイル情報と操作は「詳細」にあります。",
-    ko: "클라우드 추가 또는 업로드가 끝나면 내용을 볼 수 있습니다. 파일 정보와 작업은 ‘세부 정보’에 있습니다.",
+  "等上传或云添加完成后，就能查看内容了。文件信息可以在「详情」里看。": {
+    tw: "等上傳或雲端新增完成後，就能檢視內容了。檔案資訊可以在「詳細資料」裡看。",
+    en: 'Once the upload or Cloud Add finishes, you can open it here. Check "Details" for file info.',
+    ja: "アップロードやクラウド追加が終わると内容を見られます。ファイル情報は「詳細」で確認できます。",
+    ko: "업로드나 클라우드 추가가 끝나면 내용을 볼 수 있습니다. 파일 정보는 ‘세부 정보’에 있습니다.",
   },
   文件尚未就绪: { tw: "檔案尚未就緒", en: "File not ready", ja: "ファイル準備中", ko: "파일 준비 중" },
   此格式暂不支持预览: { tw: "此格式暫不支援預覽", en: "This format can't be previewed", ja: "この形式はプレビューできません", ko: "이 형식은 미리 볼 수 없습니다" },
-  "PKP 不会伪造它的内容。文件信息和能做的操作在「详情」里。": {
-    tw: "PKP 不會偽造它的內容。檔案資訊和可用的操作在「詳細資料」裡。",
-    en: 'PKP won\'t fake its content. File info and actions are in "Details".',
-    ja: "PKP は内容を偽って表示しません。ファイル情報と操作は「詳細」にあります。",
-    ko: "PKP는 내용을 꾸며 보여 주지 않습니다. 파일 정보와 작업은 ‘세부 정보’에 있습니다.",
+  "这种文件暂时不支持直接预览，具体信息和能做的操作都在「详情」里。": {
+    tw: "這種檔案暫時不支援直接預覽，詳細資訊和可用的操作都在「詳細資料」裡。",
+    en: 'This file type can\'t be previewed here. Check "Details" for file info and actions.',
+    ja: "この形式はそのままプレビューできません。情報や操作は「詳細」にあります。",
+    ko: "이 형식은 바로 미리 볼 수 없습니다. 정보와 작업은 ‘세부 정보’에 있습니다.",
   },
-  不伪造压缩包内容: { tw: "不偽造壓縮檔內容", en: "Archive content not faked", ja: "アーカイブの内容は表示しません", ko: "압축 파일 내용을 꾸미지 않음" },
-  不伪造文件内容: { tw: "不偽造檔案內容", en: "File content not faked", ja: "ファイルの内容は表示しません", ko: "파일 내용을 꾸미지 않음" },
+  暂不支持预览压缩包: { tw: "暫不支援預覽壓縮檔", en: "Archive preview unavailable", ja: "アーカイブはプレビューできません", ko: "압축 파일 미리보기 불가" },
+  暂不支持直接预览: { tw: "暫不支援直接預覽", en: "Preview unavailable", ja: "プレビューできません", ko: "미리보기 불가" },
 
   // MarkdownDoc.ts
   "图片：{alt}": { tw: "圖片：{alt}", en: "Image: {alt}", ja: "画像：{alt}", ko: "이미지: {alt}" },

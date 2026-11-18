@@ -105,7 +105,7 @@ const FILTERS: { key: TransferFilter; label: string; empty: string }[] = [
 
 const SECTION: Record<TransferGroup, { title: string; note: string }> = {
   active: { title: N_("进行中"), note: N_("仅运行中的任务显示进度") },
-  attention: { title: N_("需要处理"), note: N_("失败原因就在任务旁") },
+  attention: { title: N_("需要处理"), note: N_("出错原因就显示在任务旁边") },
   done: { title: N_("最近完成"), note: N_("按完成时间排列") },
 };
 

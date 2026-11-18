@@ -88,7 +88,7 @@ const (
 
 var (
 	errRemoveTooMany = &lazyError{func() string { return i18n.F("一次最多处理 %d 项，请缩小范围", maxRemove) }}
-	errRemoving      = i18n.New("这个账号还有删除操作在进行，请等这一次完成")
+	errRemoving      = i18n.New("这个账号还有删除在进行，等这一次弄完吧")
 )
 
 // Why an entry was not removed, as the receipt shows it.
@@ -307,7 +307,7 @@ func (r *removeRun) locate(ids []string) (live, binned map[string]drive.File, er
 			return client.BatchGetFiles(ctx, chunk, drive.GetFileParams{})
 		})
 		if err != nil {
-			return nil, nil, i18n.Errorf("没能读到这些文件的最新状态：%w", err)
+			return nil, nil, i18n.Errorf("获取这些文件的最新状态失败：%w", err)
 		}
 		for _, f := range files {
 			if f.Trashed {
@@ -327,7 +327,7 @@ func (r *removeRun) locate(ids []string) (live, binned map[string]drive.File, er
 	if missing {
 		bin, err := r.d.binAll(r.s)
 		if err != nil {
-			return nil, nil, i18n.Errorf("没能读到回收站：%w", err)
+			return nil, nil, i18n.Errorf("读取回收站失败：%w", err)
 		}
 		wanted := make(map[string]bool, len(ids))
 		for _, id := range ids {

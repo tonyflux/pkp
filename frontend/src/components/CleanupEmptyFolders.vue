@@ -45,7 +45,7 @@ const dockTitle = computed(() => t("将处理 {n} 个顶层文件夹 · 连同 {
 const dockHint = computed(() =>
   tooMany.value
     ? t("一次最多处理 {n} 项，请缩小范围或取消部分勾选", { n: REMOVE_LIMIT })
-    : t("空文件夹不占空间，只能移到回收站；发送前会逐个重新确认。"),
+    : t("空文件夹不占空间，只能移到回收站；提交前会再逐个核对一遍。"),
 );
 </script>
 
@@ -57,7 +57,7 @@ const dockHint = computed(() =>
           <span class="hero-mark" aria-hidden="true"><Icon name="folder" :size="26" /></span>
           <div class="hero-copy">
             <span class="kicker">{{ t("文件夹整理 · 不释放空间") }}</span>
-            <h2>{{ t("留下的空壳，也一起收好。") }}</h2>
+            <h2>{{ t("空文件夹也顺手清理掉") }}</h2>
             <p>{{ t("只显示最外层空文件夹；移走一项，里面的空文件夹也会一起进入回收站。") }}</p>
           </div>
           <div class="metric">
@@ -89,7 +89,7 @@ const dockHint = computed(() =>
         <div v-if="!folders.length && !e.loading" class="none">
           <Icon name="check" :size="22" />
           <strong>{{ t("没有空文件夹") }}</strong>
-          <span>{{ t("空文件夹指整棵子树里没有任何未回收的文件；「My Pack」等特殊文件夹和根目录不算在内。") }}</span>
+          <span>{{ t("只要文件夹和它下级里面都没有文件（不算回收站里的），就算空文件夹；「My Pack」等特殊文件夹和根目录除外。") }}</span>
         </div>
 
         <div v-else data-list="folders" class="rows" :style="drawn.style">

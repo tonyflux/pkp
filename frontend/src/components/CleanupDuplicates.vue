@@ -105,8 +105,8 @@ const tooMany = computed(() => count.value > REMOVE_LIMIT);
 const dockTitle = computed(() => t("将处理 {n} 项 · 预计可回收 {size}", { n: count.value, size: bytes(dupPickedBytes.value, "0 B") }));
 const dockHint = computed(() => {
   if (tooMany.value) return t("一次最多处理 {n} 项，请缩小范围或取消部分勾选", { n: REMOVE_LIMIT });
-  if (cleanup.permanent) return t("无法撤销；只对本页勾选的副本彻底删除，每组至少保留一份。");
-  return t("至少保留每组一份。先移到回收站，空间尚不会释放。");
+  if (cleanup.permanent) return t("无法撤销，只彻底删除本页勾选的副本，每组至少留一份。");
+  return t("每组至少留一份。移到回收站后，要等彻底清空才会腾出空间。");
 });
 
 const methods = computed(() => [
@@ -186,7 +186,7 @@ function turn(forward: boolean) {
             </SelectMenu>
           </div>
           <span class="spacer" />
-          <label class="same" :title="t('所有副本都在同一个文件夹里的组，最没有争议，适合先清理')">
+          <label class="same" :title="t('所有副本都在同一个文件夹里，误存的可能性最大，建议先清理')">
             <input
               type="checkbox"
               :checked="cleanup.sameFolder"
@@ -211,7 +211,7 @@ function turn(forward: boolean) {
         <div v-if="!groups.length && !d.loading" class="none">
           <Icon name="check" :size="22" />
           <strong>{{ cleanup.sameFolder ? t("没有同一文件夹里的重复") : t("没有找到重复文件") }}</strong>
-          <span>{{ t("只按内容判断：同一指纹、同样大小才算重复。") }}</span>
+          <span>{{ t("只按内容判断：大小和内容指纹都一样才算重复。") }}</span>
         </div>
 
         <div data-list="groups" class="groups" :style="drawn.style">

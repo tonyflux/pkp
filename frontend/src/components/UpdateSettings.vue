@@ -34,15 +34,15 @@ const errors: Record<string, string> = {
   rateLimit: N_("GitHub 暂时限制了请求，请稍后再试。"),
   storage: N_("无法保存更新文件或设置，请检查磁盘空间与目录权限。"),
   installLocation: N_("请将 PKP 安装到「应用程序」后再更新，不要从磁盘镜像、只读位置或临时隔离路径运行。"),
-  installPermission: N_("未获准替换应用。请重试并允许 macOS 的权限请求。"),
-  installBusy: N_("另一个 PKP 实例正在使用此应用。请退出其他配置或窗口所属的 PKP 进程后重试。"),
-  install: onLinux ? N_("未能显示安装包，当前应用继续运行。请重试或从官方 Release 下载。") : onWindows ? N_("未能打开安装程序，当前应用继续运行。") : N_("更新安装失败，请检查磁盘空间与应用权限后重试，或从官方 Release 重新安装。"),
-  installRollback: N_("更新失败，且未能恢复原应用。请从官方 Release 重新安装 PKP；账号与本地设置仍保留。"),
+  installPermission: N_("没有拿到替换应用的权限，请重试并允许 macOS 的权限弹窗。"),
+  installBusy: N_("另一个 PKP 窗口或进程还在跑，请先关掉它再重试。"),
+  install: onLinux ? N_("未能显示安装包，当前应用继续运行。请重试或从官方 Release 下载。") : onWindows ? N_("未能打开安装程序，当前应用继续运行。") : N_("更新没装成功，检查下磁盘空间和权限再试试，或者去官方 Release 重新下载安装。"),
+  installRollback: N_("更新失败了，原来的应用也没恢复过来，请从官方 Release 重装 PKP（账号和本地设置都在）。"),
 };
 const error = computed(() => updates.error || (state.value?.error ? t(errors[state.value.error] ?? errors.network) : ""));
 const status = computed(() => {
   if (!state.value) return t("正在读取…");
-  if (!state.value.supported) return t("开发构建或此平台不支持应用内更新。");
+  if (!state.value.supported) return t("当前是开发版，或这个平台暂不支持在应用里直接更新。");
   switch (state.value.phase) {
     case "checking": return t("正在检查更新…");
     case "current": return t("已是最新正式版本");
@@ -91,7 +91,7 @@ async function openCommunity(href: string) {
 <template>
   <section class="update-settings" :aria-label="t('关于与更新')">
     <h2>{{ t("关于与更新") }}</h2>
-    <p class="lead">{{ t("检查新版本、查看更新说明，并安全下载官方安装包。") }}</p>
+    <p class="lead">{{ t("看看有没有新版本、更新了什么，也可以下载官方安装包。") }}</p>
     <div class="update-card glass-well version-card">
       <div class="version-row">
         <Logo :size="38" />
@@ -119,7 +119,7 @@ async function openCommunity(href: string) {
           <button class="pill" :disabled="busy" @click="remindUpdateLater">{{ t("稍后提醒") }}</button>
           <button class="quiet" :disabled="busy" @click="ignoreUpdate">{{ t("忽略此版本") }}</button>
         </div>
-        <p class="muted safety"><Icon name="shield" :size="13" />{{ t("不会自动安装，账号与本地设置保留。") }}</p>
+        <p class="muted safety"><Icon name="shield" :size="13" />{{ t("不会自动安装，账号和本地设置都会留着。") }}</p>
       </template>
     </div>
 
@@ -127,11 +127,11 @@ async function openCommunity(href: string) {
       <h3 id="release-notes-title">{{ t("更新说明") }}</h3>
       <div ref="notesRoot" class="notes"><MarkdownDoc :blocks="releaseNotes" @link="followReleaseLink" /></div>
       <p v-if="releaseError" class="error" role="alert">{{ releaseError }}</p>
-      <p class="muted install-note">{{ onLinux ? t("校验后将安装包保存到主目录的 PKP Updates 文件夹并显示，退出或重启后仍保留，可在安装后手动删除。请退出 PKP 后使用系统软件安装器或包管理器安装 deb/rpm；AppImage 请手动替换原文件并重新启动。不会自动写入系统目录或替换正在运行的应用，账号与本地设置保留。") : onWindows ? t("安装前将确认退出；取消退出或管理员授权不会强制关闭 PKP。安装器不会删除账号与本地设置。") : t("确认退出后将替换应用并重新打开，账号与本地设置保留。macOS 可能请求替换权限；更新不会绕过 Gatekeeper，重新打开时仍可能需要系统确认。") }}</p>
+      <p class="muted install-note">{{ onLinux ? t("校验后将安装包保存到主目录的 PKP Updates 文件夹并显示，退出或重启后仍保留，可在安装后手动删除。请退出 PKP 后使用系统软件安装器或包管理器安装 deb/rpm；AppImage 请手动替换原文件并重新启动。不会自动写入系统目录或替换正在运行的应用，账号与本地设置保留。") : onWindows ? t("开始安装前会先问你是否退出，点取消不会关掉应用，账号和本地设置都会留着。") : t("退出后会替换为新版本再重新打开，账号和设置都留着。macOS 可能会弹出替换授权，新版打开时也照常走系统安全确认。") }}</p>
     </section>
 
     <div class="update-card glass-well automatic">
-      <div><strong>{{ t("自动检查更新") }}</strong><p class="muted">{{ t("启动后检查，之后最多每 24 小时一次；不会自动下载或安装。不发送账号、文件内容或统计编号。") }}</p></div>
+      <div><strong>{{ t("自动检查更新") }}</strong><p class="muted">{{ t("每次打开以及每隔 24 小时查一次新版本，不会悄悄自动下载或安装，也不会上传账号、文件信息或统计编号。") }}</p></div>
       <Toggle :model-value="!!state?.automatic" :label="t('自动检查更新')" :disabled="!state?.supported || busy" @update:model-value="setAutomaticUpdates" />
     </div>
 

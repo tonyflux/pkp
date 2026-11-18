@@ -113,19 +113,19 @@ func readTorrentFile(path string) (torrent.Meta, error) {
 	}
 	info, err := os.Stat(path)
 	if err != nil {
-		return torrent.Meta{}, i18n.Errorf("打不开种子文件：%w", err)
+		return torrent.Meta{}, i18n.Errorf("打不开这个种子文件：%w", err)
 	}
 	if info.Size() > torrent.MaxSize {
-		return torrent.Meta{}, i18n.Errorf("种子文件超过 %d MB，不像是种子", torrent.MaxSize>>20)
+		return torrent.Meta{}, i18n.Errorf("这个文件超过 %d MB，看起来不像种子文件", torrent.MaxSize>>20)
 	}
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return torrent.Meta{}, i18n.Errorf("读不了种子文件：%w", err)
+		return torrent.Meta{}, i18n.Errorf("读取种子文件失败：%w", err)
 	}
 	meta, err := torrent.Parse(data)
 	if err != nil {
 		if errors.Is(err, torrent.ErrNoV1Hash) {
-			return torrent.Meta{}, i18n.New("这是 BitTorrent v2 种子，云盘只认 v1 磁力链接")
+			return torrent.Meta{}, i18n.New("这是 BitTorrent v2 种子，云盘目前只认 v1 磁力链接")
 		}
 		return torrent.Meta{}, i18n.New("这个文件不是种子，或者已经损坏")
 	}

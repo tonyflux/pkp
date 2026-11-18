@@ -139,7 +139,7 @@ const snippet = (token: string) =>
       <ol class="steps">
         <li><b>1</b><span>{{ t("复制上面的服务器 URL。") }}</span></li>
         <li><b>2</b><span>{{ t("在 AI 工具的 MCP 设置里添加它，例如 Claude、Cursor 或 Cherry Studio。") }}</span></li>
-        <li><b>3</b><span>{{ t("工具会打开浏览器跳转到 PikPak 授权页面，点 Authorize 允许访问。") }}</span></li>
+        <li><b>3</b><span>{{ t("工具会自动打开浏览器跳到 PikPak 授权页，点 Authorize 同意就行。") }}</span></li>
       </ol>
       <button class="link" @click="emit('open', 'pat')">
         {{ t("工具不支持浏览器授权？改用个人访问令牌") }}
@@ -221,7 +221,7 @@ const snippet = (token: string) =>
         <small class="usage">{{ t("本月 {usage}", { usage: usageOf(session.id) || t("未产生流量") }) }}</small>
         <ConfirmInline
           v-if="confirming?.id === session.id"
-          :message="t('移除后「{name}」立即无法访问你的 PikPak，要再用需在应用里重新连接。', { name: session.label || group.name })"
+          :message="t('移除后「{name}」立刻就不能再访问你的 PikPak 了，想再用得去对应应用里重新连接。', { name: session.label || group.name })"
           :confirm-label="t('移除连接')"
           danger
           @cancel="confirming = null"
@@ -267,7 +267,7 @@ const snippet = (token: string) =>
       <small v-if="usageOf(row.session.id)" class="usage">{{ t("本月 {usage}", { usage: usageOf(row.session.id) }) }}</small>
       <ConfirmInline
         v-if="confirming?.id === row.session.id"
-        :message="confirming.action === 'remove' ? t('移除后「{name}」立即无法访问你的 PikPak，要再用需重新连接。', { name: nameOf(row) }) : t('旧令牌会立即失效，用到它的地方都要换成新令牌。')"
+        :message="confirming.action === 'remove' ? t('移除后「{name}」立刻就不能再访问你的 PikPak 了，想再用需要重新连接。', { name: nameOf(row) }) : t('旧令牌会立即失效，用到它的地方都要换成新令牌。')"
         :confirm-label="confirming.action === 'remove' ? t('移除连接') : t('重新生成')"
         :danger="confirming.action === 'remove'"
         @cancel="confirming = null"

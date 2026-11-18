@@ -68,9 +68,9 @@ const (
 )
 
 var (
-	errArrivalState     = i18n.New("入库记录的状态不对")
-	errArrivalMissing   = i18n.New("这条入库记录已经不在了")
-	errSuggestionReview = i18n.New("整理建议的保留记录无效")
+	errArrivalState     = i18n.New("这条新文件记录的状态不对")
+	errArrivalMissing   = i18n.New("这条新文件提醒已经不在了")
+	errSuggestionReview = i18n.New("之前选好的保留记录无效")
 )
 
 // Arrival is one finished cloud-add task waiting to be organized, or that

@@ -32,8 +32,8 @@ const locked = computed(() => !!props.live || assistant.running || !!assistant.b
 const SOURCE_NOTE: Record<string, () => string> = {
   tmdb: () => t("TMDB 只做精确匹配，不发给模型"),
   rules: () => t("本地规则生成，未请求模型"),
-  model: () => t("模型只提出草案，执行前由你确认"),
-  "": () => t("模型只提出草案，执行前由你确认"),
+  model: () => t("AI 只负责拟定方案，确认权在你"),
+  "": () => t("AI 只负责拟定方案，确认权在你"),
 };
 
 const planHeadline = computed(() => {
@@ -105,7 +105,7 @@ const proposalVerb = computed(() =>
   <section v-if="card.kind === 'plan'" class="ai-card plan-card" :class="`is-${card.state}`">
     <div class="plan-head">
       <div class="plan-title">
-        <span class="kicker">{{ t("计划草案") }} / {{ String(number).padStart(2, "0") }}</span>
+        <span class="kicker">{{ t("待确认方案") }} / {{ String(number).padStart(2, "0") }}</span>
         <h2>{{ planHeadline }}</h2>
         <p>{{ card.title }}</p>
       </div>

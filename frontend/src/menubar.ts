@@ -127,7 +127,7 @@ export function inboxCard(state: MenuBarState, name: (account: string) => string
   return {
     title: t("「{name}」已存入云盘", { name: a.name || t("新任务") }),
     detail: [several ? name(a.account) : "", t("待整理"), t("来自云添加")].filter(Boolean).join(" · "),
-    extra: state.inbox > 1 ? t("另有 {n} 项新入库待整理", { n: state.inbox - 1 }) : "",
+    extra: state.inbox > 1 ? t("另有 {n} 个新文件待整理", { n: state.inbox - 1 }) : "",
     key: a.id,
   };
 }

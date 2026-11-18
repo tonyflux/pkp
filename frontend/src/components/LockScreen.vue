@@ -51,7 +51,7 @@ const passwordError = computed(() => {
 });
 
 const lead = computed(() =>
-  passwordShown.value ? t("输入这台电脑上的 PKP 独立密码，回到离开前的画面。") : t("使用这台电脑的身份验证，即可回到离开前的画面。"),
+  passwordShown.value ? t("输入 PKP 独立密码，解锁回到刚才的页面。") : t("验证一下身份，解锁回到刚才的页面。"),
 );
 const hint = computed(() => {
   if (passwordShown.value) return "";
@@ -176,7 +176,7 @@ onBeforeUnmount(() => clearInterval(tick));
         <div class="ring"><Icon name="lock" :size="42" /></div>
       </div>
       <p class="kicker"><i aria-hidden="true"></i>{{ t("已锁定") }}</p>
-      <h1 id="lock-title">{{ t("你的空间，暂时只属于你。") }}</h1>
+      <h1 id="lock-title">{{ t("请先解锁 PKP") }}</h1>
       <p class="lead">{{ lead }}</p>
 
       <form v-if="passwordShown" class="password" :class="{ shaking }" @submit.prevent="submit" @animationend="shaking = false">

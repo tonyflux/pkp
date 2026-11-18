@@ -67,7 +67,7 @@ function boldParts(sentence: string, values: Record<string, string>): { text: st
 }
 const marked = { what: `${MARK}what${MARK}`, place: `${MARK}place${MARK}` };
 const runningLead = computed(() =>
-  boldParts(t("{what}将保存到 {place} 下的新文件夹「{folder}」。现在可以继续浏览文件，完成后会在页面底部提示。", { ...marked, folder: madeFolder.value }), {
+  boldParts(t("{what}会解压到 {place} 下的「{folder}」里，现在可以继续逛别的文件，弄好了底部会有提示。", { ...marked, folder: madeFolder.value }), {
     what: madeWhat.value,
     place: extract.task.place,
   }),
@@ -85,7 +85,7 @@ const heading = computed(() => {
     case "taskFailed":
       return { kicker: t("未完成"), title: t("解压没有完成"), sub: t("原压缩包保持不变") };
     default:
-      return { kicker: t("云端操作"), title: t("在线解压"), sub: t("直接解压到云盘，不占用电脑的本地空间") };
+      return { kicker: t("云端操作"), title: t("在线解压"), sub: t("直接解压到云盘，不占电脑空间") };
   }
 });
 
@@ -288,7 +288,7 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onKeydown, true));
             <span class="emblem"><Icon name="archive" :size="34" /></span>
             <span class="gate-kicker">{{ t("正在读取压缩包") }}</span>
             <h3>{{ t("正在获取文件列表…") }}</h3>
-            <p>{{ t("先尝试读取内容；只有云端要求密码时才会请你输入。") }}</p>
+            <p>{{ t("会先试着打开看看，真要密码了再请你输入。") }}</p>
             <Orbit :size="20" />
           </div>
 
@@ -296,7 +296,7 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onKeydown, true));
             <span class="emblem"><Icon name="lock" :size="32" /></span>
             <span class="gate-kicker">{{ t("需要密码") }}</span>
             <h3>{{ t("这个压缩包需要密码") }}</h3>
-            <p id="extract-password-hint">{{ t("输入密码后重新读取文件列表；读取成功才能选择要解压的内容。") }}</p>
+            <p id="extract-password-hint">{{ t("输入密码后就能读取文件列表，再挑要解压的内容。") }}</p>
             <div class="password">
               <label for="extract-password">{{ t("压缩包密码") }}</label>
               <div class="secret" :class="{ wrong: extract.passwordError }">
@@ -325,7 +325,7 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onKeydown, true));
               <p v-if="extract.passwordError" class="error" role="alert">{{ extract.passwordError }}</p>
               <button type="submit" class="primary wide">{{ t("用密码重试读取") }}</button>
             </div>
-            <small class="fine">{{ t("密码只用于这次读取和解压，不会保存。") }}</small>
+            <small class="fine">{{ t("密码只用这一次，不会保存。") }}</small>
           </form>
 
           <div v-else-if="extract.stage === 'failed' && extract.failure" class="gate" role="alert">
@@ -457,7 +457,7 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onKeydown, true));
                 <p v-if="extract.task.place" class="lead">
                   <template v-for="(part, i) in runningLead" :key="i"><strong v-if="part.bold">{{ part.text }}</strong><template v-else>{{ part.text }}</template></template>
                 </p>
-                <p v-else class="lead">{{ t("这个压缩包已有解压任务在云端进行。现在可以继续浏览文件，完成后会在页面底部提示。") }}</p>
+                <p v-else class="lead">{{ t("这个压缩包已经在云端解压了，可以先看别的文件，弄好了底部会有提示。") }}</p>
                 <div class="progress-head">
                   <span>{{ t("正在处理") }}</span>
                   <span>{{
@@ -465,7 +465,7 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onKeydown, true));
                       ? t("暂时读不到云端进度，正在重试")
                       : extract.task.progress > 0
                         ? `${extract.task.progress}%`
-                        : t("进度以云端任务实际返回为准")
+                        : t("进度以云端返回为准")
                   }}</span>
                 </div>
                 <div
