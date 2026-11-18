@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const lock = JSON.parse(await readFile(resolve(root, "package-lock.json"), "utf8"));
 const notices = ["PKP frontend third-party licenses\n"];
+notices.push(`\n--- Lucide icons (ISC) ---\n${await readFile(resolve(root, "scripts/lucide-LICENSE.txt"), "utf8")}`);
 for (const [path, entry] of Object.entries(lock.packages)) {
   if (!path || entry.dev || entry.devOptional || !path.startsWith("node_modules/")) continue;
   const directory = resolve(root, path);

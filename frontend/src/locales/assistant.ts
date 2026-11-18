@@ -315,12 +315,6 @@ export default {
   整理: { tw: "整理", en: "Organize", ja: "整理", ko: "정리" },
   "{n} 项 · {status}": { tw: "{n} 項 · {status}", en: (p) => `${items(p.n, "1 item", `${p.n} items`)} · ${p.status}`, ja: "{n} 項目 · {status}", ko: "{n}개 항목 · {status}" },
   可撤销: { tw: "可復原", en: "Can undo", ja: "元に戻せます", ko: "실행 취소 가능" },
-  "文件先看清，再决定怎么动。": {
-    tw: "先看清檔案，再決定怎麼動。",
-    en: "See your files first, then decide what to change.",
-    ja: "まずファイルを把握し、それから動かし方を決めましょう。",
-    ko: "먼저 파일을 살펴본 뒤 어떻게 할지 정하세요.",
-  },
   "整理建议来自本地索引。需要模型时再交给你的模型，云盘改动始终由你确认。": {
     tw: "整理建議來自本機索引。需要模型時再交給你的模型，雲端硬碟的變更始終由你確認。",
     en: "Suggestions come from the local index. Your model is used only when needed, and you always confirm changes to the drive.",
@@ -338,7 +332,6 @@ export default {
   忽略: { tw: "忽略", en: "Ignore", ja: "無視", ko: "무시" },
   查看整理建议: { tw: "查看整理建議", en: "View suggestions", ja: "整理の提案を見る", ko: "정리 제안 보기" },
   从这里继续: { tw: "從這裡繼續", en: "Pick up here", ja: "ここから続ける", ko: "여기서 계속" },
-  "手上有事，直接处理。": { tw: "手上有事，直接處理。", en: "Got something to do? Do it here.", ja: "やることがあれば、すぐに。", ko: "할 일이 있다면 바로 처리하세요." },
   "整理已选的 {n} 个文件": {
     tw: "整理已選的 {n} 個檔案",
     en: (p) => items(p.n, "Organize the selected file", `Organize the ${p.n} selected files`),
@@ -365,9 +358,6 @@ export default {
     ja: "下の入力欄に入れます。送信前に確認します",
     ko: "아래 입력란에 채웁니다. 보내기 전에 묻습니다",
   },
-  这次有什么不同: { tw: "這次有什麼不同", en: "What's different", ja: "今回の違い", ko: "무엇이 다른가요" },
-  "AI 只参与": { tw: "AI 只參與", en: "AI only handles", ja: "AI が関わるのは", ko: "AI는" },
-  "需要判断的部分。": { tw: "需要判斷的部分。", en: "the judgment calls.", ja: "判断が必要な部分だけ。", ko: "판단이 필요한 부분만 맡습니다." },
   "搜索与命名规则在本机完成。确定的作品名称由 TMDB 精确匹配，不发给模型；模糊的结果留给你决定。": {
     tw: "搜尋與命名規則在本機完成。確定的作品名稱由 TMDB 精確比對，不傳給模型；模糊的結果留給你決定。",
     en: "Search and naming rules run on this computer. Certain titles are matched exactly by TMDB and never sent to a model; unclear results are left to you.",

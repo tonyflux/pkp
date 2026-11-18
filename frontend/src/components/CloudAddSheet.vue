@@ -430,7 +430,7 @@ header p {
   background: var(--primary) border-box;
   color: var(--on-primary);
   font-weight: 600;
-  box-shadow: inset 0 1px 0 var(--primary-rim), 0 6px 16px var(--primary-glow);
+  box-shadow: none;
 }
 
 .source button:disabled {

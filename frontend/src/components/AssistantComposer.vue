@@ -73,8 +73,8 @@ function submit() {
   padding: 13px 15px 9px;
   border: 1px solid var(--line-strong);
   border-radius: 20px;
-  background: linear-gradient(165deg, color-mix(in srgb, var(--accent) 12%, transparent), transparent 70%), var(--glass-sheet);
-  box-shadow: var(--shadow-island), inset 0 1px 0 color-mix(in srgb, var(--glass-rim) 40%, transparent);
+  background: var(--glass-sheet);
+  box-shadow: var(--shadow-island);
   transition: border-color var(--dur) var(--ease);
 }
 

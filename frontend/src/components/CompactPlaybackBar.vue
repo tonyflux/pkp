@@ -54,7 +54,7 @@ const ownerTitle = computed(() =>
 
 <template>
   <div class="bar glass" data-playback role="region" :aria-label="t('正在播放')">
-    <button class="main" :title="state.paused ? t('播放') : t('暂停')" @click="playerCommands.toggle()">
+    <button class="main" :title="state.paused ? t('播放') : t('暂停')" :aria-label="state.paused ? t('播放') : t('暂停')" @click="playerCommands.toggle()">
       <Icon :name="state.paused ? 'play' : 'pause'" :size="18" filled />
     </button>
 
@@ -142,8 +142,8 @@ const ownerTitle = computed(() =>
   padding: 0;
   border-radius: 50%;
   border: 1px solid var(--line);
-  color: #ffffff;
-  background: var(--primary) border-box;
+  color: var(--fg);
+  background: var(--glass-control);
 }
 
 /* A bounded title slot leaves room for the timeline and playback actions. */

@@ -3,6 +3,7 @@ import { computed } from "vue";
 
 // One thin line system at a single stroke weight. No emoji:
 // they render differently per platform and carry no accessible name.
+// Settings and seek arrows are adapted from Lucide 0.468.0; see THIRD_PARTY_LICENSES.
 const paths: Record<string, string> = {
   folder: "M3 7.5A2.5 2.5 0 0 1 5.5 5h3.2a2 2 0 0 1 1.5.7l1 1.2h7.3A2.5 2.5 0 0 1 21 9.4v7.1A2.5 2.5 0 0 1 18.5 19h-13A2.5 2.5 0 0 1 3 16.5z",
   file: "M14 3H7.5A2.5 2.5 0 0 0 5 5.5v13A2.5 2.5 0 0 0 7.5 21h9a2.5 2.5 0 0 0 2.5-2.5V8zM14 3v5h5",
@@ -36,15 +37,13 @@ const paths: Record<string, string> = {
   check: "M5.5 12.5l4.2 4.2L18.5 8",
   alert: "M12 8v5M12 16.4h.01M10.3 4.2L3.5 16.4A2 2 0 0 0 5.2 19.5h13.6a2 2 0 0 0 1.7-3.1L13.7 4.2a2 2 0 0 0-3.4 0z",
   plus: "M12 5.5v13M5.5 12h13",
-  settings: "M12 15.2a3.2 3.2 0 1 0 0-6.4 3.2 3.2 0 0 0 0 6.4zM19.3 14.4l.9 1.5-2 3.4-1.7-.5a7 7 0 0 1-1.6.9l-.4 1.8h-4l-.4-1.8a7 7 0 0 1-1.6-.9l-1.7.5-2-3.4.9-1.5a7 7 0 0 1 0-1.8l-.9-1.5 2-3.4 1.7.5a7 7 0 0 1 1.6-.9L10.5 3h4l.4 1.8a7 7 0 0 1 1.6.9l1.7-.5 2 3.4-.9 1.5a7 7 0 0 1 0 1.8z",
+  settings: "M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2zM15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0z",
   user: "M12 12.5a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4.5 20.3a7.6 7.6 0 0 1 15 0",
   volume: "M11 5.5L6.8 9H4.2A1.2 1.2 0 0 0 3 10.2v3.6A1.2 1.2 0 0 0 4.2 15h2.6L11 18.5zM15 9.6a3.4 3.4 0 0 1 0 4.8M17.8 7a7 7 0 0 1 0 10",
   mute: "M11 5.5L6.8 9H4.2A1.2 1.2 0 0 0 3 10.2v3.6A1.2 1.2 0 0 0 4.2 15h2.6L11 18.5zM15.5 10l5 4M20.5 10l-5 4",
-  // A 270° ring open at the top-right, with the arrowhead at the ring's
-  // top end pointing the way it turns. The centre is left clear for the
-  // "15" the buttons overlay.
-  back15: "M12 5a7.5 7.5 0 1 0 7.5 7.5M15 2.5L12 5l3 2.5",
-  forward15: "M12 5a7.5 7.5 0 1 1-7.5 7.5M9 2.5L12 5 9 7.5",
+  // The centre remains clear for the overlaid seek interval.
+  back15: "M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8M3 3v5h5",
+  forward15: "M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8M21 3v5h-5",
   pip: "M4 7.5A2.5 2.5 0 0 1 6.5 5h11A2.5 2.5 0 0 1 20 7.5v9a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 4 16.5zM12.5 12.5h5.5v4.5h-5.5z",
   fullscreen: "M4.5 9V5.5a1 1 0 0 1 1-1H9M15 4.5h3.5a1 1 0 0 1 1 1V9M19.5 15v3.5a1 1 0 0 1-1 1H15M9 19.5H5.5a1 1 0 0 1-1-1V15",
   repeat: "M6.5 7.5h10.2a2.8 2.8 0 0 1 2.8 2.8v.7M17.5 16.5H7.3a2.8 2.8 0 0 1-2.8-2.8v-.7M6.5 7.5l2.6-2.6M6.5 7.5l2.6 2.6M17.5 16.5l-2.6 2.6M17.5 16.5l-2.6-2.6",

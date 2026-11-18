@@ -13,7 +13,7 @@
   --glass-inset: rgba(112, 126, 145, 0.08);
   --glass-rim: rgba(255, 255, 255, 0.7);
   --glass-edge: rgba(85, 100, 120, 0.2);
-  --content-opacity: 100%;
+  --content-opacity: 80%;
 
   --fg: #162739;
   --fg-dim: #52647a;
@@ -25,7 +25,7 @@
   --primary-shadow: none;
   --on-primary: #ffffff;
   /* Playback progress (scrub bars, volume), in the skin's colour too. */
-  --progress: linear-gradient(90deg, var(--progress-from), var(--progress-to));
+  --progress: var(--progress-from);
   --success: #286d55;
   --warning: #875d14;
   --danger: #b33d53;
@@ -56,6 +56,7 @@
   --shadow-sheet: 0 16px 48px rgba(16, 24, 40, 0.22);
 
   --scene-sky-b: #e8ebf0;
+  --scene-background: #e4e7eb;
   /* A wallpaper of the user's own was not tuned for the glass: a wash
      towards the theme keeps the islands' text readable on it. */
   --scene-dim: rgba(244, 249, 255, 0.2);
@@ -132,6 +133,7 @@
   --shadow-sheet: 0 18px 54px rgba(0, 0, 0, 0.45);
 
   --scene-sky-b: #15171b;
+  --scene-background: #17191d;
   --scene-dim: rgba(6, 12, 24, 0.36);
 }
 
@@ -301,7 +303,7 @@ body {
   inset: 0;
   z-index: 0;
   overflow: hidden;
-  background: var(--scene-sky-b);
+  background: var(--scene-background);
 }
 
 /* ---------- Layer 3: glass ---------- */
@@ -311,8 +313,8 @@ body {
   position: relative;
   isolation: isolate;
   background: var(--glass-toolbar);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   border: 1px solid var(--line);
   border-radius: var(--radius-island);
   box-shadow: var(--shadow-island);

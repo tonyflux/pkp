@@ -457,19 +457,19 @@ export default {
     ja: "これらの設定をオフにすると、保存した割合が適用されます。",
     ko: "이 설정을 끄면 저장된 비율이 적용됩니다.",
   },
-  "正在使用你选择的图片；如需实色面板，可打开下面的「降低透明度」。": {
-    tw: "正在使用你選擇的圖片；如需實色面板，可開啟下方的「降低透明度」。",
-    en: "Using your selected image. Turn on Reduce transparency below for solid panels.",
-    ja: "選択した画像を使用中です。面を不透明にするには、下の「透明度を下げる」をオンにします。",
-    ko: "선택한 이미지를 사용 중입니다. 불투명한 패널을 원하면 아래의 ‘투명도 줄이기’를 켜세요.",
+  "正在使用你选择的图片；恢复默认将同时重置面板不透明度。": {
+    tw: "正在使用你選擇的圖片；恢復預設將同時重設面板不透明度。",
+    en: "Using your selected image; restoring the default also resets panel opacity.",
+    ja: "選択した画像を使用中です。既定に戻すとパネルの不透明度もリセットされます。",
+    ko: "선택한 이미지를 사용 중입니다. 기본값을 복원하면 패널 불투명도도 초기화됩니다.",
   },
-  "默认背景随浅色、深色变化；也可以选择电脑里的图片。": {
-    tw: "預設背景隨淺色、深色變化；也可以選擇電腦裡的圖片。",
-    en: "The default background follows light or dark mode. You can also choose an image from your computer.",
-    ja: "既定の背景はライト・ダークに合わせて変わります。コンピュータ内の画像も選べます。",
-    ko: "기본 배경은 라이트와 다크 모드에 따라 바뀝니다. 컴퓨터의 이미지를 선택할 수도 있습니다.",
+  "默认使用随浅色、深色变化的纯色背景；恢复默认也会重置面板不透明度。": {
+    tw: "預設使用隨淺色、深色變化的純色背景；恢復預設也會重設面板不透明度。",
+    en: "The default solid background follows light or dark mode; restoring the default also resets panel opacity.",
+    ja: "既定の単色背景はライト・ダークに合わせて変わります。既定に戻すとパネルの不透明度もリセットされます。",
+    ko: "기본 단색 배경은 라이트와 다크 모드에 따라 바뀝니다. 기본값을 복원하면 패널 불투명도도 초기화됩니다.",
   },
-  当前壁纸: { tw: "目前桌布", en: "Current wallpaper", ja: "現在の壁紙", ko: "현재 배경화면" },
+  当前背景: { tw: "目前背景", en: "Current background", ja: "現在の背景", ko: "현재 배경" },
   "选择图片…": { tw: "選擇圖片…", en: "Choose image…", ja: "画像を選択…", ko: "이미지 선택…" },
   降低透明度: { tw: "降低透明度", en: "Reduce transparency", ja: "透明度を下げる", ko: "투명도 줄이기" },
   "使用实色面板并关闭背景模糊，保持文字清晰。": {

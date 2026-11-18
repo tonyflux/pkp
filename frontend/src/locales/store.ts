@@ -18,7 +18,7 @@ export default {
   "选一张图片作为窗口背景（JPEG、PNG、WebP 或 GIF）": { tw: "選一張圖片作為視窗背景（JPEG、PNG、WebP 或 GIF）", en: "Pick a picture for the window background (JPEG, PNG, WebP or GIF)", ja: "ウインドウの背景にする画像を選んでください（JPEG、PNG、WebP、GIF）", ko: "창 배경으로 쓸 이미지를 선택하세요(JPEG, PNG, WebP 또는 GIF)" },
   设为壁纸: { tw: "設為桌布", en: "Set as wallpaper", ja: "壁紙に設定", ko: "배경 화면으로 설정" },
   设置壁纸: { tw: "設定桌布", en: "Set wallpaper", ja: "壁紙を設定", ko: "배경 화면 설정" },
-  恢复默认壁纸: { tw: "恢復預設桌布", en: "Restore default wallpaper", ja: "デフォルトの壁紙に戻す", ko: "기본 배경 화면 복원" },
+  恢复默认背景: { tw: "恢復預設背景", en: "Restore default background", ja: "既定の背景に戻す", ko: "기본 배경 복원" },
   "无法复制{what}，请手动选中后复制": { tw: "無法複製{what}，請手動選取後複製", en: "Couldn't copy {what}. Select it and copy manually.", ja: "{what}をコピーできませんでした。手動で選択してコピーしてください", ko: "{what}을(를) 복사할 수 없습니다. 직접 선택해 복사하세요" },
   "{what}已复制到剪贴板": { tw: "{what}已複製到剪貼簿", en: "{what} copied to clipboard", ja: "{what}をクリップボードにコピーしました", ko: "{what}을(를) 클립보드에 복사했습니다" },
   "{label}：{error}": { tw: "{label}：{error}", en: "{label} failed: {error}", ja: "{label}に失敗しました：{error}", ko: "{label} 실패: {error}" },

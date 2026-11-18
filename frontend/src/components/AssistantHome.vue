@@ -129,7 +129,6 @@ const deleting = ref("");
       <div class="home-inner">
         <header class="intro">
           <span class="eyebrow"><Icon name="spark" :size="17" /> PKP ASSISTANT <span class="slash">/</span> <span class="who">{{ account }}</span></span>
-          <h1>{{ t("文件先看清，再决定怎么动。") }}</h1>
           <p>{{ t("整理建议来自本地索引。需要模型时再交给你的模型，云盘改动始终由你确认。") }}</p>
         </header>
 
@@ -177,11 +176,7 @@ const deleting = ref("");
         <div class="columns">
           <section class="focus" aria-labelledby="ai-home-today">
             <div class="section-line">
-              <div>
-                <span class="kicker">{{ t("从这里继续") }}</span>
-                <h2 id="ai-home-today">{{ t("手上有事，直接处理。") }}</h2>
-              </div>
-              <span class="minor">{{ t("当前账号") }}</span>
+              <h2 id="ai-home-today">{{ t("从这里继续") }}</h2>
             </div>
 
             <button v-if="picked.length" class="action-row" type="button" :disabled="locked" @click="organizeEntries(picked)">
@@ -220,10 +215,7 @@ const deleting = ref("");
           </section>
 
           <aside class="side-note">
-            <span class="kicker">{{ t("这次有什么不同") }}</span>
-            <h2>{{ t("AI 只参与") }}<br />{{ t("需要判断的部分。") }}</h2>
             <p>{{ t("搜索与命名规则在本机完成。确定的作品名称由 TMDB 精确匹配，不发给模型；模糊的结果留给你决定。") }}</p>
-            <div class="divider" />
             <span class="shield"><Icon name="shield" :size="15" /> {{ t("每次询问或始终允许，由你选") }}</span>
           </aside>
         </div>
@@ -351,14 +343,6 @@ const deleting = ref("");
 .intro {
   max-width: 770px;
   margin-bottom: 30px;
-}
-
-.intro h1 {
-  margin: 12px 0 9px;
-  font-size: 28px;
-  line-height: 1.25;
-  font-weight: 650;
-  letter-spacing: -0.025em;
 }
 
 .intro p {
@@ -528,9 +512,6 @@ const deleting = ref("");
 /* ---------- Continue Here ---------- */
 
 .columns {
-  display: grid;
-  grid-template-columns: minmax(0, 1.55fr) minmax(250px, 0.7fr);
-  gap: 32px;
   margin-top: 42px;
 }
 
@@ -624,17 +605,7 @@ const deleting = ref("");
 }
 
 .side-note {
-  align-self: start;
-  padding: 23px 25px;
-  border-top: 1px solid var(--line-strong);
-  background: linear-gradient(170deg, color-mix(in srgb, var(--accent) 8%, transparent), transparent 68%);
-}
-
-.side-note h2 {
-  margin: 11px 0;
-  font-size: 20px;
-  line-height: 1.34;
-  letter-spacing: -0.02em;
+  margin-top: 20px;
 }
 
 .side-note p {
@@ -644,23 +615,13 @@ const deleting = ref("");
   color: var(--fg-dim);
 }
 
-.divider {
-  height: 1px;
-  margin: 22px 0 15px;
-  background: var(--line);
-}
-
 .shield {
   display: flex;
   align-items: center;
   gap: 7px;
+  margin-top: 8px;
   font-size: 11px;
   color: var(--fg-dim);
-}
-
-.shield svg {
-  flex: none;
-  color: var(--accent);
 }
 
 /* ---------- Recent Tasks · Recent Conversations ---------- */
@@ -792,25 +753,12 @@ const deleting = ref("");
   .home-inner {
     padding: 27px 27px 22px;
   }
-
-  .columns {
-    gap: 15px;
-  }
 }
 
 @media (max-width: 700px) {
-  .columns,
   .lists {
     grid-template-columns: minmax(0, 1fr);
     gap: 20px;
-  }
-
-  .side-note {
-    padding: 14px 16px;
-  }
-
-  .side-note h2 br {
-    display: none;
   }
 
   .inbox {
@@ -844,9 +792,6 @@ const deleting = ref("");
     margin-bottom: 24px;
   }
 
-  .intro h1 {
-    font-size: 24px;
-  }
 
   .inbox {
     padding: 18px;

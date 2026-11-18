@@ -15,11 +15,11 @@ By default PKP uses a `pkp` subdirectory in the current user's configuration dir
 - Downloaded files and player screenshots are saved in user directories, and the app lock does not encrypt them. The app lock restricts access within the application; it is not a substitute for operating system account protection or disk encryption.
 - Linux system authentication delegates operating-system credential collection to the desktop polkit agent; PKP does not receive the system password. It needs administrator-installed policy, an active local session and an authentication agent. Standalone AppImages do not install system policy. PKP standalone passwords retain only a salted Argon2id verifier in a user-readable-only file, not disk encryption. Linux cannot guarantee blocking screenshots/recordings or clearing cached desktop previews.
 
-## PikPak, Files, and Referral Relationships
+## PikPak and Files
 
 Features such as login, session renewal, browsing, sharing, transfers, cloud adding, synchronization, and online archive extraction send requests to PikPak and its file storage/CDN according to the operation performed. Login credentials are submitted to PikPak’s login service; file contents are transmitted over the corresponding network paths during playback, previewing, uploads, downloads, and synchronization checks. Passwords for online archive extraction are sent to the extraction service when needed and should not be treated as passwords used only locally.
 
-**Currently, after every successful login through the login form (including adding an account and logging in again), PKP submits a developer-preset invitation code to PikPak in the background to attempt to establish a referral relationship; there is currently no separate toggle for this.** This may have no effect if a relationship already exists or the service rejects it; failure does not affect login. Simply restoring a session on startup or refreshing a token does not trigger this submission. The registration entry point also includes promotional parameters that may result in referral attribution. Please understand this behavior before use; it is not a privacy authorization required for basic cloud drive operations.
+PKP does not request a referral relationship after sign-in, and its registration link does not carry developer referral attribution parameters. Previously established relationships are not automatically revoked.
 
 Creating a share allows people who obtain its link or passcode to access the content according to server-side rules. Do not publicly disclose private share links, passcodes, or signed download URLs.
 

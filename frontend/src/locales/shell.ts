@@ -84,7 +84,7 @@ export default {
   正在连接: { tw: "正在連線", en: "Connecting", ja: "接続中", ko: "연결 중" },
   "正在连接…": { tw: "正在連線…", en: "Connecting…", ja: "接続中…", ko: "연결 중…" },
   加载中: { tw: "載入中", en: "Loading", ja: "読み込み中", ko: "로드 중" },
-  "自定义壁纸读不出来，已换回内置壁纸": { tw: "無法讀取自訂桌布，已換回內建桌布", en: "Couldn't read the custom wallpaper; switched back to the built-in one", ja: "カスタム壁紙を読み込めないため、内蔵の壁紙に戻しました", ko: "사용자 배경화면을 읽을 수 없어 기본 배경화면으로 되돌렸습니다" },
+  "自定义壁纸读不出来，已恢复默认背景": { tw: "無法讀取自訂桌布，已恢復預設背景", en: "Couldn't read the custom wallpaper; restored the default background", ja: "カスタム壁紙を読み込めないため、既定の背景に戻しました", ko: "사용자 배경화면을 읽을 수 없어 기본 배경으로 복원했습니다" },
 
   // dom.ts platform names
   凭据管理器: { tw: "認證管理員", en: "Credential Manager", ja: "資格情報マネージャー", ko: "자격 증명 관리자" },

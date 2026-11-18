@@ -695,12 +695,12 @@ onBeforeUnmount(() => {
           <div class="card">
             <div class="card-text">
               <strong>{{ t("壁纸") }}</strong>
-              <span v-if="ui.wallpaper">{{ t("正在使用你选择的图片；如需实色面板，可打开下面的「降低透明度」。") }}</span>
-              <span v-else>{{ t("默认背景随浅色、深色变化；也可以选择电脑里的图片。") }}</span>
+              <span v-if="ui.wallpaper">{{ t("正在使用你选择的图片；恢复默认将同时重置面板不透明度。") }}</span>
+              <span v-else>{{ t("默认使用随浅色、深色变化的纯色背景；恢复默认也会重置面板不透明度。") }}</span>
             </div>
             <div class="actions">
-              <span class="wall-preview" :class="{ custom: !!ui.wallpaper }"><img :src="wallpaperSrc" :alt="t('当前壁纸')" /></span>
-              <button v-if="ui.wallpaper" class="pill" @click="clearWallpaper">{{ t("恢复默认") }}</button>
+              <span class="wall-preview" role="img" :aria-label="t('当前背景')"><img v-if="ui.wallpaper" :src="wallpaperSrc" alt="" /></span>
+              <button v-if="ui.wallpaper || ui.contentOpacity !== 80" class="pill" @click="clearWallpaper">{{ t("恢复默认") }}</button>
               <button class="pill" @click="pickWallpaper">{{ t("选择图片…") }}</button>
             </div>
           </div>
@@ -2035,7 +2035,7 @@ onBeforeUnmount(() => {
   border-radius: 10px;
   border: 1px solid var(--line-strong);
   overflow: hidden;
-  background: var(--scene-sky-b);
+  background: var(--scene-background);
 }
 
 .wall-preview img {
@@ -2043,20 +2043,8 @@ onBeforeUnmount(() => {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  opacity: var(--wallpaper-visibility, 0.05);
 }
 
-.wall-preview.custom img {
-  opacity: 1;
-}
-
-@media (prefers-reduced-transparency: reduce) {
-  .wall-preview:not(.custom) img { opacity: 0.05; }
-}
-
-:root[data-transparency="reduced"] .wall-preview:not(.custom) img {
-  opacity: 0.05;
-}
 
 .meters {
   flex-direction: column;

@@ -198,7 +198,7 @@ h1 { margin: 0; font-size: 28px; font-weight: 600; line-height: 36px; }
 .controls { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; margin: 18px 0 14px; }
 .segments { display: flex; align-items: center; padding: 4px; border-radius: var(--radius-pill); }
 .segments button { min-height: 36px; padding: 0 18px; border: none; background: transparent; box-shadow: none; color: var(--fg-dim); font-size: 14px; }
-.segments::before { background: var(--primary); box-shadow: inset 0 1px 0 var(--primary-rim), 0 4px 12px var(--primary-glow); }
+.segments::before { background: var(--primary); box-shadow: none; }
 .segments button.on { color: var(--on-primary); font-weight: 600; }
 .layouts button { width: 40px; padding: 0; border-radius: 11px; }
 .layouts::before { background: var(--accent-soft); box-shadow: none; }

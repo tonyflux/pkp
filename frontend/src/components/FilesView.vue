@@ -126,12 +126,9 @@ const heading = computed(() => {
   if (query && indexReady.value) return { title: t("搜索结果"), sub: t("“{query}” · 全盘", { query }) };
   if (ui.view === "starred") return { title: t("星标"), sub: t("你标记过的文件与文件夹") };
   if (ui.view === "trash") return { title: t("回收站"), sub: t("删除的内容会保留一段时间") };
-  if (wholeDrive.value) return { title: t("全部文件"), sub: t("跨文件夹浏览，不改变原来的文件夹结构") };
+  if (wholeDrive.value) return { title: t("全部文件"), sub: "" };
   const crumb = drive.trail.at(-1);
-  // Inside a folder the breadcrumb is the subtitle: it already spells out
-  // the full path, so a second copy would only repeat it. At the top the
-  // subtitle says which space this is, not a slogan.
-  return crumb ? { title: crumb.name, sub: "" } : { title: t("全部文件"), sub: t("云盘根目录") };
+  return crumb ? { title: crumb.name, sub: "" } : { title: t("全部文件"), sub: "" };
 });
 
 // Rows that carry where they live (search, the whole drive from the
@@ -900,37 +897,36 @@ watch(
          on a page of its own; plain words keep the list as it always was. -->
     <FilesSearch v-if="localSearchShown" />
     <template v-else>
-    <header class="head" :class="{ 'with-account': multiAccount && currentAccount }">
+    <header class="head">
       <span v-if="multiAccount && currentAccount" class="account" :title="t('当前账号')">
         <AccountIdentity :account="currentAccount" :size="24" dense />
       </span>
       <h1 class="title" :title="heading.title">{{ heading.title }}</h1>
-      <nav v-if="drive.trail.length && !wholeDrive" class="crumbs">
+      <nav v-if="drive.trail.length && !wholeDrive && !(ui.query.trim() && indexReady)" class="crumbs">
         <button class="quiet" @click="goToCrumb(0)">{{ t("全部文件") }}</button>
         <template v-for="(crumb, i) in drive.trail" :key="crumb.id">
           <Icon name="chevronRight" :size="14" />
           <button class="quiet" :title="crumb.name" @click="goToCrumb(i + 1)">{{ crumb.name }}</button>
         </template>
       </nav>
-      <p v-else class="sub">{{ heading.sub }}</p>
+      <p v-else-if="heading.sub" class="sub">{{ heading.sub }}</p>
+      <div v-if="scopeShown" class="scope-row">
+        <div v-slide class="segments scope glass-well" role="group" :aria-label="t('浏览范围')">
+          <button
+            v-for="s in scopes"
+            :key="s.key"
+            :class="{ on: ui.scope === s.key }"
+            :aria-pressed="ui.scope === s.key"
+            @click="setScope(s.key)"
+          >
+            {{ s.label }}
+          </button>
+        </div>
+        <span class="scope-hint" :class="{ warn: ui.scope === 'drive' && !indexReady }" :title="scopeHint">{{ scopeHint }}</span>
+      </div>
     </header>
 
-    <div v-if="scopeShown" class="scope-row">
-      <div v-slide class="segments scope glass-well" role="group" :aria-label="t('浏览范围')">
-        <button
-          v-for="s in scopes"
-          :key="s.key"
-          :class="{ on: ui.scope === s.key }"
-          :aria-pressed="ui.scope === s.key"
-          @click="setScope(s.key)"
-        >
-          {{ s.label }}
-        </button>
-      </div>
-      <span class="scope-hint" :class="{ warn: ui.scope === 'drive' && !indexReady }" :title="scopeHint">{{ scopeHint }}</span>
-    </div>
-
-    <div class="controls" :class="{ 'after-scope': scopeShown }">
+    <div class="controls">
       <!-- Category filters share a compact control. -->
       <div v-slide class="segments kinds glass-well" role="tablist" :aria-label="t('分类')">
         <button
@@ -1562,40 +1558,30 @@ watch(
 }
 
 .head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
   min-width: 0;
 }
 
-/* The account on screen, at the title's right: no extra row.
-   Only the title shares its line; the subtitle below runs the full width. */
-.head.with-account {
-  position: relative;
-}
-
-.head.with-account .title {
-  padding-right: 236px;
-}
-
 .head .account {
-  position: absolute;
-  top: 5px;
-  right: 0;
+  order: 1;
   max-width: 220px;
   display: flex;
+  margin-left: auto;
 }
 
-/* Under 960px the toolbar's avatar names the account and the
-   title needs the width. */
+/* The toolbar names the account on narrow windows. */
 @media (max-width: 959px) {
-  .head.with-account .title {
-    padding-right: 0;
-  }
-
   .head .account {
     display: none;
   }
 }
 
 .title {
+  min-width: 0;
+  max-width: 100%;
   margin: 0;
   font-size: 24px;
   line-height: 30px;
@@ -1608,13 +1594,10 @@ watch(
   text-overflow: ellipsis;
 }
 
-/* The subtitle or breadcrumb shares one fixed-height line, so changing scope
-   does not move the content below. */
 .sub {
-  display: flex;
-  align-items: center;
-  min-height: 28px;
-  margin: 2px 0 0;
+  min-width: 0;
+  margin: 0;
+  overflow-wrap: anywhere;
   font-size: 13px;
   line-height: 20px;
   color: var(--fg-dim);
@@ -1626,17 +1609,19 @@ watch(
   gap: 2px;
   /* Room for the first crumb's hover fill, which reaches 2px past the text
      column (the buttons' negative margin); the clip would cut it. */
-  margin: 2px -2px 0;
-  height: 28px;
+  min-width: 0;
+  max-width: 100%;
+  margin: 0 -2px;
+  min-height: 28px;
   padding: 0 2px;
   color: var(--fg-dim);
-  overflow: hidden;
+  overflow-x: auto;
 }
 
 .crumbs button {
   /* Buttons are flex boxes globally; text-overflow needs inline content. */
   display: block;
-  flex: 0 1 auto;
+  flex: 0 0 auto;
   min-width: 0;
   max-width: 244px;
   min-height: 28px;
@@ -1665,15 +1650,23 @@ watch(
   align-items: center;
   gap: 8px 14px;
   min-width: 0;
-  margin-top: 14px;
+  max-width: 100%;
+  margin-left: auto;
 }
 
 .segments.scope {
-  flex: none;
+  flex: 0 1 auto;
+  max-width: 100%;
+  height: auto;
+  min-height: 36px;
+  flex-wrap: wrap;
 }
 
 .segments.scope button {
   padding: 0 12px;
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
   font-size: 13px;
 }
 
@@ -1691,6 +1684,7 @@ watch(
 .scope-hint {
   flex: 1 1 14em;
   min-width: 0;
+  overflow-wrap: anywhere;
   font-size: 13px;
   line-height: 17px;
   text-wrap: balance;
@@ -1708,30 +1702,8 @@ watch(
   flex-wrap: wrap;
   align-items: center;
   gap: 8px;
-  margin: 16px 0 14px;
+  margin: 10px 0 10px;
   transition: padding-right var(--dur) var(--ease);
-}
-
-.controls.after-scope {
-  margin-top: 14px;
-}
-
-@media (max-height: 720px) {
-  .files {
-    padding-top: 20px;
-  }
-
-  .scope-row {
-    margin-top: 12px;
-  }
-
-  .controls {
-    margin: 14px 0 12px;
-  }
-
-  .controls.after-scope {
-    margin-top: 10px;
-  }
 }
 
 .spacer {
@@ -1783,6 +1755,11 @@ watch(
 
 .segments.kinds {
   gap: 2px;
+  min-width: 0;
+  max-width: 100%;
+  min-height: 36px;
+  height: auto;
+  flex-wrap: wrap;
   padding: 0;
   border-color: transparent;
   background: transparent;
@@ -1793,7 +1770,8 @@ watch(
   border-radius: 7px;
 }
 
-.video-layout { flex: none; }
+.video-layout { flex: 0 1 auto; max-width: 100%; height: auto; min-height: 36px; flex-wrap: wrap; }
+.video-layout button { max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
 .video-layout::before { background: var(--accent-soft); box-shadow: none; }
 .video-layout button.on { color: var(--fg); }
 
@@ -1813,18 +1791,16 @@ watch(
 }
 
 /* Keep filters reachable as the reading canvas narrows, including translated labels. */
-@container files (max-width: 679px) {
-  .segments.kinds {
-    min-width: 0;
-    max-width: 100%;
-    min-height: 36px;
-    height: auto;
-    flex-wrap: wrap;
-  }
+.segments.kinds button {
+  flex: none;
+  min-width: 44px;
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
 
+@container files (max-width: 679px) {
   .segments.kinds button {
-    flex: none;
-    min-width: 44px;
     padding-inline: 10px;
   }
 }

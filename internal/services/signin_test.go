@@ -11,7 +11,6 @@ import (
 	"sync"
 	"sync/atomic"
 	"testing"
-	"time"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
 
@@ -178,56 +177,6 @@ func TestRememberedSignIn(t *testing.T) {
 	}
 	if saved := relaunched.SavedSignIn(""); saved.Account != "" || saved.HasPassword {
 		t.Errorf("sign-in page after removal offers %+v, want nothing of the removed account", saved)
-	}
-}
-
-// Every successful sign-in accepts the invitation, as the account just
-// signed in: its token and its device. A refused one sends nothing.
-func TestSignInAcceptsInvite(t *testing.T) {
-	const account = "user@example.com"
-	type invite struct {
-		auth, device string
-		body         map[string]map[string]string
-	}
-	invites := make(chan invite, 4)
-	srv := newSignInServer(t)
-	auth := srv.Config.Handler
-	srv.Config.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == http.MethodPost && r.URL.Path == "/vip/v1/activity/invite" {
-			var got invite
-			_ = json.NewDecoder(r.Body).Decode(&got.body)
-			got.auth, got.device = r.Header.Get("Authorization"), r.Header.Get("X-Device-Id")
-			invites <- got
-			io.WriteString(w, `{}`)
-			return
-		}
-		auth.ServeHTTP(w, r)
-	})
-	svc := startSignInService(t, t.TempDir(), srv, &memoryVault{})
-
-	signIn(t, svc, SignInRequest{Login: account, Password: "hunter2"})
-	select {
-	case got := <-invites:
-		if got.auth != "Bearer a" || got.device != drive.DeviceIDFor(account) {
-			t.Errorf("invite sent as %q from device %q", got.auth, got.device)
-		}
-		if code := got.body["apk_extra"]["invite_code"]; code != inviteCode {
-			t.Errorf("invite body = %v, want invite_code %q", got.body, inviteCode)
-		}
-	case <-time.After(5 * time.Second):
-		t.Fatal("no invite after a sign-in")
-	}
-
-	srv.mu.Lock()
-	srv.refuse = true
-	srv.mu.Unlock()
-	if res, _ := svc.SignIn(SignInRequest{Login: account, Password: "wrong"}); res.Failure == "" {
-		t.Fatal("refused sign-in went through")
-	}
-	select {
-	case got := <-invites:
-		t.Errorf("refused sign-in sent an invite: %+v", got)
-	case <-time.After(200 * time.Millisecond):
 	}
 }
 

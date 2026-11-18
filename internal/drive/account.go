@@ -104,13 +104,6 @@ func (c *Client) VIPInfo(ctx context.Context) (*VIPInfo, error) {
 	return &out.Data, nil
 }
 
-// AcceptInvite asks the server to bind the account to the inviter behind
-// code (POST /vip/v1/activity/invite).
-func (c *Client) AcceptInvite(ctx context.Context, code string) error {
-	body := map[string]any{"apk_extra": map[string]string{"invite_code": code}}
-	return c.do(ctx, request{method: http.MethodPost, path: "/vip/v1/activity/invite", body: body}, nil)
-}
-
 // UserSettings reads account preferences that every PikPak client shares.
 // Values come back as text — "true"/"false" for switches, a mode name
 // otherwise — and items the server does not know are absent.

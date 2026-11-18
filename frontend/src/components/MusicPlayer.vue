@@ -860,7 +860,7 @@ h1 {
 .transport {
   display: flex;
   align-items: center;
-  gap: 18px;
+  gap: 12px;
 }
 
 .skip {
@@ -884,9 +884,9 @@ h1 {
 
 .play,
 .play:hover:not(:disabled) {
-  width: 54px;
-  height: 54px;
-  min-height: 54px;
+  width: 46px;
+  height: 46px;
+  min-height: 46px;
   padding: 0;
   border-radius: 50%;
   border: 1px solid rgba(255, 255, 255, 0.2);

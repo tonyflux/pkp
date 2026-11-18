@@ -182,8 +182,6 @@ import { viewerError, viewerKind, type ViewerKind } from "./viewer";
 import type { FolderCover, FolderStats } from "../bindings/github.com/tonyflux/pkp/internal/services";
 import { dropAccountSavedSearches, loadSavedSearches, removeSavedSearch, renameSavedSearch, savedSearches, saveSearch, updateSavedSearch, type SavedSearch, type SavedSearchCategory, type SavedSearchRange } from "./savedsearches";
 import { cancelMediaLibraryLoad, dropAccountMediaLibrary, loadMediaLibrary } from "./medialibrary";
-import wallDark from "./assets/wall-dark.webp";
-import wallLight from "./assets/wall-light.webp";
 
 // Mirrors the services.Event* names on the Go side.
 const PlayerStateEvent = "player:state";
@@ -286,11 +284,12 @@ export type ThemeMode = "system" | "light" | "dark";
 const systemDark = window.matchMedia("(prefers-color-scheme: dark)");
 const savedTheme = localStorage.getItem("pkp.theme");
 const themeMode: ThemeMode = savedTheme === "light" || savedTheme === "dark" ? savedTheme : "system";
+const DEFAULT_CONTENT_OPACITY = 80;
 const savedContentOpacity = localStorage.getItem("pkp.contentOpacity");
 const parsedContentOpacity = savedContentOpacity === null || savedContentOpacity.trim() === "" ? NaN : Number(savedContentOpacity);
 const contentOpacity = Number.isInteger(parsedContentOpacity) && parsedContentOpacity >= 0 && parsedContentOpacity <= 100
   ? parsedContentOpacity
-  : 100;
+  : DEFAULT_CONTENT_OPACITY;
 
 export const ui = reactive({
   themeMode,
@@ -298,8 +297,7 @@ export const ui = reactive({
   theme: (themeMode === "system" ? (systemDark.matches ? "dark" : "light") : themeMode) as "light" | "dark",
   // A skin from a newer or older build that this one does not know is cobalt.
   skin: skins.find((s) => s.key === savedSkin)?.key ?? "cobalt",
-  // The custom wallpaper's version (AppearanceService.SetWallpaper); empty
-  // for the built-in scene.
+  // Empty means the theme's neutral background; a version identifies a custom image.
   wallpaper: localStorage.getItem("pkp.wallpaper") ?? "",
   route: "files" as Route,
   view: "all" as LibraryView,
@@ -629,10 +627,8 @@ export async function setLanguage(pref: LanguagePref) {
   if (state) applyLanguageState(state);
 }
 
-/** The scene's picture: the user's wallpaper, or the built-in lake in the theme's light. */
-export const wallpaperSrc = computed(() =>
-  ui.wallpaper ? `/appearance/wallpaper?v=${ui.wallpaper}` : ui.theme === "dark" ? wallDark : wallLight,
-);
+/** A custom wallpaper URL, or an empty string for the default background. */
+export const wallpaperSrc = computed(() => ui.wallpaper ? `/appearance/wallpaper?v=${ui.wallpaper}` : "");
 
 /** pickWallpaper asks for a picture and makes it the scene, on this computer. */
 export async function pickWallpaper() {
@@ -652,14 +648,17 @@ export async function pickWallpaper() {
 }
 
 export async function clearWallpaper() {
-  const ok = await run(t("恢复默认壁纸"), async () => {
+  const ok = await run(t("恢复默认背景"), async () => {
     await AppearanceService.ClearWallpaper();
     return true;
   });
-  if (ok) forgetWallpaper();
+  if (ok) {
+    forgetWallpaper();
+    setContentOpacity(DEFAULT_CONTENT_OPACITY);
+  }
 }
 
-/** forgetWallpaper puts the built-in scene back: cleared, or the custom picture would not load. */
+/** Forget a cleared or unreadable custom wallpaper. */
 export function forgetWallpaper() {
   ui.wallpaper = "";
   localStorage.removeItem("pkp.wallpaper");
@@ -700,7 +699,6 @@ export function setNavCompact(on: boolean) {
 function applyTransparency() {
   document.documentElement.style.setProperty("--content-opacity", `${ui.contentOpacity}%`);
   document.documentElement.style.setProperty("--content-blur", ui.contentOpacity < 100 ? "16px" : "0px");
-  document.documentElement.style.setProperty("--wallpaper-visibility", String(Math.min(1, 0.05 + (100 - ui.contentOpacity) * 0.0475)));
   if (ui.reduceTransparency) document.documentElement.dataset.transparency = "reduced";
   else delete document.documentElement.dataset.transparency;
 }
@@ -1886,8 +1884,8 @@ export function closeAccountDialog() {
   else accounts.dialog = null;
 }
 
-/** PikPak's own sign-up page (with PKP's referral), opened in the browser: PKP has no sign-up form. */
-const SIGN_UP_URL = "https://mypikpak.com/drive/login?affiliate=342642";
+/** PikPak's own sign-up page, opened in the browser: PKP has no sign-up form. */
+const SIGN_UP_URL = "https://mypikpak.com/drive/login";
 
 /** openSignUp is the sign-in page's Sign Up: PikPak's web page in the system browser. */
 export function openSignUp(): void {

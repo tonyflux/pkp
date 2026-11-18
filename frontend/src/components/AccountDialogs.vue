@@ -561,7 +561,7 @@ onBeforeUnmount(() => {
 <style scoped>
 .signin-tabs { display: flex; padding: 3px; border-radius: 10px; background: var(--accent-soft); }
 .signin-tabs button { flex: 1; padding: 9px 8px; border: 0; border-radius: 8px; background: transparent; color: var(--fg-dim); font-size: 13px; }
-.signin-tabs button[aria-selected="true"] { background: var(--primary); color: var(--on-primary); box-shadow: inset 0 1px 0 var(--primary-rim), 0 2px 7px var(--primary-glow); }
+.signin-tabs button[aria-selected="true"] { background: var(--primary); color: var(--on-primary); box-shadow: none; }
 .password-panel { display: flex; flex-direction: column; gap: 14px; }
 /* Above every other sheet: its questions come up over them. */
 .account-scrim {

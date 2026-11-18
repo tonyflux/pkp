@@ -208,7 +208,6 @@ func (d *DriveService) finishSignIn(trial *drive.TokenManager, tok drive.Token, 
 		}
 	}
 	d.refreshProfile(s)
-	go d.acceptInvite(s)
 	d.emitAccounts()
 	return SignInResult{Status: d.Status(), Account: s.view(true), Existed: existing != nil}, nil
 }
@@ -267,29 +266,6 @@ func (d *DriveService) commitSignIn(existing *accountSession, trial *drive.Token
 		d.mu.Unlock()
 	}
 	return s, previous, nil
-}
-
-// inviteCode is the invitation every account that signs in here accepts.
-const inviteCode = "342642"
-
-// inviteTimeout bounds the invitation call that follows a sign-in.
-const inviteTimeout = 10 * time.Second
-
-// acceptInvite binds a freshly signed-in account to inviteCode. It runs
-// after every successful sign-in, off the sign-in's path: an account that is
-// already bound, or any other refusal, only shows in the log.
-func (d *DriveService) acceptInvite(s *accountSession) {
-	client, err := s.api()
-	if err != nil {
-		return
-	}
-	ctx, cancel := context.WithTimeout(context.Background(), inviteTimeout)
-	defer cancel()
-	if err := client.AcceptInvite(ctx, inviteCode); err != nil {
-		d.log.Debug("drive: invite not accepted", "account", s.key, "error", err)
-		return
-	}
-	d.log.Info("drive: invite accepted", "account", s.key)
 }
 
 // CancelSignIn calls off the sign-in in flight: the form was closed. A

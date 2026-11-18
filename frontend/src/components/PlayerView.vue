@@ -765,15 +765,15 @@ onBeforeUnmount(() => {
           </div>
 
           <div ref="controlRow" class="controls" :class="{ crowded }">
-            <button class="icon main" :title="state.paused ? t('播放') : t('暂停')" @click="playerCommands.toggle()">
-              <Icon :name="state.paused ? 'play' : 'pause'" :size="22" filled />
+            <button class="icon main" :title="state.paused ? t('播放') : t('暂停')" :aria-label="state.paused ? t('播放') : t('暂停')" @click="playerCommands.toggle()">
+              <Icon :name="state.paused ? 'play' : 'pause'" :size="20" filled />
             </button>
 
-            <button class="step" :title="t('后退 15 秒')" @click="playerCommands.seek(-15)">
+            <button class="step" :title="t('后退 15 秒')" :aria-label="t('后退 15 秒')" @click="playerCommands.seek(-15)">
               <Icon name="back15" :size="26" />
               <em>15</em>
             </button>
-            <button class="step" :title="t('前进 15 秒')" @click="playerCommands.seek(15)">
+            <button class="step" :title="t('前进 15 秒')" :aria-label="t('前进 15 秒')" @click="playerCommands.seek(15)">
               <Icon name="forward15" :size="26" />
               <em>15</em>
             </button>
@@ -1807,20 +1807,21 @@ onBeforeUnmount(() => {
 }
 
 .main {
-  width: 64px;
-  height: 64px;
-  min-height: 64px;
-  margin-right: 8px;
-  background: var(--primary);
-  color: #ffffff;
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  width: 44px;
+  height: 44px;
+  min-height: 44px;
+  margin: 0 2px;
+  border-radius: 50%;
+  background: #ededed;
+  color: #202022;
+  border: 1px solid transparent;
+  box-shadow: none;
 }
 
 /* Keeps its fill and rim: the plain button:hover outranks `.main`. */
 .main:hover:not(:disabled) {
-  background: var(--primary);
-  border-color: rgba(255, 255, 255, 0.22);
+  background: #ffffff;
+  border-color: transparent;
   filter: brightness(1.08);
 }
 

@@ -48,13 +48,6 @@ export default {
     ja: "削除した項目はしばらく保持されます",
     ko: "삭제한 항목은 일정 기간 보관됩니다",
   },
-  "跨文件夹浏览，不改变原来的文件夹结构": {
-    tw: "跨資料夾瀏覽，不改變原本的資料夾結構",
-    en: "Browse across folders without changing their structure",
-    ja: "フォルダ構成を変えずにフォルダをまたいで閲覧できます",
-    ko: "폴더 구조를 바꾸지 않고 폴더를 가로질러 탐색합니다",
-  },
-  云盘根目录: { tw: "雲端硬碟根目錄", en: "Drive root", ja: "ドライブのルート", ko: "드라이브 루트" },
   云盘里还没有文件: {
     tw: "雲端硬碟裡還沒有檔案",
     en: "No files in your drive yet",
