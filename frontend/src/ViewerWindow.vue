@@ -40,7 +40,7 @@ onMounted(start);
 </template>
 
 <style scoped>
-.viewer-window { position: relative; height: 100%; display: flex; background: #0b192b; }
+.viewer-window { position: relative; height: 100%; display: flex; background: #202022; }
 .failure { margin: auto; padding: 24px; text-align: center; }
 .failure button { margin: 4px; }
 .toast { position: absolute; z-index: 5; bottom: 24px; left: 24px; max-width: calc(100% - 48px); color: var(--danger); background: var(--canvas); }

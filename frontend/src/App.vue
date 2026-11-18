@@ -133,7 +133,7 @@ onMounted(() => {
 <template>
   <!-- The scene paints the whole window and cuts the stage hole out of
        itself wherever the native video surface is showing through. -->
-  <SceneBackdrop :waiting="booting || drive.listLoading" />
+  <SceneBackdrop />
 
   <BootSplash v-if="booting" />
 
@@ -157,7 +157,7 @@ onMounted(() => {
   </div>
   <LoginView v-else-if="!signedIn" />
 
-  <div v-else class="shell" :class="{ immersive, fullscreen: immersive && ui.fullscreen }">
+  <div v-else class="shell" :class="{ immersive, fullscreen: immersive && ui.fullscreen, unified: ui.route === 'files' || ui.route === 'settings' }">
     <FloatingNav v-if="!immersive" />
 
     <main ref="stack" class="stack">
@@ -177,7 +177,7 @@ onMounted(() => {
         </button>
       </div>
 
-      <div class="content">
+      <div class="content" :class="{ 'has-panel': showPanel }">
         <!-- The file page stays mounted under the viewer, the Info page, the
              immersive player and the account states, so going back lands on
              the same folder, filter, scroll and selection. -->
@@ -239,10 +239,7 @@ onMounted(() => {
 .signedout-settings-head [aria-pressed="true"] { color: var(--accent); border-color: var(--accent); }
 .signedout-lan { position: fixed; inset: 48px 20px 20px; overflow: auto; }
 .signedout-lan > button { margin-bottom: 12px; }
-/* Layer 3 floats over the scene with wallpaper between the islands. The file
-   page uses 20px outside and 16px between navigation, content and context.
-   With the title bar hidden, traffic lights sit on wallpaper and both islands
-   start on one line. */
+/* Keep a small margin for the native titlebar and custom wallpaper. */
 .shell {
   position: relative;
   z-index: 1;
@@ -273,7 +270,7 @@ onMounted(() => {
    layered over it: the canvas gives up their width.
    --inspector-w is the transfer, share and settings islands' width:
    280–300px once the window drops under 1280; the file page's column
-   is a fixed 288. */
+   is 264px. */
 .content {
   --inspector-w: 318px;
   position: relative;
@@ -281,6 +278,45 @@ onMounted(() => {
   min-height: 0;
   display: flex;
   gap: 16px;
+}
+
+@media (min-width: 960px) {
+  .shell.unified {
+    gap: 0;
+  }
+
+  .unified .stack,
+  .unified .content {
+    gap: 0;
+  }
+
+  .unified :deep(.nav) {
+    border-radius: var(--radius-island) 0 0 var(--radius-island);
+  }
+
+  .unified :deep(.toolbar) {
+    border-left: 0;
+    border-bottom: 0;
+    border-radius: 0 var(--radius-island) 0 0;
+  }
+
+  .unified .content > :deep(.files),
+  .unified .content > :deep(.settings),
+  .unified .content > :deep(.account-screen) {
+    border-left: 0;
+    border-radius: 0 0 var(--radius-island) 0;
+    box-shadow: none;
+  }
+
+  .unified .content.has-panel > :deep(.files) {
+    border-right: 0;
+    border-radius: 0;
+  }
+
+  .unified .content > :deep(.panel:not(.page)) {
+    border-radius: 0 0 var(--radius-island) 0;
+    box-shadow: none;
+  }
 }
 
 @media (max-width: 1279px) {

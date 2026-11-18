@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// The file page's right column: a fixed 288px beside the canvas, one glass,
+// The file page's right column: a compact rail beside the canvas, one glass,
 // two views of one panel. Overview is the account — storage, transfers, recent
 // plays — whatever folder is open; Details is what is picked, or the folder
 // itself when nothing is. Picking only changes which view shows: never the
@@ -118,19 +118,17 @@ function collapse() {
 </template>
 
 <style scoped>
-/* One glass, the canvas's height: the content inside is organised by space
-   and hairlines, not by more panes. Its fill is the reading kind
-   (--glass-panel): the lists and metadata are read here, over any
-   wallpaper; the rim, the edge light and the tab lenses stay glass. */
+/* The information column uses a quiet reading surface beside the file list. */
 .panel {
   flex: none;
-  width: 288px;
+  width: 264px;
   min-height: 0;
   display: flex;
   flex-direction: column;
   overflow: hidden;
   border-radius: var(--radius-island);
   background: var(--glass-panel);
+  box-shadow: var(--shadow-island);
 }
 
 @media (prefers-reduced-transparency: reduce) {
@@ -148,12 +146,12 @@ function collapse() {
 
 .head {
   flex: none;
-  height: 64px;
+  min-height: 56px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 6px;
-  padding: 10px 10px 10px 16px;
+  padding: 8px 8px 8px 12px;
   border-bottom: 1px solid var(--line);
 }
 
@@ -182,7 +180,7 @@ function collapse() {
 
 .tabs button {
   min-height: 40px;
-  padding: 0 12px;
+  padding: 0 10px;
   border-color: transparent;
   background: transparent;
   color: var(--fg-dim);
@@ -192,8 +190,8 @@ function collapse() {
 
 .tabs::before {
   background: var(--glass-control);
-  border: 1px solid var(--glass-edge);
-  box-shadow: inset 0 1px 0 var(--glass-rim);
+  border: 1px solid transparent;
+  box-shadow: none;
 }
 
 .tabs button.on {
@@ -220,7 +218,7 @@ function collapse() {
   overflow-y: auto;
   overscroll-behavior: contain;
   scrollbar-width: thin;
-  padding: 20px;
+  padding: 16px;
 }
 
 .page .body > .view {
@@ -234,10 +232,17 @@ function collapse() {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 0 20px;
+  padding: 0 16px;
   border-top: 1px solid var(--line);
   font-size: 12px;
   color: var(--fg-dim);
+}
+
+.foot span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .page .foot {

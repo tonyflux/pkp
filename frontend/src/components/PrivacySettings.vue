@@ -105,8 +105,7 @@ const note = computed(() => {
 
 <template>
   <div class="privacy">
-    <p class="eyebrow"><Icon name="shield" :size="16" />PRIVACY &amp; SECURITY</p>
-    <h2>{{ t("把云盘留在你的视线里。") }}</h2>
+    <h2>{{ t("应用锁") }}</h2>
     <p class="lead">{{ t("离开电脑时，锁住 PKP 里的文件、分享和播放画面。已有传输可以继续运行。") }}</p>
 
     <div class="grid">
@@ -115,7 +114,6 @@ const note = computed(() => {
           <div class="card-head">
             <span class="tile" aria-hidden="true"><Icon name="lock" :size="23" /></span>
             <div class="head-text">
-              <h3>{{ t("应用锁") }}</h3>
               <p>{{ t("解锁方式二选一：这台电脑的系统验证，或 PKP 独立密码") }}</p>
             </div>
             <Toggle :model-value="enabled" :label="t('开启应用锁')" :disabled="busy || !state || (!enabled && !byPassword && !state.available)" @update:model-value="setAppLockEnabled" />
@@ -271,16 +269,9 @@ const note = computed(() => {
 
       <aside class="side">
         <div class="private-card">
-          <span class="eyebrow small">WHAT STAYS PRIVATE</span>
-          <div class="visual" aria-hidden="true">
-            <div class="halo"></div>
-            <div class="shield"><Icon name="shield" :size="41" /></div>
-            <i class="orbit one"></i>
-            <i class="orbit two"></i>
-          </div>
-          <h3>{{ t("离开屏幕，") }}<br />{{ t("内容不必跟着暴露。") }}</h3>
+          <h3>{{ t("离开屏幕，") }}{{ t("内容不必跟着暴露。") }}</h3>
           <p>{{ t("锁屏不显示文件、账号和任务详情；解锁后回到之前的位置。") }}</p>
-          <div class="foot"><i class="dot" aria-hidden="true"></i>{{ t("只在这台电脑生效") }}</div>
+          <p class="foot">{{ t("只在这台电脑生效") }}</p>
         </div>
         <p class="footnote">
           {{ t("应用锁不等于退出登录，也不加密已下载到电脑的文件。独立密码与 PikPak 账号密码无关、只存在这台电脑，忘记后无法找回，只能退出登录清除本机数据后重设。") }}
@@ -293,47 +284,31 @@ const note = computed(() => {
 <style scoped>
 .privacy {
   container: privacy / inline-size;
-  --tile-from: #5cb8d2;
-  --tile-to: #2c7092;
-  --soft: color-mix(in srgb, var(--fg) 4%, transparent);
+  --soft: color-mix(in srgb, var(--fg) 2%, transparent);
   --hair: var(--line);
 }
 
-.eyebrow {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 0;
-  color: var(--accent);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.18em;
-}
-
-.eyebrow.small {
-  font-size: 10px;
-}
-
 h2 {
-  margin: 12px 0 10px;
-  font-size: clamp(25px, 2.6vw, 34px);
-  font-weight: 650;
-  line-height: 1.2;
-  letter-spacing: -0.03em;
+  margin: 0 0 5px;
+  font-size: 21px;
+  font-weight: 600;
+  line-height: 30px;
 }
 
 .lead {
   margin: 0;
+  max-width: 680px;
   color: var(--fg-dim);
-  font-size: 15px;
+  font-size: 14px;
+  line-height: 1.5;
 }
 
 .grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(240px, 300px);
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 280px);
   gap: 24px;
   max-width: 1060px;
-  margin-top: 32px;
+  margin-top: 20px;
 }
 
 .column,
@@ -342,45 +317,39 @@ h2 {
 }
 
 .lock-card {
-  border-radius: 20px;
+  border-radius: 10px;
   border: 1px solid var(--line);
   background: var(--soft);
-  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--glass-rim) 30%, transparent);
 }
 
-/* Usage Statistics is not part of the lock: its own tile colour. */
-.stats-card {
-  --tile-from: #8d84ee;
-  --tile-to: #5149b3;
-}
 
 .card-head {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 15px;
-  padding: 24px;
+  gap: 12px;
+  padding: 16px 18px;
 }
 
 .tile {
-  width: 47px;
-  height: 47px;
+  width: 36px;
+  height: 36px;
   flex: none;
   display: grid;
   place-items: center;
-  border-radius: 14px;
-  background: linear-gradient(145deg, var(--tile-from), var(--tile-to));
-  color: #f5fdff;
-  box-shadow: 0 7px 20px rgba(27, 138, 166, 0.2);
+  border-radius: 8px;
+  background: var(--soft);
+  color: var(--fg-dim);
 }
 
 .head-text {
-  flex: 1;
+  flex: 1 1 180px;
   min-width: 0;
 }
 
 .head-text h3 {
   margin: 0 0 2px;
-  font-size: 17px;
+  font-size: 15px;
   font-weight: 650;
 }
 
@@ -388,17 +357,27 @@ h2 {
   margin: 0;
   color: var(--fg-dim);
   font-size: 13px;
+  line-height: 1.5;
 }
 
 .note {
-  margin: -8px 24px 18px 86px;
+  margin: -4px 18px 14px 66px;
   color: var(--warning);
   font-size: 13px;
 }
 
+.stats-card .note {
+  color: var(--fg-dim);
+  line-height: 1.5;
+}
+
+.stats-card .note[role="alert"] {
+  color: var(--warning);
+}
+
 .divider {
   height: 1px;
-  margin: 0 24px;
+  margin: 0 18px;
   background: var(--hair);
 }
 
@@ -406,9 +385,9 @@ h2 {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 14px;
-  margin: 0 24px;
-  padding: 20px 0;
+  gap: 12px;
+  margin: 0 18px;
+  padding: 15px 0;
   border-bottom: 1px solid var(--hair);
 }
 
@@ -428,8 +407,8 @@ h2 {
   flex-wrap: wrap;
   align-items: center;
   gap: 10px 12px;
-  margin: 0 24px;
-  padding: 16px 0 18px 49px;
+  margin: 0 18px;
+  padding: 12px 0 14px 42px;
   border-bottom: 1px solid var(--hair);
 }
 
@@ -484,14 +463,12 @@ h2 {
 }
 
 .small-icon {
-  width: 35px;
-  height: 35px;
+  width: 30px;
+  height: 30px;
   flex: none;
   display: grid;
   place-items: center;
-  border-radius: 10px;
-  border: 1px solid var(--line);
-  color: var(--accent);
+  color: var(--fg-dim);
 }
 
 .row-text {
@@ -509,7 +486,8 @@ h2 {
 
 .row-text small {
   color: var(--fg-dim);
-  font-size: 12px;
+  font-size: 13px;
+  line-height: 1.5;
 }
 
 /* The settings page's select (SettingsView .select), at its compact size. */
@@ -519,7 +497,7 @@ h2 {
   display: flex;
   align-items: center;
   min-width: 128px;
-  border-radius: 10px;
+  border-radius: 7px;
 }
 
 .select.off {
@@ -550,14 +528,14 @@ h2 {
   display: flex;
   flex: none;
   padding: 4px;
-  border-radius: 12px;
+  border-radius: 7px;
 }
 
 .seg button {
   min-height: 32px;
   padding: 0 13px;
   border: none;
-  border-radius: 9px;
+  border-radius: 5px;
   background: none;
   color: var(--fg-dim);
   font-size: 13px;
@@ -578,7 +556,7 @@ h2 {
   flex: none;
   min-height: 38px;
   padding: 0 16px;
-  border-radius: 10px;
+  border-radius: 7px;
   font-size: 13px;
 }
 
@@ -597,9 +575,10 @@ h2 {
   display: flex;
   align-items: center;
   gap: 14px;
-  margin: 28px 1px 12px;
+  margin: 24px 1px 10px;
   color: var(--fg-dim);
   font-size: 13px;
+  font-weight: 600;
 }
 
 .line {
@@ -610,12 +589,12 @@ h2 {
 
 .action-card {
   width: 100%;
-  min-height: 75px;
+  min-height: 62px;
   justify-content: flex-start;
-  gap: 14px;
-  padding: 14px 17px;
+  gap: 12px;
+  padding: 12px 15px;
   border: 1px solid var(--line);
-  border-radius: 17px;
+  border-radius: 10px;
   background: var(--soft);
   color: var(--fg);
   text-align: left;
@@ -631,14 +610,12 @@ h2 {
 }
 
 .action-icon {
-  width: 36px;
-  height: 36px;
+  width: 30px;
+  height: 30px;
   flex: none;
   display: grid;
   place-items: center;
-  border-radius: 11px;
-  background: var(--accent-soft);
-  color: var(--accent);
+  color: var(--fg-dim);
 }
 
 .action-text {
@@ -656,7 +633,8 @@ h2 {
 
 .action-text small {
   color: var(--fg-dim);
-  font-size: 12px;
+  font-size: 13px;
+  line-height: 1.5;
 }
 
 .chevron {
@@ -664,139 +642,42 @@ h2 {
   color: var(--fg-dim);
 }
 
-/* The decorative card is the design's deep teal in both themes: it is the
-   lock screen in miniature. */
 .private-card {
-  position: relative;
-  min-height: 420px;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  padding: 23px;
-  border-radius: 20px;
-  border: 1px solid rgba(173, 228, 247, 0.19);
-  background:
-    radial-gradient(ellipse at 55% 30%, rgba(98, 187, 206, 0.22), transparent 51%),
-    linear-gradient(165deg, #173b50, #16334a 64%, #172d43);
-  color: #f4f8fd;
-}
-
-.private-card .eyebrow {
-  color: #86cfe9;
-}
-
-.visual {
-  position: relative;
-  height: 168px;
-  display: grid;
-  place-items: center;
-}
-
-.halo {
-  position: absolute;
-  width: 160px;
-  height: 160px;
-  border-radius: 50%;
-  border: 1px solid rgba(182, 236, 248, 0.09);
-  background: radial-gradient(circle, rgba(104, 204, 222, 0.19), transparent 72%);
-}
-
-.shield {
-  width: 89px;
-  height: 89px;
-  display: grid;
-  place-items: center;
-  border-radius: 27px;
-  border: 1px solid rgba(206, 246, 253, 0.38);
-  background: linear-gradient(145deg, rgba(175, 232, 243, 0.33), rgba(95, 171, 197, 0.13));
-  box-shadow:
-    0 16px 35px rgba(2, 24, 43, 0.42),
-    inset 0 1px rgba(255, 255, 255, 0.35);
-  color: #dafaff;
-  transform: rotate(-8deg);
-}
-
-.shield :deep(svg) {
-  transform: rotate(8deg);
-}
-
-.orbit {
-  position: absolute;
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: #ace9ed;
-  box-shadow: 0 0 14px #b2f5f0;
-}
-
-.orbit.one {
-  left: 24%;
-  top: 31%;
-}
-
-.orbit.two {
-  right: 20%;
-  bottom: 28%;
-  width: 3px;
-  height: 3px;
+  padding: 2px 0 0 16px;
+  border-left: 2px solid var(--line);
 }
 
 .private-card h3 {
-  margin: 0 0 9px;
-  font-size: 21px;
-  line-height: 1.35;
-  letter-spacing: -0.02em;
+  margin: 0 0 8px;
+  font-size: 14px;
+  font-weight: 600;
 }
 
 .private-card p {
   margin: 0;
-  color: #bed4e1;
+  color: var(--fg-dim);
   font-size: 13px;
-  line-height: 1.7;
+  line-height: 1.6;
 }
 
-.foot {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: auto;
-  padding-top: 16px;
-  border-top: 1px solid rgba(216, 244, 252, 0.14);
-  color: #c5e6e8;
+.private-card .foot {
+  margin-top: 12px;
   font-size: 12px;
 }
 
-.dot {
-  width: 7px;
-  height: 7px;
-  flex: none;
-  border-radius: 50%;
-  background: #88deca;
-  box-shadow: 0 0 11px rgba(137, 228, 201, 0.4);
-}
-
 .footnote {
-  margin: 14px 3px;
+  margin: 16px 0 0 18px;
   color: var(--fg-dim);
   font-size: 12px;
   line-height: 1.7;
 }
 
-/* Too narrow for both columns: the settings stay, the illustration goes
-   (the design's ≤1130px window, measured on the canvas). */
 @container privacy (max-width: 760px) {
   .grid {
     grid-template-columns: minmax(0, 1fr);
-    margin-top: 24px;
+    margin-top: 20px;
   }
 
-  .private-card {
-    display: none;
-  }
-
-  .footnote {
-    margin-top: 0;
-  }
 }
 
 @container privacy (max-width: 460px) {
@@ -806,8 +687,8 @@ h2 {
   }
 
   .tile {
-    width: 40px;
-    height: 40px;
+    width: 32px;
+    height: 32px;
   }
 
   .note {
@@ -825,18 +706,18 @@ h2 {
   }
 
   .row-text {
-    flex-basis: calc(100% - 44px);
+    flex-basis: calc(100% - 39px);
   }
 
   .select,
   .seg,
   .manage {
-    margin-left: 44px;
+    margin-left: 39px;
   }
 
   .custom {
     margin: 0 15px;
-    padding-left: 44px;
+    padding-left: 39px;
   }
 }
 </style>

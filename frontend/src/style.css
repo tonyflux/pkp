@@ -1,41 +1,28 @@
-/*
- * Liquid glass design system.
- *
- * Four z-layers: atmosphere scene → reading canvas
- * → floating glass islands → modal glass. Glass is reserved for surfaces that
- * carry actions; anything holding file names or long text sits on a nearly
- * opaque canvas so it stays readable over a photographic background.
- */
+/* Shared surfaces and controls for the desktop workspace. */
 
 :root {
   color-scheme: light dark;
 
-  /* Light theme is the default; the dark block below overrides it. Reading
-     surfaces stay nearly opaque over the scene so dense lists and metadata
-     keep enough contrast, while edges, tabs and buttons remain glass. */
-  --canvas: rgba(250, 253, 255, 0.97);
-  --canvas-flat: #f7fbff;
-  --glass-nav: rgba(245, 250, 255, 0.6);
-  --glass-toolbar: rgba(250, 253, 255, 0.66);
-  --glass-sheet: rgba(250, 253, 255, 0.82);
-  --glass-panel: rgba(250, 253, 255, 0.93);
-  --glass-control: rgba(255, 255, 255, 0.58);
-  --glass-inset: rgba(210, 228, 244, 0.42);
-  --glass-rim: rgba(255, 255, 255, 0.9);
-  --glass-edge: rgba(156, 203, 231, 0.55);
-  --glass-glow: rgba(255, 255, 255, 0.45);
-  --glass-tint: 150%;
+  --canvas: rgba(255, 255, 255, 0.98);
+  --canvas-flat: #f8f9fb;
+  --glass-nav: rgba(244, 246, 249, 0.96);
+  --glass-toolbar: rgba(248, 249, 251, 0.96);
+  --glass-sheet: rgba(255, 255, 255, 0.97);
+  --glass-panel: rgba(248, 249, 251, 0.98);
+  --glass-control: rgba(112, 126, 145, 0.09);
+  --glass-inset: rgba(112, 126, 145, 0.08);
+  --glass-rim: rgba(255, 255, 255, 0.7);
+  --glass-edge: rgba(85, 100, 120, 0.2);
+  --content-opacity: 100%;
 
   --fg: #162739;
   --fg-dim: #52647a;
   --accent: #275fad;
   --accent-soft: color-mix(in srgb, var(--accent) 12%, transparent);
   --on-accent: #ffffff;
-  /* Primary actions are a lens in the skin's colour (mock: New / Cloud Add /
-     Play), built from the skin's three stops (see Skins below). */
-  --primary: linear-gradient(180deg, var(--primary-hi) 0%, var(--primary-mid) 55%, var(--primary-deep) 100%);
-  --primary-rim: rgba(255, 255, 255, 0.55);
-  --primary-shadow: 0 10px 24px var(--primary-glow);
+  --primary: var(--primary-mid);
+  --primary-rim: transparent;
+  --primary-shadow: none;
   --on-primary: #ffffff;
   /* Playback progress (scrub bars, volume), in the skin's colour too. */
   --progress: linear-gradient(90deg, var(--progress-from), var(--progress-to));
@@ -65,22 +52,17 @@
   --line: rgba(22, 39, 57, 0.1);
   --line-strong: rgba(22, 39, 57, 0.18);
   --scrim: rgba(22, 35, 55, 0.24);
-  --shadow-island: 0 18px 44px rgba(16, 40, 72, 0.18), 0 2px 6px rgba(16, 40, 72, 0.08);
-  --shadow-sheet: 0 28px 70px rgba(16, 40, 72, 0.3), 0 2px 8px rgba(16, 40, 72, 0.1);
+  --shadow-island: 0 1px 3px rgba(16, 24, 40, 0.06);
+  --shadow-sheet: 0 16px 48px rgba(16, 24, 40, 0.22);
 
-  /* The scene is a photograph (assets/wall-*.webp); these only veil it. */
-  --scene-glow: rgba(255, 246, 228, 0.9);
-  --scene-veil-top: rgba(255, 255, 255, 0.12);
-  --scene-veil-bottom: rgba(120, 150, 180, 0.18);
-  --scene-vignette: rgba(70, 100, 140, 0.22);
-  --scene-sky-b: #9cc0e2;
+  --scene-sky-b: #e8ebf0;
   /* A wallpaper of the user's own was not tuned for the glass: a wash
      towards the theme keeps the islands' text readable on it. */
   --scene-dim: rgba(244, 249, 255, 0.2);
 
-  --radius-island: 28px;
-  --radius-sheet: 26px;
-  --radius-card: 12px;
+  --radius-island: 16px;
+  --radius-sheet: 16px;
+  --radius-card: 10px;
   --radius-pill: 999px;
 
   /* Critically damped, ~0.4s. */
@@ -105,30 +87,25 @@
 }
 
 :root[data-theme="dark"] {
-  --canvas: rgba(15, 24, 38, 0.97);
-  --canvas-flat: #101a2a;
-  --glass-nav: rgba(41, 63, 88, 0.45);
-  --glass-toolbar: rgba(47, 70, 98, 0.49);
-  --glass-sheet: rgba(32, 48, 70, 0.8);
-  --glass-panel: rgba(32, 48, 70, 0.93);
-  --glass-control: rgba(99, 139, 186, 0.3);
-  --glass-inset: rgba(10, 22, 40, 0.38);
-  --glass-rim: rgba(210, 240, 255, 0.58);
-  --glass-edge: rgba(120, 190, 235, 0.44);
-  --glass-glow: rgba(170, 215, 255, 0.22);
-  --glass-tint: 160%;
+  --canvas: rgba(24, 27, 32, 0.98);
+  --canvas-flat: #1b1e23;
+  --glass-nav: rgba(31, 34, 40, 0.96);
+  --glass-toolbar: rgba(31, 34, 40, 0.96);
+  --glass-sheet: rgba(36, 39, 46, 0.97);
+  --glass-panel: rgba(31, 34, 40, 0.98);
+  --glass-control: rgba(210, 220, 232, 0.08);
+  --glass-inset: rgba(4, 8, 14, 0.24);
+  --glass-rim: rgba(230, 235, 245, 0.1);
+  --glass-edge: rgba(195, 205, 220, 0.16);
 
-  --fg: #f2f8ff;
-  --fg-dim: #b6c9d9;
+  --fg: #edf0f4;
+  --fg-dim: #b5bdc8;
   --accent: #83c7ff;
   --accent-soft: color-mix(in srgb, var(--accent) 16%, transparent);
   --on-accent: #102638;
-  --primary-hi: #4d9dff;
-  --primary-mid: #2b78ec;
-  --primary-deep: #1f66d8;
-  --primary-glow: rgba(40, 120, 240, 0.42);
-  --primary-rim: rgba(255, 255, 255, 0.45);
-  --primary-shadow: 0 10px 26px var(--primary-glow);
+  --primary-glow: transparent;
+  --primary-rim: transparent;
+  --primary-shadow: none;
   --on-primary: #ffffff;
   --success: #95ddc0;
   --warning: #f3c878;
@@ -148,33 +125,17 @@
   --account-4: #f3c878;
   --account-5: #ff9bac;
   --on-account: #102638;
-  --line: rgba(190, 221, 245, 0.14);
-  --line-strong: rgba(190, 221, 245, 0.26);
-  --scrim: rgba(3, 10, 24, 0.45);
-  --shadow-island: 0 20px 50px rgba(2, 10, 24, 0.5), 0 2px 6px rgba(2, 10, 24, 0.3);
-  --shadow-sheet: 0 30px 80px rgba(2, 10, 24, 0.62), 0 2px 8px rgba(2, 10, 24, 0.35);
+  --line: rgba(205, 214, 226, 0.1);
+  --line-strong: rgba(205, 214, 226, 0.18);
+  --scrim: rgba(3, 8, 16, 0.55);
+  --shadow-island: 0 1px 3px rgba(0, 0, 0, 0.14);
+  --shadow-sheet: 0 18px 54px rgba(0, 0, 0, 0.45);
 
-  --scene-glow: rgba(255, 176, 112, 0.5);
-  --scene-veil-top: rgba(5, 14, 30, 0);
-  --scene-veil-bottom: rgba(5, 14, 30, 0.28);
-  --scene-vignette: rgba(3, 10, 24, 0.26);
-  --scene-sky-b: #16395c;
+  --scene-sky-b: #15171b;
   --scene-dim: rgba(6, 12, 24, 0.36);
 }
 
-/* ---------- Skins (Settings · General · Accent Color) ----------
-
-   A skin recolours the accent family: text accents, the primary lens and its
-   glow, playback progress and the glass contour. Surfaces, text and the
-   status colours stay put, so contrast does not move with it: every accent
-   keeps 4.5:1 on its canvas, and white keeps 4.5:1 on the lens's middle
-   stop. Cobalt is the default and needs no attribute.
-
-   Each block also answers to [data-skin-swatch], so a swatch in the picker
-   paints its own skin whatever skin is current. A swatch must draw from the
-   stops, not from --primary, which the root has already resolved. Only the
-   accent, the glow and the contour differ between light and dark; the dark
-   blocks carry just those. */
+/* Accent skins keep white text readable on primary controls in both themes. */
 
 :root,
 [data-skin-swatch="cobalt"] {
@@ -184,6 +145,10 @@
   --primary-glow: rgba(31, 95, 208, 0.35);
   --progress-from: #4d9dff;
   --progress-to: #8cc8ff;
+}
+
+:root[data-theme="dark"] {
+  --primary-mid: #2a6fe6;
 }
 
 :root[data-skin="teal"],
@@ -200,6 +165,7 @@
 
 :root[data-theme="dark"][data-skin="teal"] {
   --accent: #5eead4;
+  --primary-mid: #0b7f73;
   --primary-glow: rgba(20, 184, 166, 0.4);
   --glass-edge: rgba(100, 200, 185, 0.42);
 }
@@ -218,6 +184,7 @@
 
 :root[data-theme="dark"][data-skin="violet"] {
   --accent: #c4b5fd;
+  --primary-mid: #6b46e0;
   --primary-glow: rgba(139, 92, 246, 0.42);
   --glass-edge: rgba(160, 140, 240, 0.42);
 }
@@ -236,6 +203,7 @@
 
 :root[data-theme="dark"][data-skin="amber"] {
   --accent: #fcd34d;
+  --primary-mid: #b25a08;
   --primary-glow: rgba(245, 158, 11, 0.36);
   --glass-edge: rgba(230, 180, 110, 0.4);
 }
@@ -254,6 +222,7 @@
 
 :root[data-theme="dark"][data-skin="rose"] {
   --accent: #f9a8d4;
+  --primary-mid: #cc2f6b;
   --primary-glow: rgba(236, 72, 153, 0.4);
   --glass-edge: rgba(236, 150, 185, 0.4);
 }
@@ -272,6 +241,7 @@
 
 :root[data-theme="dark"][data-skin="graphite"] {
   --accent: #cbd5e1;
+  --primary-mid: #56657a;
   --primary-glow: rgba(100, 116, 139, 0.4);
   --glass-edge: rgba(160, 174, 194, 0.4);
 }
@@ -336,84 +306,32 @@ body {
 
 /* ---------- Layer 3: glass ---------- */
 
-/* One recipe, three thicknesses, built from what WebKit can do: a blurred,
-   saturated backdrop; a 1px specular rim along the top; a cold-blue contour;
-   and — the part that makes it read as a lens rather than a tinted panel —
-   light gathering along the inside of the contour (`::before`) plus a soft
-   sheen across the top (`::after`). SVG displacement refraction
-   (`backdrop-filter: url()`) is Chromium-only, so the edge is painted, not
-   computed. Neither pseudo-element may carry text; both sit under the
-   children. */
+/* Near-opaque surfaces keep navigation and controls legible on wallpaper. */
 .glass {
   position: relative;
   isolation: isolate;
   background: var(--glass-toolbar);
-  backdrop-filter: blur(28px) saturate(var(--glass-tint));
-  -webkit-backdrop-filter: blur(28px) saturate(var(--glass-tint));
-  border: 1px solid var(--glass-edge);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--line);
   border-radius: var(--radius-island);
-  box-shadow:
-    var(--shadow-island),
-    inset 0 1px 0 var(--glass-rim),
-    inset 1px 0 0 color-mix(in srgb, var(--glass-rim) 45%, transparent),
-    inset 0 -1px 0 color-mix(in srgb, var(--glass-rim) 18%, transparent);
-}
-
-.glass::before,
-.glass::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  border-radius: inherit;
-  pointer-events: none;
-}
-
-/* The lens edge: light gathers along the contour and fades inward with no
-   edge of its own, brightest where the rim catches the sky (top-left) and
-   again at the far corner. It is an inset shadow, which falls off
-   continuously, shaped by a gradient mask. A band cut out with a mask would
-   keep a hard inner edge whatever blur it carries — CSS applies `filter`
-   before `mask` — and that edge reads as a dark plate set inside the glass. */
-.glass::before {
-  box-shadow:
-    inset 0 0 6px 0 var(--glass-glow),
-    inset 0 0 22px 4px color-mix(in srgb, var(--glass-glow) 80%, transparent);
-  -webkit-mask: linear-gradient(160deg, #000 0%, rgb(0 0 0 / 0.25) 30%, transparent 50%, rgb(0 0 0 / 0.3) 78%, #000 100%);
-  mask: linear-gradient(160deg, #000 0%, rgb(0 0 0 / 0.25) 30%, transparent 50%, rgb(0 0 0 / 0.3) 78%, #000 100%);
-}
-
-.glass::after {
-  background:
-    linear-gradient(180deg, color-mix(in srgb, var(--glass-rim) 22%, transparent) 0%, transparent 34%),
-    radial-gradient(120% 60% at 50% 100%, color-mix(in srgb, var(--glass-edge) 18%, transparent) 0%, transparent 60%);
+  box-shadow: var(--shadow-island);
 }
 
 .glass-nav {
   background: var(--glass-nav);
-  backdrop-filter: blur(32px) saturate(var(--glass-tint));
-  -webkit-backdrop-filter: blur(32px) saturate(var(--glass-tint));
 }
 
 .glass-sheet {
   background: var(--glass-sheet);
-  backdrop-filter: blur(36px) saturate(var(--glass-tint));
-  -webkit-backdrop-filter: blur(36px) saturate(var(--glass-tint));
-  box-shadow:
-    var(--shadow-sheet),
-    inset 0 1px 0 var(--glass-rim),
-    inset 1px 0 0 color-mix(in srgb, var(--glass-rim) 45%, transparent),
-    inset 0 -1px 0 color-mix(in srgb, var(--glass-rim) 18%, transparent);
+  box-shadow: var(--shadow-sheet);
 }
 
-/* A single control cut *into* a glass island (search field, nav-button
-   group, picker): a darker inset well, not a second pane on top. */
+/* Inset controls remain distinct without a second raised surface. */
 .glass-well {
   background: var(--glass-inset);
-  border: 1px solid color-mix(in srgb, var(--glass-edge) 55%, transparent);
-  box-shadow:
-    inset 0 1px 2px rgba(0, 0, 0, 0.12),
-    0 1px 0 color-mix(in srgb, var(--glass-rim) 35%, transparent);
+  border: 1px solid var(--line);
+  box-shadow: none;
 }
 
 /* ---------- Layer 2: the reading canvas ---------- */
@@ -422,7 +340,22 @@ body {
   background: var(--canvas);
   border-radius: var(--radius-island);
   border: 1px solid var(--line);
-  box-shadow: var(--shadow-island), inset 0 1px 0 color-mix(in srgb, var(--glass-rim) 30%, transparent);
+  box-shadow: var(--shadow-island);
+}
+
+/* Only workspace surfaces become translucent; dialogs, menus and player stay opaque. */
+:root:not([data-transparency="reduced"]) .shell:not(.immersive) :is(.nav, .toolbar, .content > .canvas, .content > .panel) {
+  background-color: color-mix(in srgb, var(--panel-background) var(--content-opacity), transparent);
+}
+
+.shell .nav { --panel-background: var(--glass-nav); }
+.shell .toolbar { --panel-background: var(--glass-toolbar); }
+.shell .content > .canvas { --panel-background: var(--canvas); }
+.shell .content > .panel { --panel-background: var(--glass-panel); }
+
+:root:not([data-transparency="reduced"]) .shell:not(.immersive) .content > .canvas {
+  backdrop-filter: blur(var(--content-blur, 0px));
+  -webkit-backdrop-filter: blur(var(--content-blur, 0px));
 }
 
 /* ---------- Controls ---------- */
@@ -442,7 +375,7 @@ button {
   gap: 7px;
   padding: 8px 14px;
   min-height: 34px;
-  border-radius: var(--radius-pill);
+  border-radius: 9px;
   border: 1px solid var(--line-strong);
   background: var(--glass-control);
   color: var(--fg);
@@ -473,27 +406,19 @@ button.working:disabled {
   cursor: progress;
 }
 
-/* The gradient is laid from the border box (`border-box`): from the padding
-   box it tiles into the 1px transparent border, and the bottom edge shows
-   the next tile's brightest stop as a light line under the button.
-   Hover keeps the lens: the plain button:hover above outranks
-   `button.primary`, so hovering swapped the gradient for flat glass — the
-   blink. It brightens with an inset wash instead, which eases in with the
-   shadow (a gradient itself cannot be transitioned). */
 button.primary {
-  background: var(--primary) border-box;
+  background: var(--primary);
   border-color: transparent;
   color: var(--on-primary);
   font-weight: 600;
-  box-shadow: inset 0 0 0 100vmax rgba(255, 255, 255, 0), inset 0 1px 0 var(--primary-rim),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.12), var(--primary-shadow);
+  box-shadow: none;
 }
 
 button.primary:hover:not(:disabled) {
-  background: var(--primary) border-box;
+  background: var(--primary);
   border-color: transparent;
-  box-shadow: inset 0 0 0 100vmax rgba(255, 255, 255, 0.09), inset 0 1px 0 var(--primary-rim),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.12), var(--primary-shadow);
+  filter: brightness(1.08);
+  box-shadow: none;
 }
 
 button.quiet {
@@ -911,6 +836,11 @@ code,
     -webkit-backdrop-filter: none;
     background: var(--canvas);
   }
+  :root .shell:not(.immersive) :is(.nav, .toolbar, .content > .canvas, .content > .panel) {
+    background: var(--canvas);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
 
   .glass::before,
   .glass::after {
@@ -926,6 +856,12 @@ code,
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
   background: var(--canvas);
+}
+
+:root[data-transparency="reduced"] .shell:not(.immersive) :is(.nav, .toolbar, .content > .canvas, .content > .panel) {
+  background: var(--canvas);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
 }
 
 :root[data-transparency="reduced"] .glass::before,

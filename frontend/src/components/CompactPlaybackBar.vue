@@ -129,7 +129,7 @@ const ownerTitle = computed(() =>
   align-items: center;
   gap: 10px;
   padding: 0 12px 0 10px;
-  border-radius: 20px;
+  border-radius: 14px;
 }
 
 /* Hover keeps the fill and rim (the plain button:hover outranks this rule);
@@ -141,10 +141,9 @@ const ownerTitle = computed(() =>
   min-height: 44px;
   padding: 0;
   border-radius: 50%;
-  border: 1px solid rgba(255, 255, 255, 0.35);
+  border: 1px solid var(--line);
   color: #ffffff;
   background: var(--primary) border-box;
-  box-shadow: inset 0 1px 0 var(--primary-rim), var(--primary-shadow);
 }
 
 /* A bounded title slot leaves room for the timeline and playback actions. */
@@ -155,7 +154,7 @@ const ownerTitle = computed(() =>
   justify-content: flex-start;
   padding: 6px 10px;
   border: 0;
-  border-radius: 14px;
+  border-radius: 10px;
   background: transparent;
   text-align: left;
 }
@@ -244,9 +243,7 @@ const ownerTitle = computed(() =>
   margin: -6px 0 0 -6px;
   border-radius: 50%;
   background: #ffffff;
-  box-shadow:
-    0 0 0 3px color-mix(in srgb, var(--progress-from) 35%, transparent),
-    0 1px 3px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
   opacity: 0;
   transform: scale(0.6);
   transition:

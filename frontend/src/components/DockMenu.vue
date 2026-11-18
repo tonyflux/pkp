@@ -176,12 +176,10 @@ useOutsideClick(`[data-dock-menu="${id}"]`, () => open.value, () => (open.value 
   z-index: 4;
   width: 254px;
   padding: 14px;
-  border: 1px solid rgba(201, 238, 255, 0.72);
-  border-radius: 20px;
-  background: linear-gradient(145deg, rgba(53, 87, 134, 0.96), rgba(16, 31, 61, 0.98));
-  box-shadow:
-    inset 0 1px rgba(255, 255, 255, 0.54),
-    0 18px 34px rgba(2, 14, 38, 0.46);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 12px;
+  background: rgba(31, 34, 40, 0.98);
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.35);
   animation: pop-in 0.18s var(--ease) both;
 }
 
@@ -193,9 +191,9 @@ useOutsideClick(`[data-dock-menu="${id}"]`, () => open.value, () => (open.value 
   width: 13px;
   height: 13px;
   transform: rotate(45deg);
-  background: #203d6a;
-  border-right: 1px solid rgba(201, 238, 255, 0.58);
-  border-bottom: 1px solid rgba(201, 238, 255, 0.58);
+  background: #1f2228;
+  border-right: 1px solid rgba(255, 255, 255, 0.16);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.16);
 }
 
 /* A rise without a fade: inside the stage's size container, Chromium leaves a

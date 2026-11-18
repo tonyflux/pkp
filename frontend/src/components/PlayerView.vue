@@ -1238,10 +1238,8 @@ onBeforeUnmount(() => {
 
 /* ---------- the separate window's title bar and playlist ---------- */
 
-/* Where a title bar would be, over the top of the picture: a shade for the
-   name, the account and the traffic lights, which take its first 80 points
-   and centre 26 down. The shade runs past the 52-point row so its second
-   line reads on a bright frame. It comes and goes with the dock. */
+/* The separate window's title row sits over the picture and leaves room for
+   the traffic lights. It comes and goes with the dock. */
 .titlebar {
   position: absolute;
   top: 0;
@@ -1252,16 +1250,11 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 10px;
   padding: 0 8px 16px 18px;
-  background: linear-gradient(
-    180deg,
-    rgba(6, 10, 20, 0.8),
-    rgba(6, 10, 20, 0.58) 52%,
-    rgba(6, 10, 20, 0)
-  );
-  color: #eef6ff;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
-  --fg: #eef6ff;
-  --fg-dim: rgba(228, 240, 255, 0.76);
+  background: rgba(25, 25, 27, 0.88);
+  color: #f5f5f5;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+  --fg: #f5f5f5;
+  --fg-dim: rgba(245, 245, 245, 0.76);
   transition: opacity 0.35s var(--ease);
 }
 
@@ -1293,7 +1286,7 @@ onBeforeUnmount(() => {
 }
 
 .titlebar .ghost {
-  color: #eef6ff;
+  color: #f5f5f5;
 }
 
 .titlebar .caption-close:hover {
@@ -1313,18 +1306,16 @@ onBeforeUnmount(() => {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  border-radius: 22px;
-  background: rgba(14, 28, 52, 0.84);
-  border: 1px solid rgba(190, 225, 255, 0.22);
-  box-shadow:
-    0 16px 48px rgba(0, 0, 0, 0.4),
-    inset 0 1px 0 rgba(255, 255, 255, 0.28);
-  color: #eef6ff;
+  border-radius: 14px;
+  background: rgba(28, 28, 30, 0.94);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.24);
+  color: #f5f5f5;
   cursor: auto;
-  --fg: #eef6ff;
-  --fg-dim: rgba(228, 240, 255, 0.66);
-  --line: rgba(190, 225, 255, 0.16);
-  --line-strong: rgba(190, 225, 255, 0.26);
+  --fg: #f5f5f5;
+  --fg-dim: rgba(245, 245, 245, 0.72);
+  --line: rgba(255, 255, 255, 0.1);
+  --line-strong: rgba(255, 255, 255, 0.18);
   --glass-control: rgba(255, 255, 255, 0.14);
   --accent-soft: color-mix(in srgb, var(--accent) 26%, transparent);
   transition:
@@ -1405,7 +1396,7 @@ onBeforeUnmount(() => {
 }
 
 .drawer .quiet {
-  color: #eef6ff;
+  color: #f5f5f5;
 }
 
 .drawer-enter-active,
@@ -1430,13 +1421,10 @@ onBeforeUnmount(() => {
 .next,
 .dock,
 .hover {
-  background: rgba(14, 28, 52, 0.7);
-  border: 1px solid rgba(190, 225, 255, 0.22);
-  box-shadow:
-    0 16px 48px rgba(0, 0, 0, 0.4),
-    inset 0 1px 0 rgba(255, 255, 255, 0.28),
-    inset 1px 0 0 rgba(255, 255, 255, 0.1);
-  color: #eef6ff;
+  background: rgba(28, 28, 30, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.24);
+  color: #f5f5f5;
 }
 
 .stage-state {
@@ -1457,7 +1445,7 @@ onBeforeUnmount(() => {
   gap: 10px;
   min-width: 136px;
   padding: 16px 20px 14px;
-  border-radius: 20px;
+  border-radius: 14px;
 }
 
 .stage-wait-dial {
@@ -1505,7 +1493,7 @@ onBeforeUnmount(() => {
 
 .stage-wait-text {
   font-size: 13px;
-  color: #c9dcf0;
+  color: #d1d1d1;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
@@ -1518,7 +1506,7 @@ onBeforeUnmount(() => {
   gap: 6px;
   max-width: min(420px, calc(100% - 48px));
   padding: 24px 28px 20px;
-  border-radius: 22px;
+  border-radius: 16px;
   text-align: center;
 }
 
@@ -1542,7 +1530,7 @@ onBeforeUnmount(() => {
   margin: 0;
   font-size: 13px;
   line-height: 1.6;
-  color: #b9cde6;
+  color: #d1d1d1;
   /* Wrap at the punctuation, evenly; a run with none still breaks anywhere. */
   text-wrap: balance;
   word-break: keep-all;
@@ -1560,7 +1548,7 @@ onBeforeUnmount(() => {
 .stage-error-actions button:not(.primary) {
   border-color: rgba(255, 255, 255, 0.14);
   background: rgba(255, 255, 255, 0.08);
-  color: #eef6ff;
+  color: #f5f5f5;
 }
 
 .stage-error-actions button:not(.primary):hover {
@@ -1576,8 +1564,8 @@ onBeforeUnmount(() => {
   justify-content: center;
   gap: 14px;
   padding: 24px;
-  color: #eef6ff;
-  background: rgba(8, 12, 22, 0.55);
+  color: #f5f5f5;
+  background: rgba(20, 20, 22, 0.55);
   animation: stage-loading-in 0.18s var(--ease) both;
 }
 
@@ -1644,7 +1632,7 @@ onBeforeUnmount(() => {
 .next-label {
   flex: none;
   max-width: 100%;
-  color: #a9c6e8;
+  color: #c4c4c4;
 }
 
 .next-name {
@@ -1658,7 +1646,7 @@ onBeforeUnmount(() => {
 .next .quiet {
   flex: none;
   min-height: 28px;
-  color: #eef6ff;
+  color: #f5f5f5;
 }
 
 .rise-enter-active,
@@ -1674,7 +1662,7 @@ onBeforeUnmount(() => {
   transform: translateY(8px);
 }
 
-/* ---------- dock: one piece of glass, two rows ---------- */
+/* ---------- dock ---------- */
 
 .dock {
   position: absolute;
@@ -1685,8 +1673,7 @@ onBeforeUnmount(() => {
   flex-direction: column;
   gap: 8px;
   padding: 14px 24px 14px 20px;
-  border-radius: 28px;
-  background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.07), transparent 40%);
+  border-radius: 16px;
   transition:
     opacity 0.35s var(--ease),
     transform 0.35s var(--ease);
@@ -1708,7 +1695,7 @@ onBeforeUnmount(() => {
 .time {
   font-size: 15px;
   white-space: nowrap;
-  color: #e9f2fc;
+  color: #ededed;
   min-width: 50px;
 }
 
@@ -1767,7 +1754,7 @@ onBeforeUnmount(() => {
   height: 6px;
   margin: -3px 0 0 -3px;
   border-radius: 50%;
-  background: #eaf4ff;
+  background: #ededed;
   opacity: 0.85;
   pointer-events: none;
 }
@@ -1784,9 +1771,7 @@ onBeforeUnmount(() => {
   margin: -8px 0 0 -8px;
   border-radius: 50%;
   background: #ffffff;
-  box-shadow:
-    0 0 0 4px color-mix(in srgb, var(--progress-from) 35%, transparent),
-    0 1px 4px rgba(0, 0, 0, 0.45);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
   transition:
     width 0.12s linear,
     transform var(--dur) var(--ease);
@@ -1812,7 +1797,7 @@ onBeforeUnmount(() => {
 }
 
 .hover-chapter {
-  color: #a9c6e8;
+  color: #c4c4c4;
 }
 
 .controls {
@@ -1826,19 +1811,16 @@ onBeforeUnmount(() => {
   height: 64px;
   min-height: 64px;
   margin-right: 8px;
-  background: var(--primary) border-box;
+  background: var(--primary);
   color: #ffffff;
-  border: 1px solid rgba(255, 255, 255, 0.35);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.5),
-    0 0 0 5px color-mix(in srgb, var(--progress-from) 22%, transparent),
-    0 8px 24px var(--primary-glow);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
 /* Keeps its fill and rim: the plain button:hover outranks `.main`. */
 .main:hover:not(:disabled) {
-  background: var(--primary) border-box;
-  border-color: rgba(255, 255, 255, 0.35);
+  background: var(--primary);
+  border-color: rgba(255, 255, 255, 0.22);
   filter: brightness(1.08);
 }
 
@@ -1852,7 +1834,7 @@ onBeforeUnmount(() => {
   border-radius: 50%;
   background: transparent;
   border-color: transparent;
-  color: #e3eefb;
+  color: #ededed;
 }
 
 .step em {
@@ -1867,7 +1849,7 @@ onBeforeUnmount(() => {
 .ghost {
   background: transparent;
   border-color: transparent;
-  color: #e3eefb;
+  color: #ededed;
 }
 
 .ghost:hover,
@@ -1892,7 +1874,7 @@ onBeforeUnmount(() => {
   margin-left: 6px;
   padding-left: 10px;
   border-left: 1px solid rgba(255, 255, 255, 0.14);
-  color: #d6e6f8;
+  color: #e0e0e0;
 }
 
 .controls:not(.crowded) .volume {
@@ -1916,6 +1898,24 @@ onBeforeUnmount(() => {
     height: 36px;
     min-height: 36px;
   }
+}
+
+@container stage (max-width: 600px) {
+  .controls {
+    flex-wrap: wrap;
+    justify-content: flex-start;
+  }
+
+  .controls .spacer { display: none; }
+  .dock { padding: 10px 14px; }
+  .timeline { gap: 10px; }
+  .volume { width: 130px; }
+}
+
+@container stage (max-width: 360px) {
+  .controls { gap: 4px; }
+  .volume { width: 80px; padding-left: 4px; margin-left: 0; }
+  .volume :deep(.rslider) { min-width: 0; }
 }
 
 /* ---------- Subtitles · Audio tracks · Quality · Speed: in the dock, or in More ---------- */
@@ -1958,19 +1958,25 @@ onBeforeUnmount(() => {
   max-height: calc(100cqh - 110px);
   overflow-y: auto;
   padding: 10px 14px 14px;
-  border: 1px solid rgba(201, 238, 255, 0.72);
-  border-radius: 20px;
-  background: linear-gradient(145deg, rgba(53, 87, 134, 0.96), rgba(16, 31, 61, 0.98));
-  box-shadow:
-    inset 0 1px rgba(255, 255, 255, 0.54),
-    0 18px 34px rgba(2, 14, 38, 0.46);
-  color: #edf8ff;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 14px;
+  background: rgba(32, 32, 34, 0.98);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  color: #f5f5f5;
+}
+
+@container stage (max-width: 600px) {
+  .more-pop { max-height: calc(100cqh - 190px); }
+  :deep(.dock-menu .popover) {
+    max-height: calc(100cqh - 190px);
+    overflow-y: auto;
+  }
 }
 
 .more-pop > * + .more-section {
   margin-top: 8px;
   padding-top: 12px;
-  border-top: 1px solid rgba(202, 233, 255, 0.18);
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
 }
 
 /* ---------- playlist island ---------- */

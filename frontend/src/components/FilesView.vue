@@ -94,6 +94,7 @@ const workspaceNarrow = useMedia(WORKSPACE_QUERY);
 // for any single entry), so play, preview, star and links are not offered
 // there; opening an entry selects it, which brings up Restore and Delete permanently.
 const inBin = computed(() => ui.view === "trash");
+const mediaGrid = computed(() => !inBin.value && (ui.category === "image" || ui.category === "video"));
 
 const chips: { key: CategoryFilter; label: string }[] = [
   { key: "all", get label() { return t("全部"); } },
@@ -176,9 +177,6 @@ const refreshing = computed(() => drive.listLoading && drive.entries.length > 0)
 // Enough placeholders to fill a first screen, never a "page" of them.
 const ghosts = { folders: 3, files: 8 };
 
-// The mock colours folders in rotation; nothing in the data says which.
-// Only the list's glyphs: a grid card is its cover.
-const tints = ["blue", "purple", "amber"] as const;
 
 /* ---------- folder covers ---------- */
 
@@ -933,7 +931,7 @@ watch(
     </div>
 
     <div class="controls" :class="{ 'after-scope': scopeShown }">
-      <!-- One continuous well cut into the canvas, not five separate pills. -->
+      <!-- Category filters share a compact control. -->
       <div v-slide class="segments kinds glass-well" role="tablist" :aria-label="t('分类')">
         <button
           v-for="chip in chips"
@@ -1032,7 +1030,7 @@ watch(
         <div class="skel ghost-h2" />
         <div v-if="ui.layout === 'grid'" class="folders">
           <div v-for="i in ghosts.folders" :key="i" class="folder ghost-folder" :style="{ '--i': i }">
-            <span class="folder-cover cover-plain"><span class="skel ghost-fill" /></span>
+            <span class="skel ghost-icon" />
             <span class="folder-meta">
               <span class="folder-text">
                 <span class="skel ghost-line" style="width: 62%" />
@@ -1051,7 +1049,7 @@ watch(
         </div>
         </template>
         <div class="skel ghost-h2" />
-        <div v-if="ui.layout === 'grid'" class="grid">
+        <div v-if="ui.layout === 'grid'" class="grid" :class="{ 'media-grid': mediaGrid }">
           <div v-for="i in ghosts.files" :key="i" class="card ghost-card" :style="{ '--i': i + ghosts.folders }">
             <div class="thumb skel" />
             <div class="meta">
@@ -1081,7 +1079,7 @@ watch(
               v-cover
               :data-entry="folder.id"
               class="folder"
-              :class="{ picked: isPicked(folder), starred: folder.starred }"
+              :class="{ picked: isPicked(folder), starred: folder.starred, 'has-cover': !!coverOf(folder)?.items.length }"
               :title="folder.name"
               :aria-pressed="isPicked(folder)"
               @dblclick="open(folder, $event)"
@@ -1116,22 +1114,16 @@ watch(
                     </span>
                   </span>
                 </template>
-                <span v-else-if="coverOf(folder)" class="empty-symbol">
-                  <span class="mini-folder" />
-                  <span>{{ t("等待放入文件") }}</span>
-                </span>
-                <span v-else class="mini-folder" />
               </span>
               <span v-if="folder.starred" class="star-mark" role="img" :aria-label="t('已加星标')" :title="t('已加星标')">
                 <Icon name="star" :size="12" filled />
               </span>
               <span class="folder-meta">
-                <span class="folder-mark" aria-hidden="true" />
+                <span class="folder-mark" aria-hidden="true"><Icon name="folder" :size="20" /></span>
                 <span class="folder-text">
                   <strong>{{ folder.name }}</strong>
                   <small :title="folder.path">{{ folderLine(folder) }}</small>
                 </span>
-                <Icon class="chevron" name="chevronRight" :size="16" />
               </span>
             </button>
           </div>
@@ -1142,7 +1134,7 @@ watch(
             </thead>
             <tbody>
               <tr
-                v-for="(folder, i) in visibleFolders"
+                v-for="folder in visibleFolders"
                 :key="folder.id"
                 :data-entry="folder.id"
                 :class="{ picked: isPicked(folder) }"
@@ -1156,7 +1148,7 @@ watch(
                     <span class="check" :class="{ on: isPicked(folder) }" aria-hidden="true" @click.stop="togglePick(folder)" @dblclick.stop>
                       <Icon name="check" :size="12" />
                     </span>
-                    <Icon class="folder-icon" :class="tints[i % tints.length]" name="folder" :size="18" filled />
+                    <Icon class="folder-icon" name="folder" :size="18" filled />
                     <span class="label" :title="folder.name">{{ folder.name }}</span>
                   </div>
                 </td>
@@ -1186,7 +1178,7 @@ watch(
         <template v-if="visibleFiles.length">
           <h2>{{ t("section|文件") }} <span class="count">({{ visibleFiles.length }})</span></h2>
 
-          <div v-if="ui.layout === 'grid'" class="grid">
+          <div v-if="ui.layout === 'grid'" class="grid" :class="{ 'media-grid': mediaGrid }">
             <article
               v-for="file in visibleFiles"
               :key="file.id"
@@ -1197,28 +1189,22 @@ watch(
               @dblclick="open(file, $event)"
               @contextmenu.prevent.stop="openContextMenu(file, $event)"
             >
-              <div class="thumb">
-                <span class="check" :class="{ on: isPicked(file) }" aria-hidden="true" @click.stop="togglePick(file)" @dblclick.stop>
-                  <Icon name="check" :size="13" />
-                </span>
-                <span v-if="file.starred" class="star-mark" role="img" :aria-label="t('已加星标')" :title="t('已加星标')">
-                  <Icon name="star" :size="12" filled />
-                </span>
+              <span class="check" :class="{ on: isPicked(file) }" aria-hidden="true" @click.stop="togglePick(file)" @dblclick.stop>
+                <Icon name="check" :size="13" />
+              </span>
+              <span v-if="file.starred" class="star-mark" role="img" :aria-label="t('已加星标')" :title="t('已加星标')">
+                <Icon name="star" :size="12" filled />
+              </span>
+              <div class="thumb" :class="`type-${file.category}`">
                 <Thumb :src="file.thumbnail" :alt="file.name" lazy>
-                  <Icon :name="file.category" :size="28" />
+                  <span class="file-fallback" aria-hidden="true">
+                    <Icon :name="file.category" :size="21" />
+                  </span>
                 </Thumb>
-                <span v-if="file.duration" class="duration">{{ clock(file.duration) }}</span>
+                <span v-if="file.duration && !isPlaying(file)" class="duration">{{ clock(file.duration) }}</span>
                 <span v-if="isPlaying(file)" class="playing" role="img" :aria-label="t('正在播放')">
                   <Icon :name="player.state.paused ? 'play' : 'pause'" :size="13" filled />
                 </span>
-                <template v-if="!inBin">
-                  <button v-if="file.playable" class="play" :title="t('播放')" @click.stop="play(file)">
-                    <Icon name="play" :size="16" filled />
-                  </button>
-                  <button v-else-if="file.preview" class="play" :title="t('预览')" @click.stop="openViewer(file)">
-                    <Icon name="eye" :size="16" />
-                  </button>
-                </template>
               </div>
               <div class="meta">
                 <div class="name-row">
@@ -1239,6 +1225,12 @@ watch(
                 <!-- The whole drive: the line under the name says where it lives. -->
                 <small v-if="wholeDrive && file.path" class="path" :title="shownPath(file.path)">{{ shownPath(file.path) }}</small>
                 <small v-else :title="file.path">{{ bytes(file.size) }} · {{ when(file, true) }}</small>
+                <button v-if="!inBin && file.playable" class="quiet icon play" :title="t('播放')" @click.stop="play(file)">
+                  <Icon name="play" :size="15" filled />
+                </button>
+                <button v-else-if="!inBin && file.preview" class="quiet icon play" :title="t('预览')" @click.stop="openViewer(file)">
+                  <Icon name="eye" :size="15" />
+                </button>
               </div>
             </article>
           </div>
@@ -1528,14 +1520,14 @@ watch(
 
 <style scoped>
 .files {
-  --surface: color-mix(in srgb, var(--canvas-flat) 91%, white 9%);
-  --surface-hover: color-mix(in srgb, var(--canvas-flat) 84%, white 16%);
+  --surface: color-mix(in srgb, var(--canvas-flat) 96%, var(--fg) 4%);
+  --surface-hover: color-mix(in srgb, var(--canvas-flat) 92%, var(--fg) 8%);
   flex: 1;
   min-width: 0;
   display: flex;
   flex-direction: column;
   /* Keep room for the reading canvas beside the navigation and information panel. */
-  padding: 26px 24px 0;
+  padding: 20px 24px 0;
   overflow: hidden;
   container: files / inline-size;
 }
@@ -1605,8 +1597,8 @@ watch(
 
 .title {
   margin: 0;
-  font-size: 28px;
-  line-height: 34px;
+  font-size: 24px;
+  line-height: 30px;
   font-weight: 600;
   letter-spacing: -0.01em;
   /* Folder names run to a full sentence; the name belongs on one line and
@@ -1623,7 +1615,7 @@ watch(
   align-items: center;
   min-height: 28px;
   margin: 2px 0 0;
-  font-size: 15px;
+  font-size: 13px;
   line-height: 20px;
   color: var(--fg-dim);
 }
@@ -1650,7 +1642,7 @@ watch(
   min-height: 28px;
   margin: 0 -2px;
   padding: 0 10px;
-  font-size: 15px;
+  font-size: 13px;
   text-align: left;
   white-space: nowrap;
   overflow: hidden;
@@ -1673,7 +1665,7 @@ watch(
   align-items: center;
   gap: 8px 14px;
   min-width: 0;
-  margin-top: 20px;
+  margin-top: 14px;
 }
 
 .segments.scope {
@@ -1681,14 +1673,13 @@ watch(
 }
 
 .segments.scope button {
-  padding: 0 16px;
-  font-size: 14px;
+  padding: 0 12px;
+  font-size: 13px;
 }
 
-/* A lighter chip than the Type lens below: one primary pill on screen. */
 .segments.scope::before {
   background: var(--accent-soft);
-  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--glass-rim) 40%, transparent);
+  box-shadow: none;
 }
 
 .segments.scope button.on {
@@ -1716,8 +1707,8 @@ watch(
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 12px;
-  margin: 22px 0 20px;
+  gap: 8px;
+  margin: 16px 0 14px;
   transition: padding-right var(--dur) var(--ease);
 }
 
@@ -1751,20 +1742,25 @@ watch(
 .sort {
   display: flex;
   align-items: center;
-  height: 44px;
-  padding: 4px;
-  border-radius: var(--radius-pill);
+  height: 36px;
+  padding: 3px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
 }
 
 .segments button {
-  min-height: 36px;
-  padding: 0 20px;
+  min-height: 28px;
+  padding: 0 14px;
   border: none;
-  border-radius: var(--radius-pill);
+  border-radius: 5px;
   background: none;
   box-shadow: none;
   color: var(--fg-dim);
-  font-size: 15px;
+  font-size: 13px;
   font-weight: 500;
 }
 
@@ -1774,39 +1770,42 @@ watch(
 }
 
 .segments::before {
-  background: var(--primary);
-  box-shadow: inset 0 1px 0 var(--primary-rim), 0 4px 12px var(--primary-glow);
+  border-radius: 5px;
+  background: var(--accent-soft);
+  box-shadow: none;
 }
 
 .segments button.on {
   background: transparent;
-  color: var(--on-primary);
+  color: var(--accent);
   font-weight: 600;
 }
 
+.segments.kinds {
+  gap: 2px;
+  padding: 0;
+  border-color: transparent;
+  background: transparent;
+}
+
+.segments.kinds::before {
+  background: var(--accent-soft);
+  border-radius: 7px;
+}
+
 .video-layout { flex: none; }
-.video-layout::before { background: var(--accent-soft); box-shadow: inset 0 1px 0 var(--glass-rim); }
+.video-layout::before { background: var(--accent-soft); box-shadow: none; }
 .video-layout button.on { color: var(--fg); }
 
 .segments.compact button {
-  width: 40px;
+  width: 34px;
   padding: 0;
-  border-radius: 11px;
+  border-radius: 4px;
 }
 
-.segments.compact button:first-child {
-  border-radius: 18px 11px 11px 18px;
-}
-
-.segments.compact button:last-child {
-  border-radius: 11px 18px 18px 11px;
-}
-
-/* The layout toggle marks its state with a lighter chip, not the cobalt
-   lens: only one primary pill per row (mock 01/02). */
 .segments.compact::before {
   background: var(--accent-soft);
-  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--glass-rim) 40%, transparent);
+  box-shadow: none;
 }
 
 .segments.compact button.on {
@@ -1818,7 +1817,7 @@ watch(
   .segments.kinds {
     min-width: 0;
     max-width: 100%;
-    min-height: 44px;
+    min-height: 36px;
     height: auto;
     flex-wrap: wrap;
   }
@@ -1839,10 +1838,10 @@ watch(
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  height: 36px;
-  padding: 0 8px 0 10px;
-  border-radius: var(--radius-pill);
-  font-size: 15px;
+  height: 28px;
+  padding: 0 8px;
+  border-radius: 4px;
+  font-size: 13px;
   font-weight: 500;
   color: var(--fg);
   white-space: nowrap;
@@ -1961,6 +1960,7 @@ watch(
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
   cursor: pointer;
   opacity: 0;
+  pointer-events: none;
   transition: opacity var(--dur) var(--ease);
 }
 
@@ -1978,6 +1978,7 @@ watch(
 .selecting .check,
 .check.on {
   opacity: 1;
+  pointer-events: auto;
 }
 
 /* border-box: the gradient runs under the ring instead of tiling into it. */
@@ -2006,8 +2007,7 @@ watch(
 
 /* ---------- ghosts: the list before the list ---------- */
 
-/* Ghost rows occupy the exact final row positions, so initial loading and
-   browsing-scope changes do not shift content. */
+/* Loading placeholders follow the final card geometry. */
 .ghost {
   overflow: hidden;
 }
@@ -2023,10 +2023,19 @@ watch(
   cursor: default;
 }
 
-.ghost-fill {
-  position: absolute;
-  inset: 4px;
-  border-radius: 5px;
+.ghost-folder {
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+}
+
+.ghost-folder .ghost-icon {
+  width: 52px;
+  height: 52px;
+}
+
+.ghost-folder .folder-meta {
+  padding: 0;
 }
 
 .ghost-folder .folder-text {
@@ -2070,7 +2079,7 @@ watch(
   display: flex;
   align-items: center;
   gap: 12px;
-  min-height: 46px;
+  min-height: 44px;
   padding: 0 12px;
   border-bottom: 1px solid var(--line);
 }
@@ -2082,16 +2091,16 @@ watch(
 /* ---------- sections ---------- */
 
 h2 {
-  margin: 4px 0 14px;
-  font-size: 17px;
-  line-height: 22px;
+  margin: 4px 0 10px;
+  font-size: 14px;
+  line-height: 20px;
   font-weight: 600;
 }
 
 h2 + .folders + h2,
 .folders + h2,
 .rows + h2 {
-  margin-top: 26px;
+  margin-top: 20px;
 }
 
 .count {
@@ -2102,16 +2111,15 @@ h2 + .folders + h2,
 
 /* ---------- folders ---------- */
 
-/* Columns derive from the list width rather than window width, with a 216px
-   card minimum and 16px gap. */
+/* Columns follow the available workspace width. */
 .folders {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(216px, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 216px), 1fr));
+  gap: 8px;
+  align-items: start;
 }
 
-/* A card is a cover of the folder's direct children (one large
-   tile, two small) inside a folder outline, then the name and the count. */
+/* Keep the folder preview and name together without a heavy card outline. */
 .folder {
   display: flex;
   flex-direction: column;
@@ -2119,13 +2127,13 @@ h2 + .folders + h2,
   justify-content: flex-start;
   gap: 0;
   min-width: 0;
-  padding: 13px 12px 10px;
-  border-radius: 14px;
+  padding: 10px 12px;
+  border-radius: 10px;
   border: 1px solid var(--line);
-  background: var(--surface);
+  background: color-mix(in srgb, var(--fg) 2%, var(--canvas));
   box-shadow: none;
   text-align: left;
-  transition: background var(--dur) var(--ease), border-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
+  transition: background var(--dur) var(--ease), border-color var(--dur) var(--ease);
 }
 
 .folder:hover:not(:disabled) {
@@ -2135,45 +2143,35 @@ h2 + .folders + h2,
 
 .folder.picked,
 .folder.picked:hover {
-  border-color: transparent;
-  box-shadow: 0 0 0 2px var(--accent), 0 0 0 6px var(--accent-soft);
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  box-shadow: none;
 }
 
-/* The pick box and the star sit in the cover's top corners, 4px inside the
-   tiles, as a file card's do on its thumbnail (1 border + 12/13 padding +
-   4 margin + 1 border + 4 padding + 4). */
-.folder > .check {
-  top: 26px;
-  left: 21px;
+/* Selection controls sit over the card without intercepting ordinary clicks. */
+.folder > .check,
+.card > .check {
+  top: 4px;
+  left: 4px;
 }
 
-.folder > .star-mark {
-  top: 26px;
-  right: 21px;
+.folder > .star-mark,
+.card > .star-mark {
+  top: 4px;
+  right: 4px;
 }
 
-/* Light by default, the dark skin below (the mock's colours). */
 .folders {
-  --cover-bg: #dce9f3;
-  --cover-line: rgba(78, 121, 154, 0.25);
-  --cover-empty: rgba(72, 115, 157, 0.045);
-  --tile-photo: #c8dae9;
-  --tile-glyph: #c8dae9;
-  --tile-document: #c8dae9;
-  --tile-audio: #c8dae9;
-  --tile-ink: #203c56;
+  --cover-bg: color-mix(in srgb, var(--canvas-flat) 90%, var(--fg) 10%);
+  --cover-line: var(--line);
+  --cover-empty: var(--surface);
+  --tile-photo: color-mix(in srgb, var(--canvas-flat) 86%, var(--fg) 14%);
+  --tile-glyph: var(--tile-photo);
+  --tile-document: var(--tile-photo);
+  --tile-audio: var(--tile-photo);
+  --tile-ink: var(--fg-dim);
 }
 
-:root[data-theme="dark"] .folders {
-  --cover-bg: #1a2a3c;
-  --cover-line: rgba(147, 188, 219, 0.19);
-  --cover-empty: rgba(116, 151, 183, 0.065);
-  --tile-photo: #29435b;
-  --tile-glyph: #334c65;
-  --tile-document: #3b4b64;
-  --tile-audio: #273c54;
-  --tile-ink: #dceaf5;
-}
 
 .folder-cover {
   position: relative;
@@ -2182,11 +2180,11 @@ h2 + .folders + h2,
   grid-template-rows: repeat(2, minmax(0, 1fr));
   gap: 4px;
   flex: none;
-  height: 119px;
-  margin-top: 4px;
-  padding: 4px;
-  border: 1px solid var(--cover-line);
-  border-radius: 10px;
+  height: 86px;
+  margin-top: 0;
+  padding: 2px;
+  border: 0;
+  border-radius: 6px;
   background: var(--cover-bg);
 }
 
@@ -2260,7 +2258,6 @@ h2 + .folders + h2,
   font-size: 11px;
 }
 
-.folder-mark,
 .mini-folder {
   position: relative;
   display: block;
@@ -2269,11 +2266,20 @@ h2 + .folders + h2,
   height: 15px;
   margin-top: 3px;
   border-radius: 2px 3px 3px 3px;
-  background: linear-gradient(180deg, #8ac5ee, #528ac0);
-  box-shadow: 0 2px 5px rgba(15, 40, 66, 0.22);
+  background: var(--accent);
 }
 
-.folder-mark::before,
+.folder-mark {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 8px;
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 9%, var(--canvas-flat));
+}
+
 .mini-folder::before {
   content: "";
   position: absolute;
@@ -2282,7 +2288,7 @@ h2 + .folders + h2,
   width: 10px;
   height: 5px;
   border-radius: 3px 3px 0 0;
-  background: #669ccb;
+  background: var(--accent);
 }
 
 .mini-folder {
@@ -2390,88 +2396,31 @@ h2 + .folders + h2,
   display: none;
 }
 
-/* Before the index can say (and in the bin): the outline and a folder. */
-.folder-cover.cover-plain {
-  display: grid;
-  place-items: center;
-  grid-template-columns: minmax(0, 1fr);
-  grid-template-rows: minmax(0, 1fr);
-}
-
-.folder-cover.cover-plain > .mini-folder {
-  opacity: 0.62;
-  transform: scale(1.5);
-}
-
+/* Folders without a cover stay compact and foreground their names. */
+.folder-cover.cover-plain,
 .folder-cover.cover-empty {
-  display: grid;
-  place-items: center;
-  grid-template-columns: minmax(0, 1fr);
-  grid-template-rows: minmax(0, 1fr);
-  border-style: dashed;
-  background: var(--cover-empty);
+  display: none;
 }
 
-
-.empty-symbol {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 13px;
-  color: var(--fg-dim);
-  font-size: 12px;
+.folder:not(.has-cover) {
+  min-height: 72px;
 }
 
-.empty-symbol .mini-folder {
-  opacity: 0.62;
-  transform: scale(1.5);
+.folder:not(.has-cover) .folder-meta {
+  padding-top: 0;
 }
+
 
 .folder-meta {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   min-width: 0;
   width: 100%;
-  padding: 8px 2px 0;
+  padding: 10px 0 0;
 }
 
-.folder-meta .chevron {
-  flex: none;
-  color: var(--fg-dim);
-  opacity: 0.8;
-}
-
-/* One column (a phone-narrow window): the cover takes the extra width as height. */
-@media (max-width: 520px) {
-  .folder-cover {
-    height: 140px;
-  }
-}
-
-/* Starred at a glance. A starred folder card wears the file cards' gold mark
-   in its cover's top-right corner (the pick box has the other), its edge
-   warmed to match and a faint gold light from that corner, so it stands
-   out in a grid of plain cards. A file shows the mark in the thumbnail's
-   free top corner (duration, play and the playing mark take the bottom),
-   in the playing mark's dark glass so one gold reads on any frame. */
-.folder.starred {
-  border-color: color-mix(in srgb, var(--star) 32%, transparent);
-  background:
-    radial-gradient(160px 110px at 100% 0, color-mix(in srgb, var(--star) 13%, transparent), transparent 70%),
-    var(--surface);
-}
-
-.folder.starred:hover:not(:disabled) {
-  border-color: color-mix(in srgb, var(--star) 48%, transparent);
-  background:
-    radial-gradient(160px 110px at 100% 0, color-mix(in srgb, var(--star) 17%, transparent), transparent 70%),
-    var(--surface-hover);
-}
-
-.folder.starred.picked {
-  border-color: transparent;
-}
+/* The star mark identifies favorites without changing the card surface. */
 
 .star-mark {
   position: absolute;
@@ -2496,20 +2445,10 @@ h2 + .folders + h2,
   color: var(--star);
 }
 
-.folder-icon.blue {
-  --t0: #7cc4ff;
-  --t1: #2f86f0;
+.folder-icon {
+  color: var(--accent);
 }
 
-.folder-icon.purple {
-  --t0: #c9a6ff;
-  --t1: #8c5ff2;
-}
-
-.folder-icon.amber {
-  --t0: #ffd98a;
-  --t1: #f0a63c;
-}
 
 .folder-text {
   display: flex;
@@ -2543,48 +2482,141 @@ h2 + .folders + h2,
 
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(216px, 1fr));
-  gap: 20px 16px;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 216px), 1fr));
+  gap: 8px;
 }
 
-/* Three 216px cards need 680px including gaps; keep their count stable
-   across that boundary while giving smaller canvases a readable card size. */
-@container files (max-width: 679px) {
-  .grid {
-    grid-template-columns: repeat(auto-fill, minmax(min(100%, 172px), 1fr));
+.media-grid {
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 180px), 1fr));
+  gap: 14px;
+}
+
+.media-grid .card {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
+  min-height: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+.media-grid .thumb {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 10;
+  border-radius: 0;
+}
+
+.media-grid .file-fallback {
+  background: color-mix(in srgb, var(--accent) 5%, var(--canvas-flat));
+}
+
+.media-grid .file-fallback svg {
+  width: 30px;
+  height: 30px;
+}
+
+.media-grid .meta {
+  flex: none;
+  padding: 8px 10px 11px;
+}
+
+.media-grid .duration {
+  left: auto;
+  right: 7px;
+  bottom: 7px;
+  padding: 2px 5px;
+  font-size: 11px;
+  line-height: 15px;
+}
+
+.media-grid .play {
+  right: 10px;
+  top: auto;
+  bottom: 10px;
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.media-grid .play:hover:not(:disabled) {
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.media-grid .card > .check,
+.media-grid .card > .star-mark {
+  top: 8px;
+}
+
+.media-grid .card > .check { left: 8px; }
+.media-grid .card > .star-mark { right: 8px; }
+
+.media-grid .card:has(.play) .meta {
+  padding-right: 48px;
+}
+
+@media (hover: none) {
+  .media-grid .play {
+    opacity: 1;
+    pointer-events: auto;
   }
 }
 
-/* Match the forced icon rail in dom.ts: expanding it must not reduce columns. */
-@media (max-width: 1079px) {
-  .grid {
-    grid-template-columns: repeat(auto-fill, minmax(min(100%, 216px), 1fr));
-  }
-}
 
-/* The mock puts the picture straight on the canvas: no card chrome, the
-   selection ring hugs the thumbnail. */
 .card {
   position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
   min-width: 0;
+  min-height: 70px;
+  padding: 9px 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--fg) 2%, var(--canvas));
   cursor: pointer;
+  transition: background var(--dur) var(--ease), border-color var(--dur) var(--ease);
 }
 
-/* content-visibility: off-screen thumbnails (picture, blurred chips, play
-   button) are skipped, so a resize — the nav collapsing, the window
-   being dragged — only lays out and paints the cards in view. The 16:9
-   ratio sizes the box from its width, skipped or not, so no placeholder
-   height is needed and the scroll height stays exact. */
+.card:hover {
+  border-color: var(--line-strong);
+  background: var(--surface-hover);
+}
+
+.card.picked {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
 .thumb {
   position: relative;
-  aspect-ratio: 16 / 9;
-  border-radius: var(--radius-card);
+  flex: none;
+  width: 52px;
+  height: 52px;
+  border-radius: 8px;
   overflow: hidden;
-  background: color-mix(in srgb, var(--fg) 8%, transparent);
+  background: color-mix(in srgb, var(--accent) 9%, var(--canvas-flat));
   display: grid;
   place-items: center;
-  content-visibility: auto;
-  transition: box-shadow var(--dur) var(--ease);
+}
+
+.thumb.type-audio,
+.thumb.type-archive {
+  background: color-mix(in srgb, var(--tint-violet) 10%, var(--canvas-flat));
+}
+
+.file-fallback {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  color: var(--accent);
+}
+
+.type-audio .file-fallback,
+.type-archive .file-fallback {
+  color: var(--tint-violet);
 }
 
 /* The rim sits over the picture; Thumb owns the sweep and fade. */
@@ -2593,43 +2625,36 @@ h2 + .folders + h2,
   position: absolute;
   inset: 0;
   border-radius: inherit;
-  box-shadow: inset 0 0 0 1px var(--line-strong), inset 0 1px 0 color-mix(in srgb, var(--glass-rim) 30%, transparent);
+  box-shadow: inset 0 0 0 1px var(--line);
   pointer-events: none;
 }
 
 .card.picked .thumb {
-  box-shadow: 0 0 0 2px var(--accent), 0 0 0 6px var(--accent-soft);
+  box-shadow: inset 0 0 0 1px var(--accent);
 }
 
 .duration {
   position: absolute;
-  right: 10px;
-  bottom: 10px;
-  padding: 3px 8px;
-  border-radius: 8px;
-  font-size: 12px;
-  line-height: 16px;
-  font-weight: 500;
+  left: 2px;
+  right: 2px;
+  bottom: 2px;
+  padding: 1px 2px;
+  border-radius: 4px;
+  font-size: 9px;
+  line-height: 12px;
+  text-align: center;
   font-variant-numeric: tabular-nums;
   color: #fff;
-  background: rgba(6, 16, 28, 0.64);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  transition: opacity var(--dur) var(--ease);
+  background: rgba(6, 16, 28, 0.75);
 }
 
-/* The play affordance takes the badge's corner on hover, so the two never
-   stack on the same pixels. */
-.card:hover .duration {
-  opacity: 0;
-}
 
 /* "This one is in the player": a different mark from selection, so both
    can show at once on different cards (mock 05). */
 .playing {
   position: absolute;
-  left: 10px;
-  bottom: 10px;
+  left: 3px;
+  bottom: 3px;
   width: 24px;
   height: 24px;
   display: grid;
@@ -2649,37 +2674,40 @@ h2 + .folders + h2,
 
 .play {
   position: absolute;
-  right: 10px;
-  bottom: 10px;
-  width: 34px;
-  height: 34px;
-  min-height: 34px;
+  right: 8px;
+  bottom: 8px;
+  width: 30px;
+  height: 30px;
+  min-height: 30px;
   padding: 0;
-  border-radius: 50%;
-  color: var(--on-primary);
-  background: var(--primary) border-box;
+  border-radius: 8px;
+  color: var(--accent);
+  background: var(--accent-soft);
   border-color: transparent;
-  box-shadow: inset 0 1px 0 var(--primary-rim), 0 6px 14px rgba(0, 0, 0, 0.3);
+  box-shadow: none;
   opacity: 0;
+  pointer-events: none;
   transition: opacity var(--dur) var(--ease);
 }
 
 .card:hover .play,
 .card:focus-within .play {
   opacity: 1;
+  pointer-events: auto;
 }
 
-/* Keeps its fill on hover: the plain button:hover outranks `.play`. */
 .play:hover:not(:disabled) {
-  background: var(--primary) border-box;
+  color: var(--accent);
+  background: var(--accent-soft);
   border-color: transparent;
 }
 
 .meta {
+  flex: 1;
   display: flex;
   flex-direction: column;
   gap: 2px;
-  padding: 10px 2px 0;
+  padding: 0;
   min-width: 0;
 }
 
@@ -2693,7 +2721,7 @@ h2 + .folders + h2,
 .name-row strong {
   flex: 1;
   min-width: 0;
-  font-size: 15px;
+  font-size: 14px;
   line-height: 20px;
   font-weight: 600;
   overflow: hidden;
@@ -2702,7 +2730,10 @@ h2 + .folders + h2,
 }
 
 .meta small {
-  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
   line-height: 18px;
   color: var(--fg-dim);
 }
@@ -2720,6 +2751,13 @@ h2 + .folders + h2,
   min-height: 28px;
   margin-right: -4px;
   color: var(--fg-dim);
+  opacity: 1;
+}
+
+.card:hover .more,
+.card:focus-within .more,
+.more.open {
+  opacity: 1;
 }
 
 .more.open,
@@ -2740,7 +2778,7 @@ h2 + .folders + h2,
 .rows th,
 .rows td {
   text-align: left;
-  padding: 9px 12px;
+  padding: 6px 10px;
   border-bottom: 1px solid var(--line);
 }
 
@@ -2765,13 +2803,13 @@ h2 + .folders + h2,
 }
 
 .rows tbody td:first-child {
-  border-top-left-radius: 10px;
-  border-bottom-left-radius: 10px;
+  border-top-left-radius: 4px;
+  border-bottom-left-radius: 4px;
 }
 
 .rows tbody td:last-child {
-  border-top-right-radius: 10px;
-  border-bottom-right-radius: 10px;
+  border-top-right-radius: 4px;
+  border-bottom-right-radius: 4px;
 }
 
 .rows .cell {
@@ -2976,9 +3014,9 @@ h2 + .folders + h2,
 .purge {
   flex: none;
   gap: 8px;
-  min-height: 44px;
-  padding: 0 18px;
-  font-size: 15px;
+  min-height: 36px;
+  padding: 0 12px;
+  font-size: 13px;
   font-weight: 500;
 }
 
@@ -2995,7 +3033,7 @@ h2 + .folders + h2,
   margin: -8px 0 18px;
   padding: 10px 12px 10px 16px;
   border: 1px solid color-mix(in srgb, var(--danger) 30%, transparent);
-  border-radius: 14px;
+  border-radius: 7px;
   background: color-mix(in srgb, var(--danger) 8%, transparent);
 }
 
@@ -3013,7 +3051,7 @@ h2 + .folders + h2,
   transform: translateX(-50%);
   max-width: calc(100% - 24px);
   padding: 6px 8px 6px 18px;
-  border-radius: var(--radius-pill);
+  border-radius: 8px;
   box-shadow: var(--shadow-sheet);
 }
 

@@ -116,7 +116,6 @@ export default {
   保留: { tw: "保留", en: "Keep", ja: "残す", ko: "유지" },
   "section|文件夹": { tw: "資料夾", en: "Folders", ja: "フォルダ", ko: "폴더" },
   "section|文件": { tw: "檔案", en: "Files", ja: "ファイル", ko: "파일" },
-  等待放入文件: { tw: "等待放入檔案", en: "Waiting for files", ja: "ファイルはまだありません", ko: "파일을 기다리는 중" },
   已加星标: { tw: "已加星號", en: "Starred", ja: "スター付き", ko: "별표됨" },
   名称: { tw: "名稱", en: "Name", ja: "名前", ko: "이름" },
   大小: { tw: "大小", en: "Size", ja: "サイズ", ko: "크기" },

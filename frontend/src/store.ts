@@ -286,6 +286,11 @@ export type ThemeMode = "system" | "light" | "dark";
 const systemDark = window.matchMedia("(prefers-color-scheme: dark)");
 const savedTheme = localStorage.getItem("pkp.theme");
 const themeMode: ThemeMode = savedTheme === "light" || savedTheme === "dark" ? savedTheme : "system";
+const savedContentOpacity = localStorage.getItem("pkp.contentOpacity");
+const parsedContentOpacity = savedContentOpacity === null || savedContentOpacity.trim() === "" ? NaN : Number(savedContentOpacity);
+const contentOpacity = Number.isInteger(parsedContentOpacity) && parsedContentOpacity >= 0 && parsedContentOpacity <= 100
+  ? parsedContentOpacity
+  : 100;
 
 export const ui = reactive({
   themeMode,
@@ -335,6 +340,7 @@ export const ui = reactive({
   // Glass turned into solid surfaces (Settings · General): the manual twin of the
   // system's reduced-transparency setting, and the cheap mode on weak GPUs.
   reduceTransparency: localStorage.getItem("pkp.reduceTransparency") === "1",
+  contentOpacity,
   // The nav as an icon rail (Settings · General, ⌘\). Content narrower than 1080px
   // gets the rail whatever this says.
   navCompact: localStorage.getItem("pkp.navCompact") === "1",
@@ -679,12 +685,22 @@ export function setReduceTransparency(on: boolean) {
   applyTransparency();
 }
 
+export function setContentOpacity(value: number) {
+  if (!Number.isFinite(value)) return;
+  ui.contentOpacity = Math.min(100, Math.max(0, Math.round(value)));
+  localStorage.setItem("pkp.contentOpacity", String(ui.contentOpacity));
+  applyTransparency();
+}
+
 export function setNavCompact(on: boolean) {
   ui.navCompact = on;
   localStorage.setItem("pkp.navCompact", on ? "1" : "0");
 }
 
 function applyTransparency() {
+  document.documentElement.style.setProperty("--content-opacity", `${ui.contentOpacity}%`);
+  document.documentElement.style.setProperty("--content-blur", ui.contentOpacity < 100 ? "16px" : "0px");
+  document.documentElement.style.setProperty("--wallpaper-visibility", String(Math.min(1, 0.05 + (100 - ui.contentOpacity) * 0.0475)));
   if (ui.reduceTransparency) document.documentElement.dataset.transparency = "reduced";
   else delete document.documentElement.dataset.transparency;
 }

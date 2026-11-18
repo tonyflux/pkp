@@ -26,7 +26,7 @@ import PrivacySettings from "./PrivacySettings.vue";
 import ShortcutsSettings from "./ShortcutsSettings.vue";
 import ConnectivityPanel from "./ConnectivityPanel.vue";
 import UpdateSettings from "./UpdateSettings.vue";
-import { isTyping, keychainName, modKey, onLinux, onMac, onWindows, systemName } from "../dom";
+import { isTyping, keychainName, modKey, onLinux, onMac, onWindows, systemName, useMedia } from "../dom";
 import { PROXY_MODES, PROXY_SCHEMES, useProxyDraft } from "../proxydraft";
 import { PRESETS, previewPath, templateError, type NamingStyle } from "../templates";
 import { AI_PRESETS, CUSTOM_PRESET_ID, presetOf } from "../aipresets";
@@ -71,6 +71,7 @@ import {
   setNavCompact,
   setParallelDownloads,
   setParallelUploads,
+  setContentOpacity,
   setReduceTransparency,
   setResumableUploads,
   setSkin,
@@ -107,6 +108,7 @@ type Panel = "" | "webdav" | "mcp" | "pat" | "apps";
 const tab = ref<Tab>("basic");
 const panel = ref<Panel>("");
 const main = ref<HTMLElement>();
+const systemReduceTransparency = useMedia("(prefers-reduced-transparency: reduce)");
 // The three cards whose island is AccessIsland.
 const access = computed(() => (panel.value === "mcp" || panel.value === "pat" || panel.value === "apps" ? panel.value : null));
 
@@ -609,7 +611,6 @@ onBeforeUnmount(() => {
   <section class="settings canvas">
     <header class="head">
       <h1>{{ t("设置") }}</h1>
-      <p>{{ t("管理偏好与连接") }}</p>
     </header>
 
     <div class="cols">
@@ -672,7 +673,7 @@ onBeforeUnmount(() => {
           <div class="card">
             <div class="card-text">
               <strong>{{ t("主题色") }}</strong>
-              <span>{{ t("按钮、选中、进度条和玻璃边缘的颜色，浅色和深色都适用。") }}</span>
+              <span>{{ t("按钮、选中和进度条的颜色，浅色和深色都适用。") }}</span>
             </div>
             <div class="swatches" role="radiogroup" :aria-label="t('主题色')">
               <button
@@ -694,11 +695,11 @@ onBeforeUnmount(() => {
           <div class="card">
             <div class="card-text">
               <strong>{{ t("壁纸") }}</strong>
-              <span v-if="ui.wallpaper">{{ t("正在用你选的图片。玻璃上的字看不清时，可以打开下面的「降低透明度」。") }}</span>
-              <span v-else>{{ t("内置的雪山湖景，随浅色、深色换明暗；也可以换成电脑里的一张图片。") }}</span>
+              <span v-if="ui.wallpaper">{{ t("正在使用你选择的图片；如需实色面板，可打开下面的「降低透明度」。") }}</span>
+              <span v-else>{{ t("默认背景随浅色、深色变化；也可以选择电脑里的图片。") }}</span>
             </div>
             <div class="actions">
-              <img class="wall-preview" :src="wallpaperSrc" :alt="t('当前壁纸')" />
+              <span class="wall-preview" :class="{ custom: !!ui.wallpaper }"><img :src="wallpaperSrc" :alt="t('当前壁纸')" /></span>
               <button v-if="ui.wallpaper" class="pill" @click="clearWallpaper">{{ t("恢复默认") }}</button>
               <button class="pill" @click="pickWallpaper">{{ t("选择图片…") }}</button>
             </div>
@@ -706,8 +707,37 @@ onBeforeUnmount(() => {
 
           <div class="card">
             <div class="card-text">
+              <strong id="content-opacity-label">{{ t("面板背景不透明度") }}</strong>
+              <span id="content-opacity-note">
+                <template v-if="ui.reduceTransparency || systemReduceTransparency">
+                  <template v-if="ui.reduceTransparency">{{ t("已开启降低透明度，面板背景保持实色。") }}</template>
+                  <template v-if="systemReduceTransparency"> {{ t("系统要求降低透明度，面板背景保持实色。") }}</template>
+                  {{ t("保存的百分比将在关闭这些选项后生效。") }}
+                </template>
+                <template v-else>{{ t("调整背景面板的不透明度，不影响文字和其他控件。") }}</template>
+              </span>
+            </div>
+            <div class="opacity-control">
+              <input
+                type="range"
+                min="0"
+                max="100"
+                step="1"
+                :value="ui.contentOpacity"
+                :disabled="ui.reduceTransparency || systemReduceTransparency"
+                aria-labelledby="content-opacity-label"
+                aria-describedby="content-opacity-note"
+                :aria-valuetext="`${ui.contentOpacity}%`"
+                @input="setContentOpacity(Number(($event.target as HTMLInputElement).value))"
+              />
+              <span aria-hidden="true">{{ ui.contentOpacity }}%</span>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-text">
               <strong>{{ t("降低透明度") }}</strong>
-              <span>{{ t("玻璃改为实色表面：壁纸再亮也不影响文字对比，模糊运算也一并省掉。") }}</span>
+              <span>{{ t("使用实色面板并关闭背景模糊，保持文字清晰。") }}</span>
             </div>
             <Toggle :model-value="ui.reduceTransparency" :label="t('降低透明度')" @update:model-value="setReduceTransparency" />
           </div>
@@ -1666,29 +1696,22 @@ onBeforeUnmount(() => {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  padding: 26px 28px 12px;
+  padding: 20px 28px 12px;
   overflow: hidden;
 }
 
 .head h1 {
-  margin: 0;
-  font-size: 32px;
+  margin: 0 0 16px;
+  font-size: 22px;
+  line-height: 30px;
   font-weight: 600;
-  line-height: 40px;
-  letter-spacing: 0.01em;
-}
-
-.head p {
-  margin: 4px 0 22px;
-  font-size: 16px;
-  color: var(--fg-dim);
 }
 
 .cols {
   flex: 1;
   min-height: 0;
   display: flex;
-  gap: 26px;
+  gap: 24px;
 }
 
 .rail {
@@ -1696,20 +1719,20 @@ onBeforeUnmount(() => {
   flex: none;
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  padding: 6px 12px 0 0;
+  gap: 3px;
+  padding: 0 12px 0 0;
   border-right: 1px solid var(--line);
 }
 
 .rail button {
   justify-content: flex-start;
-  gap: 14px;
-  min-height: 50px;
-  padding: 0 18px;
+  gap: 10px;
+  min-height: 40px;
+  padding: 0 12px;
   border-color: transparent;
   background: transparent;
-  color: var(--fg);
-  font-size: 16px;
+  color: var(--fg-dim);
+  font-size: 14px;
   font-weight: 500;
 }
 
@@ -1718,13 +1741,13 @@ onBeforeUnmount(() => {
 }
 
 .rail::before {
-  background: var(--primary);
-  box-shadow: inset 0 1px 0 var(--primary-rim), 0 8px 20px var(--primary-glow);
+  background: var(--accent-soft);
+  box-shadow: none;
 }
 
 .rail button.on {
   background: transparent;
-  color: var(--on-primary);
+  color: var(--accent);
   font-weight: 600;
 }
 
@@ -1732,19 +1755,19 @@ onBeforeUnmount(() => {
   flex: 1;
   min-width: 0;
   overflow-y: auto;
-  padding: 6px 8px 24px 0;
+  padding: 0 8px 24px 0;
 }
 
 .main h2 {
   margin: 0;
-  font-size: 25px;
+  font-size: 21px;
   font-weight: 600;
-  line-height: 34px;
+  line-height: 30px;
 }
 
 .lead {
-  margin: 6px 0 24px;
-  font-size: 15px;
+  margin: 5px 0 20px;
+  font-size: 14px;
   color: var(--fg-dim);
 }
 
@@ -1781,13 +1804,13 @@ onBeforeUnmount(() => {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 14px 18px;
+  gap: 12px 18px;
   width: 100%;
-  margin-bottom: 14px;
-  padding: 20px 22px;
-  border-radius: 16px;
+  margin-bottom: 8px;
+  padding: 16px 18px;
+  border-radius: 10px;
   border: 1px solid var(--line);
-  background: color-mix(in srgb, var(--fg) 3%, transparent);
+  background: color-mix(in srgb, var(--fg) 2%, transparent);
   color: var(--fg);
 }
 
@@ -1800,6 +1823,31 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 18px;
   flex: none;
+}
+
+.opacity-control {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 190px;
+  max-width: 100%;
+  min-width: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.opacity-control input {
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  accent-color: var(--accent);
+}
+
+.opacity-control input:focus {
+  background: transparent;
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
 }
 
 /* Beside its badge the text needs less room before the actions give way. */
@@ -1830,7 +1878,7 @@ onBeforeUnmount(() => {
 }
 
 .card-text strong {
-  font-size: 17px;
+  font-size: 15px;
   font-weight: 600;
 }
 
@@ -1887,12 +1935,12 @@ onBeforeUnmount(() => {
 /* The mock's action pills: a glass control with a chevron, not a link. */
 .pill {
   flex: none;
-  min-height: 44px;
+  min-height: 38px;
   padding: 0 18px;
   gap: 6px;
   border-color: color-mix(in srgb, var(--glass-edge) 70%, transparent);
   background: var(--glass-control);
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 600;
   box-shadow: inset 0 1px 0 color-mix(in srgb, var(--glass-rim) 60%, transparent);
 }
@@ -1905,7 +1953,7 @@ onBeforeUnmount(() => {
   display: flex;
   flex: none;
   padding: 4px;
-  border-radius: 14px;
+  border-radius: 10px;
 }
 
 .seg button {
@@ -1913,7 +1961,7 @@ onBeforeUnmount(() => {
   padding: 0 15px;
   gap: 6px;
   border: none;
-  border-radius: 10px;
+  border-radius: 7px;
   background: none;
   color: var(--fg-dim);
   font-size: 14px;
@@ -1968,8 +2016,7 @@ onBeforeUnmount(() => {
   height: 30px;
   border-radius: 50%;
   color: #ffffff;
-  background: linear-gradient(180deg, var(--primary-hi) 0%, var(--primary-mid) 55%, var(--primary-deep) 100%);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45), 0 4px 10px var(--primary-glow);
+  background: var(--primary-mid);
 }
 
 .swatch.on {
@@ -1978,10 +2025,7 @@ onBeforeUnmount(() => {
 }
 
 .swatch.on i {
-  box-shadow:
-    0 0 0 2px var(--canvas-flat),
-    0 0 0 4px var(--primary-mid),
-    0 4px 10px var(--primary-glow);
+  box-shadow: 0 0 0 2px var(--canvas-flat), 0 0 0 4px var(--primary-mid);
 }
 
 .wall-preview {
@@ -1990,8 +2034,28 @@ onBeforeUnmount(() => {
   height: 48px;
   border-radius: 10px;
   border: 1px solid var(--line-strong);
+  overflow: hidden;
+  background: var(--scene-sky-b);
+}
+
+.wall-preview img {
+  display: block;
+  width: 100%;
+  height: 100%;
   object-fit: cover;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
+  opacity: var(--wallpaper-visibility, 0.05);
+}
+
+.wall-preview.custom img {
+  opacity: 1;
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .wall-preview:not(.custom) img { opacity: 0.05; }
+}
+
+:root[data-transparency="reduced"] .wall-preview:not(.custom) img {
+  opacity: 0.05;
 }
 
 .meters {
@@ -2941,6 +3005,7 @@ onBeforeUnmount(() => {
 
   .rail {
     flex-direction: row;
+    overflow-x: auto;
     padding: 0 0 10px;
     border-right: none;
     border-bottom: 1px solid var(--line);
@@ -2957,9 +3022,7 @@ onBeforeUnmount(() => {
     line-height: 28px;
   }
 
-  .lead,
-  .badge,
-  .card-text span {
+  .badge {
     display: none;
   }
 
