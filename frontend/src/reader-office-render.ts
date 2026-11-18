@@ -14,7 +14,7 @@ export function safeOfficeCss(css: string): string {
   return unsafe || /url\s*\(/i.test(checked) || forbiddenCss.test(checked) ? "" : css;
 }
 export function sanitizeOfficeHtml(root: HTMLElement): string {
-  if (root.querySelectorAll("*").length > OFFICE_LIMITS.nodes) throw new Error(t("office|文档超过安全预览上限"));
+  if (root.querySelectorAll("*").length > OFFICE_LIMITS.nodes) throw new Error(t("office|文档太大或太长，超出了预览上限"));
   for (const element of Array.from(root.querySelectorAll("img,image"))) {
     for (const name of ["src", "href", "xlink:href"]) {
       const source = element.getAttribute(name);
@@ -61,7 +61,7 @@ export async function createOfficeRenderer(pkg: OfficePackage, signal: AbortSign
   await renderAsync(pkg.bytes, root, root, { className: "docx", inWrapper: true, breakPages: true, ignoreFonts: true, useBase64URL: true, renderAltChunks: false, renderComments: false, renderChanges: false, experimental: false });
   if (signal.aborted) throw new DOMException("Aborted", "AbortError");
   const sections = Array.from(root.querySelectorAll<HTMLElement>("section.docx"));
-  if (!sections.length || sections.length > OFFICE_LIMITS.pages || root.querySelectorAll("*").length > OFFICE_LIMITS.nodes) throw new Error(t("office|文档超过安全预览上限"));
+  if (!sections.length || sections.length > OFFICE_LIMITS.pages || root.querySelectorAll("*").length > OFFICE_LIMITS.nodes) throw new Error(t("office|文档太大或太长，超出了预览上限"));
   const styles = Array.from(root.querySelectorAll("style"));
   return {
     count: sections.length,

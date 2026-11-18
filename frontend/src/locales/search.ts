@@ -107,11 +107,11 @@ export default {
   "播放至 {time}": { tw: "播放至 {time}", en: "Stopped at {time}", ja: "{time} まで再生", ko: "{time}까지 재생" },
   播放: { tw: "播放", en: "Play", ja: "再生", ko: "재생" },
   本地搜索: { tw: "本機搜尋", en: "Local Search", ja: "ローカル検索", ko: "로컬 검색" },
-  "筛选直接在本地索引完成，不需要模型，也不发送文件名。": {
-    tw: "篩選直接在本機索引完成，不需要模型，也不傳送檔名。",
-    en: "Filtering runs on the local index: no model, and no file names are sent.",
-    ja: "絞り込みはローカルインデックスで行います。モデルは不要で、ファイル名も送信しません。",
-    ko: "필터링은 로컬 인덱스에서 바로 처리됩니다. 모델이 필요 없고 파일 이름도 보내지 않습니다.",
+  "只在本地索引里筛选，不联网也不动用 AI。": {
+    tw: "只在本機索引裡篩選，不連網也不用 AI。",
+    en: "Filtered in your local index only — offline, no AI used.",
+    ja: "ローカルインデックスだけで絞り込みます。AI も通信も使いません。",
+    ko: "로컬 인덱스에서만 걸러냅니다. 오프라인이며 AI를 쓰지 않습니다.",
   },
   搜索条件: { tw: "搜尋條件", en: "Search filters", ja: "検索条件", ko: "검색 조건" },
   "移除条件：{label}": { tw: "移除條件：{label}", en: "Remove filter: {label}", ja: "条件を削除：{label}", ko: "조건 제거: {label}" },
@@ -141,11 +141,11 @@ export default {
     ko: "조건에 맞는 파일이 없습니다. 다른 조건을 써 보거나 조건을 지우세요.",
   },
   全选: { tw: "全選", en: "Select all", ja: "すべて選択", ko: "모두 선택" },
-  "这只是本地筛选。想进一步按意思找，可以选择「问 AI」，发送前先确认数据范围。": {
-    tw: "這只是本機篩選。想進一步按意思找，可以選擇「問 AI」，傳送前會先確認資料範圍。",
-    en: "This is local filtering only. To search by meaning, choose “Ask AI” — you confirm what data is sent first.",
-    ja: "これはローカルの絞り込みです。意味で探すには「AI に聞く」を選んでください。送信前にデータの範囲を確認します。",
-    ko: "로컬 필터링일 뿐입니다. 의미로 찾으려면 ‘AI에게 묻기’를 선택하세요. 보내기 전에 데이터 범위를 먼저 확인합니다.",
+  "这里是按条件精确筛选；想按意思找，可以试试「问 AI」（发送前会先让你确认内容）。": {
+    tw: "這裡是依條件精確篩選；想依意思找，可以試試「問 AI」（傳送前會先讓你確認內容）。",
+    en: "Filtered here by exact conditions. To search by meaning, try “Ask AI” (you'll confirm what's sent first).",
+    ja: "ここでは条件で正確に絞り込みます。意味で探したいときは「AI に聞く」をお試しください（送信前に内容を確認できます）。",
+    ko: "여기서는 조건에 맞춰 정확히 걸러냅니다. 의미로 찾으려면 ‘AI에게 묻기’를 써 보세요(보내기 전에 내용을 먼저 확인합니다).",
   },
 
   /* ---------- parse.ts: why a file is set aside or left to ask about ---------- */

@@ -94,7 +94,7 @@ async function load() {
     await probe.body?.cancel();
     if (!probe.ok) throw new Error(t("读取文件失败（HTTP {status}）", { status: probe.status }));
     if (ranged && (!range || !Number.isSafeInteger(size) || size < 1)) throw new Error(t("文件服务器没有返回有效的字节范围"));
-    if (size > 256 * 1024 * 1024) throw new Error(t("内容超过安全读取上限"));
+    if (size > 256 * 1024 * 1024) throw new Error(t("文件太大，超出了预览限制"));
     const source = ranged ? { url: props.url, length: size, rangeChunkSize: 65536, disableAutoFetch: true, disableStream: true } : { data: await readBounded(props.url, 256 * 1024 * 1024, controller.signal) };
     if (run !== generation) return;
     const loadingTask = getDocument({ ...source, isEvalSupported: false, enableXfa: false, useWorkerFetch: false, CMapReaderFactory: PdfCMapFactory, StandardFontDataFactory: PdfFontFactory, WasmFactory: PdfWasmFactory, maxImageSize: 32000000, canvasMaxAreaInBytes: 64 * 1024 * 1024, useSystemFonts: true });

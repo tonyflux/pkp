@@ -17,11 +17,11 @@ export default {
     ja: "このフォルダ直下の項目のみ",
     ko: "현재 폴더의 바로 아래 항목만 표시합니다",
   },
-  "来自不同文件夹的文件，在这里汇合": {
-    tw: "來自不同資料夾的檔案，在這裡匯集",
-    en: "Files from every folder, gathered in one place",
-    ja: "各フォルダのファイルをここにまとめて表示",
-    ko: "여러 폴더의 파일을 여기에 모아 보여 줍니다",
+  "所有文件夹里的文件都列在这里": {
+    tw: "所有資料夾裡的檔案都列在這裡",
+    en: "All your files across folders, listed together",
+    ja: "すべてのフォルダのファイルをここに一覧表示",
+    ko: "모든 폴더의 파일을 여기에 모아 표시",
   },
   "本地索引建立中，结果可能不完整": {
     tw: "正在建立本機索引，結果可能不完整",
@@ -116,7 +116,7 @@ export default {
   保留: { tw: "保留", en: "Keep", ja: "残す", ko: "유지" },
   "section|文件夹": { tw: "資料夾", en: "Folders", ja: "フォルダ", ko: "폴더" },
   "section|文件": { tw: "檔案", en: "Files", ja: "ファイル", ko: "파일" },
-  等待放入文件: { tw: "等待放入檔案", en: "Waiting for files", ja: "ファイルはまだありません", ko: "파일을 기다리는 중" },
+  里面还是空的: { tw: "裡面還是空的", en: "Empty folder", ja: "まだ空です", ko: "아직 비어 있음" },
   已加星标: { tw: "已加星號", en: "Starred", ja: "スター付き", ko: "별표됨" },
   名称: { tw: "名稱", en: "Name", ja: "名前", ko: "이름" },
   大小: { tw: "大小", en: "Size", ja: "サイズ", ko: "크기" },

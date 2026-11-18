@@ -149,7 +149,7 @@ export function useProxyDraft() {
       const detail = [test.proxyMessage, test.serviceMessage].filter(Boolean).join(t("；"));
       return { title, tone: test.ok ? "ok" : "bad", text: detail || title };
     }
-    if (proxy.mode === "direct") return { title: t("尚未测试"), tone: "", text: t("直连不经过代理，测试只检查 PKP 服务是否可访问。") };
+    if (proxy.mode === "direct") return { title: t("尚未测试"), tone: "", text: t("直连不走代理，测试只看能不能连上 PKP 服务。") };
     return { title: t("尚未测试"), tone: "", text: proxyDirty.value ? t("配置已更改，请重新测试。") : t("先测试连接，再应用设置。") };
   });
   const proxyElapsed = computed(() => {

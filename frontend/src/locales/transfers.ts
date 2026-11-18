@@ -50,41 +50,41 @@ export default {
     ja: "表示中のアカウント：{name}（詳細を見てもアカウントは切り替わりません）",
     ko: "현재 보고 있는 계정: {name} (세부 정보를 봐도 계정이 전환되지 않습니다)",
   },
-  "任务完成后，保存到云盘的文件被删除了，云端因此把它记为失败。重新运行找不回这个文件；它若还在回收站，可以从回收站还原。": {
-    tw: "任務完成後，儲存到雲端硬碟的檔案被刪除了，雲端因此把它記為失敗。重新執行找不回這個檔案；它若還在垃圾桶，可以從垃圾桶還原。",
-    en: "The file this task saved to your drive was deleted after it finished, so the server marks the task failed. Running it again won't bring the file back; if it's still in the Trash, restore it from there.",
-    ja: "タスク完了後にクラウドドライブへ保存したファイルが削除されたため、サーバーは失敗として記録しています。再実行してもファイルは戻りません。ゴミ箱に残っていれば、ゴミ箱から復元できます。",
-    ko: "작업이 끝난 뒤 클라우드 드라이브에 저장된 파일이 삭제되어 서버가 실패로 기록했습니다. 다시 실행해도 파일은 돌아오지 않습니다. 휴지통에 있다면 휴지통에서 복원할 수 있습니다.",
+  "文件本来已经存好，但后来在云盘里被删掉了，所以云端记成了失败。重跑任务找不回它，如果还在回收站，可以去回收站还原。": {
+    tw: "檔案本來已經存好，但後來在雲端硬碟裡被刪掉了，所以雲端記成了失敗。重跑任務找不回它，如果還在垃圾桶，可以去垃圾桶還原。",
+    en: "The file was saved, then deleted from your drive afterward, so the cloud marked this task failed. Running it again won't bring it back — check Trash if you still need it.",
+    ja: "保存されたファイルが後からクラウド上で削除されたため、サーバーでは失敗扱いになっています。再実行しても戻りませんが、ゴミ箱に残っていれば復元できます。",
+    ko: "파일이 저장된 뒤 드라이브에서 삭제되어 서버가 실패로 기록했습니다. 다시 실행해도 돌아오지 않으며, 휴지통에 있다면 거기서 복원할 수 있습니다.",
   },
-  "应用退出时这个下载还没完成。已下载的部分保留在本地，继续下载会从中断的地方接着下载。": {
-    tw: "應用程式結束時這個下載還沒完成。已下載的部分保留在本機，繼續下載會從中斷的地方接著下載。",
-    en: "The app quit before this download finished. What was downloaded is kept on this computer; continuing picks up where it stopped.",
-    ja: "アプリ終了時にこのダウンロードは完了していませんでした。ダウンロード済みの部分はローカルに残っており、再開すると中断したところから続きます。",
-    ko: "앱이 종료될 때 이 다운로드가 끝나지 않았습니다. 다운로드된 부분은 로컬에 남아 있으며, 계속하면 중단된 지점부터 이어받습니다.",
+  "上次退出时还没下完，已下载的部分还留着，点继续会接着往下传。": {
+    tw: "上次結束時還沒載完，已下載的部分還留著，點繼續會接著往下傳。",
+    en: "PKP closed before this download finished. The downloaded part was saved locally, so continuing picks up from where it paused.",
+    ja: "前回終了時にまだダウンロード中でした。途中のデータは残っているため、続きから再開できます。",
+    ko: "지난 종료 시 아직 다 받지 못했습니다. 받은 부분은 남아 있어 계속하면 이어서 내려받습니다.",
   },
-  "应用退出时这个下载还没完成。重新下载会从头开始。": {
-    tw: "應用程式結束時這個下載還沒完成。重新下載會從頭開始。",
-    en: "The app quit before this download finished. Downloading again starts from the beginning.",
-    ja: "アプリ終了時にこのダウンロードは完了していませんでした。再ダウンロードは最初からになります。",
-    ko: "앱이 종료될 때 이 다운로드가 끝나지 않았습니다. 다시 다운로드하면 처음부터 시작합니다.",
+  "上次退出时还没下完，这次重新下载会从头开始。": {
+    tw: "上次結束時還沒載完，這次重新下載會從頭開始。",
+    en: "PKP closed before this download finished. Downloading again will start from scratch.",
+    ja: "前回終了時にまだダウンロード中でした。再ダウンロードすると最初からやり直します。",
+    ko: "지난 종료 시 아직 다 받지 못했습니다. 다시 받으면 처음부터 시작합니다.",
   },
-  "应用退出时这个上传还没完成。已上传的部分留在云端，继续上传会从中断的地方接着上传。": {
-    tw: "應用程式結束時這個上傳還沒完成。已上傳的部分留在雲端，繼續上傳會從中斷的地方接著上傳。",
-    en: "The app quit before this upload finished. What was uploaded stays in the cloud; continuing picks up where it stopped.",
-    ja: "アプリ終了時にこのアップロードは完了していませんでした。アップロード済みの部分はクラウドに残っており、再開すると中断したところから続きます。",
-    ko: "앱이 종료될 때 이 업로드가 끝나지 않았습니다. 업로드된 부분은 클라우드에 남아 있으며, 계속하면 중단된 지점부터 이어올립니다.",
+  "上次退出时还没传完，已上传的部分还在云端，点继续会接着传。": {
+    tw: "上次結束時還沒傳完，已上傳的部分還在雲端，點繼續會接著傳。",
+    en: "PKP closed before this upload finished. What was uploaded is still in the cloud, so continuing picks up where it left off.",
+    ja: "前回終了時にまだアップロード中でした。送信済みの分はクラウドに残っているため、続きから再開できます。",
+    ko: "지난 종료 시 아직 다 올리지 못했습니다. 올라간 부분은 클라우드에 남아 있어 계속하면 이어 올립니다.",
   },
-  "应用退出时这个上传还没完成。重新上传会从头开始，不会接着之前的进度。": {
-    tw: "應用程式結束時這個上傳還沒完成。重新上傳會從頭開始，不會接著之前的進度。",
-    en: "The app quit before this upload finished. Uploading again starts from the beginning, not from the earlier progress.",
-    ja: "アプリ終了時にこのアップロードは完了していませんでした。再アップロードは最初からになり、以前の進捗は引き継がれません。",
-    ko: "앱이 종료될 때 이 업로드가 끝나지 않았습니다. 다시 업로드하면 이전 진행 상황 없이 처음부터 시작합니다.",
+  "上次退出时还没传完，重传会从头开始，不能接上次的进度。": {
+    tw: "上次結束時還沒傳完，重傳會從頭開始，無法接著上次的進度。",
+    en: "PKP closed before this upload finished. Uploading again starts from the beginning without earlier progress.",
+    ja: "前回終了時にまだアップロード中でした。再アップロードは最初からのやり直しになります。",
+    ko: "지난 종료 시 아직 다 올리지 못했습니다. 다시 올리면 이전 진행 없이 처음부터 시작합니다.",
   },
-  "已上传的部分留在云端，继续上传会从中断的地方接着上传。": {
-    tw: "已上傳的部分留在雲端，繼續上傳會從中斷的地方接著上傳。",
-    en: "What was uploaded stays in the cloud; continuing picks up where it stopped.",
-    ja: "アップロード済みの部分はクラウドに残っており、再開すると中断したところから続きます。",
-    ko: "업로드된 부분은 클라우드에 남아 있으며, 계속하면 중단된 지점부터 이어올립니다.",
+  "已经上传的部分还留在云端，点继续会接着传。": {
+    tw: "已經上傳的部分還留在雲端，點繼續會接著傳。",
+    en: "What was uploaded is still in the cloud; continuing picks up from where it left off.",
+    ja: "アップロード済みの部分はクラウドに残っているため、続きから再開できます。",
+    ko: "이미 올린 부분은 클라우드에 남아 있어 계속하면 이어서 올립니다.",
   },
   待整理建议: { tw: "待整理建議", en: "Organize suggestion", ja: "整理の提案", ko: "정리 제안" },
   建议没有生成: { tw: "建議沒有產生", en: "Couldn't build a suggestion", ja: "提案を作成できませんでした", ko: "제안을 만들지 못했습니다" },
@@ -155,7 +155,7 @@ export default {
   没有需要处理的任务: { tw: "沒有需要處理的任務", en: "No tasks need attention", ja: "要対応のタスクはありません", ko: "확인이 필요한 작업이 없습니다" },
   没有已完成的任务: { tw: "沒有已完成的任務", en: "No finished tasks", ja: "完了したタスクはありません", ko: "완료된 작업이 없습니다" },
   仅运行中的任务显示进度: { tw: "僅執行中的任務顯示進度", en: "Only running tasks show progress", ja: "実行中のタスクのみ進捗を表示", ko: "실행 중인 작업만 진행률을 표시합니다" },
-  失败原因就在任务旁: { tw: "失敗原因就在任務旁", en: "Each failure says why", ja: "失敗の理由はタスクの横に表示", ko: "실패 이유는 작업 옆에 표시됩니다" },
+  出错原因就显示在任务旁边: { tw: "失敗原因就顯示在任務旁邊", en: "Error details appear right beside the task", ja: "エラーの理由はタスクの横に表示されます", ko: "실패 원인이 작업 바로 옆에 표시됩니다" },
   最近完成: { tw: "最近完成", en: "Recently finished", ja: "最近完了", ko: "최근 완료" },
   按完成时间排列: { tw: "依完成時間排列", en: "By finish time", ja: "完了日時順", ko: "완료 시간순" },
   实时更新: { tw: "即時更新", en: "Live", ja: "リアルタイム更新", ko: "실시간 업데이트" },
@@ -277,11 +277,11 @@ export default {
   },
   已下载的部分保留: { tw: "已下載的部分保留", en: "What's downloaded is kept", ja: "ダウンロード済みの部分は残ります", ko: "다운로드된 부분은 유지됩니다" },
   所选的下载都没有在进行: { tw: "所選的下載都沒有在進行", en: "None of the selected downloads is running", ja: "選択したダウンロードはどれも進行していません", ko: "선택한 다운로드 중 진행 중인 것이 없습니다" },
-  "保留了进度的从中断处继续，其余从头开始": {
-    tw: "保留了進度的從中斷處繼續，其餘從頭開始",
-    en: "Those with saved progress continue; the rest start over",
+  "有进度记录的会接着传，其余从头开始": {
+    tw: "有進度紀錄的會接著傳，其餘從頭開始",
+    en: "Items with saved progress continue; the rest start over",
     ja: "進捗が残っているものは続きから、それ以外は最初から",
-    ko: "진행 상황이 남은 항목은 이어서, 나머지는 처음부터 시작합니다",
+    ko: "진행 기록이 남은 항목은 이어서, 나머지는 처음부터 시작합니다",
   },
   "所选的下载里没有暂停、失败、取消或中断的": {
     tw: "所選的下載裡沒有暫停、失敗、取消或中斷的",
@@ -325,11 +325,11 @@ export default {
   },
 
   // CloudAddSheet
-  "另有 {n} 项待打开，提交或清空对应类型的内容后继续。": {
-    tw: "另有 {n} 項待開啟，提交或清空對應類型的內容後繼續。",
-    en: (p) => `${p.n} more ${plural(p.n, "item is", "items are")} waiting. Submit or clear the input of the corresponding type to continue.`,
-    ja: "ほかに {n} 件が待機中です。該当する種類の内容を送信または消去すると続行します。",
-    ko: "{n}개 항목이 더 대기 중입니다. 해당 유형의 내용을 제출하거나 지우면 계속합니다.",
+  "还有 {n} 项排着队，先把这一批提交或清空后再继续。": {
+    tw: "還有 {n} 項排著隊，先把這一批提交或清空後再繼續。",
+    en: (p) => `${p.n} more ${plural(p.n, "item is", "items are")} in line. Submit or clear this tab to continue.`,
+    ja: "ほかに {n} 件が待機中です。今の内容を送信または消去すると次へ進めます。",
+    ko: "{n}개 항목이 더 대기 중입니다. 현재 내용을 제출하거나 비운 뒤 계속하세요.",
   },
   待处理的外部打开请求: {
     tw: "待處理的外部開啟請求",

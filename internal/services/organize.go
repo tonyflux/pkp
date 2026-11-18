@@ -78,7 +78,7 @@ var (
 
 var (
 	errPlanTooLarge = &lazyError{func() string { return i18n.F("单个计划不能超过 %d 项", maxPlan) }}
-	errOrganizing   = i18n.New("这个账号正在整理，请等这一次完成")
+	errOrganizing   = i18n.New("这个账号还在整理中，等这一轮弄完吧")
 )
 
 // Why a change did not happen, as the receipt shows it.
@@ -107,7 +107,7 @@ func fmtMakeFailed(name, cause string) string {
 	return i18n.F("没能新建「%s」：%s", name, cause)
 }
 func fmtReadFailed(name, cause string) string {
-	return i18n.F("读不出「%s」里有什么：%s", name, cause)
+	return i18n.F("打不开「%s」查看里面有什么：%s", name, cause)
 }
 func fmtNumbered(name string) string {
 	return i18n.F("目标名称已被占用，云盘改名为「%s」", name)
@@ -195,7 +195,7 @@ func (d *DriveService) Organize(account string, req OrganizeRequest) (OrganizeRe
 			return d.keepOrganizeRecord(s.key, rec)
 		}
 		if err := r.save(); err != nil {
-			return OrganizeRecord{}, i18n.Errorf("没能写下整理记录，未执行：%w", err)
+			return OrganizeRecord{}, i18n.Errorf("保存整理记录失败，操作没执行：%w", err)
 		}
 	}
 

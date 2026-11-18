@@ -80,7 +80,7 @@ func (d *DriveService) SyncPreview(requestID string, config foldersync.Config) (
 	}
 	if _, exists := d.syncPreviews[requestID]; exists {
 		d.syncPreviewMu.Unlock()
-		return foldersync.Preview{}, i18n.New("这次同步扫描已经在进行")
+		return foldersync.Preview{}, i18n.New("已经在扫描了，稍微等一下")
 	}
 	d.syncPreviews[requestID] = cancel
 	d.syncPreviewMu.Unlock()
@@ -227,7 +227,7 @@ func (d *DriveService) SyncFolderTrail(account, id string) ([]Crumb, error) {
 	seen := map[string]bool{}
 	for id != "" {
 		if seen[id] {
-			return nil, i18n.New("云端目录关系异常，请重新选择同步位置")
+			return nil, i18n.New("云端目录结构对不上，请重选同步文件夹")
 		}
 		seen[id] = true
 		node, err := backend.Get(ctx, id)
@@ -269,7 +269,7 @@ func (b *syncDriveBackend) AccountID() string { return b.user }
 
 func (b *syncDriveBackend) client() (*drive.Client, error) {
 	if b.d.byKey(b.s.key) != b.s || b.s.record().UserID != b.user || b.user == "" {
-		return nil, errors.Join(foldersync.ErrAuth, i18n.New("同步所属账号已改变，请重新配对"))
+		return nil, errors.Join(foldersync.ErrAuth, i18n.New("同步对应的账号变了，请重新关联"))
 	}
 	client, err := b.s.api()
 	return client, b.classify(err)
@@ -366,7 +366,7 @@ func (b *syncDriveBackend) Root(ctx context.Context, id string) (foldersync.Node
 	seen := map[string]bool{}
 	for node := root; node.ID != ""; {
 		if seen[node.ID] {
-			return foldersync.Node{}, i18n.New("云端目录关系异常，请重新选择同步位置")
+			return foldersync.Node{}, i18n.New("云端目录结构对不上，请重选同步文件夹")
 		}
 		seen[node.ID] = true
 		names = append(names, node.Name)
@@ -379,7 +379,7 @@ func (b *syncDriveBackend) Root(ctx context.Context, id string) (foldersync.Node
 			return foldersync.Node{}, err
 		}
 		if !node.Directory {
-			return foldersync.Node{}, i18n.New("云端目录关系异常，请重新选择同步位置")
+			return foldersync.Node{}, i18n.New("云端目录结构对不上，请重选同步文件夹")
 		}
 	}
 	slices.Reverse(names)
@@ -416,7 +416,7 @@ func (b *syncDriveBackend) List(ctx context.Context, parentID string) ([]folders
 			return out, nil
 		}
 		if seenTokens[page.NextPageToken] {
-			return nil, i18n.New("云端目录分页未完整结束，未执行同步")
+			return nil, i18n.New("云端目录列表没拉完整，这次先不同步")
 		}
 		seenTokens[page.NextPageToken] = true
 		params.PageToken = page.NextPageToken
@@ -435,7 +435,7 @@ func (b *syncDriveBackend) current(ctx context.Context, node foldersync.Node) (f
 	}
 	if !sameSyncVersion(node, got) {
 		b.d.log.Debug("sync: entry version changed", "id", node.ID, "expected", node.Version, "actual", got.Version, "nameChanged", node.Name != got.Name, "parentChanged", node.ParentID != got.ParentID, "sizeChanged", node.Size != got.Size, "phaseBefore", node.Phase, "phaseAfter", got.Phase, "modifiedBefore", node.Modified, "modifiedAfter", got.Modified)
-		return foldersync.Node{}, errors.Join(foldersync.ErrChanged, i18n.New("文件在核对后发生变化，已保留原件，请重新扫描"))
+		return foldersync.Node{}, errors.Join(foldersync.ErrChanged, i18n.New("文件刚刚又改了，原文件没动，请重新扫描一次"))
 	}
 	return got, nil
 }
@@ -498,7 +498,7 @@ func (b *syncDriveBackend) Upload(ctx context.Context, request foldersync.Upload
 	var slot *drive.UploadSlot
 	if request.FileID != "" {
 		if len(request.Grant) == 0 {
-			return foldersync.Node{}, errors.Join(foldersync.ErrUnknown, i18n.New("上传授权记录不完整，已停止自动重试"))
+			return foldersync.Node{}, errors.Join(foldersync.ErrUnknown, i18n.New("上传凭证不完整，先停下自动重试"))
 		}
 		slot = &drive.UploadSlot{File: drive.File{ID: request.FileID}}
 		if err := json.Unmarshal(request.Grant, &slot.OSS); err != nil {
@@ -536,18 +536,18 @@ func (b *syncDriveBackend) Upload(ctx context.Context, request foldersync.Upload
 			break
 		}
 		if node.Phase == drive.PhaseError {
-			return node, i18n.New("云端未完成同步上传，旧版本已保留")
+			return node, i18n.New("云端这次没上传完，旧版本已保留")
 		}
 		select {
 		case <-ctx.Done():
 			return node, errors.Join(foldersync.ErrUnknown, ctx.Err())
 		case <-deadline.C:
-			return node, errors.Join(foldersync.ErrUnknown, i18n.New("云端尚未确认上传完成，旧版本已保留"))
+			return node, errors.Join(foldersync.ErrUnknown, i18n.New("云端还没确认上传完成，旧版本先留着"))
 		case <-time.After(taskPoll):
 		}
 	}
 	if node.ParentID != request.ParentID || node.Name != request.Name {
-		return node, errors.Join(foldersync.ErrUnknown, i18n.New("云端保存位置与计划不同，已保留所有版本"))
+		return node, errors.Join(foldersync.ErrUnknown, i18n.New("云端存到的位置和预期对不上，两边版本都留着了"))
 	}
 	localHash, err := syncfs.Hash(ctx, request.Path)
 	if err != nil {
@@ -599,7 +599,7 @@ func (b *syncDriveBackend) Mkdir(ctx context.Context, parentID, name, operationI
 	}
 	node, err := b.Get(ctx, file.ID)
 	if err == nil && (node.ParentID != parentID || node.Name != name || !node.Directory) {
-		err = i18n.New("云端保存位置与计划不同，已保留所有版本")
+		err = i18n.New("云端存到的位置和预期对不上，两边版本都留着了")
 	}
 	if err != nil {
 		return node, errors.Join(foldersync.ErrUnknown, err)
@@ -629,7 +629,7 @@ func (b *syncDriveBackend) Rename(ctx context.Context, node foldersync.Node, nam
 	}
 	got, err := b.Get(ctx, node.ID)
 	if err != nil || got.Name != name || got.ParentID != node.ParentID {
-		return got, errors.Join(foldersync.ErrUnknown, err, i18n.New("云端尚未确认名称变更，已保留原件"))
+		return got, errors.Join(foldersync.ErrUnknown, err, i18n.New("云端还没确认改名成功，原文件没动"))
 	}
 	requestSync(b.s)
 	return got, nil
@@ -667,7 +667,7 @@ func (b *syncDriveBackend) Move(ctx context.Context, node foldersync.Node, paren
 	}
 	got, err := b.Get(ctx, node.ID)
 	if err != nil || got.ParentID != parentID || got.Name != node.Name {
-		return got, errors.Join(foldersync.ErrUnknown, err, i18n.New("云端尚未确认移动结果，已保留所有版本"))
+		return got, errors.Join(foldersync.ErrUnknown, err, i18n.New("云端还没确认移动结果，两边版本都留着了"))
 	}
 	if got.Name != name {
 		return b.Rename(ctx, got, name, operationID)
@@ -695,7 +695,7 @@ func (b *syncDriveBackend) await(ctx context.Context, taskID string) error {
 		}
 		if task.Done() {
 			if task.Phase != drive.PhaseComplete {
-				return i18n.New("云端未确认同步操作完成，请重新核对")
+				return i18n.New("云端没确认同步是否完成，请重新核对一下")
 			}
 			return nil
 		}
@@ -744,7 +744,7 @@ func (b *syncDriveBackend) Trash(ctx context.Context, node foldersync.Node, oper
 		requestSync(b.s)
 		return nil
 	}
-	return errors.Join(foldersync.ErrUnknown, i18n.New("云端回收站尚未确认这项文件，未标记为已删除"))
+	return errors.Join(foldersync.ErrUnknown, i18n.New("还没在云端回收站里确认到它，先不标记为已删除"))
 }
 
 func (b *syncDriveBackend) Trashed(ctx context.Context, id string) (bool, error) {

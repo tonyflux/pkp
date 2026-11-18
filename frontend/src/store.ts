@@ -1700,7 +1700,7 @@ export async function watchExternalOpen(): Promise<void> {
 
 /** What the account on screen has started and not submitted, "" for nothing. */
 function unsubmitted(): string {
-  if (savedHistoryDirty.value) return t("未保存的已保存历史更改");
+  if (savedHistoryDirty.value) return t("这个搜索还有没保存的修改");
   if (syncDraft.pending) return t("尚未确认的文件夹同步");
   const incomingShare = shareImportPending();
   if (incomingShare) return incomingShare;
@@ -1738,7 +1738,7 @@ function ask(question: Question): Promise<boolean> {
 async function leaveUnsubmitted(target: string): Promise<boolean> {
   if (!(await waitSavedHistoryLeave())) return false;
   if (syncDraft.busy) {
-    notify(t("正在确认同步关系，请稍后再切换账号"), "info");
+    notify(t("正在保存同步设置，请稍等一下再切换账号"), "info");
     return false;
   }
   if (shareImportBusy()) {
@@ -2832,12 +2832,12 @@ function savedHistoryFailure(error: unknown): false {
 
 function validateSavedHistoryDraft(): void {
   if (!ui.query.trim()) throw new Error(t("请输入搜索条件"));
-  if (!savedHistoryCanSave.value) throw new Error(t("所选项目范围不能保存为动态搜索，请先移除所选项范围"));
+  if (!savedHistoryCanSave.value) throw new Error(t("按勾选项目筛选的条件没法保存成动态搜索，先去掉范围限制再保存。"));
 }
 
 export function saveSavedHistoryChanges(): boolean {
   const item = currentSavedSearch.value;
-  if (!item) return savedHistoryFailure(t("这条已保存历史已不存在，请重新打开列表"));
+  if (!item) return savedHistoryFailure(t("找不到这条已保存的搜索了，请重新打开列表"));
   try {
     validateSavedHistoryDraft();
     const draft = savedHistoryDefinition();
@@ -2903,7 +2903,7 @@ export function openSavedSearch(id: string, edit = false): void {
   if (!currentId.value || accounts.switching) return;
   if (savedSearches.account !== currentId.value) loadSavedSearches(currentId.value);
   const item = savedSearches.items.find((entry) => entry.id === id);
-  if (!item) { savedHistoryFailure(t("这条已保存历史已不存在，请重新打开列表")); return; }
+  if (!item) { savedHistoryFailure(t("找不到这条已保存的搜索了，请重新打开列表")); return; }
   if (savedHistory.id === id && savedHistory.account === currentId.value) {
     if (!savedHistoryDirty.value && !edit) applySavedHistory(item);
     else ui.route = "files";
@@ -4646,7 +4646,7 @@ function askConsent(sheet: Pick<ConsentSheet, "title" | "lede" | "sends" | "esti
   assistant.consent = {
     accountName: accountName(account),
     level: "metadata",
-    notSends: t("工具查询不会额外发送文件内容、字幕、账号凭据、下载和分享链接、分享口令、任务源链接、本地文件路径或 TMDB 资料；不包括你在问题或历史问答中写入的内容。"),
+    notSends: t("工具查询不会主动读取并发送文件内容、字幕、账号凭据、下载或分享链接、提取码、本地路径或 TMDB 资料（除非你自己贴在了提问里）。"),
     to: modelLine(),
     ...sheet,
   };
@@ -4933,7 +4933,7 @@ async function startTurn(text: string, range: AskScope = assistant.scope) {
       consent: (d: TurnDisclosure) =>
         askConsent({
           title: t("这一轮，要把哪些信息发给模型？"),
-          lede: t("本轮只询问一次：AI 在这一轮里调用本地工具查到的内容会一起发送，不会逐次再问。"),
+          lede: t("这一轮只问你这一次：AI 查本地文件时找到的结果也会一起发过去，不会每一步都弹出来问。"),
           sends: d.sends + extra,
           estimate: d.estimate,
           limit: conv.usage.limit,
@@ -5610,12 +5610,12 @@ export async function runCard(turnId: string, cardId: string) {
   card.state = "running";
   card.note = "";
   const persist = async () => {
-    if (!(await saveConversation(conv, account, snapshot))) throw new Error(t("无法保存操作状态，已停止提交；已经提交的操作不会回滚，请重新查询实际状态。"));
+    if (!(await saveConversation(conv, account, snapshot))) throw new Error(t("保存状态失败，先停在这里；已经提交的操作撤不回，建议查一下最新状态。"));
   };
   const check = () => {
     if (run.stop || currentId.value !== account || assistant.conversation !== conv) {
       if (card.kind === "operation") card.stopped = true;
-      throw new Error(t("已停止提交剩余项目；已经提交的操作不会回滚，仍可能完成。"));
+      throw new Error(t("剩下的已经停下了；不过前面发出去的操作撤不回，可能还会陆续完成。"));
     }
   };
   try {
@@ -6769,7 +6769,7 @@ export async function runPlan(keepUndecided?: boolean) {
   const done = record;
   if (account === currentId.value) void reload(false);
   const completed = new Set((done.items ?? []).filter((item) => item.done && !item.error).map((item) => item.fileId));
-  await run(t("更新入库提醒"), () => updatePlanArrivals(account, p!, completed, done.id));
+  await run(t("更新新文件提醒"), () => updatePlanArrivals(account, p!, completed, done.id));
   if (p.arrivals.length) await loadInbox(account);
   if (account !== currentId.value || assistant.account !== account) {
     const n = recordCounts(done);
@@ -6793,7 +6793,7 @@ export async function runPlan(keepUndecided?: boolean) {
   assistant.receiptKept = kept;
   assistant.screen = "receipt";
   const pending = pendingArrivals.value.filter((a) => p!.arrivals.some((r) => r.id === a.id)).length;
-  if (pending) say(t("本次仍有 {n} 条入库提醒待处理：未决定或执行失败的文件不会自动标为已处理。", { n: pending }), "warning");
+  if (pending) say(t("还有 {n} 条新文件提醒待定：没决定怎么处理或执行失败的还会留着。", { n: pending }), "warning");
   void loadAssistantHistory();
 }
 
@@ -6956,7 +6956,7 @@ export async function loadInbox(account = currentId.value) {
   try {
     await DriveService.SetArrivalSuggestions(account, suggested);
   } catch (err) {
-    if (!removedAccounts.has(account)) notify(t("{label}：{error}", { label: t("更新入库提醒"), error: errorText(err) }), "error");
+    if (!removedAccounts.has(account)) notify(t("{label}：{error}", { label: t("更新新文件提醒"), error: errorText(err) }), "error");
   }
 }
 
@@ -7057,7 +7057,7 @@ export async function openArrival(a: Arrival) {
   const key = `${a.account}/${a.id}`;
   const ready = arrivalPlans.get(key);
   arrivalPlans.delete(key);
-  await openPlan(t("正在读取新入库的文件…"), () => (ready ? Promise.resolve(ready) : arrivalPlan(a)));
+  await openPlan(t("正在读取新保存的文件…"), () => (ready ? Promise.resolve(ready) : arrivalPlan(a)));
 }
 
 /** Builds one reviewable plan for the selected arrivals only. */
@@ -7065,12 +7065,12 @@ export async function openArrivals(arrivals: Arrival[]) {
   const chosen = arrivals.filter((a) => a.account === currentId.value && a.state === "new");
   if (!chosen.length) return;
   if (chosen.length === 1) return openArrival(chosen[0]);
-  await openPlan(t("正在读取新入库的文件…"), async (account) => {
+  await openPlan(t("正在读取新保存的文件…"), async (account) => {
     if (chosen.some((a) => !a.fileId)) throw new Error(t("这个任务没有产出文件"));
     const ids = [...new Set(chosen.map((a) => a.fileId))];
     const plan = await selectionPlan(account, ids, { arrivals: chosen });
-    if (ids.some((id) => !plan.tree.byId.has(id))) throw new Error(t("部分入库文件尚未进入本地索引，请稍后重试"));
-    return { ...plan, title: t("批量整理 · {n} 项入库", { n: chosen.length }), task: t("批量整理 · {n} 项入库", { n: chosen.length }) };
+    if (ids.some((id) => !plan.tree.byId.has(id))) throw new Error(t("有些新文件还没进本地索引，等几秒再试试"));
+    return { ...plan, title: t("批量整理 · {n} 个新文件", { n: chosen.length }), task: t("批量整理 · {n} 个新文件", { n: chosen.length }) };
   });
 }
 
@@ -7081,7 +7081,7 @@ export async function openArrivalById(account: string, id: string) {
   const a = inbox.arrivals.find((x) => x.id === id);
   if (!a) {
     ui.route = "assistant";
-    notify(t("这条入库记录已不在了"));
+    notify(t("这条新文件提醒已经不在了"));
     return;
   }
   await openArrival(a);
@@ -7089,7 +7089,7 @@ export async function openArrivalById(account: string, id: string) {
 
 /** dismissArrival is Ignore: the arrival leaves the inbox; nothing on the drive changes. False when it could not be saved. */
 export async function dismissArrival(a: Arrival): Promise<boolean> {
-  const ok = await run(t("忽略入库提醒"), async () => {
+  const ok = await run(t("忽略新文件提醒"), async () => {
     await DriveService.SetArrival(a.account, a.id, "dismissed", "");
     return true;
   });
@@ -8085,7 +8085,7 @@ function shareLinkText(share: { url: string; passCode: string }): string {
 export async function copyShareLink(share: { url: string; passCode: string; status?: string }) {
   const text = shareLinkText(share);
   const ok = await copyText(text, t("分享链接"));
-  if (ok && share.status && share.status !== "active") notify(t("已复制，但这个分享已不可访问"), "info");
+  if (ok && share.status && share.status !== "active") notify(t("已复制，但这个分享已经失效"), "info");
 }
 
 export async function copyShareLinks(items: ShareSummary[]): Promise<void> {
@@ -8218,7 +8218,7 @@ export async function setResumableUploads(on: boolean) {
     local.resumableUploads = !on;
     return;
   }
-  notify(on ? t("已开启断点续传 · 只影响这台电脑") : t("已关闭断点续传 · 只影响这台电脑"), "success");
+  notify(on ? t("已开启断点续传（仅本机生效）") : t("已关闭断点续传（仅本机生效）"), "success");
   void loadUploads();
 }
 
@@ -8242,7 +8242,7 @@ export async function setParallelUploads(n: number) {
     local.parallelUploads = was;
     return;
   }
-  notify(t("同时上传 {n} 个文件 · 只影响这台电脑", { n }), "success");
+  notify(t("同时上传 {n} 个文件（仅本机生效）", { n }), "success");
 }
 
 /** The choices for Concurrent Downloads; the Go side enforces the same 1–5 range. */
@@ -8267,7 +8267,7 @@ export async function setParallelDownloads(n: number) {
     local.parallelDownloads = was;
     return;
   }
-  notify(t("同时下载 {n} 个文件 · 只影响这台电脑", { n }), "success");
+  notify(t("同时下载 {n} 个文件（仅本机生效）", { n }), "success");
 }
 
 /** setDownloadThreads sets how many connections each file opens; files under way keep theirs. */
@@ -8284,7 +8284,7 @@ export async function setDownloadThreads(n: number) {
     local.downloadThreads = was;
     return;
   }
-  notify(t("每个文件 {n} 个线程 · 只影响这台电脑", { n }), "success");
+  notify(t("每个文件 {n} 个线程（仅本机生效）", { n }), "success");
 }
 
 /** pickDownloadDir asks for the folder Download to Computer saves into, on this computer. */

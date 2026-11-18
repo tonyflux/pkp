@@ -20,8 +20,8 @@ var (
 	ErrPermission = i18n.New("同步没有访问权限")
 	ErrNotFound   = i18n.New("同步项目不存在")
 	ErrUnknown    = i18n.New("同步操作结果待确认，已停止自动重试")
-	ErrRepair     = i18n.New("同步基线或根身份无法验证，请重新扫描并配对")
-	ErrChanged    = i18n.New("同步内容已经变化，请重新审阅预览")
+	ErrRepair     = i18n.New("同步记录对不上了，请重新扫描并关联文件夹")
+	ErrChanged    = i18n.New("两边文件又变了，先重新预览确认一下")
 )
 
 type Config struct {

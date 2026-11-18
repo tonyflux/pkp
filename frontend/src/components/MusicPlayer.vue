@@ -230,7 +230,7 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onKey));
               </Thumb>
               <span v-if="state.loading" class="cover-wait"><Orbit :size="26" :label="t('加载中')" /></span>
             </div>
-            <p class="cover-caption" aria-hidden="true">PKP · YOUR SPACE, YOUR SOUND</p>
+            <p class="cover-caption" aria-hidden="true">PKP · AUDIO PLAYER</p>
           </div>
 
           <div class="track-info">
@@ -252,7 +252,7 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onKey));
               </div>
             </div>
             <template v-else>
-              <p class="context">{{ t("把这一刻留给音乐。") }}</p>
+              <p class="context">{{ t("云盘里的音频，点开就能听。") }}</p>
               <dl class="metadata">
                 <div v-if="format" class="metadata-format">
                   <dt>{{ t("文件格式") }}</dt>

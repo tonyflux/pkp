@@ -5,17 +5,17 @@ import type { Messages } from "./types";
 export default {
   界面语言: { tw: "介面語言", en: "Language", ja: "表示言語", ko: "언어" },
   跟随系统: { tw: "跟隨系統", en: "System", ja: "システムに合わせる", ko: "시스템 설정" },
-  "跟随这台电脑的语言设置，当前为{name}。": {
-    tw: "跟隨這台電腦的語言設定，目前為{name}。",
-    en: "Follows this computer's language settings; currently {name}.",
-    ja: "このコンピュータの言語設定に従います。現在は{name}です。",
-    ko: "이 컴퓨터의 언어 설정을 따릅니다. 현재 {name}입니다.",
+  "跟随系统当前语言（{name}）": {
+    tw: "跟隨系統目前語言（{name}）",
+    en: "Follows your system language ({name})",
+    ja: "システムの言語設定に従います（現在は{name}）",
+    ko: "시스템 언어 설정을 따릅니다(현재 {name})",
   },
-  "PKP 的文字立即切换；系统的打开面板和验证窗口在下次启动 PKP 后跟上。": {
-    tw: "PKP 的文字立即切換；系統的開啟面板和驗證視窗在下次啟動 PKP 後跟上。",
-    en: "PKP's text switches now; system open panels and authentication windows follow the next time PKP starts.",
-    ja: "PKP の表示はすぐに切り替わります。システムのファイル選択パネルや認証ウインドウは、次回 PKP を起動したときに切り替わります。",
-    ko: "PKP의 텍스트는 바로 바뀝니다. 시스템의 열기 패널과 인증 창은 다음에 PKP를 실행할 때 바뀝니다.",
+  "界面文字会马上切换；系统的文件选择框和解锁弹窗在下次打开 PKP 时生效。": {
+    tw: "介面文字會馬上切換；系統的檔案選擇框與解鎖視窗將在下次開啟 PKP 時生效。",
+    en: "App text updates right away; system file dialogs and auth prompts switch next time PKP opens.",
+    ja: "アプリ内の表示はすぐに切り替わります。システムのファイル選択パネルや認証画面は次回起動時に反映されます。",
+    ko: "앱 화면은 바로 바뀌며, 시스템 파일 선택 창과 인증 창은 다음에 PKP를 열 때 적용됩니다.",
   },
   保存界面语言: { tw: "儲存介面語言", en: "Save language", ja: "表示言語の保存", ko: "언어 저장" },
 

@@ -63,7 +63,7 @@ const assistantAccount = computed(
 );
 // The page the assistant shows, in the toolbar's name: Plan preview, Receipt.
 const assistantTitle = computed(() =>
-  assistantPage.screen === "plan" ? t("AI 助手 · 计划预览") : assistantPage.screen === "receipt" ? t("AI 助手 · 回执") : t("AI 助手"),
+  assistantPage.screen === "plan" ? t("AI 助手 · 整理方案") : assistantPage.screen === "receipt" ? t("AI 助手 · 操作结果") : t("AI 助手"),
 );
 // Cleanup: the account and the range it scans, that the
 // scan reads only this computer's index, and Rescan.
@@ -277,7 +277,7 @@ onUnmounted(() => window.removeEventListener("keydown", onKey));
         :class="{ on: aiReady }"
         type="button"
         style="--wails-draggable: no-drag"
-        :title="aiReady ? t('模型：{model}，点按打开设置 · AI', { model: aiSettings.value?.model ?? '' }) : t('还没有连接模型，点按打开设置 · AI')"
+        :title="aiReady ? t('模型：{model}，点击打开 AI 设置', { model: aiSettings.value?.model ?? '' }) : t('还没配置模型，点击去设置')"
         @click="openAISettings"
       >
         <i aria-hidden="true" />
@@ -294,7 +294,7 @@ onUnmounted(() => window.removeEventListener("keydown", onKey));
         <strong>{{ assistantAccount }}</strong>
         <span>{{ cleanupScope }}</span>
       </div>
-      <span class="local" :title="t('扫描只读这台电脑上的本地索引，不请求云端')">
+      <span class="local" :title="t('只在本地索引里查，不会请求云端')">
         <Icon name="shield" :size="16" />
         {{ t("本地索引扫描") }}
       </span>
@@ -398,7 +398,7 @@ onUnmounted(() => window.removeEventListener("keydown", onKey));
             @click="askAI"
           >
             <Icon name="spark" :size="16" />
-            <span class="drop-words"><strong>{{ t("问 AI：{text}", { text: dropText }) }}</strong><small>{{ t("发送前先确认数据范围") }}</small></span>
+            <span class="drop-words"><strong>{{ t("问 AI：{text}", { text: dropText }) }}</strong><small>{{ t("发给 AI 前会让你先确认范围") }}</small></span>
           </div>
         </div>
       </div>

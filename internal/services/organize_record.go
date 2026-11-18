@@ -39,7 +39,7 @@ func probRestoreTaken() string { return i18n.T("原位置已有同名项，未�
 func probNotInBin() string     { return i18n.T("回收站里已经没有这一项") }
 func probParentAway() string   { return i18n.T("原来的文件夹没有恢复，未恢复") }
 func probStillHolds() string   { return i18n.T("里面还有其他内容，已保留") }
-func probUnread() string       { return i18n.T("读不到这一项，未处理") }
+func probUnread() string       { return i18n.T("读取这一项失败，已跳过") }
 func fmtRestoredAs(name string) string {
 	return i18n.F("已恢复；原位置已有同名项，云盘改名为「%s」", name)
 }
@@ -165,7 +165,7 @@ func (d *DriveService) UndoOrganize(account, recordID string) (OrganizeRecord, e
 	// Written before the first step: whatever happens next, the run is
 	// not undone a second time.
 	if err := d.keepOrganizeRecord(s.key, rec); err != nil {
-		return OrganizeRecord{}, i18n.Errorf("没能写下整理记录，未撤销：%w", err)
+		return OrganizeRecord{}, i18n.Errorf("保存整理记录失败，撤销没执行：%w", err)
 	}
 
 	var restore, back, made []*orgItem

@@ -73,7 +73,7 @@ const retryItems = computed(() => retryTask.value?.items.filter((item) => item.s
 const retryMessage = computed(() => {
   const task = retryTask.value;
   if (!task) return "";
-  let message = t("filetask|在账号「{account}」重新执行「{operation}」，仅重试 {n} 个确认未生效的失败项。", {
+  let message = t("filetask|在账号「{account}」重试「{operation}」，只重做失败的 {n} 项。", {
     account: task.accountName, operation: task.label, n: retryItems.value.length,
   });
   if (task.destination) message += " " + t("filetask|原目标：{destination}。", { destination: task.destination });
@@ -82,7 +82,7 @@ const retryMessage = computed(() => {
 });
 
 function phaseLabel(task: FileTask): string {
-  if (task.stopping && !taskFinished(task)) return t("filetask|正在停止提交，等待已提交项目结算");
+  if (task.stopping && !taskFinished(task)) return t("filetask|正在停止，等已发出的操作处理完");
   switch (task.phase) {
     case "queued": return t("filetask|已排队，尚未提交");
     case "submitting": return t("filetask|正在提交");
@@ -90,8 +90,8 @@ function phaseLabel(task: FileTask): string {
     case "verifying": return t("filetask|正在核对结果");
     case "done": return task.action === "download" ? t("filetask|已加入传输队列") : t("filetask|全部完成");
     case "partial": return !taskCounts(task).done && taskCounts(task).unknown
-      ? t("filetask|结果待确认") : t("filetask|部分完成，请查看回执");
-    case "failed": return t("filetask|未完成，请查看回执");
+      ? t("filetask|结果待确认") : t("filetask|部分完成，请查看结果");
+    case "failed": return t("filetask|未完成，请查看结果");
     case "stopped": return t("filetask|已停止剩余提交");
   }
 }
@@ -197,7 +197,7 @@ watch(() => [selected.value?.id, fileTasks.open] as const, async ([id, open], [p
     :aria-label="t('filetask|后台文件任务')" @keydown.esc="escape" @mouseleave="armAutoHide" @focusout="armAutoHide">
     <header v-if="selected && counts" class="task-strip">
       <button ref="toggle" class="quiet task-toggle" data-file-task-toggle :aria-expanded="fileTasks.open"
-        aria-controls="file-task-details" :aria-label="fileTasks.open ? t('filetask|收起任务回执') : t('filetask|展开任务回执')"
+        aria-controls="file-task-details" :aria-label="fileTasks.open ? t('filetask|收起任务详情') : t('filetask|展开任务详情')"
         @click="fileTasks.open ? collapse() : fileTasks.open = true">
         <Orbit v-if="!taskFinished(selected) && selected.phase !== 'queued'" :size="18" :label="phaseLabel(selected)" />
         <Icon v-else :name="selected.phase === 'done' ? 'check' : taskFinished(selected) ? 'list' : 'clock'" :size="18" />
@@ -215,11 +215,11 @@ watch(() => [selected.value?.id, fileTasks.open] as const, async ([id, open], [p
         <progress :value="processed" :max="Math.max(counts.total, 1)" :aria-label="t('filetask|已处理项目进度')"
           :aria-valuetext="processedLabel(selected)" />
       </div>
-      <span class="session-count" :title="t('filetask|本次会话保留 {n} 条任务回执', { n: history.length })">
-        {{ activeCount ? t('filetask|{n} 项任务进行中', { n: activeCount }) : t('filetask|{n} 条回执', { n: history.length }) }}
+      <span class="session-count" :title="t('filetask|本次保留 {n} 条任务记录', { n: history.length })">
+        {{ activeCount ? t('filetask|{n} 项任务进行中', { n: activeCount }) : t('filetask|{n} 条结果', { n: history.length }) }}
       </span>
       <button v-if="!taskFinished(selected)" class="quiet strip-stop" data-file-task-stop :disabled="selected.stopping"
-        :title="t('filetask|只停止尚未提交的项目；已提交的操作会继续结算，不会撤销。')" @click="stopFileTask(selected.id)">
+        :title="t('filetask|只停掉还没发出的项目；已经发出去的会继续完成，不会撤销。')" @click="stopFileTask(selected.id)">
         <Icon name="stop" :size="15" />{{ selected.stopping ? t('filetask|正在停止') : t('filetask|停止剩余提交') }}
       </button>
       <button v-if="!activeCount" class="quiet icon" data-file-task-hide :aria-label="t('filetask|收起文件任务')"
@@ -238,7 +238,7 @@ watch(() => [selected.value?.id, fileTasks.open] as const, async ([id, open], [p
         </button>
       </nav>
       <div ref="scroller" class="task-receipt" data-file-task-receipt :data-task-id="selected?.id" tabindex="0"
-        :aria-label="t('filetask|逐项操作回执')" @scroll.passive="rememberScroll">
+        :aria-label="t('filetask|逐项结果')" @scroll.passive="rememberScroll">
         <template v-if="selected && counts">
         <div class="receipt-heading">
           <div class="receipt-identity">
@@ -247,21 +247,21 @@ watch(() => [selected.value?.id, fileTasks.open] as const, async ([id, open], [p
             <span v-if="selected.destination">{{ t('filetask|原目标：{destination}。', { destination: selected.destination }) }}</span>
           </div>
           <button v-if="taskFinished(selected)" class="quiet remove-receipt" data-file-task-dismiss
-            @click="dismiss(selected)">{{ t('filetask|移除当前回执') }}</button>
+            @click="dismiss(selected)">{{ t('filetask|清除这条记录') }}</button>
           <button v-if="taskFinished(selected) && retryable.length && !retry" class="quiet retry-all" data-file-task-retry-all
             @click="requestRetry(selected, $event)">{{ t('filetask|重试全部失败项（{n}）', { n: retryable.length }) }}</button>
         </div>
-        <div class="receipt-counts" :aria-label="t('filetask|回执统计')">
+        <div class="receipt-counts" :aria-label="t('filetask|结果统计')">
           <span>{{ t('filetask|完成 {n}', { n: counts.done }) }}</span>
           <span v-if="counts.failed" class="failed">{{ t('filetask|失败 {n}', { n: counts.failed }) }}</span>
           <span v-if="counts.unknown" class="unknown">{{ t('filetask|待确认 {n}', { n: counts.unknown }) }}</span>
           <span v-if="counts.unprocessed">{{ t('filetask|未提交 {n}', { n: counts.unprocessed }) }}</span>
         </div>
         <p v-if="selected.action === 'download' && counts.done" class="receipt-note">
-          {{ t('下载已加入传输队列，实际下载进度请到传输中心查看。') }}
+          {{ t('已加入下载队列，进度可在「传输中心」查看。') }}
         </p>
         <p v-if="!taskFinished(selected) || selected.phase === 'stopped'" class="receipt-note">
-          {{ t('filetask|只停止尚未提交的项目；已提交的操作会继续结算，不会撤销。') }}
+          {{ t('filetask|只停掉还没发出的项目；已经发出去的会继续完成，不会撤销。') }}
         </p>
         <p v-if="counts.unknown" class="receipt-note unknown">
           {{ t('filetask|部分结果无法确认，可能已生效。请先检查云端结果；这些项目不能直接重试。') }}
@@ -272,14 +272,14 @@ watch(() => [selected.value?.id, fileTasks.open] as const, async ([id, open], [p
           <ConfirmInline :message="retryMessage" :confirm-label="t('filetask|确认重试 {n} 项', { n: retryItems.length })"
             :danger="selected.action === 'delete' || selected.action === 'empty'" @confirm="confirmRetry" @cancel="cancelRetry" />
         </div>
-        <ul class="receipt-items" data-list="receipt" :style="drawn.style" :aria-label="t('filetask|逐项操作回执')">
+        <ul class="receipt-items" data-list="receipt" :style="drawn.style" :aria-label="t('filetask|逐项结果')">
           <li v-for="{ item, index, style } in drawn.rows" :key="rowKey(item)" class="receipt-item" :class="item.state"
             :style="style" :data-row="rowKey(item)" :aria-posinset="index + 1" :aria-setsize="selected.items.length" tabindex="0"
             data-file-task-item :data-item-id="item.id" :data-state="item.state">
             <Icon :name="itemIcon(item.state)" :size="16" />
             <div class="item-copy">
               <strong>{{ item.name }}</strong>
-              <span class="item-state">{{ item.retried ? t('filetask|已重新提交，请查看新回执') : item.state === 'done' && selected.action === 'download' ? t('filetask|已加入传输队列') : itemLabel(item.state) }}</span>
+              <span class="item-state">{{ item.retried ? t('filetask|已重新提交，请查看新结果') : item.state === 'done' && selected.action === 'download' ? t('filetask|已加入传输队列') : itemLabel(item.state) }}</span>
               <p v-if="item.error" class="item-error">{{ item.error }}</p>
             </div>
             <button v-if="taskFinished(selected) && item.state === 'failed' && !item.retried && !retry" class="quiet item-retry" data-file-task-retry

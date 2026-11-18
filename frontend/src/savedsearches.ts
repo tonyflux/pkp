@@ -25,16 +25,16 @@ const text = (value: unknown, max: number): value is string => typeof value === 
 export function parseSavedSearches(raw: string | null): SavedSearch[] {
   if (raw === null) return [];
   const data: unknown = JSON.parse(raw);
-  if (!record(data) || data.version !== 1 || !Array.isArray(data.items) || data.items.length > MAX_ITEMS) throw new Error(t("已保存历史数据无效，未作更改"));
+  if (!record(data) || data.version !== 1 || !Array.isArray(data.items) || data.items.length > MAX_ITEMS) throw new Error(t("保存的搜索数据格式不对，未作改动"));
   const ids = new Set<string>();
   return data.items.map((item: unknown) => {
-    if (!record(item) || !text(item.id, 256) || !item.id || ids.has(item.id) || !text(item.name, 100) || !item.name.trim() || !text(item.query, 8192) || !item.query.trim() || typeof item.category !== "string" || !Object.hasOwn(categories, item.category)) throw new Error(t("已保存历史数据无效，未作更改"));
+    if (!record(item) || !text(item.id, 256) || !item.id || ids.has(item.id) || !text(item.name, 100) || !item.name.trim() || !text(item.query, 8192) || !item.query.trim() || typeof item.category !== "string" || !Object.hasOwn(categories, item.category)) throw new Error(t("保存的搜索数据格式不对，未作改动"));
     ids.add(item.id);
     let range: SavedSearchRange | null = null;
     if (item.range !== null) {
-      if (!record(item.range) || Object.keys(item.range).some((field) => field !== "folderId" && field !== "under") || !text(item.range.under, 4096) || (item.range.folderId !== undefined && (!text(item.range.folderId, 256) || !item.range.folderId))) throw new Error(t("已保存历史数据无效，未作更改"));
+      if (!record(item.range) || Object.keys(item.range).some((field) => field !== "folderId" && field !== "under") || !text(item.range.under, 4096) || (item.range.folderId !== undefined && (!text(item.range.folderId, 256) || !item.range.folderId))) throw new Error(t("保存的搜索数据格式不对，未作改动"));
       range = { under: item.range.under, ...(item.range.folderId ? { folderId: item.range.folderId as string } : {}) };
-      if (range.under !== parseSearch(item.query, new Date()).query.under) throw new Error(t("已保存历史数据无效，未作更改"));
+      if (range.under !== parseSearch(item.query, new Date()).query.under) throw new Error(t("保存的搜索数据格式不对，未作改动"));
     }
     return { id: item.id, name: item.name, query: item.query, range, category: item.category as SavedSearchCategory };
   });
@@ -84,7 +84,7 @@ export function saveSearch(account: string, name: string, query: string, range: 
 export function updateSavedSearch(account: string, id: string, query: string, range: SavedSearchRange | null, category: SavedSearchCategory): SavedSearch {
   const items = readAccount(account);
   const item = items.find((entry) => entry.id === id);
-  if (!item) throw new Error(t("这条已保存历史已不存在，请重新打开列表"));
+  if (!item) throw new Error(t("找不到这条已保存的搜索了，请重新打开列表"));
   const updated = { ...item, query, range: range ? { ...range } : null, category };
   writeAccount(account, items.map((entry) => entry.id === id ? updated : entry));
   return updated;
@@ -93,14 +93,14 @@ export function updateSavedSearch(account: string, id: string, query: string, ra
 export function renameSavedSearch(account: string, id: string, name: string): void {
   const items = readAccount(account);
   const item = items.find((entry) => entry.id === id);
-  if (!item) throw new Error(t("这条已保存历史已不存在，请重新打开列表"));
+  if (!item) throw new Error(t("找不到这条已保存的搜索了，请重新打开列表"));
   if (!name.trim()) throw new Error(t("请输入搜索名称"));
   writeAccount(account, items.map((entry) => entry.id === id ? { ...entry, name: name.trim() } : entry));
 }
 
 export function removeSavedSearch(account: string, id: string): void {
   const items = readAccount(account);
-  if (!items.some((entry) => entry.id === id)) throw new Error(t("这条已保存历史已不存在，请重新打开列表"));
+  if (!items.some((entry) => entry.id === id)) throw new Error(t("找不到这条已保存的搜索了，请重新打开列表"));
   writeAccount(account, items.filter((entry) => entry.id !== id));
 }
 

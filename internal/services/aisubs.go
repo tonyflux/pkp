@@ -677,7 +677,7 @@ func (r *aiRun) stream(sess *subsrelay.Session, src aiSource) error {
 					if err := dec.err(); err != nil {
 						failures++
 						if failures > 3 {
-							return &aiSourceError{message: i18n.T("读不到这个视频的声音"), err: err}
+							return &aiSourceError{message: i18n.T("识别不到这个视频里的声音"), err: err}
 						}
 						// Reopened at the picture, after a pause that grows.
 						r.a.log.Warn("ai subtitles: audio decoder failed", "error", err, "attempt", failures)

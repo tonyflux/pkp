@@ -133,8 +133,8 @@ const THEME_MODES: { key: ThemeMode; label: string }[] = [
 const languageOptions = computed<SelectOption<LanguagePref>[]>(() => [{ value: "system", label: t("跟随系统") }, ...LOCALES]);
 const languageNote = computed(() =>
   i18n.pref === "system"
-    ? t("跟随这台电脑的语言设置，当前为{name}。", { name: LOCALES.find((l) => l.value === i18n.locale)?.label ?? i18n.locale })
-    : t("PKP 的文字立即切换；系统的打开面板和验证窗口在下次启动 PKP 后跟上。"),
+    ? t("跟随系统当前语言（{name}）", { name: LOCALES.find((l) => l.value === i18n.locale)?.label ?? i18n.locale })
+    : t("界面文字会马上切换；系统的文件选择框和解锁弹窗在下次打开 PKP 时生效。"),
 );
 
 // The platform's own names, said in the UI's language.
@@ -632,7 +632,7 @@ onBeforeUnmount(() => {
         <!-- ---------- General ---------- -->
         <template v-if="tab === 'basic'">
           <h2>{{ t("基本") }}</h2>
-          <p class="lead">{{ t("这些选项只影响这台电脑上的显示方式。") }}</p>
+          <p class="lead">{{ t("这些选项只影响这台电脑上的显示，不会同步到别处。") }}</p>
 
           <div class="card">
             <div class="card-text">
@@ -708,7 +708,7 @@ onBeforeUnmount(() => {
           <div class="card">
             <div class="card-text">
               <strong>{{ t("降低透明度") }}</strong>
-              <span>{{ t("玻璃改为实色表面：壁纸再亮也不影响文字对比，模糊运算也一并省掉。") }}</span>
+              <span>{{ t("把半透明玻璃换成纯色底：再亮的壁纸也不挡字，顺便省点性能。") }}</span>
             </div>
             <Toggle :model-value="ui.reduceTransparency" :label="t('降低透明度')" @update:model-value="setReduceTransparency" />
           </div>
@@ -716,7 +716,7 @@ onBeforeUnmount(() => {
           <div class="card">
             <div class="card-text">
               <strong>{{ t("侧栏只显示图标") }}</strong>
-              <span>{{ t("导航收成一列图标，把宽度让给内容；也可以按 {shortcut} 或侧栏顶部的按钮切换。窗口窄于 1080px 时总是这样显示。", { shortcut: `${modKey}\\` }) }}</span>
+              <span>{{ t("把侧边栏收成一列图标，留出更多空间看文件；也可以按 {shortcut} 切换（窗口窄于 1080px 时会自动收起）。", { shortcut: `${modKey}\\` }) }}</span>
             </div>
             <Toggle :model-value="ui.navCompact" :label="t('侧栏只显示图标')" @update:model-value="setNavCompact" />
           </div>
@@ -788,8 +788,8 @@ onBeforeUnmount(() => {
               <strong>{{ t("PKP 在前台时也通知") }}</strong>
               <span>{{
                 onWindows
-                  ? t("默认只在 PKP 不在最前面、或窗口已关到系统托盘时通知：PKP 在前台时，页面上已经能看到结果。")
-                  : t("默认只在 PKP 不在最前面、或窗口已关到菜单栏时通知：PKP 在前台时，页面上已经能看到结果。")
+                  ? t("默认只在后台或缩到系统托盘时发通知；窗口就在眼前时就不打扰你了。")
+                  : t("默认只在后台或缩到菜单栏时发通知；窗口就在眼前时就不打扰你了。")
               }}</span>
             </div>
             <Toggle
@@ -804,7 +804,7 @@ onBeforeUnmount(() => {
             <div class="card-text">
               <strong>{{ t("会通知的事") }}</strong>
               <span>
-                {{ t("下载到电脑和本地上传：有文件失败时马上通知，全部完成后合成一条；云添加完成或失败；整理、撤销、删除与还原结束；账号登录失效、需要重新登录。点通知回到 PKP 对应的页面。应用锁锁定时，通知不显示文件名和账号。") }}
+                {{ t("包括下载/上传出错或全部完成、云添加结果、文件整理与清理完成、账号登录过期。点通知会直接跳到对应页面；应用锁开启时，通知里会自动隐藏文件名和账号。") }}
               </span>
             </div>
           </div>
@@ -830,7 +830,7 @@ onBeforeUnmount(() => {
         <!-- ---------- Account management ---------- -->
         <template v-else-if="tab === 'accounts'">
           <h2>{{ t("账号管理") }}</h2>
-          <p class="lead">{{ t("一个 PKP，各有归属的收藏空间") }}</p>
+          <p class="lead">{{ t("多个账号，放在一起管") }}</p>
 
           <div class="section-head">
             <h3 class="group">
@@ -910,7 +910,7 @@ onBeforeUnmount(() => {
             </span>
           </div>
 
-          <p class="info-note">{{ t("切换账号不会停止后台下载、上传或云添加。退出并移除账号前，会说明本机任务的处理方式。") }}</p>
+          <p class="info-note">{{ t("切账号不会打断后台的下载、上传和云添加；如果要彻底移除账号，移除前会先把本地任务怎么处理说清楚。") }}</p>
         </template>
 
         <!-- ---------- Transfers ---------- -->
@@ -1078,8 +1078,8 @@ onBeforeUnmount(() => {
         <!-- ---------- AI (Configure AI) ---------- -->
         <template v-else-if="tab === 'ai'">
           <p class="eyebrow">{{ t("设置 · AI") }}</p>
-          <h2>{{ t("模型和发送范围，由你决定。") }}</h2>
-          <p class="lead">{{ t("整理建议、本地搜索和入库建议都不需要模型。连接你自己的模型后，才能问 AI；API Key 存在本机{store}。", { store: keychainName }) }}</p>
+          <h2>{{ t("配置自己的模型，掌控发给 AI 的内容范围") }}</h2>
+          <p class="lead">{{ t("整理建议、本地搜索和新文件分类都不需要模型。接上你自己的模型后，就能直接对话问 AI；API Key 存在系统{store}里。", { store: keychainName }) }}</p>
 
           <div v-if="!ai" class="late loading">
             <Orbit :size="18" :label="t('正在读取')" />
@@ -1144,7 +1144,7 @@ onBeforeUnmount(() => {
                 </SuggestMenu>
               </div>
               <p class="hint" :class="{ bad: sameModelConnection && modelList.error }" role="status">{{ modelHint }}</p>
-              <p v-if="sameModelConnection && modelList.ids !== null" class="hint">{{ t("按服务端原始模型 ID 展示，不做本地筛选；能否调用取决于账号权限、配额及接口支持。") }}</p>
+              <p v-if="sameModelConnection && modelList.ids !== null" class="hint">{{ t("原样显示接口返回的模型 ID；具体能不能调用，看你的账号权限和额度。") }}</p>
 
               <div class="field">
                 <span id="ai-key">API Key</span>
@@ -1229,7 +1229,7 @@ onBeforeUnmount(() => {
                   {{
                     limitError ||
                     (unlimited
-                      ? t("不限制：对话不会因为用量停下，授权卡片上仍会显示每轮的预计用量；费用按你的模型服务实际计费。")
+                      ? t("不限制上限：聊天不会中途停下，每轮确认前还是会估一个预计用量；实际费用按你的模型服务商结算。")
                       : t("一段对话累计达到上限后停止请求，保留已经得到的结果。"))
                   }}
                 </p>
@@ -1256,7 +1256,7 @@ onBeforeUnmount(() => {
                 </template>
                 <p class="hint shield-note">
                   <Icon name="shield" :size="15" />
-                  <span>{{ t("元数据选「始终允许」不包括字幕；两个级别按账号分别设置。改文件仍需要逐项预览和确认。") }}</span>
+                  <span>{{ t("给元数据选「始终允许」时不包括字幕内容；每个账号单独设置。真要改文件时还是会先给你预览确认。") }}</span>
                 </p>
               </section>
             </div>
@@ -1326,7 +1326,7 @@ onBeforeUnmount(() => {
               </p>
               <template v-else>
                 <p class="hint">
-                  {{ t("填写你自己的 TMDB API Key（v3）或 API 读访问令牌（v4），可在 themoviedb.org 的「设置 · API」页申请。只用于影视整理时核对片名和年份；不填时，影视整理只按规则和模型识别。") }}
+                  {{ t("填上你自己的 TMDB API Key（v3）或读访问令牌（v4）（去 themoviedb.org 的设置里申请），整理影视时用来更准地核对片名和年份；不填也能照常按规则和 AI 识别。") }}
                 </p>
 
                 <div class="field">
@@ -1430,7 +1430,7 @@ onBeforeUnmount(() => {
                 </header>
 
                 <template v-if="proxy.mode === 'custom'">
-                  <p class="hint">{{ t("填写代理服务提供的地址和端口。只有 PKP 自己的请求走它，电脑上其他应用不受影响。") }}</p>
+                  <p class="hint">{{ t("填上代理服务提供的地址和端口。只有 PKP 自己的请求会走它，不会影响电脑上的其他软件。") }}</p>
                   <label class="field">
                     <span>{{ t("类型") }}</span>
                     <span class="select glass-well">
@@ -1526,17 +1526,17 @@ onBeforeUnmount(() => {
                 </template>
 
                 <template v-else-if="proxy.mode === 'system'">
-                  <p class="hint">{{ t("使用电脑当前的网络和代理设置；没有设置代理时再看 http_proxy 等环境变量。系统里的 VPN 仍由操作系统管理。") }}</p>
+                  <p class="hint">{{ t("按电脑当前的网络和代理设置连接（没设代理时会再看 http_proxy 等环境变量）；系统里的 VPN 照常生效。") }}</p>
                   <p class="hint">{{ px.system }}</p>
                   <!-- Not red alone: the sentence says it and the sign shows it. -->
                   <p v-if="px.systemPac" class="hint bad icon-note" role="alert">
                     <Icon name="alert" :size="15" />
-                    <span>{{ t("电脑用的是 PAC 自动代理脚本，PKP 不执行脚本，这些请求会直接发出。需要确定的路径时请选「自定义代理」。") }}</span>
+                    <span>{{ t("电脑启用了 PAC 自动代理脚本，PKP 不支持运行它，请求会直连出去；要走指定代理请选「自定义代理」。") }}</span>
                   </p>
                 </template>
 
                 <template v-else>
-                  <p class="hint">{{ t("PKP 不额外指定应用代理。电脑上已有的 VPN 或系统路由仍可能影响实际路径，「直连」不等于绕过 VPN。") }}</p>
+                  <p class="hint">{{ t("PKP 不走代理直接连网；不过电脑上开着的系统 VPN 或路由规则依然会生效（选「直连」并不代表绕过 VPN）。") }}</p>
                 </template>
 
                 <!-- Advanced proxy bypass addresses are shared by custom and
@@ -1550,8 +1550,8 @@ onBeforeUnmount(() => {
                     <span>{{ t("不使用代理的地址") }}</span>
                     <textarea v-model="proxy.bypass" rows="2" spellcheck="false" :placeholder="t('例如 {example}', { example: 'localhost, *.example.com' })" :disabled="proxySettings.saving" />
                     <small>
-                      {{ t("用逗号、空格或换行分隔；留空表示不设例外。本机地址（127.0.0.1、localhost）始终直连。") }}
-                      {{ t("网段写法（如 192.168.0.0/16）只对应用自身的请求生效；网页里的图片请按主机名或 IP 填写。") }}
+                      {{ t("用逗号、空格或换行隔开；留空就不设例外（127.0.0.1、localhost 本身始终直连）。") }}
+                      {{ t("像 192.168.0.0/16 这样的网段只管应用自身的请求；页面里的图片请直接写域名或 IP。") }}
                     </small>
                   </label>
                 </template>
@@ -1597,7 +1597,7 @@ onBeforeUnmount(() => {
             <div class="action-row">
               <p class="hint icon-note save-note">
                 <Icon name="info" :size="15" />
-                <span>{{ t("设置保存在这台电脑上，切换账号时沿用；应用之后，登录、文件、上传下载、在线播放、AI 与 TMDB 的请求都按这里的方式发出。") }}</span>
+                <span>{{ t("网络设置只保存在这台电脑上，切换账号也不用重设；应用后登录、传输、播放、AI 和 TMDB 都会按它连网。") }}</span>
               </p>
               <div class="actions">
                 <button
@@ -1628,7 +1628,7 @@ onBeforeUnmount(() => {
         <!-- ---------- Connections & integrations ---------- -->
         <template v-else>
           <h2>{{ t("连接与集成") }}</h2>
-          <p class="lead">{{ t("连接第三方服务与扩展能力，让你的使用更灵活高效。") }}</p>
+          <p class="lead">{{ t("管理 WebDAV、MCP、个人令牌和已授权的第三方应用。") }}</p>
 
           <div v-if="connections.loading && !connections.webdav" class="late loading">
             <Orbit :size="18" :label="t('正在读取')" />

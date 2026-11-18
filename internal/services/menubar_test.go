@@ -148,7 +148,7 @@ func TestMenuBarSummaryCountsArrivalsBelowLocalAttention(t *testing.T) {
 	if s.Item.Kind != "" || s.Attention != 0 {
 		t.Errorf("arrivals changed the transfer item: %+v", s)
 	}
-	if !attentionOn(s) || badgeLabel(s) != "PKP，3 项新入库待整理" {
+	if !attentionOn(s) || badgeLabel(s) != "PKP，有 3 个新文件待整理" {
 		t.Errorf("dot, label = %v, %q; want the arrivals named", attentionOn(s), badgeLabel(s))
 	}
 
@@ -172,7 +172,7 @@ func TestMenuBarSummaryCountsArrivalsBelowLocalAttention(t *testing.T) {
 	if s = summarize(moving, nil, accounts, cloudRead{}, nil); attentionOn(s) {
 		t.Error("a moving transfer lit the dot")
 	}
-	if s = summarize(moving, nil, accounts, cloudRead{}, arrivals); !attentionOn(s) || badgeLabel(s) != "PKP，3 项新入库待整理" {
+	if s = summarize(moving, nil, accounts, cloudRead{}, arrivals); !attentionOn(s) || badgeLabel(s) != "PKP，有 3 个新文件待整理" {
 		t.Errorf("dot, label = %v, %q", attentionOn(s), badgeLabel(s))
 	}
 }
@@ -201,18 +201,18 @@ func TestMenuBarQuitAsksOnlyWhenSomethingStops(t *testing.T) {
 		{
 			name:      "one download, in the design's words",
 			downloads: []DownloadTask{down("a", "1", download.StateDownloading, "")},
-			want:      []string{"目前有 1 项下载到电脑。退出将停止这项本机传输；云端任务是否继续由服务端决定。只想收起窗口，请选择「继续运行」。"},
+			want:      []string{"还有 1 项下载正在电脑上进行，退出会直接中断；云端离线任务不受影响。只是想先收起窗口，点「继续运行」就行。"},
 		},
 		{
 			name:      "queued ones stop too, every account's",
 			uploads:   []UploadTask{up("a", "1", upload.StateQueued, ""), up("b", "2", upload.StateUploading, "")},
 			downloads: []DownloadTask{down("b", "3", download.StateQueued, "")},
-			want:      []string{"1 项下载到电脑和 2 项本地上传", "这些本机传输"},
+			want:      []string{"1 项下载和 2 项上传正在电脑上进行", "只是想先收起窗口"},
 		},
 		{
 			name:    "unsubmitted input alone",
 			unsaved: "云添加的链接",
-			want:    []string{"云添加的链接还没有提交，退出后不会保留。"},
+			want:    []string{"云添加的链接还没提交，退出的话不会保留。"},
 		},
 	}
 	for _, tc := range cases {

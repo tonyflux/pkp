@@ -571,7 +571,7 @@ func (m *MenuBarService) requestUpdateInstall(start func() error, cancel func())
 	m.mu.Lock()
 	if m.app == nil || m.quitting.Load() || m.asking.Load() || m.updateQuit != nil {
 		m.mu.Unlock()
-		return i18n.New("更新操作正在进行")
+		return i18n.New("已经在更新中了")
 	}
 	m.updateQuit = &updateQuit{start: start, cancel: cancel}
 	m.mu.Unlock()
@@ -672,7 +672,7 @@ func (m *MenuBarService) ShouldQuit() bool {
 	question := quitQuestion(m.drive.Uploads(), m.drive.Downloads(), unsaved)
 	if manager, err := m.drive.syncManager(); err == nil {
 		if n := manager.ActiveCount(); n > 0 {
-			question = i18n.F("目前有 %d 个同步对正在执行。退出将停止本机同步；下次启动会先重新核对。", n) + question
+			question = i18n.F("还有 %d 组文件夹正在同步。退出会先停下来，下次打开会重新核对后再继续。", n) + question
 		}
 	}
 	if question == "" || m.app == nil {
@@ -890,13 +890,13 @@ func newer(a, b string) bool {
 func badgeLabel(s MenuBarState) string {
 	switch {
 	case s.SyncAttention > 0:
-		return i18n.N(s.SyncAttention, "PKP，%d 个同步对需要处理", s.SyncAttention)
+		return i18n.N(s.SyncAttention, "PKP，有 %d 组同步需要处理", s.SyncAttention)
 	case s.SyncRunning > 0 && s.Running == 0:
-		return i18n.N(s.SyncRunning, "PKP，%d 个同步对正在执行", s.SyncRunning)
+		return i18n.N(s.SyncRunning, "PKP，正在同步 %d 组文件夹", s.SyncRunning)
 	case s.Attention > 0:
 		return i18n.N(s.Attention, "PKP，%d 项传输需要处理", s.Attention)
 	case s.Inbox > 0:
-		return i18n.N(s.Inbox, "PKP，%d 项新入库待整理", s.Inbox)
+		return i18n.N(s.Inbox, "PKP，有 %d 个新文件待整理", s.Inbox)
 	case s.Running > 0:
 		return i18n.N(s.Running, "PKP，%d 项传输正在进行", s.Running)
 	case s.Cloud == "unknown":
@@ -926,22 +926,18 @@ func quitQuestion(uploads []UploadTask, downloads []DownloadTask, unsaved string
 	var b strings.Builder
 	switch {
 	case down > 0 && up > 0:
-		b.WriteString(i18n.F("目前有 %d 项下载到电脑和 %d 项本地上传。退出将停止这些本机传输；云端任务是否继续由服务端决定。", down, up))
-	case down == 1:
-		b.WriteString(i18n.F("目前有 %d 项下载到电脑。退出将停止这项本机传输；云端任务是否继续由服务端决定。", down))
-	case down > 1:
-		b.WriteString(i18n.F("目前有 %d 项下载到电脑。退出将停止这些本机传输；云端任务是否继续由服务端决定。", down))
-	case up == 1:
-		b.WriteString(i18n.F("目前有 %d 项本地上传。退出将停止这项本机传输；云端任务是否继续由服务端决定。", up))
-	case up > 1:
-		b.WriteString(i18n.F("目前有 %d 项本地上传。退出将停止这些本机传输；云端任务是否继续由服务端决定。", up))
+		b.WriteString(i18n.F("还有 %d 项下载和 %d 项上传正在电脑上进行，退出会直接中断；云端离线任务不受影响。", down, up))
+	case down > 0:
+		b.WriteString(i18n.N(down, "还有 %d 项下载正在电脑上进行，退出会直接中断；云端离线任务不受影响。", down))
+	case up > 0:
+		b.WriteString(i18n.N(up, "还有 %d 项上传正在电脑上进行，退出会直接中断；云端离线任务不受影响。", up))
 	}
 	if unsaved != "" {
-		b.WriteString(i18n.F("%s还没有提交，退出后不会保留。", unsaved))
+		b.WriteString(i18n.F("%s还没提交，退出的话不会保留。", unsaved))
 	}
 	if b.Len() == 0 {
 		return ""
 	}
-	b.WriteString(i18n.T("只想收起窗口，请选择「继续运行」。"))
+	b.WriteString(i18n.T("只是想先收起窗口，点「继续运行」就行。"))
 	return b.String()
 }

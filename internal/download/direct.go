@@ -16,7 +16,7 @@ import (
 )
 
 var (
-	errDirectCheckpoint = i18n.New("传输检查点与当前操作不一致")
+	errDirectCheckpoint = i18n.New("断点续传记录对不上当前操作")
 	errDirectActive     = i18n.New("传输操作正在进行")
 )
 

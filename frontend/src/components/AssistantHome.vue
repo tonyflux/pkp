@@ -129,15 +129,15 @@ const deleting = ref("");
       <div class="home-inner">
         <header class="intro">
           <span class="eyebrow"><Icon name="spark" :size="17" /> PKP ASSISTANT <span class="slash">/</span> <span class="who">{{ account }}</span></span>
-          <h1>{{ t("文件先看清，再决定怎么动。") }}</h1>
-          <p>{{ t("整理建议来自本地索引。需要模型时再交给你的模型，云盘改动始终由你确认。") }}</p>
+          <h1>{{ t("看看文件怎么整理") }}</h1>
+          <p>{{ t("整理建议直接来自本地索引；拿不准的才问你配好的 AI，改动云盘一定要你点确认。") }}</p>
         </header>
 
         <section v-if="arrival && pendingArrivals.length === 1" class="inbox" aria-labelledby="ai-home-inbox">
           <div class="inbox-left">
             <span class="glyph" aria-hidden="true"><Icon name="transfer" :size="26" /></span>
             <div class="inbox-text">
-              <p class="kicker">{{ t("新入库 · 等你决定") }}</p>
+              <p class="kicker">{{ t("刚存进来的新文件") }}</p>
               <h2 id="ai-home-inbox">{{ t("「{name}」已存入云盘", { name: arrival.name }) }}</h2>
               <p class="meta">{{ arrivalLine }}</p>
             </div>
@@ -145,7 +145,7 @@ const deleting = ref("");
           <div class="inbox-right">
             <span class="local-pill"><Icon name="check" :size="13" /> {{ t("不用模型") }}</span>
             <div class="inbox-actions">
-              <button class="quiet dismiss" type="button" :disabled="locked" :title="t('不整理，提醒不再出现；云盘里的文件不受影响')" @click="dismissArrival(arrival)">{{ t("忽略") }}</button>
+              <button class="quiet dismiss" type="button" :disabled="locked" :title="t('只是忽略提醒，云盘里的文件照样留着')" @click="dismissArrival(arrival)">{{ t("忽略") }}</button>
               <button class="primary go" type="button" :disabled="locked" @click="openArrival(arrival)">
                 {{ t("查看整理建议") }}
                 <Icon name="arrowRight" :size="15" />
@@ -154,9 +154,9 @@ const deleting = ref("");
           </div>
         </section>
 
-        <section v-if="pendingArrivals.length > 1" class="arrival-batch" :aria-label="t('批量处理入库提醒')">
+        <section v-if="pendingArrivals.length > 1" class="arrival-batch" :aria-label="t('批量处理新文件提醒')">
           <header class="arrival-batch-head">
-            <h2>{{ t("待处理入库 · {n} 项", { n: pendingArrivals.length }) }}</h2>
+            <h2>{{ t("待整理新文件 · {n} 项", { n: pendingArrivals.length }) }}</h2>
             <label class="arrival-check"><input type="checkbox" :checked="allArrivalsPicked" :indeterminate="!!selectedArrivals.length && !allArrivalsPicked" :disabled="batchLocked" @change="arrivalPicks = allArrivalsPicked ? [] : pendingArrivals.map((a) => a.id)" />{{ t("全选") }}</label>
           </header>
           <ul class="arrival-options">
@@ -169,8 +169,8 @@ const deleting = ref("");
           </ul>
           <footer class="arrival-batch-actions">
             <span class="minor">{{ t("已选 {n} 项", { n: selectedArrivals.length }) }}</span>
-            <button class="quiet dismiss" :disabled="batchLocked || !selectedArrivals.length" :title="t('不整理，提醒不再出现；云盘里的文件不受影响')" @click="ignoreSelected">{{ t("忽略所选入库") }}</button>
-            <button class="primary go" :disabled="batchLocked || !selectedArrivals.length" @click="openArrivals(selectedArrivals)">{{ t("批量查看整理建议") }}<Icon name="arrowRight" :size="15" /></button>
+            <button class="quiet dismiss" :disabled="batchLocked || !selectedArrivals.length" :title="t('只是忽略提醒，云盘里的文件照样留着')" @click="ignoreSelected">{{ t("忽略选中的提醒") }}</button>
+            <button class="primary go" :disabled="batchLocked || !selectedArrivals.length" @click="openArrivals(selectedArrivals)">{{ t("一起看整理建议") }}<Icon name="arrowRight" :size="15" /></button>
           </footer>
         </section>
 
@@ -179,7 +179,7 @@ const deleting = ref("");
             <div class="section-line">
               <div>
                 <span class="kicker">{{ t("从这里继续") }}</span>
-                <h2 id="ai-home-today">{{ t("手上有事，直接处理。") }}</h2>
+                <h2 id="ai-home-today">{{ t("常用操作") }}</h2>
               </div>
               <span class="minor">{{ t("当前账号") }}</span>
             </div>
@@ -188,7 +188,7 @@ const deleting = ref("");
               <span class="action-icon"><Icon name="folder" :size="19" /></span>
               <span class="action-copy">
                 <strong>{{ t("整理已选的 {n} 个文件", { n: picked.length }) }}</strong>
-                <small>{{ t("{where} · 规则先出计划，剩余的再问 AI", { where: pickedWhere }) }}</small>
+                <small>{{ t("{where} · 规则先出方案，剩下的再问 AI", { where: pickedWhere }) }}</small>
               </span>
               <Icon class="row-arrow" name="chevronRight" :size="15" />
             </button>
@@ -197,7 +197,7 @@ const deleting = ref("");
               <span class="action-icon soft"><Icon name="search" :size="19" /></span>
               <span class="action-copy">
                 <strong>{{ t("找上次没看完的视频") }}</strong>
-                <small>{{ t("先用本地索引，结果留在云盘里") }}</small>
+                <small>{{ t("只在本地索引里查，不发请求给模型") }}</small>
               </span>
               <Icon class="row-arrow" name="chevronRight" :size="15" />
             </button>
@@ -213,7 +213,7 @@ const deleting = ref("");
               <span class="action-icon soft"><Icon name="spark" :size="19" /></span>
               <span class="action-copy">
                 <strong>{{ t("「{name}」", { name: text }) }}</strong>
-                <small>{{ t("填入下方输入框，发送前会先问你") }}</small>
+                <small>{{ t("会先填进下面输入框，你点发送才会发出去") }}</small>
               </span>
               <Icon class="row-arrow" name="chevronRight" :size="15" />
             </button>
@@ -221,10 +221,10 @@ const deleting = ref("");
 
           <aside class="side-note">
             <span class="kicker">{{ t("这次有什么不同") }}</span>
-            <h2>{{ t("AI 只参与") }}<br />{{ t("需要判断的部分。") }}</h2>
-            <p>{{ t("搜索与命名规则在本机完成。确定的作品名称由 TMDB 精确匹配，不发给模型；模糊的结果留给你决定。") }}</p>
+            <h2>{{ t("AI 只帮你") }}<br />{{ t("处理拿不准的部分") }}</h2>
+            <p>{{ t("搜索和规则整理全都在本机跑；能对上 TMDB 的剧名和片名直接采用，不发给模型，拿不准的才留给你决定。") }}</p>
             <div class="divider" />
-            <span class="shield"><Icon name="shield" :size="15" /> {{ t("每次询问或始终允许，由你选") }}</span>
+            <span class="shield"><Icon name="shield" :size="15" /> {{ t("每次确认还是记住选择，由你决定") }}</span>
           </aside>
         </div>
 
@@ -234,7 +234,7 @@ const deleting = ref("");
               <h3 id="ai-home-records">{{ t("最近任务") }}</h3>
               <span class="minor">{{ t("本账号") }}</span>
             </div>
-            <p v-if="assistant.historyError" class="empty error">{{ t("读不出最近任务：{error}", { error: assistant.historyError }) }}</p>
+            <p v-if="assistant.historyError" class="empty error">{{ t("读取最近任务失败：{error}", { error: assistant.historyError }) }}</p>
             <p v-else-if="!records.length" class="empty">{{ t("还没有整理记录") }}</p>
             <ul v-else>
               <li v-for="row in records" :key="row.r.id">
@@ -279,7 +279,7 @@ const deleting = ref("");
                 </div>
                 <ConfirmInline
                   v-if="deleting === c.id"
-                  :message="t('删除后这段对话不再保存在这台电脑；已执行的整理和回执不受影响。')"
+                  :message="t('删掉对话只清除聊天记录，已经做过的整理和结果记录都在。')"
                   :confirm-label="t('删除对话')"
                   danger
                   @cancel="deleting = ''"

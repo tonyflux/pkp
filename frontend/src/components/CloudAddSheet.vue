@@ -256,7 +256,7 @@ async function submitTorrent() {
         </div>
 
         <p v-if="externalOpen.pending.length && !cloudAdd.reading" class="pending" role="status">
-          {{ t("另有 {n} 项待打开，提交或清空对应类型的内容后继续。", { n: externalOpen.pending.length }) }}
+          {{ t("还有 {n} 项排着队，先把这一批提交或清空后再继续。", { n: externalOpen.pending.length }) }}
         </p>
 
         <!-- The entry well is a recessed near-opaque surface. -->

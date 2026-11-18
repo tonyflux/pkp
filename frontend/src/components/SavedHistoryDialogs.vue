@@ -14,8 +14,8 @@ const name = ref("");
 const title = computed(() => {
   const current = dialog.value;
   if (!current) return "";
-  if (current.kind === "rename") return t("重命名已保存历史");
-  if (current.kind === "delete") return t("删除已保存历史“{name}”？", { name: current.name });
+  if (current.kind === "rename") return t("重命名保存的搜索");
+  if (current.kind === "delete") return t("删除已保存的搜索“{name}”？", { name: current.name });
   return t("保存对“{name}”的更改？", { name: current.name });
 });
 let opener: HTMLElement | null = null;

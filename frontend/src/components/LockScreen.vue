@@ -50,7 +50,7 @@ const passwordError = computed(() => {
 });
 
 const lead = computed(() =>
-  passwordShown.value ? t("输入这台电脑上的 PKP 独立密码，回到离开前的画面。") : t("使用这台电脑的身份验证，即可回到离开前的画面。"),
+  passwordShown.value ? t("输入 PKP 独立密码，解锁回到刚才的页面。") : t("验证一下身份，解锁回到刚才的页面。"),
 );
 const hint = computed(() => {
   if (passwordShown.value) return "";
@@ -172,7 +172,7 @@ onBeforeUnmount(() => clearInterval(tick));
         <div class="ring"><Icon name="lock" :size="42" /></div>
       </div>
       <p class="kicker"><i aria-hidden="true"></i>{{ t("已锁定") }}</p>
-      <h1 id="lock-title">{{ t("你的空间，暂时只属于你。") }}</h1>
+      <h1 id="lock-title">{{ t("请先解锁 PKP") }}</h1>
       <p class="lead">{{ lead }}</p>
 
       <form v-if="passwordShown" class="password" :class="{ shaking }" @submit.prevent="submit" @animationend="shaking = false">
@@ -238,7 +238,7 @@ onBeforeUnmount(() => clearInterval(tick));
         <span class="forget-kicker">NO RECOVERY</span>
         <h2 id="forget-title">{{ t("独立密码没有找回通道") }}</h2>
         <p id="forget-text">
-          {{ t("PKP 不保存密码原文，也不会通过邮箱或客服重置。要继续使用这台电脑上的 PKP，只能退出登录并清除本机缓存，重新登录后重新设置应用锁。云端文件和已下载到电脑的文件不受影响。") }}
+          {{ t("这个密码没法通过邮箱或客服重置。要是真忘了，只能退出登录并清掉这台电脑的缓存，重新登录后再设一遍（云盘里的文件和下好的文件都不会丢）。") }}
         </p>
         <p v-if="forgetError" class="forget-error" role="alert"><Icon name="alert" :size="15" />{{ forgetError }}</p>
         <div class="forget-actions">

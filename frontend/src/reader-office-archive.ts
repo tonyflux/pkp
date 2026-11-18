@@ -21,7 +21,7 @@ const forbidden: Record<string, true> = Object.fromEntries(["altChunk", "object"
 const allowedRelationships = /\/(?:officeDocument|styles|numbering|settings|theme|fontTable|header|footer|footnotes|endnotes|image|extended-properties)$/;
 
 export function parseOfficeXml(source: string): XMLDocument {
-  if (/<!\s*(?:DOCTYPE|ENTITY)/i.test(source)) throw new Error(t("office|文档包含不安全的 XML"));
+  if (/<!\s*(?:DOCTYPE|ENTITY)/i.test(source)) throw new Error(t("office|文档包含不支持的格式或外部引用"));
   checkXmlComplexity(source, OFFICE_LIMITS.nodes);
   const xml = new DOMParser().parseFromString(source, "application/xml");
   if (xml.getElementsByTagName("parsererror").length) throw new Error(t("office|文档的 XML 已损坏"));
@@ -65,7 +65,7 @@ export async function loadOfficePackage(url: string, signal: AbortSignal): Promi
   try {
     const entries: Entry[] = [];
     for await (const entry of reader.getEntriesGenerator()) {
-      if (entries.length >= OFFICE_LIMITS.entries) throw new Error(t("office|文档超过安全预览上限"));
+      if (entries.length >= OFFICE_LIMITS.entries) throw new Error(t("office|文档太大或太长，超出了预览上限"));
       entries.push(entry);
     }
     let expanded = 0;
@@ -74,7 +74,7 @@ export async function loadOfficePackage(url: string, signal: AbortSignal): Promi
       if (entry.directory) continue;
       const name = entry.filename;
       expanded += entry.uncompressedSize;
-      if (!name || name.length > 512 || name.startsWith("/") || /[\\\u0000-\u001f]/.test(name) || name.split("/").some(part => part === "." || part === "..") || members.has(name) || entry.encrypted || !Number.isSafeInteger(expanded) || expanded > OFFICE_LIMITS.expanded || entry.uncompressedSize > OFFICE_LIMITS.member || (entry.uncompressedSize > 1024 * 1024 && entry.uncompressedSize / Math.max(entry.compressedSize, 1) > 200)) throw new Error(t("office|文档超过安全预览上限"));
+      if (!name || name.length > 512 || name.startsWith("/") || /[\\\u0000-\u001f]/.test(name) || name.split("/").some(part => part === "." || part === "..") || members.has(name) || entry.encrypted || !Number.isSafeInteger(expanded) || expanded > OFFICE_LIMITS.expanded || entry.uncompressedSize > OFFICE_LIMITS.member || (entry.uncompressedSize > 1024 * 1024 && entry.uncompressedSize / Math.max(entry.compressedSize, 1) > 200)) throw new Error(t("office|文档太大或太长，超出了预览上限"));
       members.add(name);
     }
     if (!members.has("word/document.xml")) throw new Error(t("office|文档结构不完整"));
@@ -87,7 +87,7 @@ export async function loadOfficePackage(url: string, signal: AbortSignal): Promi
       if (entry.directory) continue;
       const path = entry.filename;
       if (/\.(?:xml|rels)$/i.test(path) && (/^word\//.test(path) || ["[Content_Types].xml", "_rels/.rels", "docProps/app.xml"].includes(path)) && !/(?:embeddings|activeX|customXml|webExtensions)\//i.test(path)) {
-        if (entry.uncompressedSize > OFFICE_LIMITS.xml) throw new Error(t("office|文档超过安全预览上限"));
+        if (entry.uncompressedSize > OFFICE_LIMITS.xml) throw new Error(t("office|文档太大或太长，超出了预览上限"));
         const data = await extractOfficeEntry(entry, OFFICE_LIMITS.xml, signal);
         const source = new TextDecoder("utf-8", { fatal: true }).decode(data);
         xmlNodes += checkXmlComplexity(source, OFFICE_LIMITS.nodes - xmlNodes);
@@ -112,7 +112,7 @@ async function extractOfficeEntry(entry: FileEntry, maximum: number, signal: Abo
   let size = 0;
   const writable = new WritableStream<Uint8Array>({ write(chunk) {
     size += chunk.byteLength;
-    if (size > maximum || size > entry.uncompressedSize) throw new Error(t("office|文档超过安全预览上限"));
+    if (size > maximum || size > entry.uncompressedSize) throw new Error(t("office|文档太大或太长，超出了预览上限"));
     chunks.push(chunk);
   } });
   await entry.getData({ writable }, { signal, checkSignature: true });

@@ -79,7 +79,7 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onKeydown));
           <span class="symbol" aria-hidden="true"><Icon name="globe" :size="22" /></span>
           <span class="kicker">NETWORK · PKP</span>
           <h2 id="net-sheet-title">{{ t("网络与代理") }}</h2>
-          <p id="net-sheet-text" class="text">{{ t("选择 PKP 的联网方式，登录和之后的所有请求都按它发出。只影响 PKP 自己，不更改电脑上的 VPN 或系统代理。") }}</p>
+          <p id="net-sheet-text" class="text">{{ t("设置 PKP 自己的联网方式，只对 PKP 生效，不会改你电脑上的 VPN 或系统代理。") }}</p>
         </header>
 
         <div v-if="!px" class="body loading">
@@ -197,11 +197,11 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onKeydown));
             <p class="hint">{{ px.system }}</p>
             <p v-if="px.systemPac" class="hint bad icon-note" role="alert">
               <Icon name="alert" :size="15" />
-              <span>{{ t("电脑用的是 PAC 自动代理脚本，PKP 不执行脚本，这些请求会直接发出。需要确定的路径时请选「自定义代理」。") }}</span>
+              <span>{{ t("电脑启用了 PAC 自动代理脚本，PKP 不支持运行它，请求会直连出去；要走指定代理请选「自定义代理」。") }}</span>
             </p>
           </template>
 
-          <p v-else class="hint">{{ t("PKP 不额外指定应用代理。电脑上已有的 VPN 或系统路由仍可能影响实际路径。") }}</p>
+          <p v-else class="hint">{{ t("PKP 不走应用代理，直接连网；不过电脑上开着的 VPN 或系统路由依然会生效。") }}</p>
 
           <template v-if="proxy.mode !== 'direct'">
             <button
@@ -217,7 +217,7 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onKeydown));
             <label v-if="proxyAdvanced" id="net-sheet-bypass" class="field">
               <span>{{ t("不使用代理的地址") }}</span>
               <textarea v-model="proxy.bypass" rows="2" spellcheck="false" :placeholder="t('例如 {example}', { example: 'localhost, *.example.com' })" :disabled="proxySettings.saving" />
-              <small>{{ t("用逗号、空格或换行分隔；留空表示不设例外。本机地址始终直连。") }}</small>
+              <small>{{ t("用逗号、空格或换行隔开；留空就不设例外（本机地址默认直连）。") }}</small>
             </label>
           </template>
 

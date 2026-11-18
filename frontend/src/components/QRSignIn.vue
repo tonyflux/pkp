@@ -146,7 +146,7 @@ onBeforeUnmount(() => { generation++; stopTimers(); cancel(session); session = "
     </div>
     <div class="qr-status"><span class="status-label" role="status" aria-live="polite"><i v-if="state === 'waiting'" class="waiting-dot" />{{ status }}</span><small v-if="deadline && !terminal && state !== 'complete'" :aria-label="t('{n} 秒后失效', { n: remaining })"><Icon name="clock" :size="12" />{{ timeLeft }}</small></div>
     <div v-if="state === 'network'" class="network-actions"><button type="button" @click="retry">{{ t("重试连接") }}</button><button v-if="networkLink" type="button" @click="emit('network')">{{ t("检查网络与代理") }}</button></div>
-    <p class="privacy"><Icon name="lock" :size="13" />{{ t("无需向 PKP 提供账号密码") }}</p>
+    <p class="privacy"><Icon name="lock" :size="13" />{{ t("不用在这里输账号密码") }}</p>
   </div>
 </template>
 

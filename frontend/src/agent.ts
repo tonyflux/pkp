@@ -661,9 +661,9 @@ export const TOOL_DEFS: readonly ToolDef[] = [
     description:
       "General plan for moving, renaming, or moving items to the recycle bin (not movie and TV organization). Provide an ID and destination for each item; generate a plan card and execute only after the user reviews each item and confirms. Does not permanently delete anything.",
     plan: true,
-    running: N_("正在生成计划草案"),
-    done: N_("已生成计划草案"),
-    failed: N_("无法生成计划草案"),
+    running: N_("正在生成整理方案"),
+    done: N_("已生成整理方案"),
+    failed: N_("无法生成整理方案"),
     schema: {
       type: "object",
       properties: {
@@ -689,9 +689,9 @@ export const TOOL_DEFS: readonly ToolDef[] = [
     name: "propose_offline_add",
     description: "Cloud-add draft: save user-provided links, or failed BTIH cloud-add tasks (IDs starting with c) to be added again, to a folder. Add only after user confirmation.",
     plan: true,
-    running: N_("正在准备云添加草案"),
-    done: N_("已准备云添加草案"),
-    failed: N_("无法准备云添加草案"),
+    running: N_("正在准备云添加"),
+    done: N_("已准备好云添加"),
+    failed: N_("没能准备好云添加"),
     schema: {
       type: "object",
       properties: {
@@ -705,18 +705,18 @@ export const TOOL_DEFS: readonly ToolDef[] = [
     name: "propose_download",
     description: "Local download draft: IDs of files or folders to download. Start only after user confirmation.",
     plan: true,
-    running: N_("正在准备下载草案"),
-    done: N_("已准备下载草案"),
-    failed: N_("无法准备下载草案"),
+    running: N_("正在准备下载"),
+    done: N_("已准备好下载"),
+    failed: N_("没能准备好下载"),
     schema: { type: "object", properties: { handles: HANDLES_FIELD }, required: ["handles"] },
   },
   {
     name: "propose_share",
     description: "Sharing draft: IDs of files or folders to share. Create the share only after user confirmation.",
     plan: true,
-    running: N_("正在准备分享草案"),
-    done: N_("已准备分享草案"),
-    failed: N_("无法准备分享草案"),
+    running: N_("正在准备分享"),
+    done: N_("已准备好分享"),
+    failed: N_("没能准备好分享"),
     schema: { type: "object", properties: { handles: HANDLES_FIELD }, required: ["handles"] },
   },
   {
@@ -741,9 +741,9 @@ export const TOOL_DEFS: readonly ToolDef[] = [
     name: "propose_operation",
     description: "Create a confirmation card for a cloud-drive operation. Nothing executes until the user confirms. Use file handles for copy/star/unstar/open_file/extract_archive, trash handles for restore, and exact transfer/share handle domains for controls. Failed BTIH cloud tasks alone support retry. Uploads use a native picker chosen by the user, never model-supplied local paths. Torrent, extraction and file opening continue through existing UI. Permanent deletion and emptying trash are forbidden.",
     plan: true,
-    running: N_("正在准备操作草案"),
-    done: N_("已准备操作草案"),
-    failed: N_("无法准备操作草案"),
+    running: N_("正在准备操作"),
+    done: N_("已准备好操作"),
+    failed: N_("没能准备好操作"),
     schema: {
       type: "object",
       properties: {
@@ -1705,14 +1705,14 @@ export async function runTurn(deps: AgentDeps, state: ConversationState, userTex
   const estimate = (): TokenRange => (turn.mode === "tools" ? chatEstimate(chatRequest()) : estimateTokens(jsonRequest(), STEP_OUTPUT));
   const switchToJson = () => {
     turn.mode = "json";
-    turn.modeNote = t("这个模型不支持工具调用，已改用单步模式：每步只能查一项，回答会慢一些。");
+    turn.modeNote = t("当前模型不支持工具调用，已切到单步模式（一次只能查一项，会慢一点）。");
     plain = toPlain(chatMessages);
   };
   if (turn.mode === "json") plain = toPlain(chatMessages);
 
   const used = () => turn.usage.input + turn.usage.output;
   const overBudget = () => used() + estimate().low > deps.budget;
-  const BUDGET_NOTICE = t("已达到本对话的用量上限，停在这里；已有的结果都保留。");
+  const BUDGET_NOTICE = t("这次对话到了用量上限，先停在这儿，前面查到的结果都留着。");
 
   // One consent for the whole turn, before anything is sent.
   if (overBudget()) return finish("budget", BUDGET_NOTICE);
@@ -1720,9 +1720,9 @@ export async function runTurn(deps: AgentDeps, state: ConversationState, userTex
     const go = await deps.consent({
       title: t("这一轮要发给模型的内容"),
       sends: t(
-        "发送你的这句话、本对话之前的问答文字，以及工具查到的文件名、云盘路径、大小、时间、回收站项目、分享状态和传输任务元数据（每页最多 40 项）。问题或历史问答中的敏感内容也会发送。",
+        "会把你现在发的问题、前面聊过的内容，以及工具查到的文件名、路径、大小、时间、回收站/分享/传输任务元数据（每页最多 40 条）发给模型——对话里如果写了敏感信息也会一并带上。",
       ),
-      notSent: t("工具查询不会额外发送文件内容、字幕、账号凭据、下载和分享链接、分享口令、任务源链接、本地文件路径或 TMDB 资料；不包括你在问题或历史问答中写入的内容。"),
+      notSent: t("工具查询不会主动读取并发送文件内容、字幕、账号凭据、下载或分享链接、提取码、本地路径或 TMDB 资料（除非你自己贴在了提问里）。"),
       estimate: estimate(),
       level: "metadata",
     });
@@ -1896,5 +1896,5 @@ export async function runTurn(deps: AgentDeps, state: ConversationState, userTex
     const result = await execute(call.tool, call.args);
     plain.push({ role: "user", content: `Tool ${call.tool} results:\n${result}` });
   }
-  return finish("limit", t("这一轮已调用模型 {n} 次，先停在这里；可以继续追问。", { n: MAX_CALLS }));
+  return finish("limit", t("这一轮调用了 {n} 次模型，先暂停一下，你可以接着追问。", { n: MAX_CALLS }));
 }

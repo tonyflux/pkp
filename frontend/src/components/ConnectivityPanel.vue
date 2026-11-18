@@ -17,10 +17,10 @@ function label(service: string) {
       <span class="heading"><Icon name="globe" :size="20" /><span><h3>{{ t("连通性测试") }}</h3><small>{{ t("测试当前已应用的网络，不使用未保存的代理设置。") }}</small></span></span>
       <button class="primary" :disabled="connectivity.testing" @click="testConnectivity"><Orbit v-if="connectivity.testing" :size="15" />{{ connectivity.testing ? t("正在测试") : t("开始测试") }}</button>
     </header>
-    <p class="hint">{{ t("启动后及每 5 分钟自动检测。直连时自动选择响应最快的可用 DNS 节点；通过代理时由代理选择远端节点。") }}</p>
+    <p class="hint">{{ t("打开应用后每 5 分钟会自动测一次。直连会自动选响应最快的 DNS 节点，走代理时则由代理决定节点。") }}</p>
     <p v-if="connectivity.error" class="warning" role="alert">{{ connectivity.error }}</p>
     <template v-if="result?.at">
-      <p class="outcome" :class="{ warning: result.poor }" role="status"><Icon :name="result.poor ? 'alert' : 'check'" :size="16" />{{ result.poor ? t("部分服务连接较慢或不可用，请检查网络，尝试开启或切换 VPN 节点后重测。") : t("服务连接正常") }}</p>
+      <p class="outcome" :class="{ warning: result.poor }" role="status"><Icon :name="result.poor ? 'alert' : 'check'" :size="16" />{{ result.poor ? t("有些服务比较慢或连不上，检查下网络，或者开关、切换下 VPN 节点再试。") : t("服务连接正常") }}</p>
       <ul>
         <li v-for="row in result.targets" :key="row.service">
           <span class="service"><strong>{{ label(row.service) }}</strong><small>{{ row.host }}</small></span>
@@ -30,7 +30,7 @@ function label(service: string) {
       </ul>
       <p class="hint">{{ t("检测时间") }} · {{ stamp(result.at) }}</p>
     </template>
-    <p class="hint">{{ t("耗时为 HTTPS 响应头延迟，不是下载带宽。HTTP 401/403/404 表示服务已响应，不代表账号验证通过。测试不发送账号凭据，也不修改系统 VPN。") }}</p>
+    <p class="hint">{{ t("这里测的是 HTTPS 响应头延迟，不是下载速度（收到 401/403/404 也算连通）；不会发送账号密码，也不会改你的系统 VPN。") }}</p>
   </section>
 </template>
 <style scoped>
