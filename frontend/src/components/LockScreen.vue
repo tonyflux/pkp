@@ -18,6 +18,7 @@ import { t } from "../i18n";
 const state = computed(() => appLock.state);
 const asking = computed(() => !!state.value?.authenticating);
 const systemReady = computed(() => !!state.value?.available && state.value?.method === "system");
+const systemSelected = computed(() => state.value?.method === "system");
 
 // The password field shows when the standalone password is the way in, when the system
 // cannot ask, or when the user chose it over the system's dialog.
@@ -56,7 +57,9 @@ const hint = computed(() => {
   if (passwordShown.value) return "";
   if (asking.value) return t("请在系统弹出的窗口中完成验证");
   if (appLock.note) return appLock.note;
-  if (!systemReady.value) return t("系统验证不可用：{reason}。可以改用独立密码", { reason: state.value?.unavailable || t("这台电脑无法弹出系统身份验证") });
+  if (!systemReady.value) return state.value?.hasPassword
+    ? t("系统验证不可用：{reason}。可以改用独立密码", { reason: state.value?.unavailable || t("这台电脑无法弹出系统身份验证") })
+    : t("系统验证不可用：{reason}。恢复系统验证后重试，或清除本机账号数据重新登录。", { reason: state.value?.unavailable || t("这台电脑无法弹出系统身份验证") });
   return t("由系统验证你的身份，PKP 不会看到你的密码");
 });
 
@@ -211,7 +214,7 @@ onBeforeUnmount(() => clearInterval(tick));
           <Icon name="alert" :size="15" />{{ passwordError }}
         </p>
       </form>
-      <button v-else ref="button" type="button" class="unlock" :disabled="asking || !systemReady" @click="unlock">
+      <button v-else ref="button" type="button" class="unlock" :disabled="asking || !systemSelected" @click="unlock">
         <Icon name="shield" :size="19" />
         {{ t("解锁 PKP") }}
         <Icon class="arrow" name="arrowRight" :size="17" />
@@ -221,6 +224,7 @@ onBeforeUnmount(() => clearInterval(tick));
         <button v-if="!passwordShown && state?.hasPassword" type="button" class="link" @click="switchWay(true)">{{ t("改用独立密码") }}</button>
         <button v-if="passwordShown && systemReady" type="button" class="link" @click="switchWay(false)">{{ t("改用系统验证") }}</button>
         <button v-if="passwordShown" type="button" class="link" @click="openForget">{{ t("忘记密码？") }}</button>
+        <button v-else-if="state && !state.hasPassword && systemSelected" type="button" class="link" @click="openForget">{{ t("无法使用系统验证？") }}</button>
       </div>
       <p v-if="hint" class="hint" role="status">{{ hint }}</p>
     </div>
@@ -236,10 +240,9 @@ onBeforeUnmount(() => clearInterval(tick));
     <div v-if="forgetting" class="forget-scrim" @click.self="closeForget" @keydown.esc.prevent="closeForget">
       <div class="forget" role="alertdialog" aria-modal="true" aria-labelledby="forget-title" aria-describedby="forget-text">
         <span class="forget-symbol" aria-hidden="true"><Icon name="key" :size="22" /></span>
-        <span class="forget-kicker">NO RECOVERY</span>
-        <h2 id="forget-title">{{ t("独立密码没有找回通道") }}</h2>
+        <h2 id="forget-title">{{ passwordShown ? t("独立密码没有找回通道") : t("无法使用系统验证？") }}</h2>
         <p id="forget-text">
-          {{ t("PKP 不保存密码原文，也不会通过邮箱或客服重置。要继续使用这台电脑上的 PKP，只能退出登录并清除本机缓存，重新登录后重新设置应用锁。云端文件和已下载到电脑的文件不受影响。") }}
+          {{ passwordShown ? t("PKP 不保存密码原文，也不会通过邮箱或客服重置。要继续使用这台电脑上的 PKP，只能退出登录并清除本机缓存，重新登录后重新设置应用锁。云端文件和已下载到电脑的文件不受影响。") : t("请先尝试恢复系统验证。若仍无法解锁，可退出所有账号并清除本机账号数据、索引、记录与未完成的本地传输，然后重新登录。云端文件和已下载到电脑的文件不受影响。") }}
         </p>
         <p v-if="forgetError" class="forget-error" role="alert"><Icon name="alert" :size="15" />{{ forgetError }}</p>
         <div class="forget-actions">
@@ -624,12 +627,6 @@ h1 {
   color: #dafaff;
 }
 
-.forget-kicker {
-  color: #86cfe9;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.18em;
-}
 
 .forget h2 {
   margin: 10px 0;

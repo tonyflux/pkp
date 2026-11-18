@@ -110,14 +110,13 @@ func TestAppLockTurnsOnOnlyAfterTheOwnerIsConfirmed(t *testing.T) {
 		t.Fatal("switching on locked at once")
 	}
 
-	// The next start of PKP opens locked; with the system unable to
-	// authenticate it does not, or nothing could ever open it.
+	// A restart remains locked even when authentication is unavailable.
 	if !NewAppLockService(lockDrive(t, config), nil, nil).Locked() {
 		t.Fatal("PKP with App lock on started unlocked")
 	}
 	sys.available.Store(false)
-	if NewAppLockService(lockDrive(t, config), nil, nil).Locked() {
-		t.Fatal("PKP started locked though the system cannot authenticate")
+	if !NewAppLockService(lockDrive(t, config), nil, nil).Locked() {
+		t.Fatal("PKP started unlocked though App lock is on")
 	}
 }
 
@@ -150,6 +149,38 @@ func TestAppLockStaysLockedUntilTheSystemSaysYes(t *testing.T) {
 	}
 	if err := l.Lock(); err != nil || !l.Locked() {
 		t.Fatalf("Lock now: %v, locked %v", err, l.Locked())
+	}
+}
+
+func TestAppLockAutomaticallyLocksWhenSystemUnavailable(t *testing.T) {
+	sys := lockSystem(t)
+	drive := lockDrive(t, t.TempDir())
+	l := NewAppLockService(drive, nil, nil)
+	sys.available.Store(false)
+	sys.result.Store(int32(applock.Unavailable))
+
+	l.lockIfEnabled()
+	if l.Locked() {
+		t.Fatal("automatic lock engaged while disabled")
+	}
+	if err := drive.updateSettings(func(s *LocalSettings) { s.AppLock = true }); err != nil {
+		t.Fatal(err)
+	}
+	l.lockIfEnabled()
+	if !l.Locked() {
+		t.Fatal("automatic lock skipped while authentication unavailable")
+	}
+	if got := l.Unlock(context.Background()); got.Result != "unavailable" || !got.State.Locked || !l.Locked() {
+		t.Fatalf("unavailable authentication unlocked: %+v", got)
+	}
+	sys.available.Store(true)
+	sys.result.Store(int32(applock.Verified))
+	if got := l.Unlock(context.Background()); got.Result != "ok" || l.Locked() {
+		t.Fatalf("authentication did not recover: %+v", got)
+	}
+	sys.available.Store(false)
+	if err := l.Lock(); err != nil || !l.Locked() {
+		t.Fatalf("manual lock while authentication unavailable: %v, locked %v", err, l.Locked())
 	}
 }
 
@@ -508,6 +539,16 @@ func TestAppLockBackupPasswordStandsInForAMissingSystem(t *testing.T) {
 	}
 	if r := l.UnlockWithPassword("open sesame"); !r.ok() || l.Locked() {
 		t.Fatalf("backup unlock: %+v", r)
+	}
+	l.lockIfEnabled()
+	if !l.Locked() {
+		t.Fatal("automatic lock skipped with only the backup available")
+	}
+	if r := l.UnlockWithPassword("incorrect"); r.Result != "wrong" || !l.Locked() {
+		t.Fatalf("incorrect backup unlocked: %+v", r)
+	}
+	if r := l.UnlockWithPassword("open sesame"); !r.ok() || l.Locked() {
+		t.Fatalf("backup unlock after automatic lock: %+v", r)
 	}
 	if _, err := l.RemovePassword("open sesame"); err == nil {
 		t.Fatal("removed the backup while it is the only way in")

@@ -43,7 +43,7 @@ def bundle(destination):
     dest = Path(destination)
     seeds = ["libgtk-4-1", "libwebkitgtk-6.0-4", "libmpv2", "ffmpeg", "bubblewrap", "xdg-dbus-proxy",
              "libglib2.0-bin", "libgdk-pixbuf2.0-bin", "glib-networking", "gstreamer1.0-plugins-base",
-             "gstreamer1.0-plugins-good", "fonts-dejavu-core", "adwaita-icon-theme", "libgl1-mesa-dri",
+             "gstreamer1.0-plugins-good", "fontconfig", "fonts-dejavu-core", "fonts-noto-cjk", "adwaita-icon-theme", "libgl1-mesa-dri",
              "libegl-mesa0", "libglx-mesa0", "libvulkan1", "shared-mime-info", "dash", "coreutils"]
     seeds.extend(["gsettings-desktop-schemas", "libc-bin", "base-files"])
     rows = []

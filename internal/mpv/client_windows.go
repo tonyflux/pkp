@@ -176,6 +176,14 @@ func (c *Client) AttachSurface(window unsafe.Pointer) error {
 	return l.setProperty(handle, "wid", strconv.FormatUint(uint64(hwnd), 10))
 }
 
+// WaitSurfaceReady completes immediately: Windows creates its surface synchronously.
+func (c *Client) WaitSurfaceReady() error {
+	if !c.opts.Headless && !c.Running() {
+		return ErrNotRunning
+	}
+	return nil
+}
+
 // MoveSurface re-parents the attached surface into another window (an HWND),
 // hidden until the next SetSurfaceRect. mpv's window inside goes with it, so
 // the playing file never notices.

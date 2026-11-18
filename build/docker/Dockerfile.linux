@@ -9,11 +9,11 @@ RUN case "$(dpkg --print-architecture)" in amd64) archive=http://archive.ubuntu.
  && printf 'Types: deb deb-src\nURIs: %s\nSuites: noble noble-updates noble-security\nComponents: main universe restricted multiverse\nSigned-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg\nSnapshot: %s\n' "$archive" "$UBUNTU_SNAPSHOT" > /etc/apt/sources.list.d/ubuntu.sources \
  && printf 'APT::Snapshot "%s";\n' "$UBUNTU_SNAPSHOT" > /etc/apt/apt.conf.d/50snapshot \
  && apt-get update \
- && apt-get install -y --no-install-recommends ca-certificates curl build-essential clang pkg-config \
+ && apt-get install -y --no-install-recommends ca-certificates curl git build-essential clang pkg-config \
       libgtk-4-dev libwebkitgtk-6.0-dev libepoxy-dev libmpv-dev libavcodec-dev libavformat-dev libavutil-dev libswresample-dev \
       ffmpeg bubblewrap xdg-dbus-proxy xdg-utils desktop-file-utils shared-mime-info \
       libglib2.0-bin libgdk-pixbuf2.0-bin libgtk-4-bin glib-networking gsettings-desktop-schemas \
-      gstreamer1.0-plugins-base gstreamer1.0-plugins-good fonts-dejavu-core adwaita-icon-theme \
+      gstreamer1.0-plugins-base gstreamer1.0-plugins-good fontconfig fonts-dejavu-core fonts-noto-cjk adwaita-icon-theme \
       libfuse3-dev zlib1g-dev libzstd-dev liblzma-dev liblz4-dev liblzo2-dev \
       autoconf automake libtool libsquashfuse-dev squashfs-tools file python3 rpm \
       dbus-x11 xvfb weston mesa-utils libgl1-mesa-dri apparmor-utils polkitd \

@@ -29,6 +29,8 @@ static void *pkp_get_proc_address(void *ctx, const char *name) {
 
 static NSView *gHost = nil;
 static PkpVideoLayer *gLayer = nil;
+static pkp_surface_lifetime *gOwner = NULL;
+static _Atomic int gSurfacePresent = 0;
 static mpv_handle *gMpv = NULL;
 static mpv_render_context *gRender = NULL;
 static CGLContextObj gContext = NULL;
@@ -111,7 +113,9 @@ static NSView *pkp_find_webview(NSView *content) {
 // render context requires it, and the layer never hands it out again.
 - (CGLContextObj)copyCGLContextForPixelFormat:(CGLPixelFormatObj)pixelFormat {
 	CGLContextObj context = [super copyCGLContextForPixelFormat:pixelFormat];
-	gContext = context;
+	pthread_mutex_lock(&gLock);
+	if (self == gLayer && gMpv != NULL) gContext = context;
+	pthread_mutex_unlock(&gLock);
 	return context;
 }
 
@@ -121,10 +125,17 @@ static NSView *pkp_find_webview(NSView *content) {
                 displayTime:(const CVTimeStamp *)timeStamp {
 	// The render context can only be built where a GL context is current,
 	// which is inside a draw, so the first draw always has to happen.
+	pthread_mutex_lock(&gLock);
+	if (self != gLayer || gMpv == NULL) {
+		pthread_mutex_unlock(&gLock);
+		return NO;
+	}
 	if (atomic_load(&gCreateState) == 0) {
+		pthread_mutex_unlock(&gLock);
 		return YES;
 	}
 	if (gRender == NULL) {
+		pthread_mutex_unlock(&gLock);
 		return NO;
 	}
 	// A pending capture draws even without a new frame: mpv redraws the
@@ -134,11 +145,11 @@ static NSView *pkp_find_webview(NSView *content) {
 		int skip = 1;
 		mpv_render_param params[] = {{MPV_RENDER_PARAM_SKIP_RENDERING, &skip}, {0, NULL}};
 		CGLSetCurrentContext(ctx);
-		pthread_mutex_lock(&gLock);
 		mpv_render_context_render(gRender, params);
 		pthread_mutex_unlock(&gLock);
 		return NO;
 	}
+	pthread_mutex_unlock(&gLock);
 	return (flags & MPV_RENDER_UPDATE_FRAME) != 0 || atomic_load(&gCaptureWanted) != 0 ||
 	       (atomic_load(&gRedraw) != 0 && atomic_load(&gVisible) != 0);
 }
@@ -149,6 +160,10 @@ static NSView *pkp_find_webview(NSView *content) {
              displayTime:(const CVTimeStamp *)timeStamp {
 	CGLSetCurrentContext(ctx);
 	pthread_mutex_lock(&gLock);
+	if (self != gLayer || gMpv == NULL) {
+		pthread_mutex_unlock(&gLock);
+		return;
+	}
 
 	if (gRender == NULL && atomic_load(&gCreateState) == 0 && gMpv != NULL) {
 		mpv_opengl_init_params glInit = {.get_proc_address = pkp_get_proc_address,
@@ -232,13 +247,17 @@ static NSView *pkp_find_webview(NSView *content) {
 
 @end
 
-int pkp_surface_attach(void *nsWindow, mpv_handle *mpv, char **err) {
+int pkp_surface_attach(void *nsWindow, mpv_handle *mpv, pkp_surface_lifetime *lifetime, char **err) {
 	__block int rc = 0;
 	__block char *message = NULL;
 
+    if (!pkp_surface_lifetime_active(lifetime)) return -1;
 	pkp_main_sync(^{
+      if (!pkp_surface_lifetime_enter(lifetime)) { rc = -1; return; }
+      @try {
 	  if (gLayer != nil) {
-		  return; // already attached
+		  if (gOwner != lifetime) { rc = -1; message = strdup("video surface belongs to another client"); }
+		  return;
 	  }
 	  NSWindow *window = (NSWindow *)nsWindow;
 	  NSView *content = [window contentView];
@@ -265,10 +284,16 @@ int pkp_surface_attach(void *nsWindow, mpv_handle *mpv, char **err) {
 		  }
 	  }
 
+      gOwner = lifetime;
+      atomic_store(&gSurfacePresent, 1);
+	  pthread_mutex_lock(&gLock);
 	  gMpv = mpv;
-	  atomic_store(&gCreateState, 0);
-
 	  gLayer = [[PkpVideoLayer alloc] init];
+	  atomic_store(&gVisible, 1);
+	  atomic_store(&gRedraw, 0);
+	  atomic_store(&gCreateState, 0);
+	  pthread_mutex_unlock(&gLock);
+
 	  gLayer.opaque = YES;
 	  gLayer.needsDisplayOnBoundsChange = YES;
 	  gLayer.contentsScale = window.backingScaleFactor;
@@ -290,6 +315,9 @@ int pkp_surface_attach(void *nsWindow, mpv_handle *mpv, char **err) {
 	  } else {
 		  [content addSubview:gHost];
 	  }
+      } @finally {
+          pkp_surface_lifetime_leave(lifetime);
+      }
 	});
 
 	if (rc != 0) {
@@ -300,28 +328,41 @@ int pkp_surface_attach(void *nsWindow, mpv_handle *mpv, char **err) {
 		}
 		return rc;
 	}
-
-	// The layer starts 2x2 and visible on purpose: it has to draw once to
-	// build the render context, and a hidden layer never draws. Three
-	// seconds is far longer than the frame or two this really takes.
-	for (int i = 0; i < 300 && atomic_load(&gCreateState) == 0; i++) {
-		usleep(10000);
-	}
-	if (atomic_load(&gCreateState) != 1) {
-		if (err != NULL) {
-			*err = strdup(atomic_load(&gCreateState) == -1 ? gCreateError
-			                                              : "the video layer never drew a frame");
-		}
-		return -1;
-	}
-	return 0;
+	if ([NSThread isMainThread]) return 0;
+	return pkp_surface_wait_ready(lifetime, err);
 }
 
-int pkp_surface_move(void *nsWindow, char **err) {
+int pkp_surface_wait_ready(pkp_surface_lifetime *lifetime, char **err) {
+	if ([NSThread isMainThread] && atomic_load(&gCreateState) == 0) {
+		if (err != NULL) *err = strdup("surface initialization must be awaited off the UI thread");
+		return -1;
+	}
+	// A visible bootstrap draw creates the render context. The UI caller
+	// returns before that draw; the worker waits here for its result.
+    for (int i = 0; i < 300 && atomic_load(&gCreateState) == 0 && pkp_surface_lifetime_active(lifetime); i++) {
+		usleep(10000);
+	}
+    pthread_mutex_lock(&gLock);
+    int state = atomic_load(&gCreateState);
+    if (!pkp_surface_lifetime_active(lifetime) || state != 1) {
+        if (err != NULL) {
+            *err = strdup(state == -1 ? gCreateError : "the video layer never drew a frame");
+        }
+        pthread_mutex_unlock(&gLock);
+        return -1;
+    }
+    pthread_mutex_unlock(&gLock);
+    return 0;
+}
+
+int pkp_surface_move(void *nsWindow, pkp_surface_lifetime *lifetime, char **err) {
 	__block int rc = 0;
 	__block char *message = NULL;
 
 	pkp_main_sync(^{
+      if (!pkp_surface_lifetime_enter(lifetime)) { rc = -1; return; }
+      @try {
+      if (gOwner != lifetime) { rc = -1; return; }
 	  if (gHost == nil) {
 		  rc = -1;
 		  message = strdup("no video surface to move");
@@ -360,6 +401,9 @@ int pkp_surface_move(void *nsWindow, char **err) {
 		  }
 	  }
 	  gLayer.contentsScale = window.backingScaleFactor;
+      } @finally {
+          pkp_surface_lifetime_leave(lifetime);
+      }
 	});
 
 	if (rc != 0) {
@@ -372,8 +416,11 @@ int pkp_surface_move(void *nsWindow, char **err) {
 	return rc;
 }
 
-void pkp_surface_set_rect(double x, double y, double w, double h, int visible) {
-	dispatch_async(dispatch_get_main_queue(), ^{
+void pkp_surface_set_rect(pkp_surface_lifetime *lifetime, double x, double y, double w, double h, int visible) {
+	pkp_main_sync(^{
+	  if (!pkp_surface_lifetime_enter(lifetime)) return;
+      @try {
+      if (gOwner != lifetime) return;
 	  if (gHost == nil) {
 		  return;
 	  }
@@ -394,56 +441,51 @@ void pkp_surface_set_rect(double x, double y, double w, double h, int visible) {
 	  if (window != nil && gLayer != nil) {
 		  gLayer.contentsScale = window.backingScaleFactor;
 	  }
+      } @finally {
+          pkp_surface_lifetime_leave(lifetime);
+      }
 	});
 }
 
-void pkp_surface_detach(void) {
-	// Fast path for a core that never had a surface: a headless run, or a
-	// unit test. Hopping to the main queue there would block forever,
-	// because nothing is draining it outside a real application.
-	if (gLayer == nil && gRender == NULL) {
-		return;
-	}
-
-	// Stop the draw loop before touching the render context, so no draw is
-	// in flight while it goes away.
-	pkp_main_sync(^{
-	  if (gLayer != nil) {
-		  gLayer.asynchronous = NO;
-	  }
-	});
-
-	pthread_mutex_lock(&gLock);
-	if (gRender != NULL) {
-		if (gContext != NULL) {
-			CGLSetCurrentContext(gContext);
-		}
-		mpv_render_context_free(gRender);
-		gRender = NULL;
-	}
-	atomic_store(&gCreateState, 0);
-	gMpv = NULL;
-	gContext = NULL;
-	pthread_mutex_unlock(&gLock);
-
-	pkp_main_sync(^{
-	  if (gHost != nil) {
-		  [gHost removeFromSuperview];
-		  [gHost release];
-		  gHost = nil;
-	  }
-	  if (gLayer != nil) {
-		  [gLayer release];
-		  gLayer = nil;
-	  }
-	});
+void pkp_surface_detach(pkp_surface_lifetime *lifetime) {
+    if (!atomic_load(&gSurfacePresent)) return;
+    pkp_main_sync(^{
+      if (gOwner != lifetime) return;
+      if (gLayer != nil) gLayer.asynchronous = NO;
+      pthread_mutex_lock(&gLock);
+      if (gRender != NULL) {
+          if (gContext != NULL) CGLSetCurrentContext(gContext);
+          mpv_render_context_free(gRender);
+          gRender = NULL;
+      }
+      atomic_store(&gCreateState, 0);
+      gMpv = NULL;
+      gContext = NULL;
+      pthread_mutex_lock(&gCaptureLock);
+      atomic_store(&gCaptureWanted, 0);
+      pthread_cond_broadcast(&gCaptureCond);
+      pthread_mutex_unlock(&gCaptureLock);
+      pthread_mutex_unlock(&gLock);
+      if (gHost != nil) {
+          [gHost removeFromSuperview];
+          [gHost release];
+          gHost = nil;
+      }
+      pthread_mutex_lock(&gLock);
+      PkpVideoLayer *layer = gLayer;
+      gLayer = nil;
+      pthread_mutex_unlock(&gLock);
+      [layer release];
+      gOwner = NULL;
+      atomic_store(&gSurfacePresent, 0);
+    });
 }
 
 int pkp_surface_capture(int timeout_ms, unsigned char **rgba, int *width, int *height) {
 	*rgba = NULL;
 	*width = 0;
 	*height = 0;
-	if (gRender == NULL) {
+	if (atomic_load(&gCreateState) != 1) {
 		return -1;
 	}
 
@@ -457,6 +499,10 @@ int pkp_surface_capture(int timeout_ms, unsigned char **rgba, int *width, int *h
 	}
 
 	pthread_mutex_lock(&gCaptureLock);
+	if (atomic_load(&gCreateState) != 1) {
+		pthread_mutex_unlock(&gCaptureLock);
+		return -1;
+	}
 	free(gCaptureBuf);
 	gCaptureBuf = NULL;
 	atomic_store(&gCaptureWanted, 1);
@@ -484,7 +530,7 @@ char *pkp_surface_describe(void) {
 	// Same reason as detach: with no surface there is nothing to ask the
 	// main thread, and hopping there would hang in a process that is not
 	// draining the main queue.
-	if (gHost == nil) {
+	if (!atomic_load(&gSurfacePresent)) {
 		return strdup("surface=none");
 	}
 
@@ -514,7 +560,7 @@ char *pkp_surface_describe(void) {
 		          @"surface=live render=%d state=%d hidden=%d frame=%.0f,%.0f %.0fx%.0f "
 		          @"window=%ld subview=%ld/%ld hosted=%d scale=%.1f async=%d frames=%llu "
 		          @"skipped=%llu laststatus=0x%x webview=%@",
-		          gRender != NULL, atomic_load(&gCreateState), [gHost isHidden],
+		          atomic_load(&gCreateState) == 1, atomic_load(&gCreateState), [gHost isHidden],
 		          frame.origin.x, frame.origin.y, frame.size.width, frame.size.height,
 		          [gHost window] != nil ? (long)[[gHost window] windowNumber] : 0L, (long)index, (long)total,
 		          [gHost layer] == gLayer, gLayer != nil ? gLayer.contentsScale : 0.0,
@@ -526,15 +572,17 @@ char *pkp_surface_describe(void) {
 	return copy;
 }
 
-int pkp_surface_attached(void) { return gRender != NULL ? 1 : 0; }
+int pkp_surface_attached(void) { return atomic_load(&gCreateState) == 1; }
 
 unsigned long long pkp_surface_frames(void) { return atomic_load(&gFrames); }
 
 void pkp_surface_probe(unsigned char *top_rgba, unsigned char *bottom_rgba) {
+	pthread_mutex_lock(&gLock);
 	if (top_rgba != NULL) {
 		memcpy(top_rgba, gTopPixel, 4);
 	}
 	if (bottom_rgba != NULL) {
 		memcpy(bottom_rgba, gBottomPixel, 4);
 	}
+	pthread_mutex_unlock(&gLock);
 }

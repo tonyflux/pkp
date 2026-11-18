@@ -52,3 +52,19 @@ describe("restore default appearance", () => {
     expect(ui.messageTone).toBe("error");
   });
 });
+
+describe("workspace transparency settings", () => {
+  it("keeps the chosen opacity while reduced transparency is toggled", () => {
+    setContentOpacity(35);
+    setReduceTransparency(true);
+
+    expect(document.documentElement.dataset.transparency).toBe("reduced");
+    expect(document.documentElement.style.getPropertyValue("--content-opacity")).toBe("35%");
+
+    setReduceTransparency(false);
+
+    expect(document.documentElement.dataset.transparency).toBeUndefined();
+    expect(document.documentElement.style.getPropertyValue("--content-opacity")).toBe("35%");
+    expect(document.documentElement.style.getPropertyValue("--content-blur")).toBe("16px");
+  });
+});

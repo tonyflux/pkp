@@ -4,6 +4,12 @@
 
 ## Unreleased
 
+- Compact the file header and place the browsing scope beside the current location; keep incomplete-index warnings and scrollable long paths.
+- Keep App Lock engaged when system authentication is temporarily unavailable or a session changes. Retry authentication after recovery; clearing local account data requires explicit confirmation.
+- Fix a potential deadlock when video surfaces move between windows during shutdown. Return the surface before its window closes and preserve initialization errors.
+- Fix Linux update packages disappearing on exit, HTTPS system-proxy settings being overwritten, premature desktop-portal request closure, and system reduce-transparency preferences being ignored. RPM/AppImage bundle CJK fonts and can read host fonts.
+- Isolate frontend dependencies during Linux Docker builds and verify both architectures' package source identities and matching runtime sources before signing, preventing accidental publication of stale packages.
+
 - Remove referral submissions after password and QR sign-in, and remove developer attribution parameters from the registration link. Relationships established by earlier versions are not automatically revoked.
 - Compact the file page and simplify the AI assistant home, use a neutral solid default backdrop, reduce blur and glow, and refine settings/seek icons and playback controls while retaining custom wallpaper, opacity and necessary consent disclosures.
 

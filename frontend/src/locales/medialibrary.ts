@@ -39,5 +39,4 @@ export default {
   "按文件": { tw: "依檔案", en: "By file", ja: "ファイル別", ko: "파일별" },
   "按作品": { tw: "依作品", en: "By work", ja: "作品別", ko: "작품별" },
   "返回作品": { tw: "返回作品", en: "Back to works", ja: "作品に戻る", ko: "작품 목록으로" },
-  "按作品聚合当前目录及子目录的视频": { tw: "依作品彙整目前目錄及子目錄的影片", en: "Group videos in this folder and its subfolders by work", ja: "現在のフォルダとサブフォルダの動画を作品別にまとめる", ko: "현재 폴더와 하위 폴더의 동영상을 작품별로 묶습니다" },
 } satisfies Messages;

@@ -127,7 +127,7 @@ async function openCommunity(href: string) {
       <h3 id="release-notes-title">{{ t("更新说明") }}</h3>
       <div ref="notesRoot" class="notes"><MarkdownDoc :blocks="releaseNotes" @link="followReleaseLink" /></div>
       <p v-if="releaseError" class="error" role="alert">{{ releaseError }}</p>
-      <p class="muted install-note">{{ onLinux ? t("校验后在文件管理器中显示安装包，PKP 保持运行。请退出 PKP 后使用系统软件安装器或包管理器安装 deb/rpm；AppImage 请手动替换原文件并重新启动。不会自动写入系统目录或替换正在运行的应用，账号与本地设置保留。") : onWindows ? t("安装前将确认退出；取消退出或管理员授权不会强制关闭 PKP。安装器不会删除账号与本地设置。") : t("确认退出后将替换应用并重新打开，账号与本地设置保留。macOS 可能请求替换权限；更新不会绕过 Gatekeeper，重新打开时仍可能需要系统确认。") }}</p>
+      <p class="muted install-note">{{ onLinux ? t("校验后将安装包保存到主目录的 PKP Updates 文件夹并显示，退出或重启后仍保留，可在安装后手动删除。请退出 PKP 后使用系统软件安装器或包管理器安装 deb/rpm；AppImage 请手动替换原文件并重新启动。不会自动写入系统目录或替换正在运行的应用，账号与本地设置保留。") : onWindows ? t("安装前将确认退出；取消退出或管理员授权不会强制关闭 PKP。安装器不会删除账号与本地设置。") : t("确认退出后将替换应用并重新打开，账号与本地设置保留。macOS 可能请求替换权限；更新不会绕过 Gatekeeper，重新打开时仍可能需要系统确认。") }}</p>
     </section>
 
     <div class="update-card glass-well automatic">

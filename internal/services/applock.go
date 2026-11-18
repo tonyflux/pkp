@@ -173,9 +173,8 @@ type AppLockService struct {
 	lockGen int
 }
 
-// NewAppLockService prepares App Lock. With the setting on, PKP starts locked:
-// quitting and opening it again is no way around the lock. A lock nothing
-// could open (System Authentication gone and no standalone password) is not put up.
+// NewAppLockService prepares App Lock. With the setting on, PKP starts locked,
+// even if authentication is temporarily unavailable.
 func NewAppLockService(drive *DriveService, player *PlayerService, menu *MenuBarService) *AppLockService {
 	l := &AppLockService{
 		drive:   drive,
@@ -186,11 +185,7 @@ func NewAppLockService(drive *DriveService, player *PlayerService, menu *MenuBar
 		open:    make(chan struct{}),
 	}
 	l.freeIDs, l.freeNames = lockFreeMethods()
-	if s := drive.LocalSettings(); s.AppLock {
-		if ok, _ := lockable(s); ok {
-			l.locked = true
-		}
-	}
+	l.locked = drive.LocalSettings().AppLock
 	if !l.locked {
 		close(l.open)
 	}
@@ -469,9 +464,6 @@ func (l *AppLockService) Lock() error {
 	if !s.AppLock {
 		return i18n.New("请先开启应用锁")
 	}
-	if ok, why := lockable(s); !ok {
-		return errors.New(why)
-	}
 	l.lock()
 	return nil
 }
@@ -687,17 +679,11 @@ func (l *AppLockService) nativeWindow(ctx context.Context) unsafe.Pointer {
 	return nil
 }
 
-// lockIfEnabled locks when the setting is on and the lock can be opened.
+// lockIfEnabled locks whenever the setting is on, regardless of current authentication availability.
 func (l *AppLockService) lockIfEnabled() {
-	s := l.drive.LocalSettings()
-	if !s.AppLock {
-		return
+	if l.drive.LocalSettings().AppLock {
+		l.lock()
 	}
-	if ok, why := lockable(s); !ok {
-		l.log.Warn("applock: not locking, nothing could open it", "why", why)
-		return
-	}
-	l.lock()
 }
 
 func (l *AppLockService) lock() {

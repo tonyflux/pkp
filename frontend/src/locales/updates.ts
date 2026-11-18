@@ -56,11 +56,11 @@ const messages: Messages = {
   "正在显示安装包…": { tw: "正在顯示安裝套件…", en: "Showing the package…", ja: "パッケージを表示中…", ko: "설치 파일 표시 중…" },
   "此更新需要 glibc {version} 或更新版本（Ubuntu 24.04 或兼容发行版）。": { tw: "此更新需要 glibc {version} 或更新版本（Ubuntu 24.04 或相容發行版）。", en: "This update requires glibc {version} or later (Ubuntu 24.04 or a compatible distribution).", ja: "この更新には glibc {version} 以降が必要です（Ubuntu 24.04 または互換ディストリビューション）。", ko: "이 업데이트에는 glibc {version} 이상이 필요합니다(Ubuntu 24.04 또는 호환 배포판)." },
   显示安装包: { tw: "顯示安裝套件", en: "Show Package", ja: "パッケージを表示", ko: "설치 파일 보기" },
-  "校验后在文件管理器中显示安装包，PKP 保持运行。请退出 PKP 后使用系统软件安装器或包管理器安装 deb/rpm；AppImage 请手动替换原文件并重新启动。不会自动写入系统目录或替换正在运行的应用，账号与本地设置保留。": {
-    tw: "驗證後在檔案管理員中顯示安裝套件，PKP 保持執行。請結束 PKP 後使用系統軟體安裝程式或套件管理員安裝 deb/rpm；AppImage 請手動替換原檔案並重新啟動。不會自動寫入系統目錄或替換正在執行的應用程式，帳號與本機設定保留。",
-    en: "After verification, the package is shown in your file manager and PKP keeps running. Quit PKP, then install deb/rpm with your system software installer or package manager. For AppImage, replace the original file manually and relaunch. PKP never writes to system folders or replaces the running app automatically. Accounts and local settings are preserved.",
-    ja: "検証後、ファイルマネージャーにパッケージを表示し、PKP は実行を続けます。PKP を終了してから、システムのインストーラまたはパッケージマネージャーで deb/rpm をインストールしてください。AppImage は元のファイルを手動で置き換えて再起動してください。システムフォルダへの書き込みや実行中のアプリの置き換えは自動では行いません。アカウントとローカル設定は保持されます。",
-    ko: "검증 후 파일 관리자에 설치 파일을 표시하며 PKP는 계속 실행됩니다. PKP를 종료한 다음 시스템 소프트웨어 설치 프로그램이나 패키지 관리자로 deb/rpm을 설치하세요. AppImage는 원본 파일을 직접 교체하고 다시 실행하세요. 시스템 폴더에 쓰거나 실행 중인 앱을 자동으로 교체하지 않습니다. 계정과 로컬 설정은 유지됩니다.",
+  "校验后将安装包保存到主目录的 PKP Updates 文件夹并显示，退出或重启后仍保留，可在安装后手动删除。请退出 PKP 后使用系统软件安装器或包管理器安装 deb/rpm；AppImage 请手动替换原文件并重新启动。不会自动写入系统目录或替换正在运行的应用，账号与本地设置保留。": {
+    tw: "驗證後將安裝套件儲存至家目錄的 PKP Updates 資料夾並顯示，結束或重新啟動後仍會保留，安裝後可手動刪除。請結束 PKP 後使用系統安裝程式或套件管理員安裝 deb/rpm；AppImage 請手動替換原檔案並重新啟動。不會自動寫入系統目錄或替換執行中的應用程式，帳號與本機設定保留。",
+    en: "After verification, the package is saved in PKP Updates in your home folder and shown in your file manager. It remains after quitting or restarting; delete it manually after installation. Quit PKP, then install deb/rpm with your system installer or package manager. For AppImage, replace the original file manually and relaunch. PKP does not automatically write to system folders or replace the running app. Accounts and local settings are preserved.",
+    ja: "検証後、パッケージをホームフォルダーの PKP Updates に保存して表示します。終了や再起動後も残るため、インストール後に手動で削除できます。PKP を終了してからシステムのインストーラーまたはパッケージマネージャーで deb/rpm をインストールしてください。AppImage は元のファイルを手動で置き換えて再起動してください。システムフォルダーへの書き込みや実行中のアプリの置き換えは自動では行いません。アカウントと設定は保持されます。",
+    ko: "검증 후 홈 폴더의 PKP Updates에 설치 파일을 저장하고 표시합니다. 종료하거나 다시 시작해도 유지되며 설치 후 직접 삭제할 수 있습니다. PKP를 종료한 다음 시스템 설치 프로그램이나 패키지 관리자로 deb/rpm을 설치하세요. AppImage는 원본 파일을 직접 교체하고 다시 실행하세요. 시스템 폴더에 쓰거나 실행 중인 앱을 자동으로 교체하지 않습니다. 계정과 설정은 유지됩니다.",
   },
 };
 export default messages;

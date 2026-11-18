@@ -192,7 +192,7 @@ jobs:
       - name: Build pinned Ubuntu toolchain and real Linux packages
         run: |
           docker build -f build/docker/Dockerfile.linux -t pkp-linux-builder .
-          docker run --rm -v "$PWD:/src" pkp-linux-builder sh -c 'cd frontend && npm ci && cd .. && make linux-package'
+          docker run --rm -e PKP_RELEASE_BUILD=1 -v "$PWD:/src" pkp-linux-builder sh -c 'cd frontend && npm ci && cd .. && make linux-package'
       - name: Test media and GTK rendering on X11 and Wayland
         run: |
           # These permissions apply only to this disposable CI container. The
@@ -207,6 +207,9 @@ jobs:
         run: |
           docker run --rm --tmpfs /tmp:rw,exec,mode=1777 --security-opt seccomp=unconfined --security-opt apparmor=unconfined \
             -v "$PWD:/src" pkp-linux-builder bash build/linux/verify-packages.sh
+      - name: Check Linux binary source identity and bind package hashes
+        run: |
+          docker run --rm -v "$PWD:/src" pkp-linux-builder sh -c 'export GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=safe.directory GIT_CONFIG_VALUE_0=/src; go run ./cmd/pkp-release linux-provenance -dir bin -version "$(go run ./cmd/pkp-release version)" -arch "$(go env GOARCH)"'
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: linux-packages-${{ matrix.arch }}
@@ -215,4 +218,5 @@ jobs:
             bin/PKP-*-linux-${{ matrix.arch }}.rpm
             bin/PKP-*-linux-${{ matrix.arch }}.AppImage
             bin/PKP-*-linux-${{ matrix.arch }}-runtime-sources.tar.gz
+            bin/PKP-*-linux-${{ matrix.arch }}-provenance.json
           if-no-files-found: error

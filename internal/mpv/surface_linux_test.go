@@ -11,6 +11,7 @@ import (
 	"strings"
 	"testing"
 	"time"
+	"unsafe"
 )
 
 // Run explicitly under either Xvfb (GDK_BACKEND=x11) or a headless Weston
@@ -30,7 +31,19 @@ func TestLinuxSurface(t *testing.T) {
 	if !ok {
 		t.Fatal("GTK4 could not connect to the requested display")
 	}
-	defer stop()
+	defer func() {
+		done := make(chan struct{})
+		go func() { stop(); close(done) }()
+		select {
+		case <-done:
+		case <-time.After(time.Second):
+			t.Error("GTK host did not stop")
+		}
+	}()
+	testLinuxSurfaceCloseWithQueuedCall(t, windows)
+	if t.Failed() {
+		return
+	}
 	c := New(Options{Logger: quiet(), Extra: map[string]string{
 		"ao": "null", "hwdec": "no", "loop-file": "inf", "pause": "yes",
 	}})
@@ -44,6 +57,9 @@ func TestLinuxSurface(t *testing.T) {
 		t.Fatalf("libmpv version = %q, %v", version, err)
 	}
 	if err := c.AttachSurface(windows[0]); err != nil {
+		t.Fatal(err)
+	}
+	if err := c.WaitSurfaceReady(); err != nil {
 		t.Fatal(err)
 	}
 	if err := c.Command(ctx, "loadfile", clip); err != nil {
@@ -121,5 +137,66 @@ func TestLinuxSurface(t *testing.T) {
 	}
 	if c.SurfaceStats().Attached {
 		t.Fatal("surface remained attached after teardown")
+	}
+}
+
+// Hold GTK in its close callback until the worker has actually queued its
+// native call. This reproduces the UI-thread writer versus queued reader.
+func testLinuxSurfaceCloseWithQueuedCall(t *testing.T, windows [2]unsafe.Pointer) {
+	for _, operation := range []string{"attach", "move", "rect"} {
+		ok := t.Run(operation, func(t *testing.T) {
+			c := New(Options{Logger: quiet(), Extra: map[string]string{"ao": "null"}})
+			if err := c.Start(context.Background()); err != nil {
+				t.Fatal(err)
+			}
+			if operation != "attach" {
+				if err := c.AttachSurface(windows[0]); err != nil {
+					t.Fatal(err)
+				}
+			}
+			entered, closed := surfaceCloseOnMain(c)
+			select {
+			case <-entered:
+			case <-time.After(5 * time.Second):
+				t.Fatal("GTK close callback did not start")
+			}
+			finished := make(chan error, 1)
+			go func() {
+				switch operation {
+				case "attach":
+					finished <- c.AttachSurface(windows[0])
+				case "move":
+					finished <- c.MoveSurface(windows[1])
+				default:
+					c.SetSurfaceRect(Rect{Width: 100, Height: 100, Visible: true})
+					finished <- nil
+				}
+			}()
+			select {
+			case err := <-closed:
+				if err != nil {
+					t.Fatal(err)
+				}
+			case <-time.After(5 * time.Second):
+				t.Fatal("close deadlocked with a queued surface call")
+			}
+			if err := c.WaitSurfaceReady(); err != ErrNotRunning {
+				t.Fatalf("surface readiness after close: %v", err)
+			}
+			select {
+			case err := <-finished:
+				if operation != "rect" && err != ErrNotRunning {
+					t.Fatalf("queued operation after close: %v, want ErrNotRunning", err)
+				}
+			case <-time.After(5 * time.Second):
+				t.Fatal("queued surface call did not return after close")
+			}
+			if c.SurfaceStats().Attached {
+				t.Fatal("surface attached after close")
+			}
+		})
+		if !ok {
+			return
+		}
 	}
 }

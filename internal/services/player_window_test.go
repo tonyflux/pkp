@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
 
@@ -75,5 +76,68 @@ func TestStageFollowsTheWindowHoldingTheVideo(t *testing.T) {
 	}
 	if svc.CloseWindow() != nil || svc.popout != nil {
 		t.Error("closing twice must be a no-op")
+	}
+}
+
+// A queued stage must not prevent a closing hook from returning the surface,
+// and must not place the old window's rectangle after that hook runs.
+func TestClosingWhileStageIsQueued(t *testing.T) {
+	svc := NewPlayerService(PlayerOptions{Headless: true, Logger: quiet()})
+	main := application.NewWindow(application.WebviewWindowOptions{Name: "main"})
+	popout := application.NewWindow(application.WebviewWindowOptions{Name: "player"})
+	svc.AttachWindow(main)
+	svc.popout = popout
+	svc.host = popout.ID()
+	queued := make(chan func(), 1)
+	svc.surfaceDispatch = func(fn func()) {
+		done := make(chan struct{})
+		queued <- func() { defer close(done); fn() }
+		<-done
+	}
+	ctx := context.WithValue(context.Background(), application.WindowKey, popout)
+	done := make(chan error, 1)
+	go func() { done <- svc.SetStage(ctx, mpv.Rect{Width: 800, Height: 600, Visible: true}) }()
+	var stage func()
+	select {
+	case stage = <-queued:
+	case <-time.After(time.Second):
+		t.Fatal("stage was not queued")
+	}
+	closed := make(chan error, 1)
+	go func() { closed <- svc.closePopout(popout) }()
+	select {
+	case err := <-closed:
+		if err != nil {
+			t.Fatal(err)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("closing blocked behind the queued stage")
+	}
+	stage()
+	if err := <-done; err != nil {
+		t.Fatal(err)
+	}
+	if svc.host != main.ID() || svc.SurfaceStats().Rect.Visible {
+		t.Fatal("old stage changed the surface after closing")
+	}
+}
+
+func TestOldClosingHookDoesNotCloseNewPopout(t *testing.T) {
+	svc := NewPlayerService(PlayerOptions{Headless: true, Logger: quiet()})
+	main := application.NewWindow(application.WebviewWindowOptions{Name: "main"})
+	old := application.NewWindow(application.WebviewWindowOptions{Name: "old"})
+	current := application.NewWindow(application.WebviewWindowOptions{Name: "current"})
+	svc.AttachWindow(main)
+	svc.popout = current
+	svc.host = current.ID()
+	if err := svc.closePopout(old); err != nil {
+		t.Fatal(err)
+	}
+	if svc.popout != current || svc.host != current.ID() {
+		t.Fatal("old closing hook affected the current window")
+	}
+	ctx := context.WithValue(context.Background(), application.WindowKey, old)
+	if err := svc.HostVideo(ctx); err == nil {
+		t.Fatal("closed window reclaimed the surface")
 	}
 }

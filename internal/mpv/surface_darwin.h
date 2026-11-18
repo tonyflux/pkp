@@ -16,26 +16,31 @@
 #include <mpv/client.h>
 #include <mpv/render.h>
 #include <mpv/render_gl.h>
+#include "surface_lifetime.h"
 
 // pkp_surface_attach builds the view and binds a libmpv render context to its
-// GL context. Returns 0 on success; otherwise it returns the mpv error code
-// (or -1) and stores a malloc'd message in *err for the caller to free.
-int pkp_surface_attach(void *nsWindow, mpv_handle *mpv, char **err);
+// GL context. On the main thread, context creation completes asynchronously.
+// Returns 0 on success, otherwise -1 and a malloc'd message in *err. The
+// caller keeps the native window alive through main-thread execution.
+int pkp_surface_attach(void *nsWindow, mpv_handle *mpv, pkp_surface_lifetime *lifetime, char **err);
+// Wait off the UI thread for asynchronous context creation or its error.
+int pkp_surface_wait_ready(pkp_surface_lifetime *lifetime, char **err);
 
 // pkp_surface_set_rect positions the view in web coordinates: origin at the
 // top-left of the content area, in points rather than pixels.
-void pkp_surface_set_rect(double x, double y, double w, double h, int visible);
+void pkp_surface_set_rect(pkp_surface_lifetime *lifetime, double x, double y, double w, double h, int visible);
 
 // pkp_surface_move re-parents the attached view into another window, below
 // that window's webview, and hides it until the next pkp_surface_set_rect:
 // the old rectangle means nothing there. The layer and its render context
 // stay as they are. Returns 0 on success; otherwise -1 with a malloc'd
 // message in *err for the caller to free.
-int pkp_surface_move(void *nsWindow, char **err);
+// The caller keeps the native window alive through main-thread execution.
+int pkp_surface_move(void *nsWindow, pkp_surface_lifetime *lifetime, char **err);
 
 // pkp_surface_detach frees the render context and removes the view. It must
 // run before the mpv handle is destroyed.
-void pkp_surface_detach(void);
+void pkp_surface_detach(pkp_surface_lifetime *lifetime);
 
 // pkp_surface_attached reports whether a render context is bound.
 int pkp_surface_attached(void);

@@ -24,7 +24,7 @@ v0.2.0 是首个开源版本；v0.4.1 沿用上文的八件附件与同一更新
 
 普通 CI 与签名构建共用按系统、架构和媒体构建脚本内容区分的 `media-…` 缓存；未命中时仍按固定来源和 SHA-256 重新构建。CI 在前端检查阶段核验完整 Go 依赖锁，签名构建在打包前再次核验；缓存不包含签名私钥，原生测试、升级助手烟测、源码一致性与发布验签均保留。
 
-- **本地发布：** 在 macOS 上安装 Wails、CMake、NSIS 和捆绑库工具，并先从同一源码快照构建两架构 Linux 附件。运行 `make release-local RELEASE_NOTES=build/release-notes.md RELEASE_KEY=/secure/path/to/update-ed25519.key LINUX_RELEASE_DIR=/路径/Linux附件`，再运行 `make release-verify`。不提供 `LINUX_RELEASE_DIR` 时仅生成原有双平台集合，不伪造 Linux 支持。构建和签名不上传；用有权发布到 `tonyflux/pkp` 的 `gh` 身份执行 `make release-draft` 上传验证草稿，审阅后执行 `make release-publish` 发布为 Latest。
+- **本地发布：** 在 macOS 上安装 Wails、CMake、NSIS 和捆绑库工具，并先从同一干净源码快照构建两架构 Linux 附件及 provenance 文件（见[开发指南](docs/DEVELOPMENT.md)）。运行 `make release-local RELEASE_NOTES=build/release-notes.md RELEASE_KEY=/secure/path/to/update-ed25519.key LINUX_RELEASE_DIR=/路径/Linux附件`，再运行 `make release-verify`。签名前会核对源码提交与各附件摘要；来源文件不进入正式发布。该检查防止误用旧包，不证明构建环境或来源文件没有被恶意篡改。不提供 `LINUX_RELEASE_DIR` 时仅生成原有双平台集合，不伪造 Linux 支持。构建和签名不上传；用有权发布到 `tonyflux/pkp` 的 `gh` 身份执行 `make release-draft` 上传验证草稿，审阅后执行 `make release-publish` 发布为 Latest。
 - **可选 GitHub 工作流：** 在仓库外部设置中为 `release` 环境配置适当的必需审核人和部署限制，并配置环境密钥 `UPDATE_SIGNING_KEY`（匹配的私钥）及 `PUBLIC_RELEASE_TOKEN`（有权向 `tonyflux/pkp` 发布 Release）。环境保护由 GitHub 仓库设置控制，并非本文件强制；不要为拉取请求 CI 配置这些密钥。发布构建仅接受从 `main` 手动运行：指定已有源码标签并将 `publish` 设为 false，运行检查并在环境审批通过后构建、签名、验证及上传草稿。推送标签不会自动启动发布构建；本地发布后的 `release.published` 事件仍由独立的 `release-check.yml` 验证公开附件，`main` 与拉取请求 CI 保持不变。审阅草稿后，从 `main` 手动运行并将 `publish` 设为 true；工作流下载并验证已有草稿，再发布为 Latest，不重新构建。标签必须与源码版本一致且指向 `main` 可到达的提交。不要重新构建、重签或覆盖已经正式发布的版本；应发布新版本。还须单独保护标签创建和工作流变更。
 
 准备这些文件本身不会发布版本。真正发布时须核验签名清单声明的完整附件集合、对应源码、签名和哈希，并执行发布后的公开下载检查。Linux 两架构 CI 产物从同一源码标签构建，签名阶段下载并汇总；不得把来自不同提交的附件混合发布。

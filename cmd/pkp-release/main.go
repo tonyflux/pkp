@@ -39,7 +39,7 @@ func defaultKey() string {
 
 func run(args []string) error {
 	if len(args) == 0 {
-		return errors.New("usage: pkp-release version|keygen|check|snapshot|source|prepare|verify|publish [flags]")
+		return errors.New("usage: pkp-release version|keygen|check|snapshot|source|linux-provenance|prepare|verify|publish [flags]")
 	}
 	fs := flag.NewFlagSet(args[0], flag.ContinueOnError)
 	keyPath := fs.String("key", defaultKey(), "Ed25519 private key outside the repository")
@@ -50,6 +50,7 @@ func run(args []string) error {
 	metadataOnly := fs.Bool("metadata-only", false, "check version metadata without a signing key")
 	publish := fs.Bool("publish", false, "publish a verified draft as Latest (publish command only)")
 	linux := fs.Bool("linux", false, "include both architectures of Linux native packages, AppImage and corresponding runtime source")
+	arch := fs.String("arch", "", "Linux package architecture")
 	if err := fs.Parse(args[1:]); err != nil {
 		return err
 	}
@@ -101,6 +102,11 @@ func run(args []string) error {
 		}
 		fmt.Println(source.Commit)
 		return nil
+	case "linux-provenance":
+		if *dir == "" || *version == "" || *arch == "" {
+			return errors.New("provide -dir, -version and -arch")
+		}
+		return linuxProvenanceForBuild(*dir, *version, *arch)
 	case "source":
 		if *dir == "" || *sourceCommit == "" {
 			return errors.New("provide -dir and -source-commit captured before building")
@@ -264,6 +270,12 @@ func macMinimum() (string, error) {
 }
 
 func prepare(dir, version, notes string, key ed25519.PrivateKey, linux bool) error {
+	if dir == "" {
+		return errors.New("provide a release asset directory")
+	}
+	if err := checkVersion(version); err != nil {
+		return err
+	}
 	minimum, err := macMinimum()
 	if err != nil {
 		return err
@@ -271,6 +283,11 @@ func prepare(dir, version, notes string, key ed25519.PrivateKey, linux bool) err
 	source, err := prepareSource(dir, version)
 	if err != nil {
 		return err
+	}
+	if linux {
+		if err := verifyLinuxProvenance(dir, version, source); err != nil {
+			return err
+		}
 	}
 	m := releaseManifest{Manifest: update.Manifest{Version: version, PublishedAt: time.Now().UTC().Format(time.RFC3339), Notes: notes, Packages: map[string]update.Package{}}, Source: source}
 	for _, platform := range []string{"darwin-universal", "windows-x64-arm64"} {
@@ -300,9 +317,6 @@ func prepare(dir, version, notes string, key ed25519.PrivateKey, linux bool) err
 				info, err := os.Lstat(filepath.Join(dir, name))
 				if err != nil {
 					return err
-				}
-				if !info.Mode().IsRegular() || info.Size() == 0 {
-					return fmt.Errorf("Linux asset must be a nonempty regular file: %s", name)
 				}
 				digest, err := fileDigest(filepath.Join(dir, name))
 				if err != nil {

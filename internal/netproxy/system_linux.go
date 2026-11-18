@@ -75,6 +75,13 @@ func linuxProxyEndpoint(scheme, host, port string) *url.URL {
 	return &url.URL{Scheme: scheme, Host: net.JoinHostPort(strings.Trim(host, "[]"), strconv.Itoa(n))}
 }
 
+func linuxProxyFallback(info *SystemInfo) {
+	// GNOME uses HTTP for HTTPS only when no HTTPS proxy is configured.
+	if info.HTTPS == nil {
+		info.HTTPS = info.HTTP
+	}
+}
+
 func readSystemProxy() (SystemInfo, bool) {
 	settings := linuxSettings("org.gnome.system.proxy")
 	if settings == nil {
@@ -118,8 +125,6 @@ func readSystemProxy() (SystemInfo, bool) {
 			info.SOCKS = endpoint
 		}
 	}
-	if linuxProxyValue(settings, "use-same-proxy") == "true" {
-		info.HTTPS = info.HTTP
-	}
+	linuxProxyFallback(&info)
 	return info, true
 }

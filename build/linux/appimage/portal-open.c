@@ -3,6 +3,35 @@
 #include <fcntl.h>
 #include <unistd.h>
 
+#ifndef PORTAL_TIMEOUT_SECONDS
+#define PORTAL_TIMEOUT_SECONDS 30
+#endif
+
+typedef struct {
+    GMainLoop *loop;
+    const char *path;
+    guint response;
+    gboolean received;
+} Request;
+
+static void response_received(GDBusConnection *bus, const char *sender, const char *path,
+                              const char *interface, const char *signal, GVariant *parameters,
+                              gpointer data) {
+    Request *request = data;
+    (void)bus; (void)sender; (void)interface; (void)signal;
+    if (!request->path || !g_str_equal(path, request->path)) return;
+    GVariant *results;
+    g_variant_get(parameters, "(u@a{sv})", &request->response, &results);
+    g_variant_unref(results);
+    request->received = TRUE;
+    g_main_loop_quit(request->loop);
+}
+
+static gboolean request_timeout(gpointer data) {
+    g_main_loop_quit(((Request *)data)->loop);
+    return G_SOURCE_REMOVE;
+}
+
 /* Launch on the host desktop, never execute a host ELF against bundled /usr. */
 int main(int argc, char **argv) {
     if (argc != 2) {
@@ -12,6 +41,11 @@ int main(int argc, char **argv) {
     GError *error = NULL;
     GDBusConnection *bus = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, &error);
     if (!bus) goto failed;
+    Request request = {0};
+    request.loop = g_main_loop_new(NULL, FALSE);
+    guint subscription = g_dbus_connection_signal_subscribe(bus, "org.freedesktop.portal.Desktop",
+        "org.freedesktop.portal.Request", "Response", NULL, NULL, G_DBUS_SIGNAL_FLAGS_NONE,
+        response_received, &request, NULL);
     GVariantBuilder options;
     g_variant_builder_init(&options, G_VARIANT_TYPE_VARDICT);
     GVariant *reply = NULL;
@@ -22,6 +56,8 @@ int main(int argc, char **argv) {
         g_free(path);
         if (fd < 0) {
             g_printerr("Cannot open file: %s\n", argv[1]);
+            g_dbus_connection_signal_unsubscribe(bus, subscription);
+            g_main_loop_unref(request.loop);
             g_object_unref(bus);
             return 1;
         }
@@ -40,11 +76,25 @@ int main(int argc, char **argv) {
             g_variant_new("(ss@a{sv})", "", argv[1], g_variant_builder_end(&options)),
             G_VARIANT_TYPE("(o)"), G_DBUS_CALL_FLAGS_NONE, 30000, NULL, &error);
     }
-    g_object_unref(bus);
     if (reply) {
+        g_variant_get(reply, "(&o)", &request.path);
+        guint timeout = g_timeout_add_seconds(PORTAL_TIMEOUT_SECONDS, request_timeout, &request);
+        g_main_loop_run(request.loop);
+        if (request.received) g_source_remove(timeout);
+        else g_dbus_connection_call_sync(bus, "org.freedesktop.portal.Desktop", request.path,
+            "org.freedesktop.portal.Request", "Close", NULL, NULL, G_DBUS_CALL_FLAGS_NONE,
+            1000, NULL, NULL);
         g_variant_unref(reply);
-        return 0;
     }
+    g_dbus_connection_signal_unsubscribe(bus, subscription);
+    g_main_loop_unref(request.loop);
+    g_object_unref(bus);
+    if (request.received && request.response == 0) return 0;
+    if (request.received) {
+        g_printerr("Desktop portal request %s.\n", request.response == 1 ? "cancelled" : "failed");
+        return 1;
+    }
+    if (!error) g_set_error_literal(&error, G_IO_ERROR, G_IO_ERROR_TIMED_OUT, "portal request timed out");
 failed:
     g_printerr("PKP needs a working desktop portal to open external files/URLs: %s\n", error ? error->message : "unknown error");
     g_clear_error(&error);

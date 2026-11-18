@@ -3,9 +3,13 @@
 package mpv
 
 /*
+#cgo CFLAGS: -DPKP_SURFACE_TEST
+#include <stdint.h>
+extern void pkp_surface_test_reset(void);
 #include <gtk/gtk.h>
 #include <webkit/webkit.h>
 #include <stdlib.h>
+extern void pkp_test_queue_close(uintptr_t handle);
 
 // Isolated integration-test host. No Wails application or user account required.
 struct pkp_test_host {
@@ -59,6 +63,7 @@ import "C"
 
 import (
 	"runtime"
+	"runtime/cgo"
 	"unsafe"
 )
 
@@ -86,4 +91,17 @@ func surfaceTestHost() ([2]unsafe.Pointer, func(), bool) {
 		return r.windows, func() {}, false
 	}
 	return r.windows, func() { C.pkp_test_host_quit(r.host); <-done }, true
+}
+
+type surfaceCloseTest struct {
+	client  *Client
+	entered chan struct{}
+	closed  chan error
+}
+
+func surfaceCloseOnMain(c *Client) (<-chan struct{}, <-chan error) {
+	C.pkp_surface_test_reset()
+	test := &surfaceCloseTest{client: c, entered: make(chan struct{}), closed: make(chan error, 1)}
+	C.pkp_test_queue_close(C.uintptr_t(cgo.NewHandle(test)))
+	return test.entered, test.closed
 }

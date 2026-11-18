@@ -29,7 +29,7 @@ mkdir -p "$sources/licenses"
 cp -a "$appdir/usr/share/doc/." "$sources/licenses/"
 mkdir -p "$sources/common-licenses"
 cp -a /usr/share/common-licenses/. "$sources/common-licenses/"
-cp build/linux/appimage/{build.sh,bundle.py,bundle_test.py,sources.sh,verify-extraction.sh,AppRun} "$sources/"
+cp build/linux/appimage/{build.sh,bundle.py,bundle_test.py,portal-open-test.c,sources.sh,verify-extraction.sh,AppRun} "$sources/"
 cp build/docker/Dockerfile.linux "$sources/"
 (cd "$sources" && find distro -type f -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS)
 mkdir -p "$sources/apt-metadata"

@@ -193,7 +193,8 @@ type PlayerService struct {
 	mpv    *mpv.Client
 	stream *stream.Server
 
-	startMu sync.Mutex
+	startMu  sync.Mutex
+	attachMu sync.Mutex
 	// loadMu orders the decisions that end in a loadfile — open, stop, a
 	// switch, the way back from a failed one — so none of them replaces a
 	// file another has just started.
@@ -244,17 +245,13 @@ type PlayerService struct {
 	// audio is the music page's last read of a file's tags and cover.
 	audio audioMemo
 
-	// surfaceMu orders where the surface is and where it is placed: a move
-	// and a rectangle from the window that just lost the surface must not
-	// interleave. host is the ID of the window holding it.
-	surfaceMu sync.Mutex
-	host      uint
-	// stageMu orders the windows' background switches (Windows only, see
-	// followStage); seeThrough is, per window ID, whether its webview is
-	// see-through right now. Kept apart from surfaceMu: the switch waits on
-	// the main thread.
-	stageMu    sync.Mutex
-	seeThrough map[uint]bool
+	// Surface operations and window closing hooks run on the UI thread, so
+	// checking a window and using its native handle is one transaction.
+	host            uint
+	windowClosing   bool
+	surfaceDispatch func(func())
+	seeThrough      map[uint]bool
+	openWindowMu    sync.Mutex
 	// popoutMu guards popout, the separate player window while it is open;
 	// picture, the display size last seen; shaped, the proportions the
 	// window was last shaped for (0 for none yet); and buttons, whether its
@@ -279,15 +276,26 @@ func (p *PlayerService) AttachWindow(window *application.WebviewWindow) {
 	p.mu.Lock()
 	p.window = window
 	p.mu.Unlock()
-	p.surfaceMu.Lock()
 	p.host = window.ID()
-	p.surfaceMu.Unlock()
 
 	// The separate window only mirrors the session this window owns, so it
 	// goes with it. The surface comes home first, so the window it leaves is
 	// never destroyed with the surface inside.
-	window.RegisterHook(events.Common.WindowClosing, func(*application.WindowEvent) {
-		if popout := p.returnHome(); popout != nil {
+	window.RegisterHook(events.Common.WindowClosing, func(e *application.WindowEvent) {
+		var popout *application.WebviewWindow
+		var err error
+		p.onSurfaceThread(func() {
+			popout, err = p.returnHome(nil)
+			if err == nil {
+				p.windowClosing = true
+			}
+		})
+		if err != nil {
+			p.log.Warn("player: video surface could not return to the main window", "error", err)
+			e.Cancel()
+			return
+		}
+		if popout != nil {
 			popout.Close()
 		}
 	})
@@ -310,8 +318,6 @@ func (p *PlayerService) followStage(window application.Window, visible bool) {
 	if runtime.GOOS != "windows" {
 		return
 	}
-	p.stageMu.Lock()
-	defer p.stageMu.Unlock()
 	// A window not seen yet is opaque: that is how it was created.
 	if p.seeThrough[window.ID()] == visible {
 		return
@@ -338,16 +344,43 @@ func (p *PlayerService) SetStage(ctx context.Context, rect mpv.Rect) error {
 		return err
 	}
 	caller := callerWindow(ctx)
-	if caller != nil {
-		p.followStage(caller, rect.Visible)
-	}
-	p.surfaceMu.Lock()
-	defer p.surfaceMu.Unlock()
-	if caller != nil && caller.ID() != p.host {
-		return nil
-	}
-	p.mpv.SetSurfaceRect(rect)
+	p.onSurfaceThread(func() {
+		if caller != nil && p.liveSurfaceWindow(caller) {
+			p.followStage(caller, rect.Visible)
+		}
+		if p.windowClosing || (caller != nil && (caller.ID() != p.host || !p.liveSurfaceWindow(caller))) {
+			return
+		}
+		p.mpv.SetSurfaceRect(rect)
+	})
 	return nil
+}
+
+// onSurfaceThread waits without holding a service lock. Closing hooks enqueue
+// their transaction before Wails is allowed to destroy the window.
+func (p *PlayerService) onSurfaceThread(fn func()) {
+	if p.surfaceDispatch != nil {
+		p.surfaceDispatch(fn)
+	} else if application.Get() == nil {
+		fn()
+	} else {
+		application.InvokeSync(fn)
+	}
+}
+
+func (p *PlayerService) liveSurfaceWindow(window application.Window) bool {
+	if p.windowClosing {
+		return false
+	}
+	p.mu.Lock()
+	main := p.window
+	p.mu.Unlock()
+	if main != nil && window.ID() == main.ID() {
+		return true
+	}
+	p.popoutMu.Lock()
+	defer p.popoutMu.Unlock()
+	return p.popout != nil && window.ID() == p.popout.ID()
 }
 
 // SurfaceStats reports what the video surface has drawn. The sampled pixels
@@ -359,31 +392,66 @@ func (p *PlayerService) SurfaceStats() mpv.SurfaceStats { return p.mpv.SurfaceSt
 // window's content view does not exist when the service starts, so this
 // cannot happen in ServiceStartup.
 func (p *PlayerService) ensureSurface() error {
-	p.mu.Lock()
-	window, attached, headless := p.window, p.attached, p.headless
-	p.mu.Unlock()
-
-	if attached || headless {
+	if p.headless {
 		return nil
 	}
-	if window == nil {
-		return i18n.New("没有可以显示视频的窗口")
+	p.attachMu.Lock()
+	defer p.attachMu.Unlock()
+	p.mu.Lock()
+	attached := p.attached
+	p.mu.Unlock()
+	if attached {
+		return nil
 	}
-
 	ctx, cancel := context.WithTimeout(context.Background(), commandTimeout)
 	defer cancel()
 	if err := p.ensureRunning(ctx); err != nil {
 		return err
 	}
-	if err := p.mpv.AttachSurface(window.NativeWindow()); err != nil {
+	var err error
+	p.onSurfaceThread(func() {
+		p.mu.Lock()
+		window, attached := p.window, p.attached
+		p.mu.Unlock()
+		if attached {
+			return
+		}
+		if window == nil || p.windowClosing {
+			err = i18n.New("没有可以显示视频的窗口")
+			return
+		}
+		err = p.mpv.AttachSurface(window.NativeWindow())
+	})
+	if err != nil {
 		return err
 	}
-
-	p.mu.Lock()
-	p.attached = true
-	p.mu.Unlock()
-	p.log.Info("video surface attached", "state", p.mpv.SurfaceStats().Diagnostic)
-	return nil
+	if err = p.mpv.WaitSurfaceReady(); err != nil {
+		return err
+	}
+	p.onSurfaceThread(func() {
+		if p.windowClosing {
+			err = i18n.New("没有可以显示视频的窗口")
+			return
+		}
+		p.mu.Lock()
+		window := p.window
+		p.mu.Unlock()
+		if p.host != window.ID() {
+			p.popoutMu.Lock()
+			popout := p.popout
+			p.popoutMu.Unlock()
+			if popout != nil && popout.ID() == p.host {
+				err = p.mpv.MoveSurface(popout.NativeWindow())
+			}
+		}
+		if err == nil {
+			p.mu.Lock()
+			p.attached = true
+			p.mu.Unlock()
+			p.log.Info("video surface attached", "state", p.mpv.SurfaceStats().Diagnostic)
+		}
+	})
+	return err
 }
 
 // NewPlayerService wires the engine but starts nothing; ServiceStartup does.

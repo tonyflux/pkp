@@ -836,10 +836,10 @@ code,
   .glass-sheet {
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
-    background: var(--canvas);
+    background-color: var(--canvas-flat);
   }
-  :root .shell:not(.immersive) :is(.nav, .toolbar, .content > .canvas, .content > .panel) {
-    background: var(--canvas);
+  :root:not([data-transparency="reduced"]) .shell:not(.immersive) :is(.nav, .toolbar, .content > .canvas, .content > .panel) {
+    background-color: var(--canvas-flat);
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
   }
@@ -857,11 +857,11 @@ code,
 :root[data-transparency="reduced"] .glass-sheet {
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
-  background: var(--canvas);
+  background-color: var(--canvas-flat);
 }
 
 :root[data-transparency="reduced"] .shell:not(.immersive) :is(.nav, .toolbar, .content > .canvas, .content > .panel) {
-  background: var(--canvas);
+  background-color: var(--canvas-flat);
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
 }

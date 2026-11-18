@@ -50,11 +50,13 @@ type Client struct {
 	log  *slog.Logger
 	logs *mpvLog
 
-	// Native callers hold mu until their handle use ends; Close drains them
-	// before detaching. The event loop is drained separately via loopDone.
-	mu     sync.RWMutex
-	handle *C.mpv_handle
-	rect   Rect
+	// Native non-UI callers hold mu until handle use ends. Surface calls retain
+	// a separate lifetime and validate it on the UI thread instead.
+	mu       sync.RWMutex
+	handle   *C.mpv_handle
+	rect     Rect
+	lifetime *C.pkp_surface_lifetime
+	closing  bool
 
 	loopDone chan struct{}
 
@@ -96,6 +98,10 @@ func (c *Client) Start(context.Context) error {
 		return fmt.Errorf("mpv: already running")
 	}
 
+	if c.closing {
+		c.mu.Unlock()
+		return fmt.Errorf("mpv: closing")
+	}
 	handle := C.mpv_create()
 	if handle == nil {
 		c.mu.Unlock()
@@ -120,6 +126,16 @@ func (c *Client) Start(context.Context) error {
 	C.mpv_request_log_messages(handle, level)
 	C.free(unsafe.Pointer(level))
 
+	var lifetime *C.pkp_surface_lifetime
+	if !c.opts.Headless {
+		lifetime = C.pkp_surface_lifetime_new()
+		if lifetime == nil {
+			C.mpv_terminate_destroy(handle)
+			c.mu.Unlock()
+			return fmt.Errorf("mpv: could not allocate surface lifetime")
+		}
+	}
+	c.lifetime = lifetime
 	c.handle = handle
 	c.loopDone = make(chan struct{})
 	done := c.loopDone
@@ -133,6 +149,11 @@ func (c *Client) Start(context.Context) error {
 func (c *Client) Close() error {
 	c.mu.Lock()
 	handle := c.handle
+	lifetime := c.lifetime
+	c.lifetime = nil
+	if handle != nil {
+		c.closing = true
+	}
 	c.handle = nil
 	done := c.loopDone
 	c.loopDone = nil
@@ -141,12 +162,16 @@ func (c *Client) Close() error {
 	if handle == nil {
 		return nil
 	}
+	if lifetime != nil {
+		C.pkp_surface_lifetime_stop(lifetime)
+	}
 
 	// The render context holds a reference to the core, so it has to go
 	// first; destroying the core underneath it is undefined. Headless cores
 	// never had one.
-	if !c.opts.Headless {
-		C.pkp_surface_detach()
+	if lifetime != nil {
+		C.pkp_surface_detach(lifetime)
+		C.pkp_surface_lifetime_release(lifetime)
 	}
 
 	// Wake the event loop so it observes the detached handle and returns
@@ -156,6 +181,9 @@ func (c *Client) Close() error {
 		<-done
 	}
 	C.mpv_terminate_destroy(handle)
+	c.mu.Lock()
+	c.closing = false
+	c.mu.Unlock()
 	return nil
 }
 
@@ -165,18 +193,23 @@ func (c *Client) AttachSurface(nsWindow unsafe.Pointer) error {
 	if c.opts.Headless {
 		return nil
 	}
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-	handle := c.handle
+	handle, lifetime := c.surfaceLifetime()
 	if handle == nil {
 		return ErrNotRunning
 	}
+	defer C.pkp_surface_lifetime_release(lifetime)
 	if nsWindow == nil {
 		return fmt.Errorf("mpv: no native window")
 	}
 
 	var cErr *C.char
-	if status := C.pkp_surface_attach(nsWindow, handle, &cErr); status != 0 {
+	if status := C.pkp_surface_attach(nsWindow, handle, lifetime, &cErr); status != 0 {
+		if C.pkp_surface_lifetime_active(lifetime) == 0 {
+			if cErr != nil {
+				C.free(unsafe.Pointer(cErr))
+			}
+			return ErrNotRunning
+		}
 		message := "unknown error"
 		if cErr != nil {
 			message = C.GoString(cErr)
@@ -187,22 +220,56 @@ func (c *Client) AttachSurface(nsWindow unsafe.Pointer) error {
 	return nil
 }
 
+// WaitSurfaceReady waits for the surface initialized on the UI thread to draw.
+// It must be called off the UI thread so the first draw can run.
+func (c *Client) WaitSurfaceReady() error {
+	if c.opts.Headless {
+		return nil
+	}
+	_, lifetime := c.surfaceLifetime()
+	if lifetime == nil {
+		return ErrNotRunning
+	}
+	defer C.pkp_surface_lifetime_release(lifetime)
+	var cErr *C.char
+	if C.pkp_surface_wait_ready(lifetime, &cErr) != 0 {
+		if cErr != nil {
+			defer C.free(unsafe.Pointer(cErr))
+		}
+		if C.pkp_surface_lifetime_active(lifetime) == 0 {
+			return ErrNotRunning
+		}
+		message := "unknown error"
+		if cErr != nil {
+			message = C.GoString(cErr)
+		}
+		return fmt.Errorf("mpv: initialise surface: %s", message)
+	}
+	return nil
+}
+
 // MoveSurface moves playback into another native window, hidden until the
 // next SetSurfaceRect. The GL/render context survives GTK reparenting.
 func (c *Client) MoveSurface(nsWindow unsafe.Pointer) error {
 	if c.opts.Headless {
 		return nil
 	}
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-	if c.handle == nil {
+	handle, lifetime := c.surfaceLifetime()
+	if handle == nil {
 		return ErrNotRunning
 	}
+	defer C.pkp_surface_lifetime_release(lifetime)
 	if nsWindow == nil {
 		return fmt.Errorf("mpv: no native window")
 	}
 	var cErr *C.char
-	if status := C.pkp_surface_move(nsWindow, &cErr); status != 0 {
+	if status := C.pkp_surface_move(nsWindow, lifetime, &cErr); status != 0 {
+		if C.pkp_surface_lifetime_active(lifetime) == 0 {
+			if cErr != nil {
+				C.free(unsafe.Pointer(cErr))
+			}
+			return ErrNotRunning
+		}
 		message := "unknown error"
 		if cErr != nil {
 			message = C.GoString(cErr)
@@ -211,6 +278,17 @@ func (c *Client) MoveSurface(nsWindow unsafe.Pointer) error {
 		return fmt.Errorf("mpv: move surface: %s", message)
 	}
 	return nil
+}
+
+// surfaceLifetime pins only the cancellation token, never a queued UI call.
+func (c *Client) surfaceLifetime() (*C.mpv_handle, *C.pkp_surface_lifetime) {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	if c.handle == nil || c.lifetime == nil {
+		return nil, nil
+	}
+	C.pkp_surface_lifetime_retain(c.lifetime)
+	return c.handle, c.lifetime
 }
 
 // SetSurfaceRect moves the video surface. The rectangle is in web
@@ -223,9 +301,14 @@ func (c *Client) SetSurfaceRect(rect Rect) {
 	if c.opts.Headless {
 		return
 	}
+	_, lifetime := c.surfaceLifetime()
+	if lifetime == nil {
+		return
+	}
+	defer C.pkp_surface_lifetime_release(lifetime)
 
 	C.pkp_surface_set_rect(
-		C.double(rect.X), C.double(rect.Y),
+		lifetime, C.double(rect.X), C.double(rect.Y),
 		C.double(math.Max(rect.Width, 1)), C.double(math.Max(rect.Height, 1)),
 		boolToCInt(rect.Visible),
 	)

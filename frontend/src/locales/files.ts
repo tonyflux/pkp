@@ -11,18 +11,6 @@ export default {
   "chip|音频": { tw: "音訊", en: "Audio", ja: "音声", ko: "오디오" },
   "chip|文档": { tw: "文件", en: "Document", ja: "書類", ko: "문서" },
   整个云盘: { tw: "整個雲端硬碟", en: "Entire drive", ja: "ドライブ全体", ko: "드라이브 전체" },
-  只显示当前文件夹的直接子项: {
-    tw: "只顯示目前資料夾的直接子項目",
-    en: "Only items directly in this folder",
-    ja: "このフォルダ直下の項目のみ",
-    ko: "현재 폴더의 바로 아래 항목만 표시합니다",
-  },
-  "来自不同文件夹的文件，在这里汇合": {
-    tw: "來自不同資料夾的檔案，在這裡匯集",
-    en: "Files from every folder, gathered in one place",
-    ja: "各フォルダのファイルをここにまとめて表示",
-    ko: "여러 폴더의 파일을 여기에 모아 보여 줍니다",
-  },
   "本地索引建立中，结果可能不完整": {
     tw: "正在建立本機索引，結果可能不完整",
     en: "Building the local index; results may be incomplete",

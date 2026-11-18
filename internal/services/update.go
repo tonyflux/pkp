@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
+	"io"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -58,6 +59,7 @@ type UpdateService struct {
 	state               UpdateState
 	manifest            *update.Manifest
 	path                string
+	linuxPackage        string
 	cacheDir            string
 	cancel              context.CancelFunc
 	closing             bool
@@ -190,6 +192,7 @@ func (u *UpdateService) check(manual bool) error {
 	if u.path != "" {
 		_ = os.Remove(u.path)
 		u.path = ""
+		u.linuxPackage = ""
 	}
 	u.state.Phase, u.state.Error, u.state.Notice = "checking", "", false
 	u.state.Info, u.manifest, u.state.Received = nil, nil, 0
@@ -397,7 +400,13 @@ func (u *UpdateService) Install() error {
 	p, _ := u.manifest.Package(u.platform)
 	u.state.Phase, u.state.Error = "installing", ""
 	u.publishLocked()
+	if runtime.GOOS == "linux" {
+		u.wg.Add(1)
+	}
 	u.mu.Unlock()
+	if runtime.GOOS == "linux" {
+		defer u.wg.Done()
+	}
 	if err := update.CheckFile(path, p); err != nil {
 		u.installResult(err)
 		return err
@@ -407,7 +416,42 @@ func (u *UpdateService) Install() error {
 			u.installResult(errAppLocked)
 			return errAppLocked
 		}
-		err := revealPath(path, true)
+		u.mu.Lock()
+		saved := u.linuxPackage
+		u.mu.Unlock()
+		created := false
+		if saved == "" {
+			var err error
+			saved, err = saveLinuxUpdate(path, update.PackageName(version, u.platform), p)
+			if err != nil {
+				u.installResult(err)
+				return err
+			}
+			created = true
+		} else if err := update.CheckFile(saved, p); err != nil {
+			u.mu.Lock()
+			u.linuxPackage = ""
+			u.state.Phase, u.state.Error = "ready", updateError(err, "install")
+			u.publishLocked()
+			u.mu.Unlock()
+			return err
+		}
+		err := u.ctx.Err()
+		if err == nil && u.lock != nil && u.lock.Locked() {
+			err = errAppLocked
+		}
+		if err == nil {
+			err = revealPath(saved, true)
+		}
+		if created {
+			if err != nil {
+				_ = os.RemoveAll(filepath.Dir(saved))
+			} else {
+				u.mu.Lock()
+				u.linuxPackage = saved
+				u.mu.Unlock()
+			}
+		}
 		u.installResult(err)
 		return err
 	}
@@ -464,6 +508,69 @@ func (u *UpdateService) Install() error {
 		}
 	}()
 	return nil
+}
+
+// saveLinuxUpdate exports a verified package to a private, persistent directory.
+func saveLinuxUpdate(source, name string, p update.Package) (path string, err error) {
+	if name == "" || filepath.Base(name) != name {
+		return "", update.ErrManifest
+	}
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "", err
+	}
+	dest := filepath.Join(home, "PKP Updates")
+	if err = os.MkdirAll(dest, 0700); err != nil {
+		return "", err
+	}
+	dir, err := os.MkdirTemp(dest, "package-")
+	var staging string
+	if err != nil {
+		return "", err
+	}
+	defer func() {
+		if staging != "" {
+			_ = os.Remove(staging)
+		}
+		if err != nil {
+			_ = os.RemoveAll(dir)
+		}
+	}()
+	in, err := os.Open(source)
+	if err != nil {
+		return "", err
+	}
+	defer in.Close()
+	path = filepath.Join(dir, name)
+	mode := os.FileMode(0600)
+	if filepath.Ext(name) == ".AppImage" {
+		mode = 0700
+	}
+	out, err := os.CreateTemp(dir, ".part-*")
+	if err != nil {
+		return "", err
+	}
+	staging = out.Name()
+	_, err = io.Copy(out, io.LimitReader(in, p.Size+1))
+	if err == nil {
+		err = out.Sync()
+	}
+	if closeErr := out.Close(); err == nil {
+		err = closeErr
+	}
+	if err != nil {
+		return "", err
+	}
+	if err = update.CheckFile(staging, p); err != nil {
+		return "", err
+	}
+	if err = os.Chmod(staging, mode); err != nil {
+		return "", err
+	}
+	if err = os.Link(staging, path); err != nil {
+		return "", err
+	}
+	return path, nil
 }
 
 func (u *UpdateService) installResult(err error) {

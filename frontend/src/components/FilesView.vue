@@ -112,12 +112,7 @@ const scopes: { key: FilesScope; label: string }[] = [
 ];
 // Only All files has one; a search across the drive replaces both.
 const scopeShown = computed(() => ui.view === "all" && !(ui.query.trim() && indexReady.value));
-const scopeHint = computed(() => {
-  if (ui.scope === "folder") return videoWorksShown.value ? t("按作品聚合当前目录及子目录的视频") : t("只显示当前文件夹的直接子项");
-  // Before the first full walk the tree comes from the server page by
-  // page: what is drawn is never the whole drive yet.
-  return indexReady.value ? t("来自不同文件夹的文件，在这里汇合") : t("本地索引建立中，结果可能不完整");
-});
+const scopeWarning = computed(() => ui.scope === "drive" && !indexReady.value);
 
 const sortLabel = computed(() => sorts.find((s) => s.key === ui.sortKey)?.label ?? sorts[0].label);
 
@@ -898,18 +893,17 @@ watch(
     <FilesSearch v-if="localSearchShown" />
     <template v-else>
     <header class="head">
-      <span v-if="multiAccount && currentAccount" class="account" :title="t('当前账号')">
-        <AccountIdentity :account="currentAccount" :size="24" dense />
-      </span>
-      <h1 class="title" :title="heading.title">{{ heading.title }}</h1>
-      <nav v-if="drive.trail.length && !wholeDrive && !(ui.query.trim() && indexReady)" class="crumbs">
-        <button class="quiet" @click="goToCrumb(0)">{{ t("全部文件") }}</button>
-        <template v-for="(crumb, i) in drive.trail" :key="crumb.id">
-          <Icon name="chevronRight" :size="14" />
-          <button class="quiet" :title="crumb.name" @click="goToCrumb(i + 1)">{{ crumb.name }}</button>
-        </template>
-      </nav>
-      <p v-else-if="heading.sub" class="sub">{{ heading.sub }}</p>
+      <div class="heading-location">
+        <h1 class="title" :title="heading.title">{{ heading.title }}</h1>
+        <nav v-if="drive.trail.length && !wholeDrive && !(ui.query.trim() && indexReady)" class="crumbs">
+          <button class="quiet" @click="goToCrumb(0)">{{ t("全部文件") }}</button>
+          <template v-for="(crumb, i) in drive.trail.slice(0, -1)" :key="crumb.id">
+            <Icon name="chevronRight" :size="14" />
+            <button class="quiet" :title="crumb.name" @click="goToCrumb(i + 1)">{{ crumb.name }}</button>
+          </template>
+        </nav>
+        <p v-else-if="heading.sub" class="sub">{{ heading.sub }}</p>
+      </div>
       <div v-if="scopeShown" class="scope-row">
         <div v-slide class="segments scope glass-well" role="group" :aria-label="t('浏览范围')">
           <button
@@ -922,8 +916,11 @@ watch(
             {{ s.label }}
           </button>
         </div>
-        <span class="scope-hint" :class="{ warn: ui.scope === 'drive' && !indexReady }" :title="scopeHint">{{ scopeHint }}</span>
+        <span v-if="scopeWarning" class="scope-hint" role="status">{{ t("本地索引建立中，结果可能不完整") }}</span>
       </div>
+      <span v-if="multiAccount && currentAccount" class="account" :title="t('当前账号')">
+        <AccountIdentity :account="currentAccount" :size="24" dense />
+      </span>
     </header>
 
     <div class="controls">
@@ -1565,11 +1562,18 @@ watch(
   min-width: 0;
 }
 
-.head .account {
-  order: 1;
-  max-width: 220px;
+.heading-location {
   display: flex;
-  margin-left: auto;
+  align-items: center;
+  flex: 1 1 18rem;
+  min-width: 0;
+  gap: 8px 16px;
+}
+
+.head .account {
+  flex: 0 1 220px;
+  min-width: 0;
+  display: flex;
 }
 
 /* The toolbar names the account on narrow windows. */
@@ -1580,6 +1584,7 @@ watch(
 }
 
 .title {
+  flex: 0 1 auto;
   min-width: 0;
   max-width: 100%;
   margin: 0;
@@ -1609,7 +1614,8 @@ watch(
   gap: 2px;
   /* Room for the first crumb's hover fill, which reaches 2px past the text
      column (the buttons' negative margin); the clip would cut it. */
-  min-width: 0;
+  flex: 1 1 auto;
+  min-width: min(9rem, 100%);
   max-width: 100%;
   margin: 0 -2px;
   min-height: 28px;
@@ -1648,10 +1654,9 @@ watch(
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px 14px;
+  gap: 8px;
   min-width: 0;
   max-width: 100%;
-  margin-left: auto;
 }
 
 .segments.scope {
@@ -1679,19 +1684,10 @@ watch(
   color: var(--fg);
 }
 
-/* Beside the switch while it has room for two short lines; under it once
-   it would be squeezed narrower than that. */
 .scope-hint {
-  flex: 1 1 14em;
-  min-width: 0;
-  overflow-wrap: anywhere;
-  font-size: 13px;
+  max-width: 20rem;
+  font-size: 12px;
   line-height: 17px;
-  text-wrap: balance;
-  color: var(--fg-dim);
-}
-
-.scope-hint.warn {
   color: var(--warning);
 }
 

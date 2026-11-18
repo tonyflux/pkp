@@ -16,6 +16,8 @@ fi
 # namespace preserves those paths without patching WebKit or disabling its sandbox.
 exec "$APPDIR$loader" --library-path "$APPDIR/usr/lib/$triplet:$APPDIR/usr/lib" "$bwrap" --unshare-user --die-with-parent \
   --bind / / --dev-bind /dev /dev --ro-bind /usr "$APPDIR/host-usr" --ro-bind "$APPDIR/usr" /usr \
+  --ro-bind-try "$APPDIR/host-usr/share/fonts" /usr/local/share/fonts/host-system \
+  --ro-bind-try "$APPDIR/host-usr/local/share/fonts" /usr/local/share/fonts/host-local \
   --setenv LD_LIBRARY_PATH "/usr/lib/$triplet:/usr/lib" \
   --setenv PATH /usr/bin:/bin \
   --setenv XDG_DATA_DIRS "/usr/share:$APPDIR/host-usr/local/share:$APPDIR/host-usr/share" \

@@ -9,12 +9,14 @@
 #include <mpv/render_gl.h>
 #include <math.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <string.h>
 
 // A single player, as on macOS. GTK/GL state belongs exclusively to the default
 // main context. Only the cached observations and capture handshake cross threads.
 static GtkWidget *area, *fixed;
 static mpv_handle *core;
+static pkp_surface_lifetime *surface_owner;
 static mpv_render_context *render;
 static GdkGLContext *gl_context;
 static GLuint video_fbo, video_texture;
@@ -25,6 +27,36 @@ static gint surface_present;
 static gint application_stopped;
 static GMutex observations;
 static GCond captured;
+#ifdef PKP_SURFACE_TEST
+static GMutex test_mutex;
+static GCond test_cond;
+static int test_queued;
+static int test_armed;
+void pkp_surface_test_reset(void) {
+    g_mutex_lock(&test_mutex);
+    test_queued = 0;
+    test_armed = 1;
+    g_mutex_unlock(&test_mutex);
+}
+void pkp_surface_test_wait(void) {
+    g_mutex_lock(&test_mutex);
+    while (!test_queued) g_cond_wait(&test_cond, &test_mutex);
+    g_mutex_unlock(&test_mutex);
+}
+#endif
+#ifdef PKP_SURFACE_TEST
+extern void pkpSurfaceTestClose(uintptr_t handle);
+static gboolean pkp_test_close_main(gpointer data) {
+    pkpSurfaceTestClose((uintptr_t)data);
+    return G_SOURCE_REMOVE;
+}
+void pkp_test_queue_close(uintptr_t handle) {
+    GSource *source = g_idle_source_new();
+    g_source_set_callback(source, pkp_test_close_main, (void *)handle, NULL);
+    g_source_attach(source, g_main_context_default());
+    g_source_unref(source);
+}
+#endif
 static int attached, visible, capture_busy, capture_pending, capture_status;
 static int capture_width, capture_height;
 static unsigned char *capture_pixels;
@@ -75,6 +107,15 @@ static void on_main(void (*fn)(void *), void *data) {
     GSource *source = g_idle_source_new();
     g_source_set_callback(source, run_call, call, release_call);
     g_source_attach(source, context);
+#ifdef PKP_SURFACE_TEST
+    g_mutex_lock(&test_mutex);
+    if (test_armed) {
+        test_armed = 0;
+        test_queued = 1;
+        g_cond_broadcast(&test_cond);
+    }
+    g_mutex_unlock(&test_mutex);
+#endif
     while (!call->done && !g_atomic_int_get(&application_stopped)) {
         g_cond_wait_until(&call->cond, &call->mutex, g_get_monotonic_time() + 100000);
     }
@@ -301,7 +342,7 @@ static GtkWidget *window_fixed(GtkWindow *window, char **err) {
     webkit_web_view_set_background_color(WEBKIT_WEB_VIEW(webview), &background);
     return base;
 }
-struct attach_args { GtkWindow *window; mpv_handle *mpv; char **err; int status; };
+struct attach_args { GtkWindow *window; mpv_handle *mpv; pkp_surface_lifetime *lifetime; char **err; int status; };
 static void detach_main(void *unused);
 static void application_shutdown(GApplication *application, gpointer unused) {
     (void)application;
@@ -310,9 +351,13 @@ static void application_shutdown(GApplication *application, gpointer unused) {
     detach_main(unused);
     g_atomic_int_set(&application_stopped, 1);
 }
-static void attach_main(void *data) {
+static void attach_active(void *data) {
     struct attach_args *args = data;
-    if (area) { args->status = 0; return; }
+    if (area) {
+        if (surface_owner == args->lifetime) args->status = 0;
+        else *args->err = g_strdup("video surface belongs to another client");
+        return;
+    }
     fixed = window_fixed(args->window, args->err);
     if (!fixed) return;
     GtkApplication *application = gtk_window_get_application(args->window);
@@ -326,6 +371,7 @@ static void attach_main(void *data) {
     memset(bottom_pixel, 0, sizeof(bottom_pixel));
     drawn_width = drawn_height = drawn_scale = 0;
     g_mutex_unlock(&observations);
+    surface_owner = args->lifetime;
     core = args->mpv;
     area = gtk_gl_area_new();
     gtk_widget_set_opacity(area, 0);
@@ -346,16 +392,27 @@ static void attach_main(void *data) {
         g_clear_object(&gl_context);
         g_object_unref(area);
         area = fixed = NULL;
+        surface_owner = NULL;
         core = NULL;
         return;
     }
     g_atomic_int_set(&surface_present, 1);
     args->status = 0;
 }
-int pkp_surface_attach(void *window, mpv_handle *mpv, char **err) {
-    struct attach_args args = {.window = window, .mpv = mpv, .err = err, .status = -1};
+static void attach_main(void *data) {
+    struct attach_args *args = data;
+    if (!pkp_surface_lifetime_enter(args->lifetime)) return;
+    attach_active(data);
+    pkp_surface_lifetime_leave(args->lifetime);
+}
+int pkp_surface_attach(void *window, mpv_handle *mpv, pkp_surface_lifetime *lifetime, char **err) {
+    struct attach_args args = {.window = window, .mpv = mpv, .lifetime = lifetime, .err = err, .status = -1};
     on_main(attach_main, &args);
     return args.status;
+}
+int pkp_surface_wait_ready(pkp_surface_lifetime *lifetime, char **err) {
+    (void)err;
+    return pkp_surface_lifetime_active(lifetime) ? 0 : -1;
 }
 static void detach_main(void *unused) {
     (void)unused;
@@ -382,17 +439,19 @@ static void detach_main(void *unused) {
         area = NULL;
     }
     fixed = NULL;
+    surface_owner = NULL;
     core = NULL;
     g_clear_pointer(&render_error, g_free);
     g_atomic_int_set(&surface_present, 0);
     fail_capture(-1);
 }
-void pkp_surface_detach(void) {
-    // Headless/not-yet-attached/already-shutdown clients must not wait for a
-    // main loop that may never have started or may already have returned.
-    if (g_atomic_int_get(&surface_present)) on_main(detach_main, NULL);
+static void detach_owned(void *data) {
+    if (surface_owner == data) detach_main(NULL);
 }
-static void move_main(void *data) {
+void pkp_surface_detach(pkp_surface_lifetime *lifetime) {
+    if (g_atomic_int_get(&surface_present)) on_main(detach_owned, lifetime);
+}
+static void move_active(void *data) {
     struct attach_args *args = data;
     if (!area) { *args->err = g_strdup("no video surface"); return; }
     GtkWidget *target = window_fixed(args->window, args->err);
@@ -412,17 +471,23 @@ static void move_main(void *data) {
     }
     args->status = 0;
 }
-int pkp_surface_move(void *window, char **err) {
+static void move_main(void *data) {
+    struct attach_args *args = data;
+    if (!pkp_surface_lifetime_enter(args->lifetime)) return;
+    if (surface_owner == args->lifetime) move_active(data);
+    pkp_surface_lifetime_leave(args->lifetime);
+}
+int pkp_surface_move(void *window, pkp_surface_lifetime *lifetime, char **err) {
     if (!g_atomic_int_get(&surface_present)) {
         *err = g_strdup("no video surface");
         return -1;
     }
-    struct attach_args args = {.window = window, .err = err, .status = -1};
+    struct attach_args args = {.window = window, .lifetime = lifetime, .err = err, .status = -1};
     on_main(move_main, &args);
     return args.status;
 }
-struct rect_args { double x, y, w, h; int visible; };
-static void rect_main(void *data) {
+struct rect_args { pkp_surface_lifetime *lifetime; double x, y, w, h; int visible; };
+static void rect_active(void *data) {
     struct rect_args *rect = data;
     if (!area) return;
     GtkWidget *parent = gtk_widget_get_parent(area);
@@ -434,9 +499,15 @@ static void rect_main(void *data) {
     if (!visible) fail_capture(-2);
     else request_draw(NULL);
 }
-void pkp_surface_set_rect(double x, double y, double w, double h, int show) {
+static void rect_main(void *data) {
+    struct rect_args *rect = data;
+    if (!pkp_surface_lifetime_enter(rect->lifetime)) return;
+    if (surface_owner == rect->lifetime) rect_active(data);
+    pkp_surface_lifetime_leave(rect->lifetime);
+}
+void pkp_surface_set_rect(pkp_surface_lifetime *lifetime, double x, double y, double w, double h, int show) {
     if (!g_atomic_int_get(&surface_present)) return;
-    struct rect_args rect = {x, y, w, h, show};
+    struct rect_args rect = {lifetime, x, y, w, h, show};
     on_main(rect_main, &rect);
 }
 int pkp_surface_attached(void) {
@@ -470,6 +541,7 @@ int pkp_surface_capture(int timeout_ms, unsigned char **rgba, int *width, int *h
             return -2;
         }
     }
+    if (!attached) { g_mutex_unlock(&observations); return -1; }
     capture_busy = 1;
     capture_pending = 1;
     capture_status = -2;

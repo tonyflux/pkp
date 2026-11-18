@@ -74,6 +74,8 @@ const playerWindowURL = "/?window=player"
 // buttons in that title bar, and it is never maximised — its shape is the
 // picture's.
 func (p *PlayerService) OpenWindow(audio bool) error {
+	p.openWindowMu.Lock()
+	defer p.openWindowMu.Unlock()
 	p.popoutMu.Lock()
 	if p.popout != nil {
 		popout := p.popout
@@ -92,6 +94,7 @@ func (p *PlayerService) OpenWindow(audio bool) error {
 		p.popoutMu.Unlock()
 		return i18n.New("无法打开播放窗口")
 	}
+	p.popoutMu.Unlock()
 
 	onWindows := runtime.GOOS == "windows"
 	width, height, minHeight := 960, 540, 270
@@ -126,29 +129,51 @@ func (p *PlayerService) OpenWindow(audio bool) error {
 		},
 	})
 	// Closing leaves the same session in the main window's playback bar.
-	popout.RegisterHook(events.Common.WindowClosing, func(*application.WindowEvent) {
-		p.returnHome()
+	popout.RegisterHook(events.Common.WindowClosing, func(e *application.WindowEvent) {
+		var err error
+		p.onSurfaceThread(func() { err = p.closePopout(popout) })
+		if err != nil {
+			p.log.Warn("player: video surface could not return to the main window", "error", err)
+			e.Cancel()
+		}
 	})
 	// Fullscreen ignores the proportions; coming out, the frame is the one
 	// from before, which may be another video's shape. Fullscreen also kept
 	// the traffic lights on.
 	popout.OnWindowEvent(events.Mac.WindowDidExitFullScreen, func(*application.WindowEvent) {
 		p.shapePopout(true)
-		p.popoutMu.Lock()
-		show := p.buttons
-		p.popoutMu.Unlock()
-		videowin.ShowButtons(popout.NativeWindow(), show)
+		p.onSurfaceThread(func() {
+			if !p.liveSurfaceWindow(popout) {
+				return
+			}
+			p.popoutMu.Lock()
+			show := p.buttons
+			p.popoutMu.Unlock()
+			videowin.ShowButtons(popout.NativeWindow(), show)
+		})
 	})
 	// Windows: leaving fullscreen, or the taskbar, puts back a frame that
 	// was not refitted meanwhile.
 	for _, back := range []events.WindowEventType{events.Windows.WindowUnFullscreen, events.Windows.WindowUnMinimise} {
 		popout.OnWindowEvent(back, func(*application.WindowEvent) { p.shapePopout(true) })
 	}
-	p.popout = popout
-	p.popoutAudio = audio
-	p.shaped = 0
-	p.buttons = true
-	p.popoutMu.Unlock()
+	opened := false
+	p.onSurfaceThread(func() {
+		if p.windowClosing {
+			return
+		}
+		p.popoutMu.Lock()
+		p.popout = popout
+		p.popoutAudio = audio
+		p.shaped = 0
+		p.buttons = true
+		opened = true
+		p.popoutMu.Unlock()
+	})
+	if !opened {
+		popout.Close()
+		return i18n.New("无法打开播放窗口")
+	}
 
 	p.shapePopout(true)
 	popout.Show()
@@ -157,8 +182,12 @@ func (p *PlayerService) OpenWindow(audio bool) error {
 
 func (p *PlayerService) configurePopout(window *application.WebviewWindow, audio bool) {
 	if audio {
-		videowin.FreeAspect(window.NativeWindow())
-		videowin.ShowButtons(window.NativeWindow(), true)
+		p.onSurfaceThread(func() {
+			if p.liveSurfaceWindow(window) {
+				videowin.FreeAspect(window.NativeWindow())
+				videowin.ShowButtons(window.NativeWindow(), true)
+			}
+		})
 		window.SetMinSize(480, 420)
 		window.SetSize(560, 700)
 	} else {
@@ -180,18 +209,20 @@ func (p *PlayerService) configurePopout(window *application.WebviewWindow, audio
 // Only that page calls it, for its own window.
 func (p *PlayerService) ShowWindowButtons(ctx context.Context, show bool) error {
 	caller := callerWindow(ctx)
-	p.popoutMu.Lock()
-	popout := p.popout
-	if popout == nil || caller == nil || caller.ID() != popout.ID() {
+	p.onSurfaceThread(func() {
+		p.popoutMu.Lock()
+		popout := p.popout
+		if popout == nil || caller == nil || caller.ID() != popout.ID() {
+			p.popoutMu.Unlock()
+			return
+		}
+		if p.popoutAudio {
+			show = true
+		}
+		p.buttons = show
 		p.popoutMu.Unlock()
-		return nil
-	}
-	if p.popoutAudio {
-		show = true
-	}
-	p.buttons = show
-	p.popoutMu.Unlock()
-	videowin.ShowButtons(popout.NativeWindow(), show)
+		videowin.ShowButtons(popout.NativeWindow(), show)
+	})
 	return nil
 }
 
@@ -243,13 +274,27 @@ func (p *PlayerService) HostVideo(ctx context.Context) error {
 	if err := p.ensureSurface(); err != nil {
 		return err
 	}
-	return p.moveSurface(caller)
+	var err error
+	p.onSurfaceThread(func() {
+		if !p.liveSurfaceWindow(caller) {
+			err = i18n.New("找不到要放入视频的窗口")
+			return
+		}
+		err = p.moveSurface(caller)
+	})
+	return err
 }
 
 // CloseWindow puts the video back in the main window and closes the separate
 // one.
 func (p *PlayerService) CloseWindow() error {
-	if popout := p.returnHome(); popout != nil {
+	var popout *application.WebviewWindow
+	var err error
+	p.onSurfaceThread(func() { popout, err = p.returnHome(nil) })
+	if err != nil {
+		return err
+	}
+	if popout != nil {
 		popout.Close()
 	}
 	return nil
@@ -267,34 +312,38 @@ func (p *PlayerService) poppedOut() bool {
 // runs once per separate window: from the buttons before they close it, and
 // from the window's closing hook when it is closed by hand. It hands back
 // the window that is to close, nil when there was none.
-func (p *PlayerService) returnHome() *application.WebviewWindow {
+func (p *PlayerService) returnHome(expected *application.WebviewWindow) (*application.WebviewWindow, error) {
 	p.popoutMu.Lock()
 	popout := p.popout
-	p.popout = nil
 	p.popoutMu.Unlock()
-	if popout == nil {
-		return nil
+	if popout == nil || (expected != nil && popout != expected) {
+		return nil, nil
 	}
-
 	p.mu.Lock()
 	main := p.window
 	p.mu.Unlock()
 	if main != nil {
 		if err := p.moveSurface(main); err != nil {
-			p.log.Warn("player: video surface could not return to the main window", "error", err)
+			return nil, err
 		}
 	}
+	p.popoutMu.Lock()
+	p.popout = nil
+	p.popoutMu.Unlock()
+	delete(p.seeThrough, popout.ID())
 	if app := application.Get(); app != nil {
 		app.Event.Emit(EventPlayerWindowClosed)
 	}
-	return popout
+	return popout, nil
 }
 
-// moveSurface makes the given window the surface's home. Before the surface
-// is attached there is nothing to move, only the home to note.
+func (p *PlayerService) closePopout(popout *application.WebviewWindow) error {
+	_, err := p.returnHome(popout)
+	return err
+}
+
+// moveSurface runs on the UI thread, with the target still alive.
 func (p *PlayerService) moveSurface(to application.Window) error {
-	p.surfaceMu.Lock()
-	defer p.surfaceMu.Unlock()
 	if p.host == to.ID() {
 		return nil
 	}

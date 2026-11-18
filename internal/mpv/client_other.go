@@ -36,6 +36,8 @@ func (c *Client) Close() error { return nil }
 
 func (c *Client) AttachSurface(unsafe.Pointer) error { return ErrUnsupported }
 
+func (c *Client) WaitSurfaceReady() error { return ErrUnsupported }
+
 func (c *Client) MoveSurface(unsafe.Pointer) error { return ErrUnsupported }
 
 func (c *Client) SetSurfaceRect(Rect) {}
