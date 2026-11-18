@@ -1,82 +1,79 @@
-# Feel free to remove those if you don't want/need to use them.
-# Make sure to check the documentation at https://nfpm.goreleaser.com
-#
-# The lines below are called `modelines`. See `:help modeline`
-
-name: "pkp"
+name: pkp
 arch: ${GOARCH}
-platform: "linux"
-version: "0.1.0"
-section: "default"
-priority: "extra"
-maintainer: "tonyflux"
-description: "High-performance PikPak desktop client"
-vendor: "PKP"
-homepage: "https://github.com/tonyflux/pkp"
-license: "GPL-3.0-only"
-release: "1"
-
+platform: linux
+version: ${VERSION}
+section: net
+priority: optional
+maintainer: tonyflux
+description: High-performance PikPak desktop client
+vendor: PKP
+homepage: https://github.com/tonyflux/pkp
+license: GPL-3.0-only
 contents:
-  - src: "./bin/pkp"
-    dst: "/usr/local/bin/pkp"
-  - src: "./build/appicon.png"
-    dst: "/usr/share/icons/hicolor/128x128/apps/pkp.png"
-  - src: "./build/linux/pkp.desktop"
-    dst: "/usr/share/applications/pkp.desktop"
-  - src: "./LICENSE"
-    dst: "/usr/share/licenses/pkp/LICENSE"
-
-# Default dependencies for the GTK4 + WebKitGTK 6.0 stack (Ubuntu 24.04+ / Debian 13+)
-depends:
-  - libgtk-4-1
-  - libwebkitgtk-6.0-4
-
-# Distribution-specific overrides for different package formats
+  - src: ${LINUX_STAGE}/usr/lib/pkp/pkp
+    expand: true
+    dst: /usr/lib/pkp/pkp
+    packager: deb
+  - src: ./build/linux/pkp
+    dst: /usr/bin/pkp
+    packager: deb
+    file_info:
+      mode: 0755
+  - src: ${LINUX_APPDIR}
+    expand: true
+    dst: /opt/pkp/runtime
+    type: tree
+    packager: rpm
+  - src: ./build/linux/pkp-rpm
+    dst: /usr/bin/pkp
+    packager: rpm
+    file_info:
+      mode: 0755
+  - src: ./build/appicon.png
+    dst: /usr/share/icons/hicolor/512x512/apps/pkp.png
+  - src: ./build/linux/desktop
+    dst: /usr/share/applications/pkp.desktop
+  - src: ./LICENSE
+    dst: /usr/share/licenses/pkp/LICENSE
+  - src: ./frontend/dist/THIRD_PARTY_LICENSES.txt
+    dst: /usr/share/licenses/pkp/THIRD_PARTY_LICENSES.txt
+  - src: ${LINUX_STAGE}/usr/share/licenses/pkp/GO_LICENSES.txt
+    expand: true
+    dst: /usr/share/licenses/pkp/GO_LICENSES.txt
+  - src: ./build/linux/com.pkp.desktop.policy
+    dst: /usr/share/polkit-1/actions/com.pkp.desktop.policy
+  - src: ./build/linux/pkp.apparmor
+    dst: /etc/apparmor.d/pkp
+    type: config
 overrides:
-  # RPM packages for Fedora / RHEL / AlmaLinux / Rocky Linux
+  deb:
+    depends:
+      - libc6 (>= 2.39)
+      - libgtk-4-1 (>= 4.14)
+      - libwebkitgtk-6.0-4
+      - libmpv2 (>= 0.37)
+      - libavcodec60
+      - libavformat60
+      - libavutil58
+      - libswresample4
+      - ffmpeg (>= 7:6.1)
+      - bubblewrap
+      - xdg-dbus-proxy
+      - xdg-utils
+      - polkitd
+      - glib-networking
+      - gsettings-desktop-schemas
+    recommends:
+      - gnome-keyring
+      - xdg-desktop-portal
   rpm:
     depends:
-      - gtk4
-      - webkitgtk6.0
-
-  # Arch Linux packages
-  archlinux:
-    depends:
-      - gtk4
-      - webkitgtk-6.0
-
-# scripts section to ensure desktop database is updated after install
+      - glibc >= 2.39
+      - xdg-utils
+      - polkit
+    recommends:
+      - gnome-keyring
+      - xdg-desktop-portal
 scripts:
-  postinstall: "./build/linux/nfpm/scripts/postinstall.sh"
-  # You can also add preremove, postremove if needed
-  # preremove: "./build/linux/nfpm/scripts/preremove.sh"
-  # postremove: "./build/linux/nfpm/scripts/postremove.sh"
-
-# If you build your app with -tags gtk3 (legacy WebKit2GTK 4.1 stack — supported through v3.0.x, removed in v3.1),
-# replace the depends/overrides above with these:
-#
-# depends:
-#   - libgtk-3-0
-#   - libwebkit2gtk-4.1-0
-# overrides:
-#   rpm:
-#     depends:
-#       - gtk3
-#       - webkit2gtk4.1
-#   archlinux:
-#     depends:
-#       - gtk3
-#       - webkit2gtk-4.1
-#
-# replaces:
-#   - foobar
-# provides:
-#   - bar
-# recommends:
-#   - whatever
-# suggests:
-#   - something-else
-# conflicts:
-#   - not-foo
-#   - not-bar
-# changelog: "changelog.yaml"
+  postinstall: ./build/linux/nfpm/scripts/postinstall.sh
+  postremove: ./build/linux/nfpm/scripts/postremove.sh

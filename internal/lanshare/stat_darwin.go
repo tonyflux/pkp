@@ -18,6 +18,8 @@ func statBirth(st *unix.Stat_t) string {
 	return fmt.Sprintf("%d:%d", st.Btim.Sec, st.Btim.Nsec)
 }
 
+func statFingerprint(f *os.File, st *unix.Stat_t) (string, error) { return "", nil }
+
 func handlePath(f *os.File) (string, error) {
 	var path [unix.PathMax]byte
 	_, _, errno := unix.Syscall(unix.SYS_FCNTL, f.Fd(), unix.F_GETPATH, uintptr(unsafe.Pointer(&path[0])))

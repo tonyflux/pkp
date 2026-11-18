@@ -66,15 +66,6 @@ def verify(directory, tag):
         "darwin-universal": f"PKP-{version}-macos-universal.dmg",
         "windows-x64-arm64": f"PKP-{version}-windows-x64-arm64-setup.exe",
     }
-    names = {*packages.values(), "update.json", "update.json.sig", "libmpv-sources.tar.gz", "LICENSE", "SHA256SUMS"}
-    if tuple(map(int, version.split("."))) >= (0, 2, 0):
-        names.add(f"PKP-{version}-source.tar.gz")
-    if {p.name for p in directory.iterdir()} != names:
-        raise ValueError(f"expected exactly {len(names)} release assets")
-    for name in names:
-        path = directory / name
-        if path.is_symlink() or not path.is_file() or path.stat().st_size == 0:
-            raise ValueError(f"not a nonempty regular asset: {name}")
     if (directory / "update.json").stat().st_size > 128 * 1024 or (directory / "update.json.sig").stat().st_size > 256:
         raise ValueError("oversized manifest or signature")
     data = (directory / "update.json").read_bytes()
@@ -92,6 +83,23 @@ def verify(directory, tag):
     manifest = json.loads(data)
     if manifest["version"] != version or set(manifest["packages"]) != set(packages) or not manifest["notes"].strip():
         raise ValueError("manifest does not match release")
+    linux_packages = manifest.get("linuxPackages")
+    linux_names = {}
+    if linux_packages is not None:
+        for arch in ("amd64", "arm64"):
+            for format, suffix in (("deb", ".deb"), ("rpm", ".rpm"), ("appimage", ".AppImage"), ("sources", "-runtime-sources.tar.gz")):
+                linux_names[f"linux-{arch}-{format}"] = f"PKP-{version}-linux-{arch}{suffix}"
+        if not isinstance(linux_packages, dict) or set(linux_packages) != set(linux_names):
+            raise ValueError("Linux release must include both architectures, all packages and runtime sources")
+    names = {*packages.values(), *linux_names.values(), "update.json", "update.json.sig", "libmpv-sources.tar.gz", "LICENSE", "SHA256SUMS"}
+    if tuple(map(int, version.split("."))) >= (0, 2, 0):
+        names.add(f"PKP-{version}-source.tar.gz")
+    if {p.name for p in directory.iterdir()} != names:
+        raise ValueError(f"expected exactly {len(names)} release assets")
+    for name in names:
+        path = directory / name
+        if path.is_symlink() or not path.is_file() or path.stat().st_size == 0:
+            raise ValueError(f"not a nonempty regular asset: {name}")
     digests = {}
     for name in names - {"SHA256SUMS"}:
         with (directory / name).open("rb") as stream:
@@ -111,7 +119,13 @@ def verify(directory, tag):
             raise ValueError("untrusted installer URL")
         if package["size"] != (directory / name).stat().st_size or package["sha256"] != digests[name]:
             raise ValueError("installer differs from signed manifest")
-    print(f"Verified {tag}: signature, both installers, all {len(names)} assets and SHA256SUMS")
+    for platform, name in linux_names.items():
+        package = linux_packages[platform]
+        if package.get("minOS") != "2.39" or package.get("url") != f"https://github.com/tonyflux/pkp/releases/download/{tag}/{name}":
+            raise ValueError("untrusted Linux package metadata")
+        if package.get("size") != (directory / name).stat().st_size or package.get("sha256") != digests[name]:
+            raise ValueError("Linux asset differs from signed manifest")
+    print(f"Verified {tag}: signature, installers, all {len(names)} assets and SHA256SUMS")
 
 
 if __name__ == "__main__":

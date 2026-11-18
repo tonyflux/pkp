@@ -49,6 +49,7 @@ func run(args []string) error {
 	notesPath := fs.String("notes", "", "UTF-8 release notes file")
 	metadataOnly := fs.Bool("metadata-only", false, "check version metadata without a signing key")
 	publish := fs.Bool("publish", false, "publish a verified draft as Latest (publish command only)")
+	linux := fs.Bool("linux", false, "include both architectures of Linux native packages, AppImage and corresponding runtime source")
 	if err := fs.Parse(args[1:]); err != nil {
 		return err
 	}
@@ -143,7 +144,7 @@ func run(args []string) error {
 		if *dir == "" {
 			return errors.New("provide -dir")
 		}
-		return prepare(*dir, *version, notes, key)
+		return prepare(*dir, *version, notes, key, *linux)
 	case "verify":
 		if *dir == "" {
 			return errors.New("provide -dir")
@@ -152,7 +153,7 @@ func run(args []string) error {
 		if err != nil {
 			return err
 		}
-		fmt.Printf("All %d release assets verified: %s\n", len(releaseAssets(m.Version)), m.Version)
+		fmt.Printf("All %d release assets verified: %s\n", len(releaseAssets(m)), m.Version)
 		return nil
 	case "publish":
 		if *dir == "" {
@@ -262,7 +263,7 @@ func macMinimum() (string, error) {
 	}
 }
 
-func prepare(dir, version, notes string, key ed25519.PrivateKey) error {
+func prepare(dir, version, notes string, key ed25519.PrivateKey, linux bool) error {
 	minimum, err := macMinimum()
 	if err != nil {
 		return err
@@ -289,6 +290,27 @@ func prepare(dir, version, notes string, key ed25519.PrivateKey) error {
 			minOS = "10.0"
 		}
 		m.Packages[platform] = update.Package{URL: update.AssetURL(version, name), Size: size, SHA256: hex.EncodeToString(h.Sum(nil)), MinOS: minOS}
+	}
+	if linux {
+		m.LinuxPackages = make(map[string]update.Package, 8)
+		for _, arch := range [...]string{"amd64", "arm64"} {
+			for _, format := range [...]string{"deb", "rpm", "appimage", "sources"} {
+				platform := "linux-" + arch + "-" + format
+				name := update.PackageName(version, platform)
+				info, err := os.Lstat(filepath.Join(dir, name))
+				if err != nil {
+					return err
+				}
+				if !info.Mode().IsRegular() || info.Size() == 0 {
+					return fmt.Errorf("Linux asset must be a nonempty regular file: %s", name)
+				}
+				digest, err := fileDigest(filepath.Join(dir, name))
+				if err != nil {
+					return err
+				}
+				m.LinuxPackages[platform] = update.Package{URL: update.AssetURL(version, name), Size: info.Size(), SHA256: digest, MinOS: "2.39"}
+			}
+		}
 	}
 	if err := m.Validate(); err != nil {
 		return err

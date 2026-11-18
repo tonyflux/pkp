@@ -1,4 +1,4 @@
-// Package lanmedia prepares complete local media for browser playback using bundled tools.
+// Package lanmedia prepares complete local media for browser playback using installed tools.
 package lanmedia
 
 import (
@@ -80,11 +80,15 @@ type Plan struct {
 type Processor struct{ ffmpeg, ffprobe string }
 
 func New() *Processor {
-	p := &Processor{}
 	exe, err := os.Executable()
 	if err != nil {
-		return p
+		return &Processor{}
 	}
+	return newProcessor(exe)
+}
+
+func newProcessor(exe string) *Processor {
+	p := &Processor{}
 	if resolved, err := filepath.EvalSymlinks(exe); err == nil {
 		exe = resolved
 	}
@@ -92,14 +96,23 @@ func New() *Processor {
 	if runtime.GOOS == "windows" {
 		suffix = ".exe"
 	}
-	for _, dir := range []string{filepath.Dir(exe), filepath.Join(filepath.Dir(exe), "Helpers"), filepath.Join(filepath.Dir(exe), "..", "Helpers")} {
+	dirs := []string{filepath.Dir(exe), filepath.Join(filepath.Dir(exe), "Helpers"), filepath.Join(filepath.Dir(exe), "..", "Helpers")}
+	if runtime.GOOS == "linux" {
+		// AppImage carries private tools; native packages depend on /usr/bin.
+		dirs = []string{filepath.Join(filepath.Dir(exe), "Helpers"), filepath.Dir(exe), "/usr/bin"}
+	}
+	for _, dir := range dirs {
 		ffmpeg, ffprobe := filepath.Join(dir, "ffmpeg"+suffix), filepath.Join(dir, "ffprobe"+suffix)
-		if a, err := os.Stat(ffmpeg); err == nil && a.Mode().IsRegular() {
-			if b, err := os.Stat(ffprobe); err == nil && b.Mode().IsRegular() {
-				p.ffmpeg, p.ffprobe = ffmpeg, ffprobe
-				break
-			}
+		a, err := os.Stat(ffmpeg)
+		if err != nil || !a.Mode().IsRegular() || (runtime.GOOS == "linux" && a.Mode().Perm()&0o111 == 0) {
+			continue
 		}
+		b, err := os.Stat(ffprobe)
+		if err != nil || !b.Mode().IsRegular() || (runtime.GOOS == "linux" && b.Mode().Perm()&0o111 == 0) {
+			continue
+		}
+		p.ffmpeg, p.ffprobe = ffmpeg, ffprobe
+		break
 	}
 	return p
 }

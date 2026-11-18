@@ -86,6 +86,11 @@ func Identify(path string) (Identity, error) {
 	if info.Mode()&os.ModeSymlink != 0 || !info.IsDir() || isReparse(info) {
 		return Identity{}, ErrUnsafePath
 	}
+	if runtime.GOOS == "linux" {
+		if err := checkComponents(absolute); err != nil {
+			return Identity{}, err
+		}
+	}
 	canonical, err := filepath.EvalSymlinks(absolute)
 	if err != nil {
 		return Identity{}, pathError(absolute, err)
@@ -114,7 +119,12 @@ func Validate(id Identity) error {
 	if !sameVolumeFile(fresh.Volume, fresh.File, id.Volume, id.File) || fresh.Path != id.Path || fresh.CaseSensitive != id.CaseSensitive || fresh.UnicodeSensitive != id.UnicodeSensitive {
 		return ErrRootChanged
 	}
-	dir, err := os.Open(id.Path)
+	var dir *os.File
+	if runtime.GOOS == "linux" {
+		dir, err = openNoFollow(id.Path)
+	} else {
+		dir, err = os.Open(id.Path)
+	}
 	if err != nil {
 		return pathError(id.Path, err)
 	}
@@ -425,6 +435,17 @@ func sameStamp(a, b stamp) bool {
 	return a.size == b.size && a.modified.Equal(b.modified) && a.version == b.version && a.file == b.file && a.mode == b.mode
 }
 
+// Linux versions include the content digest because timestamps alone can repeat.
+func versionHash(version string) string {
+	if runtime.GOOS == "linux" {
+		_, digest, ok := strings.Cut(version[strings.IndexByte(version, ':')+1:], ":")
+		if ok && len(digest) == 64 {
+			return digest
+		}
+	}
+	return ""
+}
+
 func hashFile(ctx context.Context, f *os.File) (string, error) {
 	digest := sha256.New()
 	buf := make([]byte, 256*1024)
@@ -463,7 +484,12 @@ func Hash(ctx context.Context, path string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	sum, err := hashFile(ctx, f)
+	sum := versionHash(a.version)
+	if sum == "" {
+		sum, err = hashFile(ctx, f)
+	} else {
+		err = ctx.Err()
+	}
 	if err != nil {
 		return "", pathError(path, err)
 	}
@@ -481,6 +507,12 @@ func Hash(ctx context.Context, path string) (string, error) {
 	}
 	if !os.SameFile(before, fresh) {
 		return "", ErrUnstable
+	}
+	if runtime.GOOS == "linux" {
+		if !sameStamp(a, b) {
+			return "", ErrUnstable
+		}
+		return sum, nil
 	}
 	c, err := fileStamp(fresh, path)
 	if err != nil {
@@ -543,6 +575,8 @@ func Inspect(ctx context.Context, root Identity, rel string) (*Entry, error) {
 	entry := &Entry{Path: rel, Name: info.Name(), Directory: info.IsDir(), Size: info.Size(), ModTime: info.ModTime().UTC().Format(time.RFC3339Nano), FileID: before.file, Version: before.version}
 	if entry.Directory {
 		entry.Size = 0
+	} else if digest := versionHash(before.version); digest != "" {
+		entry.Hash = digest
 	} else {
 		entry.Hash, err = Hash(ctx, path)
 		if err != nil {
@@ -686,7 +720,9 @@ func Scan(ctx context.Context, root Identity, cache map[string]Entry) ([]Entry, 
 				}
 			} else {
 				previous, ok := cache[sub]
-				if ok && !previous.Directory && previous.Size == entry.Size && previous.ModTime == entry.ModTime && previous.FileID == entry.FileID && previous.Version == entry.Version && entry.Version != "" && len(previous.Hash) == 64 {
+				if digest := versionHash(st.version); digest != "" {
+					entry.Hash = digest
+				} else if ok && !previous.Directory && previous.Size == entry.Size && previous.ModTime == entry.ModTime && previous.FileID == entry.FileID && previous.Version == entry.Version && entry.Version != "" && len(previous.Hash) == 64 {
 					entry.Hash = previous.Hash
 				} else {
 					entry.Hash, err = Hash(ctx, path)

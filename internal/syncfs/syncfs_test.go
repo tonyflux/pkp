@@ -16,7 +16,7 @@ import (
 func testRoot(t *testing.T) Identity {
 	t.Helper()
 	id, err := Identify(t.TempDir())
-	if errors.Is(err, ErrUnsupported) {
+	if errors.Is(err, ErrUnsupported) && runtime.GOOS != "linux" {
 		t.Skip("filesystem is explicitly unsupported")
 	}
 	if err != nil {

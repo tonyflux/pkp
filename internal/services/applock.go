@@ -102,6 +102,9 @@ type AppLockState struct {
 	// Unavailable says why not ("" when it can).
 	Available   bool   `json:"available"`
 	Unavailable string `json:"unavailable"`
+	// ScreenshotProtectionAvailable is false where the compositor cannot
+	// exclude a window from capture; redacting locked pages still applies.
+	ScreenshotProtectionAvailable bool `json:"screenshotProtectionAvailable"`
 	// Authenticating: the system's dialog is up.
 	Authenticating bool `json:"authenticating"`
 	// AttemptsLeft is how many wrong standalone password attempts remain before a cooldown;
@@ -273,14 +276,15 @@ func (l *AppLockService) State() AppLockState {
 	s := l.drive.LocalSettings()
 	ok, why := lockAvailable()
 	state := AppLockState{
-		Enabled:      s.AppLock,
-		Delay:        s.AppLockDelay,
-		Method:       s.AppLockMethod,
-		HasPassword:  s.AppLockPassword,
-		ProveWith:    proveWith(s, ok),
-		Available:    ok,
-		Unavailable:  why,
-		AttemptsLeft: s.AppLockThrottle.attemptsLeft(),
+		Enabled:                       s.AppLock,
+		Delay:                         s.AppLockDelay,
+		Method:                        s.AppLockMethod,
+		HasPassword:                   s.AppLockPassword,
+		ProveWith:                     proveWith(s, ok),
+		Available:                     ok,
+		Unavailable:                   why,
+		ScreenshotProtectionAvailable: runtime.GOOS == "darwin" || runtime.GOOS == "windows",
+		AttemptsLeft:                  s.AppLockThrottle.attemptsLeft(),
 	}
 	if s.AppLockThrottle.cooling(lockClock()) > 0 {
 		state.CooldownUntil = s.AppLockThrottle.Until

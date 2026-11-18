@@ -6,12 +6,12 @@
 
 **Independent open-source desktop client for your PikPak files.**
 
-Organize, sync, search, and play in one workspace. macOS 12 or later, and a Windows preview.
+Organize, sync, search, and play in one workspace. macOS 12+, Windows preview, and Linux builds.
 
 [简体中文](README.zh-CN.md) · English · [pkpapp.cc](https://pkpapp.cc/en)
 
 [![License: GPL-3.0](https://img.shields.io/badge/license-GPL--3.0-blue.svg)](LICENSE)
-[![Platform](https://img.shields.io/badge/platform-macOS%2012%2B%20%7C%20Windows%20preview-111111.svg)](https://github.com/tonyflux/pkp/releases/latest)
+[![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Linux-111111.svg)](docs/INSTALL.en.md)
 [![Latest release](https://img.shields.io/github/v/release/tonyflux/pkp)](https://github.com/tonyflux/pkp/releases/latest)
 [![Downloads](https://img.shields.io/github/downloads/tonyflux/pkp/latest/total)](https://github.com/tonyflux/pkp/releases/latest)
 
@@ -37,7 +37,7 @@ PKP is an independent desktop client for a PikPak account you already have. It i
 - **AI subtitles.** Generate captions from the video's audio through PikPak, in the original language or Chinese, English, Japanese, or Korean. Available on macOS since v0.6.0 and on Windows x64/ARM64 since v0.6.1. Enable them in the player's subtitle menu; PikPak membership, quota, and availability apply. No chat-model API key is needed. See [usage and data handling](docs/USAGE.en.md#playback-and-reading).
 - **Local index search.** Each account keeps an index on this computer, with type, size, and other filters. Search does not send file names to a model. The first index takes time.
 - **Multiple accounts.** Each account has its own session, transfer queue, and index. Switching accounts leaves the others' transfers running.
-- **Privacy on this computer.** Remembered passwords and optional API keys use the macOS Keychain or Windows Credential Manager. See [Privacy](#privacy).
+- **Privacy on this computer.** Remembered passwords and optional API keys use macOS Keychain, Windows Credential Manager or Linux Secret Service. See [Privacy](#privacy).
 
 The interface is available in English, Simplified Chinese, Traditional Chinese, Japanese, and Korean.
 
@@ -49,8 +49,9 @@ The interface is available in English, Simplified Chinese, Traditional Chinese, 
 | --- | --- |
 | macOS 12 or later, Apple silicon and Intel | [PKP-0.7.1-macos-universal.dmg](https://github.com/tonyflux/pkp/releases/download/v0.7.1/PKP-0.7.1-macos-universal.dmg) |
 | Windows x64 / ARM64 preview | [PKP-0.7.1-windows-x64-arm64-setup.exe](https://github.com/tonyflux/pkp/releases/download/v0.7.1/PKP-0.7.1-windows-x64-arm64-setup.exe) |
+| Linux x86_64 / ARM64 | Current source builds deb/rpm/AppImage; see [Linux installation and limits](docs/INSTALL.en.md#linux). Existing v0.7.1 has no Linux attachment. |
 
-The macOS build is ad hoc signed and is not notarized, so the system may ask you to approve the first launch. The Windows build has no Authenticode publisher signature, and playback, sync, notifications, and system authentication still need broader testing on real devices. Linux packages are not available.
+The macOS build is ad hoc signed and is not notarized, so the system may ask you to approve the first launch. The Windows build has no Authenticode publisher signature, and playback, sync, notifications, and system authentication still need broader testing on real devices. Linux targets GTK4/WebKitGTK 6.0 on Ubuntu 24.04 or compatible userspace; AppImage retains the sandbox and needs user namespaces. Builds do not imply a published package or complete device acceptance.
 
 **Homebrew.** PKP has no cask. `brew install --cask pikpak` installs PikPak's own app, which is a different program.
 
@@ -107,7 +108,7 @@ File browsing also includes right-click menus and shortcuts such as F2 rename an
 
 ## Build from source
 
-Builds are documented for macOS 12 or later and produce a universal app. You need Go 1.26, Node.js 24, Xcode Command Line Tools, CMake, Python 3.10 or later, and the pinned Wails CLI. Full prerequisites, tests, and Windows cross-compilation are in the [development guide](docs/DEVELOPMENT.en.md).
+The macOS quick start below produces a universal app. Linux native and AppImage builds, exact dependencies and tests are documented separately in the [development guide](docs/DEVELOPMENT.en.md#linux-builds). Go 1.26, Node.js 24 and the pinned Wails CLI are shared prerequisites; macOS additionally needs Xcode Command Line Tools, CMake and Python 3.10+.
 
 ```sh
 xcode-select --install
@@ -127,7 +128,7 @@ Read the privacy notice before you sign in: [English](PRIVACY.en.md) · [简体�
   <img src="assets/screenshots/en/app-lock.webp" alt="English App Lock settings, with system login or a separate PKP password" width="720">
 </p>
 
-- Remembered passwords, AI API keys, and TMDB credentials go into the macOS Keychain (service `com.pkp.desktop`) or Windows Credential Manager. Session tokens still live in a local credentials file. “Remember account and password” and “Automatic login” start checked; clear them on the sign-in form if you want the password kept only in memory. App Lock limits access inside the app. It does not encrypt downloaded files or the whole configuration directory.
+- Remembered passwords, AI keys, and TMDB credentials use macOS Keychain (service `com.pkp.desktop`), Windows Credential Manager or Linux Secret Service. Session tokens remain in a local credentials file. Remember-password and automatic-login options start checked; clear them to keep the sign-in password only in memory. Linux requires an unlocked session keyring. App Lock limits in-app access, not downloaded-file/config-directory encryption or guaranteed Linux capture protection.
 - Daily active installation statistics default to on in v0.3.0, including existing settings with no explicit choice, while preserving identifiable explicit off choices. v0.2.0 defaulted to off; v0.1.0 defaulted to on. A one-time notice explains the default and where to turn statistics off in Settings → Privacy & Security, also accessible before sign-in. Acknowledging or dismissing it is not consent and leaves statistics enabled; the notice has no turn-off button. With a reporting endpoint, recording starts at startup and sending can begin about 30 seconds later, before acknowledgment; without an endpoint, neither collection nor the notice occurs. Reports contain a random installation ID, version, OS/architecture, language and active local dates, not feature actions, frequencies, logs, accounts, filenames, paths, searches, questions or contents. This measures successfully reported active installations, not verified people or exact installs. Opt-out deletes the local ID and pending data, not server history. The app release does not deploy companion telemetry services.
 - Each successful sign-in from the login form, including adding an account or signing in again, submits a preset developer referral code to PikPak. There is no separate switch. A failed submission still leaves you signed in. Restoring a session or refreshing a token does not submit it. The registration link also carries referral parameters.
 - Update checks have their own switch. Production builds check GitHub for a new release and wait for you to download and install. Disabling statistics leaves update checks as they are.

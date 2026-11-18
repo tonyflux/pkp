@@ -144,6 +144,7 @@ type MenuBarService struct {
 	// closed in full screen and hides once full screen has ended.
 	hidden   atomic.Bool
 	exitFull atomic.Bool
+	trayHost atomic.Bool
 	// shown: the panel is up.
 	shown atomic.Bool
 	// reading: a cloud read is under way.
@@ -291,6 +292,7 @@ func (m *MenuBarService) Attach(app *application.App, main *application.WebviewW
 
 // ServiceStartup starts publishing the state.
 func (m *MenuBarService) ServiceStartup(ctx context.Context, _ application.ServiceOptions) error {
+	m.startTrayHostMonitor(ctx)
 	go m.loop(ctx)
 	return nil
 }
@@ -617,6 +619,11 @@ func (m *MenuBarService) SetUnsaved(what string) {
 // screen (a hidden full-screen window would leave its Space behind) and
 // hides once that is done.
 func (m *MenuBarService) closeMain() {
+	// A desktop without a tray host must never strand the only main window.
+	if !m.canHideToTray() {
+		m.Quit()
+		return
+	}
 	// App Lock: closing the window always locks at once. Off
 	// AppKit's thread: locking reads the settings and tells every window.
 	if m.lock != nil {

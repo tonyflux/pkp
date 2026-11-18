@@ -34,6 +34,7 @@ type library struct {
 	create, initialize, terminateDestroy, errorString                 *windows.Proc
 	setOptionString, setPropertyString, getProperty, freeNodeContents *windows.Proc
 	command, commandRet, observeProperty, requestLogMessages          *windows.Proc
+	commandNamed                                                      *windows.Proc
 	waitEvent, wakeup, setWakeupCallback                              *windows.Proc
 
 	wakeupCallback uintptr
@@ -64,6 +65,7 @@ func loadLibrary() (*library, error) {
 		"mpv_free_node_contents":   &l.freeNodeContents,
 		"mpv_command":              &l.command,
 		"mpv_command_ret":          &l.commandRet,
+		"mpv_command_node":         &l.commandNamed,
 		"mpv_observe_property":     &l.observeProperty,
 		"mpv_request_log_messages": &l.requestLogMessages,
 		"mpv_wait_event":           &l.waitEvent,

@@ -1,4 +1,4 @@
-//go:build !darwin
+//go:build !darwin && (!linux || !cgo || gtk3)
 
 package webproxy
 
@@ -9,8 +9,7 @@ import (
 	"github.com/tonyflux/pkp/internal/netproxy"
 )
 
-// Supported is false away from macOS: the webview there is not WebKit's, and
-// nothing in this package would reach it.
+// Supported is false for WebView2 and builds without the GTK4/WebKitGTK6 backend.
 func Supported() bool { return false }
 
 // UnsupportedNote is what Settings · Network & Proxy says: the webview (WebView2 on

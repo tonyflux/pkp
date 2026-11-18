@@ -1,13 +1,19 @@
-//go:build darwin
+//go:build darwin || linux
 
 package mpv
 
 /*
-#cgo CFLAGS: -I${SRCDIR}/../../build/darwin/libmpv/include -Wno-deprecated-declarations
-#cgo LDFLAGS: -L${SRCDIR}/../../build/darwin/libmpv/lib -lmpv -framework Cocoa -framework QuartzCore -framework OpenGL
+#cgo darwin CFLAGS: -I${SRCDIR}/../../build/darwin/libmpv/include -Wno-deprecated-declarations
+#cgo darwin LDFLAGS: -L${SRCDIR}/../../build/darwin/libmpv/lib -lmpv -framework Cocoa -framework QuartzCore -framework OpenGL
+#cgo linux pkg-config: mpv gtk4 webkitgtk-6.0 epoxy
+#cgo linux LDFLAGS: -lm
 #include <stdlib.h>
 #include <mpv/client.h>
+#ifdef __linux__
+#include "surface_linux.h"
+#else
 #include "surface_darwin.h"
+#endif
 */
 import "C"
 
@@ -153,8 +159,8 @@ func (c *Client) Close() error {
 	return nil
 }
 
-// AttachSurface builds the video surface inside the given NSWindow and binds
-// a render context to it. Calling it twice is a no-op.
+// AttachSurface builds the video surface inside the native window (NSWindow
+// on macOS, GtkWindow on Linux) and binds a render context to it.
 func (c *Client) AttachSurface(nsWindow unsafe.Pointer) error {
 	if c.opts.Headless {
 		return nil
@@ -181,12 +187,16 @@ func (c *Client) AttachSurface(nsWindow unsafe.Pointer) error {
 	return nil
 }
 
-// MoveSurface re-parents the attached surface into another NSWindow, hidden
-// until the next SetSurfaceRect. The render context is untouched, so the
-// playing file never notices.
+// MoveSurface moves playback into another native window, hidden until the
+// next SetSurfaceRect. The GL/render context survives GTK reparenting.
 func (c *Client) MoveSurface(nsWindow unsafe.Pointer) error {
 	if c.opts.Headless {
 		return nil
+	}
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	if c.handle == nil {
+		return ErrNotRunning
 	}
 	if nsWindow == nil {
 		return fmt.Errorf("mpv: no native window")
@@ -254,9 +264,12 @@ func (c *Client) Capture(ctx context.Context) (*image.RGBA, error) {
 	if c.opts.Headless {
 		return nil, errors.New("mpv: headless client has no surface")
 	}
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
 	timeout := time.Second
 	if deadline, ok := ctx.Deadline(); ok {
-		timeout = time.Until(deadline)
+		timeout = min(timeout, time.Until(deadline))
 	}
 	var buf *C.uchar
 	var width, height C.int
@@ -265,6 +278,10 @@ func (c *Client) Capture(ctx context.Context) (*image.RGBA, error) {
 		return nil, errors.New("mpv: no video surface")
 	case -2:
 		return nil, errors.New("mpv: the video surface is not drawing")
+	}
+	if err := ctx.Err(); err != nil {
+		C.free(unsafe.Pointer(buf))
+		return nil, err
 	}
 	defer C.free(unsafe.Pointer(buf))
 	w, h := int(width), int(height)

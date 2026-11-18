@@ -1,4 +1,4 @@
-//go:build darwin
+//go:build (darwin || linux) && cgo
 
 package audiotags
 
@@ -100,5 +100,18 @@ func TestCancelInterruptsAStalledOpen(t *testing.T) {
 	}
 	if waited := time.Since(start); waited > 3*time.Second {
 		t.Errorf("returned after %v", waited)
+	}
+}
+
+func TestLoopbackTagsIgnoreAmbientProxy(t *testing.T) {
+	for _, key := range []string{"http_proxy", "https_proxy", "HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY", "all_proxy"} {
+		t.Setenv(key, "http://127.0.0.1:1")
+	}
+	t.Setenv("no_proxy", "")
+	t.Setenv("NO_PROXY", "")
+	url, _ := served(t, "tagged.mp3", "-f", "lavfi", "-i", "sine=duration=1", "-metadata", "title=loopback")
+	tags, err := Read(context.Background(), url)
+	if err != nil || tags.Title != "loopback" {
+		t.Fatalf("loopback tags through ambient proxy: %+v, %v", tags, err)
 	}
 }

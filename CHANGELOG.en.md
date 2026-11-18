@@ -2,6 +2,12 @@
 
 [简体中文](CHANGELOG.md) · English
 
+## Unreleased
+
+- Add Linux x86_64/ARM64 native media, desktop integration, and deb/rpm/AppImage builds. Linux downloads are verified through the signed manifest and installed explicitly by the user without changing the legacy macOS/Windows update protocol. Password storage uses Secret Service; system authentication needs polkit policy and a desktop agent, which standalone AppImages do not install automatically. Linux does not promise capture protection and keeps the main window accessible without a tray host.
+- Complete Linux safe synchronization/LAN directory authorization, recursive change notifications and freedesktop Trash. Fix D-Bus startup failure when a profile digest begins with a digit, and inherited HTTP proxies intercepting native-media loopback requests.
+- Use named libmpv loading arguments across distribution mpv 0.37 and newer versions, retaining resume, quality switching, audio-track selection and AI-subtitle sessions.
+
 ## 0.7.1 · 2026-11-18
 
 - Improve the usage-statistics dashboard on phones: adapt date filters, cards, charts and tables to narrow screens, support touch inspection and keep chart tooltips within the page.

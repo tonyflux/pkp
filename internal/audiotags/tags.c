@@ -1,4 +1,6 @@
-#include "tags_darwin.h"
+//go:build (darwin || linux) && cgo
+
+#include "tags.h"
 
 #include <libavformat/avformat.h>
 #include <libavutil/error.h>
@@ -34,6 +36,8 @@ int pkp_tags_open(pkp_tags *t, const char *url) {
 	// A connection that stops delivering must fail, not hang the caller.
 	AVDictionary *opts = NULL;
 	av_dict_set(&opts, "rw_timeout", "15000000", 0);
+	// The Go loopback proxy owns upstream routing, never the process environment.
+	av_dict_set(&opts, "http_proxy", "", 0);
 	// Opening is enough: the demuxers read tags and the attached picture
 	// while parsing the header; avformat_find_stream_info would go on to
 	// decode packets for nothing.

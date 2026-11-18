@@ -73,6 +73,11 @@ func handleIdentity(f *os.File) (key, version, volume string, err error) {
 	key = fmt.Sprintf("%x:%x:%s", uint64(st.Dev), uint64(st.Ino), statBirth(&st))
 	volume = fmt.Sprintf("%x", uint64(st.Dev))
 	version = fmt.Sprintf("%s:%d:%s", key, st.Size, statTimes(&st))
+	var fingerprint string
+	fingerprint, err = statFingerprint(f, &st)
+	if err == nil {
+		version += fingerprint
+	}
 	return
 }
 

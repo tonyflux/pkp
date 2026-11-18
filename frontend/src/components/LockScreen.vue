@@ -56,6 +56,7 @@ const hint = computed(() => {
   if (passwordShown.value) return "";
   if (asking.value) return t("请在系统弹出的窗口中完成验证");
   if (appLock.note) return appLock.note;
+  if (!systemReady.value) return t("系统验证不可用：{reason}。可以改用独立密码", { reason: state.value?.unavailable || t("这台电脑无法弹出系统身份验证") });
   return t("由系统验证你的身份，PKP 不会看到你的密码");
 });
 
@@ -210,7 +211,7 @@ onBeforeUnmount(() => clearInterval(tick));
           <Icon name="alert" :size="15" />{{ passwordError }}
         </p>
       </form>
-      <button v-else ref="button" type="button" class="unlock" :disabled="asking" @click="unlock">
+      <button v-else ref="button" type="button" class="unlock" :disabled="asking || !systemReady" @click="unlock">
         <Icon name="shield" :size="19" />
         {{ t("解锁 PKP") }}
         <Icon class="arrow" name="arrowRight" :size="17" />

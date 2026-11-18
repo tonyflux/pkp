@@ -234,7 +234,9 @@ preferred source at registry gitHead or a resolved version tag's exact commit.
 See manifest.json for the package-to-source mapping. Optional native Node packages are build-host
 inputs, not shipped PKP desktop runtime libraries; they are not asserted to be
 source distributions. Media library sources and their build instructions are in
-the separate libmpv-sources.tar.gz release attachment. Compilers, system SDKs,
+the separate libmpv-sources.tar.gz release attachment for macOS/Windows. Linux
+AppImage releases additionally provide exact distribution runtime sources in
+PKP-<version>-linux-<arch>-runtime-sources.tar.gz. Compilers, system SDKs,
 Python, Node, Go and packaging tools remain separately installed prerequisites.
 This inventory is not an independent legal audit or a bit-for-bit rebuild claim.
 

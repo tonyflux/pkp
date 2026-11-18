@@ -508,19 +508,27 @@ type revocableFile struct {
 	*os.File
 	ctx   context.Context
 	token string
+	proof *localReadProof
 }
 
 func (f revocableFile) Read(p []byte) (int, error) {
 	if err := f.ctx.Err(); err != nil {
 		return 0, err
 	}
-	_, before, _, err := handleIdentity(f.File)
-	if err != nil || before != f.token {
+	proof := f.proof
+	if proof == nil {
+		var err error
+		proof, err = newLocalReadProof(f.File, f.token)
+		if err != nil {
+			return 0, errUnavailable
+		}
+		defer proof.Close()
+	}
+	if err := proof.Check(); err != nil {
 		return 0, errUnavailable
 	}
 	n, readErr := f.File.Read(p)
-	_, after, _, err := handleIdentity(f.File)
-	if err != nil || after != f.token {
+	if err := proof.Check(); err != nil {
 		return 0, errUnavailable
 	}
 	return n, readErr
@@ -597,12 +605,13 @@ func (m *Manager) content(w http.ResponseWriter, r *http.Request, response *acti
 		jsonError(w, errUnavailable)
 		return
 	}
-	_, token, _, err := handleIdentity(file)
-	if err != nil || token != entry.localToken {
+	proof, err := newLocalReadProof(file, entry.localToken)
+	if err != nil {
 		jsonError(w, errUnavailable)
 		return
 	}
-	http.ServeContent(w, r, entry.Name, stat.ModTime(), revocableFile{File: file, ctx: r.Context(), token: entry.localToken})
+	defer proof.Close()
+	http.ServeContent(w, r, entry.Name, stat.ModTime(), revocableFile{File: file, ctx: r.Context(), token: entry.localToken, proof: proof})
 }
 
 func (m *Manager) watchResponse(response *activeResponse) {

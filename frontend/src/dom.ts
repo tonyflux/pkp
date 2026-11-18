@@ -4,8 +4,12 @@
 import { onBeforeUnmount, onMounted, reactive, ref, watch, type Ref } from "vue";
 import { i18n, t } from "./i18n";
 
+export const onMac = navigator.platform.toLowerCase().includes("mac");
+export const onWindows = navigator.platform.startsWith("Win");
+export const onLinux = navigator.platform.toLowerCase().includes("linux");
+
 /** The shortcut modifier as the platform writes it: macOS says ⌘, Windows and Linux say Ctrl. */
-export const modKey = navigator.platform.toLowerCase().includes("mac") ? "⌘" : "Ctrl";
+export const modKey = onMac ? "⌘" : "Ctrl";
 
 /** shortcutText writes the modifier and `key` the way the platform does: ⌘R on macOS, Ctrl+R elsewhere. */
 export function shortcutText(key: string, shift = false): string {
@@ -13,26 +17,23 @@ export function shortcutText(key: string, shift = false): string {
   return `Ctrl+${shift ? "Shift+" : ""}${key}`;
 }
 
-/** Windows, where windows go by its own conventions: caption buttons on the right, File Explorer for the file manager. */
-export const onWindows = navigator.platform.startsWith("Win");
-
-// What the page calls the platform's own parts, so no Windows user reads a
-// macOS name. They are live bindings re-set on a language switch (sync, so
-// the re-render that follows already reads the new words): callers keep
-// importing plain strings.
+// Platform names are live bindings refreshed synchronously on language switches.
 /** The system as a whole. */
-export const systemName = onWindows ? "Windows" : "macOS";
+export const systemName = onMac ? "macOS" : onWindows ? "Windows" : "Linux";
 /** Where Go keeps passwords and keys (PasswordVault). */
 export let keychainName = "";
 /** Where PKP stays with its window closed: the menu bar item or the tray icon. */
 export let trayName = "";
 /** The system's settings app. */
 export let settingsAppName = "";
+/** The platform's file manager action. */
+export let revealFileLabel = "";
 
 function nameParts() {
-  keychainName = onWindows ? t("凭据管理器") : t("钥匙串");
-  trayName = onWindows ? t("系统托盘") : t("菜单栏");
+  keychainName = onMac ? t("钥匙串") : onWindows ? t("凭据管理器") : t("密钥环（Secret Service）");
+  trayName = onMac ? t("菜单栏") : t("系统托盘");
   settingsAppName = onWindows ? t("Windows 设置") : t("系统设置");
+  revealFileLabel = onMac ? t("在访达中显示") : onWindows ? t("在资源管理器中显示") : t("在文件管理器中显示");
 }
 nameParts();
 watch(() => i18n.locale, nameParts, { flush: "sync" });

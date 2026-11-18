@@ -1,12 +1,13 @@
-//go:build darwin
+//go:build (darwin || linux) && cgo
 
 package audiotags
 
 /*
-#cgo CFLAGS: -I${SRCDIR}/../../build/darwin/libmpv/include
-#cgo LDFLAGS: -L${SRCDIR}/../../build/darwin/libmpv/lib -lavformat -lavcodec -lavutil
+#cgo darwin CFLAGS: -I${SRCDIR}/../../build/darwin/libmpv/include
+#cgo darwin LDFLAGS: -L${SRCDIR}/../../build/darwin/libmpv/lib -lavformat -lavcodec -lavutil
+#cgo linux pkg-config: libavformat libavcodec libavutil
 #include <stdlib.h>
-#include "tags_darwin.h"
+#include "tags.h"
 */
 import "C"
 

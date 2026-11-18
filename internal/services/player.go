@@ -15,13 +15,14 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
 	"github.com/wailsapp/wails/v3/pkg/events"
+
+	"github.com/adrg/xdg"
 
 	"github.com/tonyflux/pkp/internal/download"
 	"github.com/tonyflux/pkp/internal/i18n"
@@ -552,11 +553,7 @@ func (p *PlayerService) setLoading(on bool) {
 // is global: without this the next file in a playlist loads and sits still.
 // start > 0 opens the file that many seconds in, as a quality switch does.
 func (p *PlayerService) load(ctx context.Context, target string, start float64) error {
-	args := []any{"loadfile", target, "replace"}
-	if start > 0 {
-		args = append(args, "-1", "start="+strconv.FormatFloat(start, 'f', 3, 64))
-	}
-	if err := p.mpv.Command(ctx, args...); err != nil {
+	if err := p.mpv.LoadFile(ctx, target, start); err != nil {
 		return err
 	}
 	return p.mpv.SetProperty(ctx, "pause", false)
@@ -803,6 +800,12 @@ func (p *PlayerService) Screenshot(name string) (string, error) {
 
 // screenshotDir is the user's Pictures folder, in a folder of the app's own.
 func screenshotDir() (string, error) {
+	if runtime.GOOS == "linux" {
+		if xdg.UserDirs.Pictures == "" {
+			return "", errors.New("XDG Pictures directory is unavailable")
+		}
+		return filepath.Join(xdg.UserDirs.Pictures, "PKP"), nil
+	}
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return "", err

@@ -8,11 +8,12 @@ PKP 自有源码采用 [GPL-3.0-only](LICENSE)。已发布的 v0.1.0 安装包�
 
 主要使用 Wails、Vue、Go 及其依赖、本地 SQLite 索引、阿里云 OSS SDK，以及 mpv / libmpv、FFmpeg、libplacebo、libass 等媒体组件。此处仅为简要说明，**不是完整依赖清单，也不代表许可证审计已经完成**。具体版本、版权与许可证应以实际发布包所附材料为准。
 
-当前媒体库构建配置采用 LGPL 路径：mpv 禁用 GPL 部分，FFmpeg 不启用 GPL 选项；libmpv 以单独动态库分发。每个正式 Release 必须同时附上与实际二进制对应的 `libmpv-sources.tar.gz`，包含相关第三方源码与构建脚本。该源码包不代替 PKP 自有源码；v0.1.0 的安装包也不是由本仓库当前源码构建。
+macOS／Windows 媒体库构建采用 LGPL 路径：mpv 禁用 GPL 部分，FFmpeg 不启用 GPL 选项；libmpv 以单独动态库分发。对应正式 Release 附 `libmpv-sources.tar.gz`，包含相关第三方源码与构建脚本。该包不替代 PKP 自有源码，也不覆盖 Linux 捆绑的不同发行版构建；v0.1.0 不由当前源码构建。
 
-局域网兼容副本使用随应用分发的 `ffmpeg` / `ffprobe`，不调用系统 PATH 中的程序。macOS 随包提供通用 arm64/x86_64 工具（`Contents/Helpers`），Windows 安装对应架构的工具到应用目录。工具与播放器使用同一固定 FFmpeg 源码，明确禁用 GPL/nonfree；H.264 编码使用 macOS VideoToolbox（允许系统软件实现）或 Windows Media Foundation 软件实现，AAC 使用 FFmpeg 内置编码器，不包含 libx264。上述源码包和许可证同时覆盖这两个程序；系统编码器是否可用须在目标电脑验证，不支持时转换明确失败。
+macOS／Windows 局域网兼容副本使用随应用分发的 `ffmpeg`／`ffprobe`，不调用系统 PATH 中的程序。macOS 随包提供 Universal 工具（`Contents/Helpers`），Windows 安装对应架构工具。工具与播放器使用同一固定 FFmpeg 源码，禁用 GPL／nonfree；H.264 使用 VideoToolbox 或 Media Foundation 软件实现，AAC 使用 FFmpeg 内置编码器，不包含 libx264。对应源码包和许可证同时覆盖工具；系统编码器不可用时明确失败。Linux 的不同媒体构建见下文。
 
 Windows AI 字幕通过随包的 `pkp-pcm.dll` 解码音频，与 macOS 共用 PKP 的解码源码，静态链接同一固定版本、禁用 GPL/nonfree 的 FFmpeg。第三方对应源码包包含这些库、解码源码与构建脚本，应用目录的 `licenses` 保留相应声明；不调用系统 FFmpeg。
+Linux deb 依赖发行版的 libmpv／FFmpeg；RPM 和 AppImage 随包携带实际依赖、WebKitGTK、GTK、GStreamer 与运行时闭包，许可证副本随包保存，并另附 `PKP-<版本>-linux-<架构>-runtime-sources.tar.gz`。该归档包含实际捆绑包的精确版本 Debian／Ubuntu 对应源码、校验材料及 AppImage 运行时构建脚本；不能仅附下载链接或拿另一平台媒体源码替代。Linux FFmpeg 可以包含 GPL 编解码组件，LAN 兼容副本的 H.264 使用 libx264，与 PKP GPL-3.0-only 分发配套；不将此发行版构建称为 LGPL-only。工具从绝对系统 `/usr/bin` 或 AppImage 私有目录读取，不使用任意 PATH／CWD。
 
 v0.2.0 起另附 `PKP-<版本>-source.tar.gz`：包含与签名更新清单记录的 Git 提交及 tree 对应的 PKP 完整自有源码、资源、锁文件和构建脚本，以及 `third_party/` 中固定 Go 模块源码、npm 发布包和可核实的上游首选源码。清单记录校验值，并提供隔离依赖缓存的恢复说明；不包含 `.git`、账号数据或私钥。系统 SDK、编译器与打包工具仍须按开发指南安装。不能把 npm 中的可选原生构建工具二进制称为其完整源码，也不承诺逐字节可复现构建。
 

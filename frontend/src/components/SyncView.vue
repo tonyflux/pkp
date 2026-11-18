@@ -3,7 +3,7 @@ import { computed, nextTick, ref, watch } from "vue";
 import { accountName, currentId, openSignIn } from "../store";
 import { t } from "../i18n";
 import { bytes, shownPath, stamp } from "../format";
-import { isTyping, onWindows, useMedia } from "../dom";
+import { isTyping, revealFileLabel, useMedia } from "../dom";
 import { loadSync, openSyncCreate, openSyncDialog, openSyncEdit, openSyncRoot, sync, syncActionName, syncDirectionName, syncModeName, syncNeedsAttention, syncPairAction, syncStateName, type SyncPair } from "../syncstore";
 import Icon from "./Icon.vue";
 import Orbit from "./Orbit.vue";
@@ -77,7 +77,7 @@ function openRoot(event: MouseEvent, pair: SyncPair, side: "local" | "cloud") {
         <div class="roots">
           <div>
             <small><Icon name="laptop" :size="16" />{{ t("本地文件夹") }}</small>
-            <p><a href="#" draggable="false" class="root-link" :title="onWindows ? t('在资源管理器中显示') : t('在访达中显示')" @click.prevent="openRoot($event, selected, 'local')">{{ selected.localPath }}</a></p>
+            <p><a href="#" draggable="false" class="root-link" :title="revealFileLabel" @click.prevent="openRoot($event, selected, 'local')">{{ selected.localPath }}</a></p>
           </div>
           <Icon name="repeat" :size="20" />
           <div>

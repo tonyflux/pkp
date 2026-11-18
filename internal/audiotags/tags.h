@@ -1,6 +1,6 @@
 // Tags and the embedded cover of a music file, from FFmpeg's demuxer.
-#ifndef PKP_AUDIOTAGS_TAGS_DARWIN_H
-#define PKP_AUDIOTAGS_TAGS_DARWIN_H
+#ifndef PKP_AUDIOTAGS_TAGS_H
+#define PKP_AUDIOTAGS_TAGS_H
 
 #include <stdint.h>
 

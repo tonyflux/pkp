@@ -1,4 +1,4 @@
-//go:build (darwin && cgo) || windows
+//go:build ((darwin || linux) && cgo) || windows
 
 package services
 

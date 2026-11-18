@@ -116,7 +116,7 @@ PKP 是面向 PikPak 用户的**非官方桌面客户端**，用于管理自己�
 | --- | --- |
 | macOS | 面向 macOS 12 及以上的 Universal 应用，兼容 Apple 芯片与 Intel；当前打包方式为 ad hoc 签名，未经 Apple 公证。 |
 | Windows | 提供 x64 / ARM64 共用安装包；仍需扩大真机覆盖，播放、同步、通知和系统身份验证等不能视为已在全部设备充分验证。部分 macOS 集成不可用；没有 Authenticode 发布者签名。 |
-| Linux | 暂不承诺支持或提供发行包。 |
+| Linux | 当前源码支持 x86_64／ARM64 的 deb、rpm 和 AppImage 构建，基线 Ubuntu 24.04／GTK4／WebKitGTK 6.0；既有 v0.7.1 没有 Linux 附件，实际包以 Release 为准。沙箱、系统钥匙环及认证能力见安装说明。 |
 
 安装要求与首次启动注意事项见 [安装说明](docs/INSTALL.md)。请仅从本仓库的正式 [Release](https://github.com/tonyflux/pkp/releases/latest) 获取安装包，并按对应说明校验。
 

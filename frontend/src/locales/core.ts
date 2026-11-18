@@ -52,4 +52,36 @@ export default {
   文档: { tw: "文件", en: "Document", ja: "ドキュメント", ko: "문서" },
   其他: { tw: "其他", en: "Other", ja: "その他", ko: "기타" },
   未知: { tw: "未知", en: "Unknown", ja: "不明", ko: "알 수 없음" },
+  "密钥环（Secret Service）": { tw: "金鑰環（Secret Service）", en: "keyring (Secret Service)", ja: "キーリング（Secret Service）", ko: "키링(Secret Service)" },
+  在文件管理器中显示: { tw: "在檔案管理員中顯示", en: "Show in File Manager", ja: "ファイルマネージャーで表示", ko: "파일 관리자에서 보기" },
+  "请在桌面环境的通知设置中允许 PKP；同时检查「请勿打扰」和通知服务是否运行。": {
+    tw: "請在桌面環境的通知設定中允許 PKP；同時檢查「勿擾模式」和通知服務是否執行。",
+    en: "Allow PKP in your desktop's notification settings. Also check Do Not Disturb and that the notification service is running.",
+    ja: "デスクトップの通知設定で PKP を許可してください。通知の一時停止設定と通知サービスの動作も確認してください。",
+    ko: "데스크톱 알림 설정에서 PKP를 허용하세요. 방해 금지 모드와 알림 서비스 실행 여부도 확인하세요.",
+  },
+  "已发送。没看到的话，检查桌面通知设置、「请勿打扰」和通知服务。": {
+    tw: "已傳送。若未看到，請檢查桌面通知設定、「勿擾模式」和通知服務。",
+    en: "Sent. If it did not appear, check desktop notification settings, Do Not Disturb, and the notification service.",
+    ja: "送信しました。表示されない場合はデスクトップの通知設定、通知の一時停止、通知サービスを確認してください。",
+    ko: "보냈습니다. 표시되지 않으면 데스크톱 알림 설정, 방해 금지 모드 및 알림 서비스를 확인하세요.",
+  },
+  "桌面环境可能已禁用 PKP 的通知。{steps}": {
+    tw: "桌面環境可能已停用 PKP 的通知。{steps}",
+    en: "Your desktop may have disabled PKP notifications. {steps}",
+    ja: "デスクトップで PKP の通知が無効になっている可能性があります。{steps}",
+    ko: "데스크톱에서 PKP 알림을 비활성화했을 수 있습니다. {steps}",
+  },
+  "系统验证：由桌面环境通过 polkit 验证当前系统账户": {
+    tw: "系統驗證：由桌面環境透過 polkit 驗證目前系統帳號",
+    en: "System authentication: your desktop verifies the current system account through polkit",
+    ja: "システム認証：デスクトップが polkit を通じて現在のシステムアカウントを認証します",
+    ko: "시스템 인증: 데스크톱이 polkit을 통해 현재 시스템 계정을 인증합니다",
+  },
+  "Linux 无法保证阻止截图、录屏或桌面窗口预览。应用锁会隐藏 PKP 内的内容，但不能清除桌面环境已保存的画面。": {
+    tw: "Linux 無法保證阻止截圖、錄影或桌面視窗預覽。應用程式鎖會隱藏 PKP 內的內容，但不能清除桌面環境已儲存的畫面。",
+    en: "Linux cannot guarantee blocking screenshots, screen recording, or desktop window previews. App Lock hides content inside PKP, but cannot erase images already saved by your desktop.",
+    ja: "Linux ではスクリーンショット、画面録画、デスクトップのウィンドウプレビューを確実に防ぐことはできません。アプリロックは PKP 内の内容を隠しますが、デスクトップが保存済みの画像は消去できません。",
+    ko: "Linux에서는 스크린샷, 화면 녹화 또는 데스크톱 창 미리보기 차단을 보장할 수 없습니다. 앱 잠금은 PKP 내부 콘텐츠를 숨기지만 데스크톱이 이미 저장한 화면은 지울 수 없습니다.",
+  },
 } satisfies Messages;

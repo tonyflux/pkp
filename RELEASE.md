@@ -6,12 +6,13 @@
 
 - 源码模块为 `github.com/tonyflux/pkp`。产品名、`com.pkp.desktop`、配置目录和安装定位保持不变。
 - PKP 自有源码适用 GPL-3.0-only。v0.1.0 已发布安装包适用 `docs/legal/v0.1.0-proprietary.txt`，不要把当前源码或新许可证追溯到该版本。
-- v0.2.0 起发布八件附件：两个安装包、`update.json`、`update.json.sig`、`PKP-<版本>-source.tar.gz`、`libmpv-sources.tar.gz`、`LICENSE`、`SHA256SUMS`。PKP 源码包对应本次构建的提交；安装包不进入 Git。v0.1.0 的七件历史附件保持不变。
+- v0.2.0 起的八件历史附件保持可验证。含 Linux 的新发布在该集合上增加 amd64／arm64 各自的 deb、rpm、AppImage 和运行库对应源码包，共十六件；额外附件通过签名 `linuxPackages` 字段认证，`packages` 仍恰好为旧版 macOS／Windows 两项。PKP 自有源码包对应本次提交，Linux 运行库源码对应实际捆绑的发行版包版本，不以 macOS／Windows 媒体源码替代。安装包不进入 Git，v0.1.0 历史条款不变。
 - 更新签名私钥只放在仓库外或可选的受保护 GitHub `release` 环境中，不放入普通 CI。丢失后不要静默更换已分发客户端信任的公钥。
 - 维护者已确认当前第三方客户端身份参数可公开及复用；保留认证值、签名算法和邀请码行为。这不表示 PikPak 背书或独立法律审计。
 - 维护者已确认当前应用标志可随开源源码及安装包公开分发；不再列为待确认阻断。该确认不表示官方背书，来源记录及导出链边界见 `docs/legal/artwork-provenance.md`。
 - macOS 从 v0.2.0 起使用显式「下载更新 → 重启并更新」：助手准备完成并获用户确认退出后，在原位置替换应用、重新打开原配置，保留账号与设置。可能出现系统替换权限请求；其他使用同一应用的 PKP 实例须先退出，不强制终止。继续使用现有正式稳定版 `update.json`、Ed25519 签名与 DMG、内置信任公钥，不使用 Sparkle，不自动下载或静默安装，也不移除隔离标记或绕过 Gatekeeper。已发布的 macOS v0.1.0 仍需手动拖拽覆盖一次才能获得此功能；Windows 保持用户确认退出后运行现有安装器的流程。
 - 隔离、签名、无窗口的原生样例已验证取消、校验拒绝、实例占用、替换后按原配置重开及启动失败回滚，复现脚本见[开发指南](docs/DEVELOPMENT.md)。正式发布前仍须人工验收真实应用退出确认、系统替换授权的允许/取消、Gatekeeper 与各平台设备上的升级；隔离烟测不等于生产升级验收，更新签名也不等于 Apple 签名或公证。
+- Linux 更新先验签与哈希再显示下载文件，由用户使用包管理器安装或退出后替换 AppImage，不自动提权、不覆盖系统文件。Ubuntu 24.04、GTK4／WebKitGTK 6.0 为构建基线；AppImage 保留 WebKit 沙箱，依赖内核用户命名空间。Secret Service、polkit 策略／认证代理、桌面托盘及截图保护能力必须如实描述。
 
 ## 发布路径
 
@@ -23,7 +24,7 @@ v0.2.0 是首个开源版本；v0.4.1 沿用上文的八件附件与同一更新
 
 普通 CI 与签名构建共用按系统、架构和媒体构建脚本内容区分的 `media-…` 缓存；未命中时仍按固定来源和 SHA-256 重新构建。CI 在前端检查阶段核验完整 Go 依赖锁，签名构建在打包前再次核验；缓存不包含签名私钥，原生测试、升级助手烟测、源码一致性与发布验签均保留。
 
-- **本地发布：** 在 macOS 上按开发指南安装构建依赖，包括 Wails、CMake、NSIS 和捆绑库所需工具。运行 `make release-local RELEASE_NOTES=build/release-notes.md RELEASE_KEY=/secure/path/to/update-ed25519.key`，再运行 `make release-verify`。这只在本地构建和签名，不上传。若要上传已验证的草稿，以有权发布到 `tonyflux/pkp` 的身份登录 `gh`，运行 `make release-draft`；审阅后运行 `make release-publish`，将草稿发布为 Latest。
+- **本地发布：** 在 macOS 上安装 Wails、CMake、NSIS 和捆绑库工具，并先从同一源码快照构建两架构 Linux 附件。运行 `make release-local RELEASE_NOTES=build/release-notes.md RELEASE_KEY=/secure/path/to/update-ed25519.key LINUX_RELEASE_DIR=/路径/Linux附件`，再运行 `make release-verify`。不提供 `LINUX_RELEASE_DIR` 时仅生成原有双平台集合，不伪造 Linux 支持。构建和签名不上传；用有权发布到 `tonyflux/pkp` 的 `gh` 身份执行 `make release-draft` 上传验证草稿，审阅后执行 `make release-publish` 发布为 Latest。
 - **可选 GitHub 工作流：** 在仓库外部设置中为 `release` 环境配置适当的必需审核人和部署限制，并配置环境密钥 `UPDATE_SIGNING_KEY`（匹配的私钥）及 `PUBLIC_RELEASE_TOKEN`（有权向 `tonyflux/pkp` 发布 Release）。环境保护由 GitHub 仓库设置控制，并非本文件强制；不要为拉取请求 CI 配置这些密钥。发布构建仅接受从 `main` 手动运行：指定已有源码标签并将 `publish` 设为 false，运行检查并在环境审批通过后构建、签名、验证及上传草稿。推送标签不会自动启动发布构建；本地发布后的 `release.published` 事件仍由独立的 `release-check.yml` 验证公开附件，`main` 与拉取请求 CI 保持不变。审阅草稿后，从 `main` 手动运行并将 `publish` 设为 true；工作流下载并验证已有草稿，再发布为 Latest，不重新构建。标签必须与源码版本一致且指向 `main` 可到达的提交。不要重新构建、重签或覆盖已经正式发布的版本；应发布新版本。还须单独保护标签创建和工作流变更。
 
-准备这些文件本身不会发布版本。真正发布时须核验八件附件、对应源码、签名和哈希，并执行发布后的公开下载检查。
+准备这些文件本身不会发布版本。真正发布时须核验签名清单声明的完整附件集合、对应源码、签名和哈希，并执行发布后的公开下载检查。Linux 两架构 CI 产物从同一源码标签构建，签名阶段下载并汇总；不得把来自不同提交的附件混合发布。

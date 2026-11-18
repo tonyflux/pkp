@@ -88,7 +88,7 @@ import type {
   ViewerReturnRequest,
   ViewerWindowState,
 } from "../bindings/github.com/tonyflux/pkp/internal/services";
-import { WORKSPACE_QUERY, keychainName, onWindows, settingsAppName } from "./dom";
+import { WORKSPACE_QUERY, keychainName, onLinux, onWindows, settingsAppName } from "./dom";
 import { bytes, maskLogin } from "./format";
 import { playingLabel } from "./quality";
 import { active, edited, hasChange, nameError, problems, summarize, toChanges, treeOf, type Change, type Tree } from "./organizer";
@@ -1097,7 +1097,9 @@ export function setNotifyForeground(on: boolean): Promise<void> {
 /** Where the system's own settings let PKP notify, as the platform words it: a key, shown through t(). */
 export const notifySettingsSteps = onWindows
   ? N_("请在 Windows 设置的「系统 › 通知」里找到 PKP，打开它的通知。")
-  : N_("请在系统设置的「通知」里找到 PKP，打开「允许通知」。");
+  : onLinux
+    ? N_("请在桌面环境的通知设置中允许 PKP；同时检查「请勿打扰」和通知服务是否运行。")
+    : N_("请在系统设置的「通知」里找到 PKP，打开「允许通知」。");
 
 /** Allow Notifications: asks the system again; macOS only asks the user the first time. */
 export async function allowNotifications(): Promise<void> {
@@ -1114,7 +1116,9 @@ export async function sendTestNotice(): Promise<void> {
     await NotifyService.SendTest();
     systemNotices.note = onWindows
       ? t("已发送。没看到的话，检查 Windows 设置里 PKP 的通知和「请勿打扰」。")
-      : t("已发送。没看到的话，检查系统设置里 PKP 的通知样式和专注模式。");
+      : onLinux
+        ? t("已发送。没看到的话，检查桌面通知设置、「请勿打扰」和通知服务。")
+        : t("已发送。没看到的话，检查系统设置里 PKP 的通知样式和专注模式。");
   } catch (err) {
     systemNotices.note = errorText(err);
   }

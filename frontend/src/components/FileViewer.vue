@@ -20,7 +20,7 @@ import TimedTextReader from "./TimedTextReader.vue";
 import { DriveService } from "../../bindings/github.com/tonyflux/pkp/internal/services";
 import Thumb from "./Thumb.vue";
 import { kindLabel } from "../format";
-import { WORKSPACE_QUERY, isTyping, onWindows, useMedia } from "../dom";
+import { WORKSPACE_QUERY, isTyping, onMac, useMedia } from "../dom";
 import { parseMarkdown } from "../markdown";
 import { fitScale, unsupportedCopy, viewerBadge, zoomIn, zoomLabel, zoomOut, type Zoom } from "../viewer";
 import { closeViewer, drive, inViewerWindow, loadViewer, loadViewerFolder, notify, openViewer, popOutViewer, rememberViewerImage, returnViewerToMain, setTextWrap, stepViewer, toggleViewerNavigation, ui, viewer, wholeDrive, type Route } from "../store";
@@ -321,9 +321,9 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <section class="viewer" :class="[`kind-${kind}`, { windowed: inViewerWindow, inset: inViewerWindow && !onWindows }]" :aria-label="t('文件查看')">
+  <section class="viewer" :class="[`kind-${kind}`, { windowed: inViewerWindow, inset: inViewerWindow && onMac }]" :aria-label="t('文件查看')">
     <header v-if="entry" class="head">
-      <button v-if="!inViewerWindow || onWindows" class="back" :title="backTitle" :aria-label="backTitle" @click="closeViewer">
+      <button v-if="!inViewerWindow || !onMac" class="back" :title="backTitle" :aria-label="backTitle" @click="closeViewer">
         <Icon :name="inViewerWindow ? 'close' : 'chevronLeft'" :size="18" />
       </button>
       <div class="title">

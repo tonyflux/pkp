@@ -16,7 +16,7 @@ import SelectMenu from "./SelectMenu.vue";
 import { Window } from "@wailsio/runtime";
 import Thumb from "./Thumb.vue";
 import { bytes, clock } from "../format";
-import { onWindows } from "../dom";
+import { onMac } from "../dom";
 import { modes, usePlayerKeys, useTransport } from "../transport";
 import {
   accounts,
@@ -181,7 +181,7 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onKey));
 </script>
 
 <template>
-  <section class="music" :class="{ windowed, win: onWindows }" style="--wails-draggable: no-drag" :aria-label="t('音乐播放')">
+  <section class="music" :class="{ windowed, mac: onMac }" style="--wails-draggable: no-drag" :aria-label="t('音乐播放')">
     <header class="topbar" style="--wails-draggable: drag">
       <nav class="crumbs" :aria-label="t('位置')">
         <button class="back" style="--wails-draggable: no-drag" :title="windowed ? t('回到主窗口播放') : t('回到{name}，音乐继续播放', { name: returnLabel })" @click="windowed ? returnToMain() : collapsePlayer()">
@@ -203,7 +203,7 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onKey));
           <Icon name="collapse" :size="17" />
           <span>{{ t("收起并继续播放") }}</span>
         </button>
-        <button v-else-if="onWindows" class="collapse" :title="t('关闭窗口并继续播放')" :aria-label="t('关闭窗口并继续播放')" @click="Window.Close()">
+        <button v-else-if="!onMac" class="collapse" :title="t('关闭窗口并继续播放')" :aria-label="t('关闭窗口并继续播放')" @click="Window.Close()">
           <Icon name="close" :size="17" />
         </button>
       </div>
@@ -1340,13 +1340,13 @@ h1 {
 }
 
 .windowed .topbar {
-  padding: 0 16px 0 96px;
+  padding: 0 16px;
   min-height: 52px;
   gap: 8px;
 }
 
-.windowed.win .topbar {
-  padding-left: 16px;
+.windowed.mac .topbar {
+  padding-left: 96px;
 }
 
 .windowed .crumbs {

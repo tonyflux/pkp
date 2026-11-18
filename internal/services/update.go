@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"runtime"
 	"sync"
 	"time"
 
@@ -221,7 +222,12 @@ func (u *UpdateService) check(manual bool) error {
 		} else if !update.Newer(m.Version, u.state.Current) {
 			u.state.Phase = "current"
 		} else {
-			p := m.Packages[u.platform]
+			p, ok := m.Package(u.platform)
+			if !ok {
+				u.state.Phase, u.state.Error = "error", "noRelease"
+				u.publishLocked()
+				return
+			}
 			u.manifest = &m
 			u.state.Info = &UpdateInfo{Version: m.Version, PublishedAt: m.PublishedAt, Notes: m.Notes, Size: p.Size, MinOS: p.MinOS, Compatible: update.SupportsOS(u.osVersion, p.MinOS)}
 			u.state.Phase = "available"
@@ -265,7 +271,7 @@ func (u *UpdateService) Download() error {
 		return i18n.New("无法保存更新文件或设置，请检查磁盘空间与目录权限。")
 	}
 	m := *u.manifest
-	p := m.Packages[u.platform]
+	p, _ := m.Package(u.platform)
 	ctx, cancel := context.WithTimeout(u.ctx, 2*time.Hour)
 	u.cancel = cancel
 	u.state.Phase, u.state.Error, u.state.Received, u.state.Notice = "downloading", "", 0, false
@@ -374,9 +380,9 @@ func (u *UpdateService) RemindLater() error {
 	return nil
 }
 
-// Install prepares the replacement before asking to quit. Cancellation or a
-// failed handoff leaves this process running; only the helper/installer replaces
-// files after the approved process has exited.
+// Install rechecks the download before handoff. Linux reveals it for explicit
+// package-manager/manual installation; other platforms prepare a replacement
+// before asking to quit. A failed handoff leaves this process running.
 func (u *UpdateService) Install() error {
 	u.mu.Lock()
 	if err := u.canStartLocked(); err != nil {
@@ -387,11 +393,21 @@ func (u *UpdateService) Install() error {
 		u.mu.Unlock()
 		return i18n.New("请先下载并校验更新")
 	}
-	path, p, version := u.path, u.manifest.Packages[u.platform], u.manifest.Version
+	path, version := u.path, u.manifest.Version
+	p, _ := u.manifest.Package(u.platform)
 	u.state.Phase, u.state.Error = "installing", ""
 	u.publishLocked()
 	u.mu.Unlock()
 	if err := update.CheckFile(path, p); err != nil {
+		u.installResult(err)
+		return err
+	}
+	if runtime.GOOS == "linux" {
+		if u.lock != nil && u.lock.Locked() {
+			u.installResult(errAppLocked)
+			return errAppLocked
+		}
+		err := revealPath(path, true)
 		u.installResult(err)
 		return err
 	}

@@ -1,12 +1,10 @@
-//go:build !darwin && !windows
+//go:build !darwin && !windows && !linux
 
 package services
 
 import "github.com/tonyflux/pkp/internal/i18n"
 
-// newSystemVault is nil outside macOS and Windows, like the player's placeholder there:
-// no keychain backend exists yet, and keeping the password in a file beside
-// the credentials is not an option. Remember Account Password and Auto Login are not offered.
+// Unsupported platforms do not store plaintext passwords as a fallback.
 func newSystemVault() PasswordVault { return nil }
 
 // keychainName is what errors call the vault that is missing here, in the

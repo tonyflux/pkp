@@ -5,7 +5,7 @@
 // never 0%; nothing claims Completed or 0 Items when the cloud could not be read;
 // counts may be added across accounts, bytes never are.
 import type { MenuBarState } from "../bindings/github.com/tonyflux/pkp/internal/services";
-import { onWindows } from "./dom";
+import { onMac } from "./dom";
 import { bytes } from "./format";
 import { N_, t } from "./i18n";
 import { fromDownload, fromTask, fromUpload, stateLabel, type TransferItem } from "./transfers";
@@ -55,7 +55,7 @@ export function panelCard(state: MenuBarState, name: (account: string) => string
     if (state.cloud === "") {
       return { ...card, tone: "reading", title: t("正在同步任务状态"), detail: t("稍候即可看到云添加的进度") };
     }
-    const detail = onWindows ? t("关闭窗口后仍可从系统托盘打开 PKP") : t("关闭窗口后仍可从菜单栏打开 PKP");
+    const detail = onMac ? t("关闭窗口后仍可从菜单栏打开 PKP") : t("关闭窗口后仍可从系统托盘打开 PKP");
     return { ...card, tone: "idle", title: t("暂无进行中的传输"), detail };
   }
   card.key = item.key;

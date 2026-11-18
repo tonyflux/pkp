@@ -1,0 +1,28 @@
+#!/bin/sh
+set -eu
+APPDIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+export APPDIR
+triplet=$(cat "$APPDIR/.triplet")
+loader=$(cat "$APPDIR/.loader")
+bwrap="$APPDIR/usr/bin/bwrap"
+if ! "$APPDIR$loader" --library-path "$APPDIR/usr/lib/$triplet:$APPDIR/usr/lib" "$bwrap" --unshare-user --ro-bind / / -- /bin/true 2>/dev/null; then
+  echo 'PKP could not initialize the user/mount namespace required by its WebKit sandbox.' >&2
+  echo 'Do not disable the WebKit sandbox. Ask your administrator to permit user namespaces for PKP.' >&2
+  echo "On AppArmor systems, install a profile for a stable AppImage path with: sudo sh '$APPDIR/install-apparmor.sh' /absolute/path/to/PKP.AppImage" >&2
+  echo 'For extract-and-run, pass the absolute path to the extracted AppRun instead.' >&2
+  exit 1
+fi
+# WebKit release builds compile /usr helper/resource paths in. A private mount
+# namespace preserves those paths without patching WebKit or disabling its sandbox.
+exec "$APPDIR$loader" --library-path "$APPDIR/usr/lib/$triplet:$APPDIR/usr/lib" "$bwrap" --unshare-user --die-with-parent \
+  --bind / / --dev-bind /dev /dev --ro-bind /usr "$APPDIR/host-usr" --ro-bind "$APPDIR/usr" /usr \
+  --setenv LD_LIBRARY_PATH "/usr/lib/$triplet:/usr/lib" \
+  --setenv PATH /usr/bin:/bin \
+  --setenv XDG_DATA_DIRS "/usr/share:$APPDIR/host-usr/local/share:$APPDIR/host-usr/share" \
+  --setenv GSETTINGS_SCHEMA_DIR /usr/share/glib-2.0/schemas \
+  --setenv GIO_MODULE_DIR "/usr/lib/$triplet/gio/modules" \
+  --setenv GDK_PIXBUF_MODULE_FILE "/usr/lib/$triplet/gdk-pixbuf-2.0/2.10.0/loaders.cache" \
+  --setenv GST_PLUGIN_SYSTEM_PATH_1_0 "/usr/lib/$triplet/gstreamer-1.0" \
+  --setenv PKP_APPIMAGE 1 \
+  --setenv PKP_LINUX_FORMAT "${PKP_LINUX_FORMAT:-appimage}" \
+  -- /usr/lib/pkp/pkp "$@"

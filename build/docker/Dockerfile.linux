@@ -1,0 +1,30 @@
+# syntax=docker/dockerfile:1
+FROM golang:1.26.0@sha256:fb612b7831d53a89cbc0aaa7855b69ad7b0caf603715860cf538df854d047b84 AS go
+FROM node:24-bookworm@sha256:9d266751ca3d7fdbe651c878ffd5ad0a42fed49a18c283509267c97f025b7496 AS node
+FROM ubuntu:24.04@sha256:73b999393d07f2bf65a40373778a44dc9a6d54ad7718d29247d8ff9413c4d6a8
+ARG UBUNTU_SNAPSHOT=20261101T000000Z
+ENV DEBIAN_FRONTEND=noninteractive
+# Signed archive snapshots pin binary AND corresponding source versions.
+RUN case "$(dpkg --print-architecture)" in amd64) archive=http://archive.ubuntu.com/ubuntu ;; arm64) archive=http://ports.ubuntu.com/ubuntu-ports ;; *) exit 1 ;; esac \
+ && printf 'Types: deb deb-src\nURIs: %s\nSuites: noble noble-updates noble-security\nComponents: main universe restricted multiverse\nSigned-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg\nSnapshot: %s\n' "$archive" "$UBUNTU_SNAPSHOT" > /etc/apt/sources.list.d/ubuntu.sources \
+ && printf 'APT::Snapshot "%s";\n' "$UBUNTU_SNAPSHOT" > /etc/apt/apt.conf.d/50snapshot \
+ && apt-get update \
+ && apt-get install -y --no-install-recommends ca-certificates curl build-essential clang pkg-config \
+      libgtk-4-dev libwebkitgtk-6.0-dev libepoxy-dev libmpv-dev libavcodec-dev libavformat-dev libavutil-dev libswresample-dev \
+      ffmpeg bubblewrap xdg-dbus-proxy xdg-utils desktop-file-utils shared-mime-info \
+      libglib2.0-bin libgdk-pixbuf2.0-bin libgtk-4-bin glib-networking gsettings-desktop-schemas \
+      gstreamer1.0-plugins-base gstreamer1.0-plugins-good fonts-dejavu-core adwaita-icon-theme \
+      libfuse3-dev zlib1g-dev libzstd-dev liblzma-dev liblz4-dev liblzo2-dev \
+      autoconf automake libtool libsquashfuse-dev squashfs-tools file python3 rpm \
+      dbus-x11 xvfb weston mesa-utils libgl1-mesa-dri apparmor-utils polkitd \
+ && apt-get clean
+COPY --from=go /usr/local/go /usr/local/go
+ENV PATH=/usr/local/go/bin:/root/go/bin:$PATH
+RUN go install github.com/goreleaser/nfpm/v2/cmd/nfpm@v2.43.0 \
+ && go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0-beta.28
+WORKDIR /src
+CMD ["make", "linux-package"]
+COPY --from=node /usr/local/bin/node /usr/local/bin/node
+COPY --from=node /usr/local/lib/node_modules /usr/local/lib/node_modules
+RUN ln -s ../lib/node_modules/npm/bin/npm-cli.js /usr/local/bin/npm \
+ && ln -s ../lib/node_modules/npm/bin/npx-cli.js /usr/local/bin/npx

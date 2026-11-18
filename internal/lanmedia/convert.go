@@ -72,6 +72,8 @@ func conversionArgs(input, output string, p Plan, options []string) ([]string, e
 			args = append(args, "-c:v", "h264_videotoolbox", "-allow_sw", "1")
 		case "windows":
 			args = append(args, "-c:v", "h264_mf", "-hw_encoding", "0")
+		case "linux":
+			args = append(args, "-c:v", "libx264", "-preset", "fast", "-profile:v", "high")
 		default:
 			return nil, ErrUnavailable
 		}

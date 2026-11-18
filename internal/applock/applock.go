@@ -1,6 +1,7 @@
 // Package applock asks the operating system whether the person at the
 // computer is its owner — Touch ID or the login password on macOS, Windows
-// Hello on Windows — and tells when the system locks the screen. PKP's App Lock
+// Hello on Windows, polkit on Linux — and tells when the system locks the screen.
+// PKP's App Lock
 // is built on it: PKP never sees or collects a system
 // password; the system's own dialog does the asking.
 package applock

@@ -5,13 +5,25 @@ package syncfs
 import (
 	"errors"
 	"fmt"
-	"golang.org/x/sys/unix"
 	"io/fs"
+	"path/filepath"
+
+	"golang.org/x/sys/unix"
 )
 
 // RenameNoReplace never downgrades to a check-then-rename sequence.
 func RenameNoReplace(from, to string) error {
-	err := unix.Renameat2(unix.AT_FDCWD, from, unix.AT_FDCWD, to, unix.RENAME_NOREPLACE)
+	source, err := openNoFollow(filepath.Dir(from))
+	if err != nil {
+		return pathError(from, err)
+	}
+	defer source.Close()
+	target, err := openNoFollow(filepath.Dir(to))
+	if err != nil {
+		return pathError(to, err)
+	}
+	defer target.Close()
+	err = unix.Renameat2(int(source.Fd()), filepath.Base(from), int(target.Fd()), filepath.Base(to), unix.RENAME_NOREPLACE)
 	if errors.Is(err, unix.EEXIST) {
 		return fmt.Errorf("%w: %s", errors.Join(ErrCollision, fs.ErrExist), to)
 	}

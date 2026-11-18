@@ -7,7 +7,7 @@ import Orbit from "./Orbit.vue";
 import Toggle from "./Toggle.vue";
 import MarkdownDoc from "./MarkdownDoc";
 import { bytes } from "../format";
-import { onWindows } from "../dom";
+import { onLinux, onWindows, systemName } from "../dom";
 import { N_, t, intlTag } from "../i18n";
 import { parseMarkdown } from "../markdown";
 import { updates, watchUpdates, checkUpdates, downloadUpdate, cancelUpdate, installUpdate, ignoreUpdate, remindUpdateLater, setAutomaticUpdates } from "../updatestore";
@@ -36,7 +36,7 @@ const errors: Record<string, string> = {
   installLocation: N_("请将 PKP 安装到「应用程序」后再更新，不要从磁盘镜像、只读位置或临时隔离路径运行。"),
   installPermission: N_("未获准替换应用。请重试并允许 macOS 的权限请求。"),
   installBusy: N_("另一个 PKP 实例正在使用此应用。请退出其他配置或窗口所属的 PKP 进程后重试。"),
-  install: onWindows ? N_("未能打开安装程序，当前应用继续运行。") : N_("更新安装失败，请检查磁盘空间与应用权限后重试，或从官方 Release 重新安装。"),
+  install: onLinux ? N_("未能显示安装包，当前应用继续运行。请重试或从官方 Release 下载。") : onWindows ? N_("未能打开安装程序，当前应用继续运行。") : N_("更新安装失败，请检查磁盘空间与应用权限后重试，或从官方 Release 重新安装。"),
   installRollback: N_("更新失败，且未能恢复原应用。请从官方 Release 重新安装 PKP；账号与本地设置仍保留。"),
 };
 const error = computed(() => updates.error || (state.value?.error ? t(errors[state.value.error] ?? errors.network) : ""));
@@ -50,7 +50,7 @@ const status = computed(() => {
     case "downloading": return t("正在下载并校验更新…");
     case "ready": return t("更新已下载，签名与安装包校验通过。");
     case "preparing":
-    case "installing": return t("正在准备安装…");
+    case "installing": return onLinux ? t("正在显示安装包…") : t("正在准备安装…");
     case "confirming": return t("正在等待退出确认…");
     case "available": return t("发现新版本");
     default: return t("从 GitHub Releases 获取正式版本。");
@@ -105,7 +105,7 @@ async function openCommunity(href: string) {
       <template v-if="state?.info">
         <h3 class="release-version">PKP {{ state.info.version }}</h3>
         <p class="muted release-meta">{{ state.info.publishedAt.slice(0, 10) }} · {{ bytes(state.info.size) }}</p>
-        <p v-if="!state.info.compatible" class="error">{{ t("此更新需要 {system} {version} 或更新版本。", { system: onWindows ? 'Windows' : 'macOS', version: state.info.minOS }) }}</p>
+        <p v-if="!state.info.compatible" class="error">{{ onLinux ? t("此更新需要 glibc {version} 或更新版本（Ubuntu 24.04 或兼容发行版）。", { version: state.info.minOS }) : t("此更新需要 {system} {version} 或更新版本。", { system: systemName, version: state.info.minOS }) }}</p>
       </template>
       <p v-if="error" class="error" role="alert">{{ error }}</p>
       <template v-if="state?.info">
@@ -114,7 +114,7 @@ async function openCommunity(href: string) {
           <div class="download-row"><span class="muted">{{ bytes(state.received) }} / {{ bytes(state.info.size) }} · {{ progress }}%</span><button class="pill" :disabled="updates.pending" @click="cancelUpdate">{{ t("取消下载") }}</button></div>
         </div>
         <div v-else class="actions">
-          <button v-if="installReady" class="pill primary" :class="{ working: busy }" :disabled="!state.supported || busy" @click="installUpdate"><Icon name="restore" :size="17" />{{ onWindows ? t("退出并运行安装程序") : t("重启并更新") }}</button>
+          <button v-if="installReady" class="pill primary" :class="{ working: busy }" :disabled="!state.supported || busy" @click="installUpdate"><Icon name="restore" :size="17" />{{ onLinux ? t("显示安装包") : onWindows ? t("退出并运行安装程序") : t("重启并更新") }}</button>
           <button v-else class="pill primary" :disabled="!state.supported || busy || !state.info.compatible" @click="downloadUpdate"><Icon name="download" :size="17" />{{ t("下载更新") }}</button>
           <button class="pill" :disabled="busy" @click="remindUpdateLater">{{ t("稍后提醒") }}</button>
           <button class="quiet" :disabled="busy" @click="ignoreUpdate">{{ t("忽略此版本") }}</button>
@@ -127,7 +127,7 @@ async function openCommunity(href: string) {
       <h3 id="release-notes-title">{{ t("更新说明") }}</h3>
       <div ref="notesRoot" class="notes"><MarkdownDoc :blocks="releaseNotes" @link="followReleaseLink" /></div>
       <p v-if="releaseError" class="error" role="alert">{{ releaseError }}</p>
-      <p class="muted install-note">{{ onWindows ? t("安装前将确认退出；取消退出或管理员授权不会强制关闭 PKP。安装器不会删除账号与本地设置。") : t("确认退出后将替换应用并重新打开，账号与本地设置保留。macOS 可能请求替换权限；更新不会绕过 Gatekeeper，重新打开时仍可能需要系统确认。") }}</p>
+      <p class="muted install-note">{{ onLinux ? t("校验后在文件管理器中显示安装包，PKP 保持运行。请退出 PKP 后使用系统软件安装器或包管理器安装 deb/rpm；AppImage 请手动替换原文件并重新启动。不会自动写入系统目录或替换正在运行的应用，账号与本地设置保留。") : onWindows ? t("安装前将确认退出；取消退出或管理员授权不会强制关闭 PKP。安装器不会删除账号与本地设置。") : t("确认退出后将替换应用并重新打开，账号与本地设置保留。macOS 可能请求替换权限；更新不会绕过 Gatekeeper，重新打开时仍可能需要系统确认。") }}</p>
     </section>
 
     <div class="update-card glass-well automatic">

@@ -332,6 +332,9 @@ func (d *DriveService) RevealDownloadDir() error {
 
 // openPath and revealPath hand a local path to the system; tests replace them.
 var openPath = func(path string) error {
+	if runtime.GOOS == "linux" {
+		return openLinuxPath(path)
+	}
 	if app := application.Get(); app != nil {
 		return app.Browser.OpenFile(path)
 	}
@@ -339,6 +342,9 @@ var openPath = func(path string) error {
 }
 
 var revealPath = func(path string, selectFile bool) error {
+	if runtime.GOOS == "linux" {
+		return revealLinuxPath(path, selectFile)
+	}
 	if app := application.Get(); app != nil {
 		return app.Env.OpenFileManager(path, selectFile)
 	}

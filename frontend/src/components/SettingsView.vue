@@ -26,7 +26,7 @@ import PrivacySettings from "./PrivacySettings.vue";
 import ShortcutsSettings from "./ShortcutsSettings.vue";
 import ConnectivityPanel from "./ConnectivityPanel.vue";
 import UpdateSettings from "./UpdateSettings.vue";
-import { isTyping, modKey, onWindows, systemName } from "../dom";
+import { isTyping, keychainName, modKey, onLinux, onMac, onWindows, systemName } from "../dom";
 import { PROXY_MODES, PROXY_SCHEMES, useProxyDraft } from "../proxydraft";
 import { PRESETS, previewPath, templateError, type NamingStyle } from "../templates";
 import { AI_PRESETS, CUSTOM_PRESET_ID, presetOf } from "../aipresets";
@@ -137,9 +137,6 @@ const languageNote = computed(() =>
     : t("PKP 的文字立即切换；系统的打开面板和验证窗口在下次启动 PKP 后跟上。"),
 );
 
-// The platform's own names, said in the UI's language.
-const keychainName = computed(() => (onWindows ? t("凭据管理器") : t("钥匙串")));
-
 // The four ways in, in the mock's order; each card's pill opens its island.
 const links: { key: Exclude<Panel, "">; icon: string; title: string; desc: string; action: string }[] = [
   { key: "webdav", icon: "globe", title: "WebDAV", desc: N_("通过 WebDAV 将文件挂载到本地或第三方应用。"), action: N_("管理") },
@@ -225,7 +222,9 @@ const noticeLine = computed(() => {
 const notifyAllowHint = computed(() =>
   onWindows
     ? t("PKP 的通知在 Windows 里被关掉了。{steps}", { steps: t(notifySettingsSteps) })
-    : t("macOS 只询问一次。没看到询问，或之前选了「不允许」，{steps}", { steps: t(notifySettingsSteps) }),
+    : onLinux
+      ? t("桌面环境可能已禁用 PKP 的通知。{steps}", { steps: t(notifySettingsSteps) })
+      : t("macOS 只询问一次。没看到询问，或之前选了「不允许」，{steps}", { steps: t(notifySettingsSteps) }),
 );
 
 // Allow notifications is changed in the system's settings: coming back to the window reads it again.
@@ -757,7 +756,7 @@ onBeforeUnmount(() => {
         <!-- ---------- Notifications (System notifications) ---------- -->
         <template v-else-if="tab === 'notify'">
           <h2>{{ t("通知") }}</h2>
-          <p class="lead">{{ onWindows ? t("PKP 在后台、或窗口关到系统托盘时，用系统通知告诉你传输和任务的结果。") : t("PKP 在后台、或窗口关到菜单栏时，用系统通知告诉你传输和任务的结果。") }}</p>
+          <p class="lead">{{ onMac ? t("PKP 在后台、或窗口关到菜单栏时，用系统通知告诉你传输和任务的结果。") : t("PKP 在后台、或窗口关到系统托盘时，用系统通知告诉你传输和任务的结果。") }}</p>
 
           <div class="card">
             <div class="card-text">
@@ -767,7 +766,7 @@ onBeforeUnmount(() => {
             <Toggle
               :model-value="!!notices?.enabled"
               :label="t('系统通知')"
-              :disabled="!notices || systemNotices.saving"
+              :disabled="!notices?.available || systemNotices.saving"
               @update:model-value="setNotifyEnabled"
             />
           </div>
@@ -787,15 +786,15 @@ onBeforeUnmount(() => {
             <div class="card-text">
               <strong>{{ t("PKP 在前台时也通知") }}</strong>
               <span>{{
-                onWindows
-                  ? t("默认只在 PKP 不在最前面、或窗口已关到系统托盘时通知：PKP 在前台时，页面上已经能看到结果。")
-                  : t("默认只在 PKP 不在最前面、或窗口已关到菜单栏时通知：PKP 在前台时，页面上已经能看到结果。")
+                onMac
+                  ? t("默认只在 PKP 不在最前面、或窗口已关到菜单栏时通知：PKP 在前台时，页面上已经能看到结果。")
+                  : t("默认只在 PKP 不在最前面、或窗口已关到系统托盘时通知：PKP 在前台时，页面上已经能看到结果。")
               }}</span>
             </div>
             <Toggle
               :model-value="!!notices?.foreground"
               :label="t('PKP 在前台时也通知')"
-              :disabled="!notices?.enabled || systemNotices.saving"
+              :disabled="!notices?.available || !notices.enabled || systemNotices.saving"
               @update:model-value="setNotifyForeground"
             />
           </div>

@@ -86,22 +86,31 @@ func TestProbeMetadataAndCodec(t *testing.T) {
 	}
 }
 
-// Explicit opt-in: point only at the freshly built bundled tools. This smoke
-// exercises real native encoding, probe, publication, preservation and cancel.
+// Explicit tool directories exercise packaged tools; Linux also exercises its
+// distro dependencies by default. Encoding, publication and cancel are real.
 func TestBundledMediaSmoke(t *testing.T) {
 	dir := os.Getenv("PKP_MEDIA_SMOKE_DIR")
+	var p *Processor
 	if dir == "" {
-		t.Skip("set PKP_MEDIA_SMOKE_DIR to bundled tools directory")
+		if runtime.GOOS != "linux" {
+			t.Skip("set PKP_MEDIA_SMOKE_DIR to bundled tools directory")
+		}
+		p = New()
+		if p.ffmpeg == "" || p.ffprobe == "" {
+			t.Skip("installed media tools unavailable")
+		}
+	} else {
+		var err error
+		dir, err = filepath.Abs(dir)
+		if err != nil {
+			t.Fatal(err)
+		}
+		suffix := ""
+		if runtime.GOOS == "windows" {
+			suffix = ".exe"
+		}
+		p = &Processor{ffmpeg: filepath.Join(dir, "ffmpeg"+suffix), ffprobe: filepath.Join(dir, "ffprobe"+suffix)}
 	}
-	dir, err := filepath.Abs(dir)
-	if err != nil {
-		t.Fatal(err)
-	}
-	suffix := ""
-	if runtime.GOOS == "windows" {
-		suffix = ".exe"
-	}
-	p := &Processor{ffmpeg: filepath.Join(dir, "ffmpeg"+suffix), ffprobe: filepath.Join(dir, "ffprobe"+suffix)}
 	root := t.TempDir()
 	input, output := filepath.Join(root, "input.avi"), filepath.Join(root, "output.mp4")
 	raw := filepath.Join(root, "frames.yuv")
@@ -146,6 +155,9 @@ func TestBundledMediaSmoke(t *testing.T) {
 	out, err := p.Probe(context.Background(), output)
 	if err != nil || out.VideoCodec != "h264" || out.Width != 320 || out.Height != 240 {
 		t.Fatalf("output %+v: %v", out, err)
+	}
+	if runtime.GOOS == "linux" && (out.PixelFormat != "yuv420p" || out.Profile != "High") {
+		t.Fatalf("Linux compatibility output must be 8-bit H.264 High: %+v", out)
 	}
 	if err := p.Convert(context.Background(), input, output, plan, nil); err == nil {
 		t.Fatal("existing output overwritten")

@@ -84,6 +84,12 @@ jobs:
             media-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('build/libmpv-common.sh', 'build/darwin/libmpv.sh', 'build/windows/libmpv.sh') }}-
       - run: npm ci
         working-directory: frontend
+      - name: Download verified Linux build artifacts
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          pattern: linux-packages-*
+          path: bin/linux-release
+          merge-multiple: true
       - name: Build, sign and verify allowlisted assets
         env:
           SIGNING_KEY: ${{ secrets.UPDATE_SIGNING_KEY }}
@@ -94,7 +100,7 @@ jobs:
           trap 'rm -f "$key"' EXIT
           umask 077
           printf '%s\n' "$SIGNING_KEY" > "$key"
-          make release-local RELEASE_NOTES=build/release-notes.md RELEASE_KEY="$key"
+          make release-local RELEASE_NOTES=build/release-notes.md RELEASE_KEY="$key" LINUX_RELEASE_DIR=bin/linux-release
           make release-verify
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:

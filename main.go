@@ -20,6 +20,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"runtime"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
 	"github.com/wailsapp/wails/v3/pkg/events"
@@ -113,6 +114,10 @@ func instanceID(configDir string) string {
 		return "com.pkp.desktop"
 	}
 	sum := sha256.Sum256([]byte(configDir))
+	if runtime.GOOS == "linux" {
+		// Every well-known D-Bus name element must start with a letter.
+		return "com.pkp.desktop.profile_" + hex.EncodeToString(sum[:6])
+	}
 	return "com.pkp.desktop." + hex.EncodeToString(sum[:6])
 }
 
@@ -211,6 +216,10 @@ func main() {
 		},
 		Mac: application.MacOptions{
 			ApplicationShouldTerminateAfterLastWindowClosed: false,
+		},
+		Linux: application.LinuxOptions{
+			ApplicationID: "com.pkp.desktop",
+			ProgramName:   "pkp",
 		},
 	})
 

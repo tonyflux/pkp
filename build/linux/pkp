@@ -1,0 +1,3 @@
+#!/bin/sh
+export PKP_LINUX_FORMAT=deb
+exec /usr/lib/pkp/pkp "$@"

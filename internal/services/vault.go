@@ -4,8 +4,8 @@ import "errors"
 
 // PasswordVault keeps remembered sign-in passwords, one per account, outside
 // the config directory: on macOS the login keychain, on Windows the
-// Credential Manager. DriveService uses the system's when
-// DriveOptions.Passwords is nil.
+// Credential Manager, and on Linux the desktop Secret Service.
+// DriveService uses the system's when DriveOptions.Passwords is nil.
 type PasswordVault interface {
 	// Password returns the account's password, or ErrNoSavedPassword.
 	Password(account string) (string, error)

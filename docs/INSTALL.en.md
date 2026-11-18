@@ -18,7 +18,7 @@ v0.2.0 is published and provides eight assets: the seven kinds listed above, plu
 
 `SHA256SUMS` is used to check download integrity and cannot, on its own, prove the publisher's identity. In-app updates use a built-in public key to verify the Ed25519-signed manifest, then check the installer size and SHA-256 hash; do not continue installation if the signature or hash is invalid.
 
-For a complete manual verification, place all assets from the same Release in a separate directory (seven for v0.1.0; eight for v0.2.0 and later) and download the public [verify_release.py](../.github/scripts/verify_release.py). After installing Python 3.11+ and OpenSSL 3+, run the following (replace the tag with the release you downloaded):
+For complete manual verification, place every asset from the same Release in a separate directory (historically seven/eight; Linux releases add six packages and two runtime-source archives) and download the public [verify_release.py](../.github/scripts/verify_release.py). After installing Python 3.11+ and OpenSSL 3+, run the following (replace the tag with the release you downloaded):
 
 ```sh
 python3 verify_release.py /path/to/release-assets v0.2.0
@@ -45,11 +45,26 @@ xattr -dr com.apple.quarantine /Applications/PKP.app
 
 This removes the application's quarantine flag; it is not a security certification. Do not extend this operation to the entire downloads directory or disable system Gatekeeper. Do not copy this command verbatim if the actual application name or path differs.
 
-## Windows and Linux
+## Windows
 
 Windows provides a shared x64 / ARM64 installer that selects the application and playback library according to the local machine's architecture. Users have reported that the initial release draft passed acceptance testing, but no complete device matrix has been provided, so an experience equivalent to macOS cannot be promised; playback surfaces, synchronization, notifications, and system authentication still need broader testing on real devices. Features such as the menu bar panel and WebView proxy have platform limitations, and the installer does not have an Authenticode publisher signature.
 
-Linux support and installer releases are not currently promised.
+## Linux
+
+Current source builds `.deb`, `.rpm`, and AppImage packages for x86_64 (`amd64`) and ARM64 (`arm64`). Native minimums are glibc 2.39, GTK 4.14 and WebKitGTK 6.0; Ubuntu 24.04 is the build baseline. This does not add Linux assets to the existing v0.7.1 release: check the actual Release attachments rather than treating source support as publication.
+
+- Ubuntu/compatible Debian systems: after verification, use `sudo apt install ./PKP-<version>-linux-<arch>.deb`. The package manager installs GTK, WebKitGTK, libmpv and FFmpeg dependencies.
+- RPM distributions: use `sudo dnf install ./PKP-<version>-linux-<arch>.rpm`. RPM carries the same private runtime as AppImage instead of requiring Ubuntu FFmpeg ABIs on Fedora-like systems. The host still needs glibc 2.39, user namespaces and graphics drivers; system policy/keyring/desktop portal services come from package management and the desktop session.
+- AppImage: make the file executable and run it. Without FUSE, use `./PKP-<version>-linux-<arch>.AppImage --appimage-extract-and-run`. Media libraries, WebKitGTK and their runtime are bundled; no separate mpv/FFmpeg installation is required. The host still needs unprivileged user namespaces and working graphics drivers. Alpine/musl native packages are not supported.
+- Ubuntu AppArmor may restrict user namespaces. For an explicit sandbox failure, have an administrator review and install the supplied path-scoped AppArmor helper/profile. Do not disable the WebKit sandbox or globally relax host security.
+- FUSE-free AppImage runs use a fresh random, user-private extraction directory for each invocation, never a shared cross-user executable cache.
+- GTK rendering supports X11 and Wayland. Scaling, drivers, GNOME/KDE and multiple displays still require device-specific acceptance. Without a system-tray host, closing the main window does not hide PKP somewhere inaccessible.
+- Remembered passwords require an unlocked Secret Service keyring such as GNOME Keyring or compatible KWallet. System authentication requires the packaged polkit policy and a desktop authentication agent. A standalone AppImage does not install system policy; use a PKP standalone password when unavailable. Linux cannot guarantee blocking screenshots, screen recordings or cached desktop previews.
+- RPM/AppImage use a bundled `/usr` in a private mount namespace. Home and ordinary files retain their paths; host `/usr` is accessible through the runtime's `host-usr` directory. Prefer native deb if directly browsing host system `/usr` files is required.
+- Revealing external files requires FileManager1 or a desktop portal; RPM/AppImage never execute host `.desktop` commands against private runtime libraries. Notifications, lock events and power management depend on host session services and report unavailable services explicitly. Private-runtime “Open notification settings” supports GNOME D-Bus activation; use system settings manually on other desktops.
+- Local sync and LAN directory authorization support ordinary ext4, XFS, Btrfs and tmpfs. Network/FUSE/overlay filesystems and encrypted/casefold directories whose safe name semantics cannot be represented are refused; an unavailable directory is never treated as deleted content. Linux local deletion uses freedesktop Trash without a permanent-delete fallback.
+
+Uninstalling the program does not delete account configuration, keyring entries, downloads or screenshots. Sign out and remove accounts in the app first, then follow the privacy notice for remaining data.
 
 ## Updating the Application
 
@@ -59,6 +74,7 @@ Release information, download progress, and download/install buttons appear toge
 
 - macOS (from v0.2.0): first click “Download Update,” then “Restart & Update” after download and verification finish. During preparation, macOS may request permission to replace the app; quit any other PKP instances using the same installed app first. Once you confirm quitting, the update helper waits for PKP to exit, replaces the app in its original location, and reopens the same profile. Accounts and local settings are preserved. Canceling permission or quit confirmation does not force PKP to close. Update from the installed app in Applications, not a DMG, a read-only location, or a translocated temporary path. Updates do not remove quarantine flags or bypass Gatekeeper. The ad hoc signing and lack of notarization still apply, and reopening may require system approval.
 - Windows: click “Quit and Run Installer,” then proceed through the quit confirmation and system administrator authorization. Canceling either quitting or authorization will not force PKP to close. The installer requires other PKP processes to exit and reuses the original installation directory; there is no need to uninstall first. Accounts and local settings are retained. Thorough acceptance testing on real Windows devices is still needed.
+- Linux: after download and verification, click “Show Package”; PKP keeps running. Install deb/rpm through the package manager, or quit PKP and manually replace the original AppImage. No silent elevation or system-file replacement occurs. Signed Linux assets use a separate `linuxPackages` field, retaining the legacy two-platform macOS/Windows update contract.
 - The released macOS v0.1.0 does not include this replacement helper. To gain “Restart & Update,” upgrading to v0.2.0 or later still requires one manual replacement: download and open the new DMG, quit PKP, then drag it over the installed app. Do not run the app directly from the image. Accounts and local settings are preserved.
 - Local test versions that lack update functionality or trust the old development public key require manually downloading and installing the official version first; no upgrade prompt will appear if both versions are 0.1.0.
 

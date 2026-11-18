@@ -2,10 +2,9 @@
 // view owned by the application window.
 //
 // The player is a library, not a subprocess: the render API hands frames to a
-// GL surface the webview sits on top of, which is the only way to get video
-// inside the window on macOS — mpv's --wid embedding covers X11, win32 and
-// Android, but not Cocoa. On Windows, where it does, mpv draws into a window
-// of its own inside a child window below the WebView2 (surface_windows.go).
+// GL surface the webview sits on top of. macOS uses NSOpenGLView; Linux uses
+// GTK4 GtkGLArea under a transparent WebKitWebView on both Wayland and X11.
+// Windows uses mpv's --wid embedding inside a child window below WebView2.
 //
 // The trade is explicit: linking libmpv makes the binary a GPL derivative
 // (see LICENSE) and a decoder crash now takes the whole application with it.
@@ -77,7 +76,9 @@ var defaults = map[string]string{
 	// the file as truncated, which mpv plays through to the end. Reconnect
 	// on dropped connections and on 5xx, including for a seek's Range
 	// request, with a short cap so a dead link still surfaces as an error.
-	"stream-lavf-o": "reconnect=1,reconnect_streamed=1,reconnect_on_http_error=5xx,reconnect_delay_max=4",
+	// Only the Go stream proxy handles upstream proxying; FFmpeg must never
+	// route our loopback reader through an inherited HTTP proxy.
+	"stream-lavf-o": "http_proxy=,reconnect=1,reconnect_streamed=1,reconnect_on_http_error=5xx,reconnect_delay_max=4",
 	// A start or a seek waits, paused for cache, until a second of playback
 	// is read ahead instead of starting on the first frame and stalling at
 	// once over the network; cache-buffering-state then counts that wait up,
@@ -185,7 +186,7 @@ type SurfaceStats struct {
 	TopPixel    [4]uint8 `json:"topPixel"`
 	BottomPixel [4]uint8 `json:"bottomPixel"`
 	Rect        Rect     `json:"rect"`
-	// Diagnostic is the live AppKit state of the surface. "No picture" has
+	// Diagnostic is the live native state of the surface. "No picture" has
 	// several causes that look identical from outside the process, and this
 	// is the only place they can be told apart.
 	Diagnostic string `json:"diagnostic"`

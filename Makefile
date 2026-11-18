@@ -12,6 +12,8 @@ help:
 	@echo "  make dist           Package the drag-to-install DMG (bin/PKP-<version>.dmg, ad-hoc signed, not notarized)"
 	@echo "  make windows        Cross-compile Windows binaries (bin/pkp-amd64.exe and bin/pkp-arm64.exe, no cgo)"
 	@echo "  make windows-installer  Package the Windows NSIS installer (bin/pkp-amd64_arm64-installer.exe, bundled libmpv, requires makensis)"
+	@echo "  make linux-package ARCH=amd64  Build native Linux deb, rpm, AppImage and runtime sources (Ubuntu 24.04)"
+	@echo "  make linux-docker ARCH=arm64   Build the same Linux packages in a native-architecture Docker container"
 	@echo "  make release-local RELEASE_NOTES=<file>  Build and sign release artifacts in bin/releases/v<version> (no upload)"
 	@echo "  make release-verify Verify the release manifest signature and every artifact hash"
 	@echo "  make release-draft  Verify and upload a draft to the public repository (excluded from automatic updates)"
@@ -33,13 +35,15 @@ help:
 
 MACOS_MIN := 12.0
 LIBMPV := build/darwin/libmpv/lib/libmpv.2.dylib
-VERSION := $(shell /usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' build/darwin/Info.plist)
+VERSION := $(shell go run ./cmd/pkp-release version)
 DMG := bin/PKP-$(VERSION).dmg
 APP_BUNDLE ?= bin/pkp.app
 DMG_TOOLS := bin/dmg-tools/.ready
 RELEASE_DIR := bin/releases/v$(VERSION)
 RELEASE_NOTES ?=
 RELEASE_KEY ?= $(HOME)/.ssh/pkp-release/update-ed25519.key
+LINUX_RELEASE_DIR ?=
+LINUX_RELEASE_ASSETS = $(foreach arch,amd64 arm64,PKP-$(VERSION)-linux-$(arch).deb PKP-$(VERSION)-linux-$(arch).rpm PKP-$(VERSION)-linux-$(arch).AppImage PKP-$(VERSION)-linux-$(arch)-runtime-sources.tar.gz)
 # Build once per architecture. The final -mmacosx-version-min in -extldflags
 # overrides the Wails cgo directive that hard-codes 10.13. libmpv is resolved
 # from pkp.app/Contents/Frameworks in packages, then a sibling Frameworks directory for bin/pkp.
@@ -57,6 +61,21 @@ WEBVIEW2_BOOTSTRAPPER := build/windows/nsis/MicrosoftEdgeWebview2Setup.exe
 # pinned LGPL build for x64 and ARM64. Dependencies are linked statically and
 # only system DLLs are loaded. Generated libraries and licenses stay untracked.
 LIBMPV_WIN_DIR := build/windows/libmpv
+
+LINUX_ARCH ?= $(if $(ARCH),$(ARCH),$(shell go env GOARCH))
+LINUX_IMAGE ?= pkp-linux-builder:$(LINUX_ARCH)
+
+.PHONY: linux linux-package linux-docker
+linux: frontend
+	LINUX_ARCH=$(LINUX_ARCH) VERSION=$(VERSION) bash build/linux/build.sh build
+
+linux-package: frontend
+	LINUX_ARCH=$(LINUX_ARCH) VERSION=$(VERSION) bash build/linux/build.sh package
+
+# Docker handles cgo with a complete target-architecture Ubuntu userspace.
+linux-docker:
+	docker build --platform linux/$(LINUX_ARCH) -f build/docker/Dockerfile.linux -t $(LINUX_IMAGE) .
+	docker run --rm --platform linux/$(LINUX_ARCH) -v "$(CURDIR):/src" -e VERSION=$(VERSION) -e SOURCE_DATE_EPOCH=$(SOURCE_DATE_EPOCH) $(LINUX_IMAGE) sh -c 'cd frontend && npm ci && cd .. && make linux-package ARCH=$(LINUX_ARCH)'
 
 # Remove build output, including dangling symlinks and regular directories.
 clean:
@@ -191,6 +210,7 @@ release-check:
 	@test -n "$(RELEASE_NOTES)" || { echo "RELEASE_NOTES=<user-facing release notes file> is required"; exit 1; }
 	@test ! -e "$(RELEASE_DIR)" || { echo "Refusing to overwrite existing release directory: $(RELEASE_DIR)"; exit 1; }
 	go run ./cmd/pkp-release check -version "$(VERSION)" -key "$(RELEASE_KEY)" -notes "$(RELEASE_NOTES)"
+	@if [ -n "$(LINUX_RELEASE_DIR)" ]; then for asset in $(LINUX_RELEASE_ASSETS); do test -s "$(LINUX_RELEASE_DIR)/$$asset" || { echo "Missing Linux release asset: $$asset" >&2; exit 1; }; done; fi
 
 release-local: release-check
 	@set -eu; source_commit=$$(go run ./cmd/pkp-release snapshot); \
@@ -201,11 +221,12 @@ release-local: release-check
 	cp "$(DMG)" "$(RELEASE_DIR)/PKP-$(VERSION)-macos-universal.dmg"
 	cp bin/pkp-amd64_arm64-installer.exe "$(RELEASE_DIR)/PKP-$(VERSION)-windows-x64-arm64-setup.exe"
 	cp bin/libmpv-sources.tar.gz LICENSE "$(RELEASE_DIR)/"
-	go run ./cmd/pkp-release prepare -version "$(VERSION)" -dir "$(RELEASE_DIR)" -key "$(RELEASE_KEY)" -notes "$(RELEASE_NOTES)"
+	@if [ -n "$(LINUX_RELEASE_DIR)" ]; then for asset in $(LINUX_RELEASE_ASSETS); do cp "$(LINUX_RELEASE_DIR)/$$asset" "$(RELEASE_DIR)/"; done; fi
+	go run ./cmd/pkp-release prepare -version "$(VERSION)" -dir "$(RELEASE_DIR)" -key "$(RELEASE_KEY)" -notes "$(RELEASE_NOTES)" $(if $(LINUX_RELEASE_DIR),-linux)
 	cd "$(RELEASE_DIR)" && shasum -a 256 \
 		"PKP-$(VERSION)-macos-universal.dmg" \
 		"PKP-$(VERSION)-windows-x64-arm64-setup.exe" \
-		update.json update.json.sig libmpv-sources.tar.gz LICENSE "PKP-$(VERSION)-source.tar.gz" > SHA256SUMS
+		update.json update.json.sig libmpv-sources.tar.gz LICENSE "PKP-$(VERSION)-source.tar.gz" $(if $(LINUX_RELEASE_DIR),$(LINUX_RELEASE_ASSETS)) > SHA256SUMS
 	@echo "Local release artifacts: $(RELEASE_DIR) (not uploaded; see RELEASE.md for release checks)"
 
 release-verify:

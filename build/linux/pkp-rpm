@@ -1,0 +1,3 @@
+#!/bin/sh
+export PKP_LINUX_FORMAT=rpm
+exec /opt/pkp/runtime/AppRun "$@"

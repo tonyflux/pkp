@@ -18,7 +18,7 @@ v0.2.0 已发布，提供八件附件：上述七类再加上 `PKP-0.2.0-source.
 
 `SHA256SUMS` 用于检查下载完整性，不能单独证明发布者身份。应用内更新会用内置公钥验证 Ed25519 签名清单，再检查安装包大小与 SHA-256；签名或哈希错误时不要继续安装。
 
-需要手动完整核验时，将同一 Release 的全部附件放在独立目录（v0.1.0 为七件；v0.2.0 及之后为八件），并下载公开的 [verify_release.py](../.github/scripts/verify_release.py)。安装 Python 3.11+ 和 OpenSSL 3+ 后运行（将标签换成你下载的版本）：
+需要手动完整核验时，将同一 Release 的全部附件放在独立目录（历史版本为七／八件；含 Linux 的发布另加六个安装包和两个运行库源码包），并下载公开的 [verify_release.py](../.github/scripts/verify_release.py)。安装 Python 3.11+ 和 OpenSSL 3+ 后运行（将标签换成你下载的版本）：
 
 ```sh
 python3 verify_release.py /路径/发布附件 v0.2.0
@@ -45,11 +45,26 @@ xattr -dr com.apple.quarantine /Applications/PKP.app
 
 这会移除该应用的隔离标记，不是安全认证，也不要扩展到整个下载目录或关闭系统 Gatekeeper。实际应用名称、路径不同则不要直接照抄。
 
-## Windows 与 Linux
+## Windows
 
 Windows 提供 x64 / ARM64 共用安装包，按本机架构选择应用与播放库。用户已反馈首发草稿验收通过，但未提供完整设备矩阵，不能承诺与 macOS 一致的体验；播放表面、同步、通知和系统身份验证等仍需扩大真机覆盖。菜单栏面板与 WebView 代理等存在平台限制，安装包没有 Authenticode 发布者签名。
 
-Linux 暂不承诺支持或发布安装包。
+## Linux
+
+当前源码提供 x86_64（`amd64`）和 ARM64（`arm64`）的 `.deb`、`.rpm` 与 AppImage 构建。最低原生运行依赖为 glibc 2.39、GTK 4.14、WebKitGTK 6.0；构建基线为 Ubuntu 24.04。既有 v0.7.1 附件不因此增加 Linux 包；以实际 Release 附件为准，不要把源码支持当作已经发布。
+
+- Ubuntu／兼容 Debian 系统：校验同一 Release 的附件后，使用 `sudo apt install ./PKP-<版本>-linux-<架构>.deb`，由包管理器安装 GTK、WebKitGTK、libmpv 和 FFmpeg 依赖。
+- 使用 RPM 的发行版：使用 `sudo dnf install ./PKP-<版本>-linux-<架构>.rpm`。RPM 自带与 AppImage 相同的私有运行时，避免强迫 Fedora 等系统安装 Ubuntu 的 FFmpeg ABI；宿主仍需 glibc 2.39、用户命名空间及图形驱动。系统策略／钥匙环／桌面门户依赖由包管理器和桌面会话提供。
+- AppImage：赋予文件执行权限后直接运行；没有 FUSE 时可用 `./PKP-<版本>-linux-<架构>.AppImage --appimage-extract-and-run`。随包携带媒体库、WebKitGTK 与对应运行时，不要求另装 mpv／FFmpeg，但需要内核允许非特权用户命名空间及可用图形驱动。不支持 Alpine／musl 原生包。
+- Ubuntu 的 AppArmor 可能限制用户命名空间。遇到明确的沙箱错误时，使用包附的、限定安装路径的 AppArmor 安装助手／配置，并由管理员审阅后安装；不要关闭 WebKit 沙箱或全局放开系统限制。
+- AppImage 的免 FUSE 模式为每次运行创建随机、仅当前用户可访问的临时解压目录，不复用跨用户共享的可执行缓存。
+- 支持 X11 与 Wayland 的 GTK 渲染路径；缩放、图形驱动、GNOME／KDE 与多屏仍需要按目标设备验收。桌面没有系统托盘宿主时，关闭主窗口不会把应用隐藏到无法找回的位置。
+- 记住密码需要已解锁的 Secret Service 钥匙环，例如 GNOME Keyring 或提供该接口的 KWallet。系统身份验证需要包安装的 polkit 策略及桌面认证代理；独立 AppImage 不会擅自安装系统策略，缺失时可使用 PKP 独立密码。Linux 不能保证阻止截图、录屏或桌面缓存的窗口预览。
+- RPM／AppImage 在私有挂载命名空间中使用随包 `/usr`；主目录和普通文件保持原路径，宿主 `/usr` 可从该运行时目录的 `host-usr` 访问。需要直接浏览宿主系统 `/usr` 的文件时优先使用 deb 原生包。
+- 外部文件定位需要 FileManager1 或桌面门户；RPM／AppImage 不在私有运行时里执行宿主 `.desktop` 命令。通知、锁屏及电源管理依赖桌面会话服务，服务不可用会明确提示。私有运行时的「打开通知设置」支持 GNOME D-Bus 激活；其他桌面请从其系统设置手动打开。
+- 本地同步和局域网目录授权支持普通 ext4、XFS、Btrfs 与 tmpfs。网络盘、FUSE、overlayfs，以及启用目录加密／大小写折叠而无法保留安全名称语义的目录会拒绝授权，不把目录暂时不可用当作文件被删除。Linux 本地删除使用 freedesktop 回收站，不退回永久删除。
+
+卸载程序不删除账号配置、钥匙环项目、下载文件或截图；移除私人数据请先在应用内退出并移除账号，再按隐私说明处理剩余文件。
 
 ## 更新应用
 
@@ -59,6 +74,7 @@ Linux 暂不承诺支持或发布安装包。
 
 - macOS（从 v0.2.0 起）：先点击「下载更新」，下载并校验完成后再点击「重启并更新」。准备期间 macOS 可能请求替换应用的权限；同一应用的其他 PKP 实例须先退出。确认退出后，更新助手等待当前 PKP 退出，替换原位置的应用并重新打开原配置；账号与本地设置保留。取消权限请求或退出确认不会强制关闭 PKP。请从「应用程序」中的已安装应用执行更新，不要从 DMG、只读位置或临时隔离路径运行。更新不移除隔离标记、不绕过 Gatekeeper；当前 ad hoc 签名与未公证限制仍适用，重新打开时可能需要系统确认。
 - Windows：点击「退出并运行安装程序」，按退出确认和系统管理员授权继续；取消退出或授权不会强制关闭 PKP。安装器要求退出其它 PKP 进程，沿用原安装目录，不需要先卸载；账号与本地设置保留。仍需 Windows 真机充分验收。
+- Linux：下载并验证后点击「显示安装包」，PKP 保持运行。使用包管理器安装 deb／rpm，或退出 PKP 后手动替换原 AppImage；不静默提权、不自动覆盖系统文件。Linux 包在签名清单的独立 `linuxPackages` 字段内，旧版 macOS／Windows 的双平台更新契约保持不变。
 - 已发布的 macOS v0.1.0 没有上述替换助手：升级到 v0.2.0 或之后版本时，仍须下载并打开新版本 DMG，退出 PKP，再手动拖拽覆盖原应用一次，才能获得「重启并更新」功能；不要直接运行镜像内应用。此步骤保留账号与本地设置。
 - 没有更新功能或信任旧开发公钥的本地测试版本，需要先手动下载并安装正式版本；同为 0.1.0 时不会提示升级。
 

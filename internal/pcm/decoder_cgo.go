@@ -1,10 +1,11 @@
-//go:build darwin && cgo
+//go:build (darwin || linux) && cgo
 
 package pcm
 
 /*
-#cgo CFLAGS: -I${SRCDIR}/../../build/darwin/libmpv/include
-#cgo LDFLAGS: -L${SRCDIR}/../../build/darwin/libmpv/lib -lavformat -lavcodec -lavutil -lswresample
+#cgo darwin CFLAGS: -I${SRCDIR}/../../build/darwin/libmpv/include
+#cgo darwin LDFLAGS: -L${SRCDIR}/../../build/darwin/libmpv/lib -lavformat -lavcodec -lavutil -lswresample
+#cgo linux pkg-config: libavformat libavcodec libavutil libswresample
 #include <stdlib.h>
 #include "decoder.h"
 */

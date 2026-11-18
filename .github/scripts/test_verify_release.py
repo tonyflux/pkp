@@ -34,7 +34,7 @@ class ReleaseVerifierTests(unittest.TestCase):
         verifier.PUBLIC_KEY = cls.original_key
         cls.temporary.cleanup()
 
-    def fixture(self, directory, version, source_change=None):
+    def fixture(self, directory, version, source_change=None, linux=False):
         manifest = {"version": version, "publishedAt": "2026-11-01T00:00:00Z", "notes": "Release notes", "packages": {}}
         for platform, suffix in (("darwin-universal", "macos-universal.dmg"), ("windows-x64-arm64", "windows-x64-arm64-setup.exe")):
             name = f"PKP-{version}-{suffix}"
@@ -55,6 +55,14 @@ class ReleaseVerifierTests(unittest.TestCase):
             manifest["source"] = source
             if source_change:
                 source_change(manifest)
+        if linux:
+            manifest["linuxPackages"] = {}
+            for arch in ("amd64", "arm64"):
+                for format, suffix in (("deb", ".deb"), ("rpm", ".rpm"), ("appimage", ".AppImage"), ("sources", "-runtime-sources.tar.gz")):
+                    name = f"PKP-{version}-linux-{arch}{suffix}"
+                    body = b"Linux runtime sources" if format == "sources" else b"Linux package"
+                    (directory / name).write_bytes(body)
+                    manifest["linuxPackages"][f"linux-{arch}-{format}"] = {"url": f"https://github.com/tonyflux/pkp/releases/download/v{version}/{name}", "size": len(body), "sha256": hashlib.sha256(body).hexdigest(), "minOS": "2.39"}
         (directory / "update.json").write_text(json.dumps(manifest))
         signed = subprocess.run(["openssl", "pkeyutl", "-sign", "-inkey", str(self.key), "-rawin", "-in", str(directory / "update.json")], check=True, capture_output=True).stdout
         (directory / "update.json.sig").write_bytes(base64.b64encode(signed))
@@ -111,6 +119,17 @@ class ReleaseVerifierTests(unittest.TestCase):
                 self.checksums(directory)
                 with self.assertRaises(ValueError):
                     self.verify(directory, version)
+
+    def test_linux_packages_and_runtime_sources_are_signed(self):
+        for suffix in (".deb", ".rpm", ".AppImage", "-runtime-sources.tar.gz"):
+            with self.subTest(suffix=suffix), tempfile.TemporaryDirectory() as temporary:
+                directory = pathlib.Path(temporary)
+                self.fixture(directory, "0.7.1", linux=True)
+                self.verify(directory, "0.7.1")
+                (directory / f"PKP-0.7.1-linux-arm64{suffix}").write_bytes(b"replacement")
+                self.checksums(directory)
+                with self.assertRaises(ValueError):
+                    self.verify(directory, "0.7.1")
 
 
 if __name__ == "__main__":

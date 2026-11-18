@@ -52,5 +52,15 @@ const messages: Messages = {
   "PKP {version} 已发布": { tw: "PKP {version} 已發佈", en: "PKP {version} is available", ja: "PKP {version} が公開されました", ko: "PKP {version} 출시" },
   "PKP 会自动从 GitHub 检查新版本，不会自动下载或安装，可在「关于与更新」中关闭。": { tw: "PKP 會自動從 GitHub 檢查新版本，不會自動下載或安裝，可在「關於與更新」中關閉。", en: "PKP automatically checks GitHub for updates, but never downloads or installs them automatically. Turn this off in About & Updates.", ja: "PKP は GitHub で新しいバージョンを自動確認しますが、自動ダウンロードやインストールは行いません。「情報とアップデート」で無効にできます。", ko: "PKP가 GitHub에서 새 버전을 자동 확인하지만 자동으로 다운로드하거나 설치하지는 않습니다. 정보 및 업데이트에서 끌 수 있습니다." },
   "查看更新": { tw: "查看更新", en: "View Update", ja: "更新を表示", ko: "업데이트 보기" },
+  "未能显示安装包，当前应用继续运行。请重试或从官方 Release 下载。": { tw: "無法顯示安裝套件，目前應用程式繼續執行。請重試或從官方 Release 下載。", en: "Could not show the package. PKP is still running. Try again or download it from the official Release.", ja: "パッケージを表示できませんでした。PKP は実行中のままです。再試行するか、公式 Release からダウンロードしてください。", ko: "설치 파일을 표시하지 못했습니다. PKP는 계속 실행됩니다. 다시 시도하거나 공식 Release에서 다운로드하세요." },
+  "正在显示安装包…": { tw: "正在顯示安裝套件…", en: "Showing the package…", ja: "パッケージを表示中…", ko: "설치 파일 표시 중…" },
+  "此更新需要 glibc {version} 或更新版本（Ubuntu 24.04 或兼容发行版）。": { tw: "此更新需要 glibc {version} 或更新版本（Ubuntu 24.04 或相容發行版）。", en: "This update requires glibc {version} or later (Ubuntu 24.04 or a compatible distribution).", ja: "この更新には glibc {version} 以降が必要です（Ubuntu 24.04 または互換ディストリビューション）。", ko: "이 업데이트에는 glibc {version} 이상이 필요합니다(Ubuntu 24.04 또는 호환 배포판)." },
+  显示安装包: { tw: "顯示安裝套件", en: "Show Package", ja: "パッケージを表示", ko: "설치 파일 보기" },
+  "校验后在文件管理器中显示安装包，PKP 保持运行。请退出 PKP 后使用系统软件安装器或包管理器安装 deb/rpm；AppImage 请手动替换原文件并重新启动。不会自动写入系统目录或替换正在运行的应用，账号与本地设置保留。": {
+    tw: "驗證後在檔案管理員中顯示安裝套件，PKP 保持執行。請結束 PKP 後使用系統軟體安裝程式或套件管理員安裝 deb/rpm；AppImage 請手動替換原檔案並重新啟動。不會自動寫入系統目錄或替換正在執行的應用程式，帳號與本機設定保留。",
+    en: "After verification, the package is shown in your file manager and PKP keeps running. Quit PKP, then install deb/rpm with your system software installer or package manager. For AppImage, replace the original file manually and relaunch. PKP never writes to system folders or replaces the running app automatically. Accounts and local settings are preserved.",
+    ja: "検証後、ファイルマネージャーにパッケージを表示し、PKP は実行を続けます。PKP を終了してから、システムのインストーラまたはパッケージマネージャーで deb/rpm をインストールしてください。AppImage は元のファイルを手動で置き換えて再起動してください。システムフォルダへの書き込みや実行中のアプリの置き換えは自動では行いません。アカウントとローカル設定は保持されます。",
+    ko: "검증 후 파일 관리자에 설치 파일을 표시하며 PKP는 계속 실행됩니다. PKP를 종료한 다음 시스템 소프트웨어 설치 프로그램이나 패키지 관리자로 deb/rpm을 설치하세요. AppImage는 원본 파일을 직접 교체하고 다시 실행하세요. 시스템 폴더에 쓰거나 실행 중인 앱을 자동으로 교체하지 않습니다. 계정과 로컬 설정은 유지됩니다.",
+  },
 };
 export default messages;

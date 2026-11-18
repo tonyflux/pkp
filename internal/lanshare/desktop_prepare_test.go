@@ -1,4 +1,4 @@
-//go:build windows || (darwin && cgo)
+//go:build windows || ((darwin || linux) && cgo)
 
 package lanshare
 
@@ -390,17 +390,25 @@ func TestDesktopCompatiblePreservesSource(t *testing.T) {
 		suffix = ".exe"
 	}
 	var ffmpeg string
-	for _, dir := range []string{filepath.Dir(exe), filepath.Join(filepath.Dir(exe), "Helpers"), filepath.Join(filepath.Dir(exe), "..", "Helpers")} {
+	dirs := []string{filepath.Dir(exe), filepath.Join(filepath.Dir(exe), "Helpers"), filepath.Join(filepath.Dir(exe), "..", "Helpers")}
+	if runtime.GOOS == "linux" {
+		dirs = []string{filepath.Join(filepath.Dir(exe), "Helpers"), filepath.Dir(exe), "/usr/bin"}
+	}
+	for _, dir := range dirs {
 		candidate := filepath.Join(dir, "ffmpeg"+suffix)
-		if _, err := os.Stat(candidate); err == nil {
-			if _, err := os.Stat(filepath.Join(dir, "ffprobe"+suffix)); err == nil {
-				ffmpeg = candidate
-				break
-			}
+		a, err := os.Stat(candidate)
+		if err != nil || !a.Mode().IsRegular() || (runtime.GOOS == "linux" && a.Mode().Perm()&0o111 == 0) {
+			continue
 		}
+		b, err := os.Stat(filepath.Join(dir, "ffprobe"+suffix))
+		if err != nil || !b.Mode().IsRegular() || (runtime.GOOS == "linux" && b.Mode().Perm()&0o111 == 0) {
+			continue
+		}
+		ffmpeg = candidate
+		break
 	}
 	if ffmpeg == "" {
-		t.Skip("bundled media tools unavailable")
+		t.Skip("installed media tools unavailable")
 	}
 	root, err := filepath.EvalSymlinks(t.TempDir())
 	if err != nil {

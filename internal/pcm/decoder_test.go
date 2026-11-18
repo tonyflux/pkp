@@ -1,4 +1,4 @@
-//go:build windows || (darwin && cgo)
+//go:build windows || ((darwin || linux) && cgo)
 
 package pcm
 
@@ -144,6 +144,19 @@ func TestDecodesWholeFileOnTheMediaTimeline(t *testing.T) {
 	}
 	if p := d.pitch(4500); !near(p, 440, 30) {
 		t.Errorf("pitch at 4.5 s = %.0f Hz, want 440", p)
+	}
+}
+
+func TestLoopbackDecodeIgnoresAmbientProxy(t *testing.T) {
+	for _, key := range []string{"http_proxy", "https_proxy", "HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY", "all_proxy"} {
+		t.Setenv(key, "http://127.0.0.1:1")
+	}
+	t.Setenv("no_proxy", "")
+	t.Setenv("NO_PROXY", "")
+	url := fixture(t, "tones.mp4", tones("-map", "[a]", "-c:a", "aac")...)
+	d := decodeAll(t, url, -1, 0)
+	if !near(float64(d.end), 6000, 50) || !near(d.pitch(1000), 1000, 30) {
+		t.Fatalf("loopback decode through ambient proxy: end=%d pitch=%.0f", d.end, d.pitch(1000))
 	}
 }
 
@@ -350,6 +363,13 @@ func TestReadsOnAfterACancelMidBody(t *testing.T) {
 		w.Write(body)
 	}))
 	defer srv.Close()
+	defer func() {
+		select {
+		case <-release:
+		default:
+			close(release)
+		}
+	}()
 
 	d, err := Open(context.Background(), srv.URL+"/long.mp4", -1, 0)
 	if err != nil {

@@ -12,7 +12,7 @@ import SelectionBar from "./SelectionBar.vue";
 import Thumb from "./Thumb.vue";
 import { bytes, clock, day, shownPath, stamp } from "../format";
 import { t } from "../i18n";
-import { WORKSPACE_QUERY, isTyping, modKey, onWindows, useMedia, useOutsideClick } from "../dom";
+import { WORKSPACE_QUERY, isTyping, modKey, onMac, useMedia, useOutsideClick } from "../dom";
 import { vSlide } from "../slide";
 import {
   accounts,
@@ -629,7 +629,7 @@ function onKeydown(ev: KeyboardEvent) {
   // sheet is up; the page also sits, hidden, under the viewer.
   const sheetUp = !!relocate.mode || !!shares.targets.length || ui.cloudAddOpen || ui.newFolderOpen || renameSheet.entries.length > 0;
   const pageKeys = ui.route === "files" && !sheetUp && !localSearchShown.value && !videoWorksShown.value;
-  const mod = (ev.metaKey || ev.ctrlKey) && !ev.altKey && !ev.shiftKey;
+  const mod = (onMac ? ev.metaKey && !ev.ctrlKey : ev.ctrlKey && !ev.metaKey) && !ev.altKey && !ev.shiftKey;
   const key = ev.key.length === 1 ? ev.key.toLowerCase() : ev.key;
   if (pageKeys && mod && key === "a") {
     ev.preventDefault();
@@ -651,7 +651,7 @@ function onKeydown(ev: KeyboardEvent) {
       void pasteClipboard();
       return;
     }
-    if (!onWindows && ev.metaKey && !ev.ctrlKey && ev.altKey && !ev.shiftKey && (key === "v" || ev.code === "KeyV")) {
+    if (onMac && ev.metaKey && !ev.ctrlKey && ev.altKey && !ev.shiftKey && (key === "v" || ev.code === "KeyV")) {
       ev.preventDefault();
       void pasteClipboard("move");
       return;
@@ -678,7 +678,7 @@ function onKeydown(ev: KeyboardEvent) {
   }
   // Shift+Delete or ⌥⌘⌫ deletes permanently (with confirmation), bypassing Trash.
   const shiftDelete = ev.key === "Delete" && ev.shiftKey && !ev.metaKey && !ev.ctrlKey && !ev.altKey;
-  const optCmdBackspace = !onWindows && ev.key === "Backspace" && ev.metaKey && ev.altKey && !ev.ctrlKey && !ev.shiftKey;
+  const optCmdBackspace = onMac && ev.key === "Backspace" && ev.metaKey && ev.altKey && !ev.ctrlKey && !ev.shiftKey;
   if (pageKeys && (shiftDelete || optCmdBackspace)) {
     const targets = eraseTargets();
     if (!targets.length) return;
@@ -715,7 +715,7 @@ function onKeydown(ev: KeyboardEvent) {
     return;
   }
   // macOS Finder's ⌘↓ opens the selected item (symmetric with ⌘↑ to go up).
-  if (pageKeys && !onWindows && ev.metaKey && !ev.ctrlKey && !ev.altKey && !ev.shiftKey && ev.key === "ArrowDown") {
+  if (pageKeys && onMac && ev.metaKey && !ev.ctrlKey && !ev.altKey && !ev.shiftKey && ev.key === "ArrowDown") {
     const current = selected.value;
     if (current) {
       ev.preventDefault();
@@ -1515,7 +1515,7 @@ watch(
           <button
             class="quiet danger"
             role="menuitem"
-            :title="t('可以在回收站还原；空间要等彻底删除后才释放（{key}）', { key: onWindows ? 'Delete' : `${modKey}⌫` })"
+            :title="t('可以在回收站还原；空间要等彻底删除后才释放（{key}）', { key: onMac ? `${modKey}⌫` : 'Delete' })"
             @click="menuAction((e) => trash([e]))"
           >
             <Icon name="trash" :size="17" /> {{ t("移到回收站") }}

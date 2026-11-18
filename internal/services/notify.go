@@ -307,6 +307,9 @@ func (n *NotifyService) OpenSystemSettings() error {
 	if n.app == nil {
 		return i18n.New("无法打开系统设置")
 	}
+	if runtime.GOOS == "linux" {
+		return openLinuxNotificationSettings()
+	}
 	url := "x-apple.systempreferences:com.apple.preference.notifications"
 	if runtime.GOOS == "windows" {
 		url = "ms-settings:notifications"
@@ -752,6 +755,11 @@ type systemCenter struct {
 }
 
 func (c *systemCenter) start(onClick func(map[string]any)) error {
+	if runtime.GOOS == "linux" {
+		if err := checkNotificationHost(); err != nil {
+			return err
+		}
+	}
 	ns := notifications.New()
 	if err := ns.ServiceStartup(context.Background(), application.ServiceOptions{}); err != nil {
 		return err

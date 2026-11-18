@@ -27,7 +27,7 @@ export interface SurfaceStats {
     "rect": Rect;
 
     /**
-     * Diagnostic is the live AppKit state of the surface. "No picture" has
+     * Diagnostic is the live native state of the surface. "No picture" has
      * several causes that look identical from outside the process, and this
      * is the only place they can be told apart.
      */

@@ -5,7 +5,6 @@ import (
 	"context"
 	"errors"
 	"slices"
-	"strconv"
 	"strings"
 	"time"
 	"unicode"
@@ -359,8 +358,7 @@ func (p *PlayerService) switchTo(ticket uint64, rawURL string, headers map[strin
 	p.dirty = true
 	p.mu.Unlock()
 
-	start := "start=" + strconv.FormatFloat(position, 'f', 3, 64)
-	if err := p.mpv.Command(ctx, "loadfile", handle.URL, "replace", "-1", start); err != nil {
+	if err := p.mpv.LoadFile(ctx, handle.URL, position); err != nil {
 		p.mu.Lock()
 		if p.swap == s {
 			p.swap = nil
@@ -467,7 +465,7 @@ func (p *PlayerService) revert(s *swap, url string, position float64, paused boo
 	defer cancel()
 	err := errors.New("player: nothing to go back to")
 	if url != "" {
-		err = p.mpv.Command(ctx, "loadfile", url, "replace", "-1", "start="+strconv.FormatFloat(position, 'f', 3, 64))
+		err = p.mpv.LoadFile(ctx, url, position)
 	}
 	if err == nil {
 		err = p.mpv.SetProperty(ctx, "pause", paused)

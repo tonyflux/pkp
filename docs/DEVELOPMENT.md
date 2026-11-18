@@ -6,7 +6,7 @@ Copyright (C) 2026 tonyflux. 构建与运行本仓库源码适用根目录 [GPL-
 
 ## 准备
 
-- 以下命令针对 macOS 12 或更新版本，构建 Apple silicon 和 Intel 通用程序；本指南不保证其他宿主平台的原生构建。
+- 下列入门命令针对 macOS 12+；Linux 构建见下文独立章节。macOS 产物同时包含 Apple silicon 和 Intel。
 - 安装 Go 1.26、Node.js 24、Xcode Command Line Tools、CMake 和 Python 3.10 或更新版本；确保 `go`、`node`、`npm`、`cmake`、`python3` 在 `PATH` 中。构建 libmpv 需要网络下载源码和工具。
 - 安装固定版本的 Wails CLI，并将 `$(go env GOPATH)/bin` 加入 `PATH`。即使 `make app-go` 使用 Go 构建，它的前端目标仍需要 `wails3` 生成绑定。
 - 签名私钥只存在仓库外的受保护文件或发布环境 secret 中，不要提交。
@@ -50,6 +50,31 @@ python3 build/darwin/updater-smoke-test.py bin/pkp-updater
 
 CI 复用 macOS 构建产物，在 Windows x64 和 ARM64 上运行同一套 PCM 时间轴、音轨、快进及取消恢复测试，以及字幕会话、会员与配额集成测试。兼容层测试不替代真机播放器界面和安装升级验收。
 
+## Linux 构建
+
+使用 Ubuntu 24.04 的 x86_64／ARM64 原生环境，或 `build/docker/Dockerfile.linux` 的匹配架构容器；不能只设置 `GOOS` 跳过 CGO／系统头文件。安装 Go 1.26、Node.js 24、固定 Wails CLI 和 nFPM v2.43.0；系统开发依赖由该 Dockerfile 列明，包含 GTK4、WebKitGTK 6.0、libmpv、FFmpeg 和 libepoxy。随后运行：
+
+```sh
+npm --prefix frontend ci
+make linux-package ARCH=arm64
+# x86_64 宿主使用 ARCH=amd64；跨架构请在匹配架构容器内构建。
+```
+
+输出为 `bin/PKP-<版本>-linux-<架构>.deb`、`.rpm`、`.AppImage` 与 `-runtime-sources.tar.gz`。deb 使用系统依赖；RPM 与 AppImage 包含 WebKit 的子进程、资源和动态库闭包，使用用户命名空间保持 WebKit 编译时的 `/usr` 路径，不关闭沙箱。构建需启用 Ubuntu `deb-src`，保留 APT 索引，并下载与实际捆绑包版本一致的对应源码及许可证；不能用 macOS／Windows 的固定媒体源码包替代它。
+
+```sh
+go test ./internal/mpv ./internal/pcm ./internal/audiotags ./internal/lanmedia
+PKP_TEST_VIDEO_SURFACE=1 xvfb-run -a go test -tags pkp_surface_test ./internal/mpv -run TestLinuxSurface -count=1
+```
+
+Wayland 在 headless Weston 下运行同一表面测试；CI 同时检查两种协议的帧像素、截图及换窗。真实 GNOME／KDE 的密码库、polkit 认证、通知、图形驱动、休眠和安装升级仍需桌面验收。隔离测试必须设置独立 `PKP_CONFIG_DIR`，不要读写真正账号配置。Linux AI 字幕复用 `internal/pcm/decoder.c`，通过 pkg-config 链接 FFmpeg，不启动解码子进程。LAN 兼容副本使用系统 `/usr/bin/ffmpeg`／`ffprobe` 或 AppImage 私有工具，不搜索 CWD／PATH；Linux H.264 编码使用发行版提供的 libx264。
+
+Linux 文件系统信任边界使用目录描述符、statx／文件系统身份和不跟随链接的操作；递归 inotify 事件触发复核，队列溢出会重新扫描。支持普通 ext4、XFS、Btrfs、tmpfs，拒绝不能可靠表示的网络／FUSE／overlay 与目录折叠语义。容器 CI 为测试挂载独立 tmpfs `/tmp`，不靠「不支持」跳过已有安全回归；回收站不可用时明确失败，不永久删除。
+
+Linux 6.8 可能在立即同大小写入时保留相同 ctime／mtime，不能仅用时间戳授权复用旧哈希。因此 Linux 扫描版本包含内容摘要，同次检查复用摘要、稳定性复核再次读取；大型媒体目录扫描仍有两遍文件读取开销。不要以延时测试或弱化文件身份检查掩盖该限制。
+
+局域网持久文件令牌也对内容做一次指纹验证；持续传输在读取前后检查绑定文件描述符的 inotify 证明，改写、属性变更或事件溢出即撤销，不在每个网络分段重复哈希整部视频。
+
 ## 仓库语言约定
 
 代码注释、开发者诊断、构建输出、内部模型指令和非多语言管理后台使用英文。公开指南提供互链的中英文版本。
@@ -68,7 +93,7 @@ make release-local RELEASE_NOTES=build/release-notes.md
 make release-verify
 ```
 
-这只在本地生成八件附件，不上传：两个安装包、`update.json`、`update.json.sig`、`PKP-<version>-source.tar.gz`、`libmpv-sources.tar.gz`、`LICENSE` 和 `SHA256SUMS`。PKP 自有源码包须包含构建该版本安装包所用的完整对应源码和构建脚本；第三方对应源码单独提供。v0.2.0 已于 2026-11-01 在 GitHub Releases 发布，并带有上述八件附件。macOS 构建仍是 ad hoc 签名、尚未公证，设备验收也不完整。签名密钥不得提交，也不得写入日志。
+默认八件历史附件保持可验证。含 Linux 的发布再加入六个安装包和两个逐架构运行库源码包，共十六件，签名清单保留 `packages` 中的 macOS／Windows 两项，并通过 `linuxPackages` 认证新增附件，旧客户端继续兼容。在 macOS 汇总两种架构 Linux 的构建输出时，传入 `LINUX_RELEASE_DIR=/路径/同一源码构建的Linux附件`；发布前应提交为干净源码快照。构建／签名不等于上传，也不表示平台真机验收或 Apple 公证完成。私钥不得提交或写入日志。
 
 ## 不纳入本仓库的内容
 

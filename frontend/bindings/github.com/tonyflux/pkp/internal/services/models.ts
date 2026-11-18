@@ -580,6 +580,12 @@ export interface AppLockState {
     "unavailable": string;
 
     /**
+     * ScreenshotProtectionAvailable is false where the compositor cannot
+     * exclude a window from capture; redacting locked pages still applies.
+     */
+    "screenshotProtectionAvailable": boolean;
+
+    /**
      * Authenticating: the system's dialog is up.
      */
     "authenticating": boolean;

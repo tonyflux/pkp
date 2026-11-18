@@ -15,7 +15,7 @@ import SubtitleSettings from "./SubtitleSettings.vue";
 import PlaylistQueue from "./PlaylistQueue.vue";
 import RangeSlider from "./RangeSlider.vue";
 import { bytes, clock } from "../format";
-import { onWindows, useOutsideClick } from "../dom";
+import { onMac, revealFileLabel, useOutsideClick } from "../dom";
 import { canChoose } from "../quality";
 import { useStage } from "../stage";
 import { trackDetail, trackLabel } from "../tracks";
@@ -223,7 +223,7 @@ const controlsHidden = computed(() => {
 // The separate window has no frame: its traffic lights belong to the title
 // bar over the picture and come and go with it. On Windows the page draws
 // the caption buttons in that title bar itself.
-if (props.windowed) {
+if (props.windowed && onMac) {
   watch(
     controlsHidden,
     (hidden) => void PlayerService.ShowWindowButtons(!hidden).catch(() => undefined),
@@ -675,7 +675,7 @@ onBeforeUnmount(() => {
         <!-- The separate window's title bar, over the picture with the
              controls; its traffic lights, or on Windows its caption
              buttons, come and go with it. -->
-        <header v-if="windowed" class="titlebar" :class="{ hidden: controlsHidden, win: onWindows }">
+        <header v-if="windowed" class="titlebar" :class="{ hidden: controlsHidden, mac: onMac }">
           <strong class="titlebar-name" :title="nowPlaying?.name">{{ nowPlaying?.name ?? t("PKP 播放器") }}</strong>
           <span v-if="playingOwner" class="titlebar-owner" :title="t('所属账号 · {name}', { name: accountLabel(playingOwner) })">
             <AccountIdentity :account="playingOwner" :size="22" dense />
@@ -683,7 +683,7 @@ onBeforeUnmount(() => {
           <button v-if="nowPlaying" class="icon ghost" :title="t('下载到电脑')" :aria-label="t('下载到电脑')" @click="download">
             <Icon name="download" :size="17" />
           </button>
-          <template v-if="onWindows">
+          <template v-if="!onMac">
             <button class="icon ghost" :title="t('最小化')" :aria-label="t('最小化')" @click="minimiseWindow">
               <Icon name="minus" :size="17" />
             </button>
@@ -706,7 +706,7 @@ onBeforeUnmount(() => {
               <span class="next-name" :title="notice.name">{{ notice.name }}</span>
             </span>
             <button v-if="notice.path" class="quiet" @click="revealScreenshot(notice.path)">
-              {{ onWindows ? t("在资源管理器中显示") : t("在访达中显示") }}
+              {{ revealFileLabel }}
             </button>
           </div>
           <div v-else-if="showNext" key="next" class="next" :class="{ low: controlsHidden, beside: listOpen }">
@@ -1251,7 +1251,7 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 0 12px 16px 96px;
+  padding: 0 8px 16px 18px;
   background: linear-gradient(
     180deg,
     rgba(6, 10, 20, 0.8),
@@ -1270,10 +1270,10 @@ onBeforeUnmount(() => {
   pointer-events: none;
 }
 
-/* Windows: no traffic lights on the left; the caption buttons end the row. */
-.titlebar.win {
-  padding-left: 18px;
-  padding-right: 8px;
+/* Only macOS overlays traffic lights on the content. */
+.titlebar.mac {
+  padding-left: 96px;
+  padding-right: 12px;
 }
 
 .titlebar-name {

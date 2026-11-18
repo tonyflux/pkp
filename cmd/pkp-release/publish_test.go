@@ -17,7 +17,7 @@ import (
 	"github.com/tonyflux/pkp/internal/update"
 )
 
-func releaseFixture(t *testing.T, version string) (string, ed25519.PublicKey) {
+func releaseFixture(t *testing.T, version string, linux bool) (string, ed25519.PublicKey) {
 	t.Helper()
 	pub, key, err := ed25519.GenerateKey(rand.Reader)
 	if err != nil {
@@ -32,6 +32,19 @@ func releaseFixture(t *testing.T, version string) (string, ed25519.PublicKey) {
 		m.Packages[platform] = update.Package{URL: update.AssetURL(m.Version, name), Size: int64(len(body)), SHA256: hex.EncodeToString(digest[:]), MinOS: "12.0"}
 		if err := os.WriteFile(filepath.Join(dir, name), body, 0600); err != nil {
 			t.Fatal(err)
+		}
+	}
+	if linux {
+		m.LinuxPackages = make(map[string]update.Package, 8)
+		for _, arch := range [...]string{"amd64", "arm64"} {
+			for _, format := range [...]string{"deb", "rpm", "appimage", "sources"} {
+				platform := "linux-" + arch + "-" + format
+				name := update.PackageName(version, platform)
+				m.LinuxPackages[platform] = update.Package{URL: update.AssetURL(version, name), Size: int64(len(body)), SHA256: hex.EncodeToString(digest[:]), MinOS: "2.39"}
+				if err := os.WriteFile(filepath.Join(dir, name), body, 0600); err != nil {
+					t.Fatal(err)
+				}
+			}
 		}
 	}
 	if requiresSource(version) {
@@ -58,7 +71,7 @@ func releaseFixture(t *testing.T, version string) (string, ed25519.PublicKey) {
 		}
 	}
 	var sums strings.Builder
-	names := releaseAssets(m.Version)
+	names := releaseAssets(m.Manifest)
 	for _, name := range names[:len(names)-1] {
 		digest, err := fileDigest(filepath.Join(dir, name))
 		if err != nil {
@@ -83,10 +96,10 @@ func TestReleaseSourceContractByVersion(t *testing.T) {
 		{"1.0.0", 8},
 	} {
 		t.Run(test.version, func(t *testing.T) {
-			if got := len(releaseAssets(test.version)); got != test.assets {
+			if got := len(releaseAssets(update.Manifest{Version: test.version})); got != test.assets {
 				t.Fatalf("release assets=%d, want %d", got, test.assets)
 			}
-			dir, _ := releaseFixture(t, test.version)
+			dir, _ := releaseFixture(t, test.version, false)
 			data, err := os.ReadFile(filepath.Join(dir, "update.json"))
 			if err != nil {
 				t.Fatal(err)
@@ -124,7 +137,7 @@ func TestVerifyReleaseRejectsUnsafeOrIncompletePublication(t *testing.T) {
 				if !requiresSource(version) && (scenario == "corrupt-own-source" || scenario == "missing-own-source") {
 					t.Skip("historical release has no own source asset")
 				}
-				dir, pub := releaseFixture(t, version)
+				dir, pub := releaseFixture(t, version, false)
 				write := func(name string, data []byte) {
 					t.Helper()
 					if err := os.WriteFile(filepath.Join(dir, name), data, 0600); err != nil {
@@ -189,6 +202,39 @@ func TestVerifyReleaseRejectsUnsafeOrIncompletePublication(t *testing.T) {
 				}
 			})
 		}
+	}
+}
+
+func TestLinuxReleaseAuthenticatesInstallersAndCorrespondingSources(t *testing.T) {
+	for _, format := range []string{"deb", "rpm", "appimage", "sources"} {
+		t.Run(format, func(t *testing.T) {
+			dir, pub := releaseFixture(t, "0.7.1", true)
+			m, err := verifyRelease(dir, pub)
+			if err != nil {
+				t.Fatal(err)
+			}
+			name := update.PackageName(m.Version, "linux-arm64-"+format)
+			if err := os.WriteFile(filepath.Join(dir, name), []byte("replacement"), 0600); err != nil {
+				t.Fatal(err)
+			}
+			var sums strings.Builder
+			for _, asset := range releaseAssets(m) {
+				if asset == "SHA256SUMS" {
+					continue
+				}
+				digest, err := fileDigest(filepath.Join(dir, asset))
+				if err != nil {
+					t.Fatal(err)
+				}
+				sums.WriteString(digest + "  " + asset + "\n")
+			}
+			if err := os.WriteFile(filepath.Join(dir, "SHA256SUMS"), []byte(sums.String()), 0600); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := verifyRelease(dir, pub); err == nil {
+				t.Fatal("Linux asset replaced using only an unsigned checksum")
+			}
+		})
 	}
 }
 

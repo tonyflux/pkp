@@ -7,16 +7,17 @@ import re
 import subprocess
 import sys
 
-if len(sys.argv) != 3 or sys.argv[1] not in ("darwin", "windows"):
-    sys.exit("usage: python3 build/go-licenses.py darwin|windows OUTPUT")
+if len(sys.argv) != 3 or sys.argv[1] not in ("darwin", "windows", "linux"):
+    sys.exit("usage: python3 build/go-licenses.py darwin|windows|linux OUTPUT")
 
 target, output = sys.argv[1:]
 root = Path(__file__).resolve().parent.parent
 name = re.compile(r"^(license|licence|copying|notice|copyright|patents)(?:[._-]|$)", re.I)
 modules = {}
-for arch in ("amd64", "arm64"):
+architectures = (subprocess.check_output(["go", "env", "GOARCH"], text=True).strip(),) if target == "linux" else ("amd64", "arm64")
+for arch in architectures:
     env = os.environ.copy()
-    env.update(GOOS=target, GOARCH=arch, CGO_ENABLED="1" if target == "darwin" else "0")
+    env.update(GOOS=target, GOARCH=arch, CGO_ENABLED="0" if target == "windows" else "1")
     data = subprocess.check_output(
         ["go", "list", "-deps", "-json", "-tags", "production", "."],
         cwd=root, env=env, text=True,
@@ -55,7 +56,7 @@ for arch in ("amd64", "arm64"):
         if not files:
             raise SystemExit(f'No license or notice files found for {key}')
 
-parts = [f"PKP Go runtime third-party notices ({target}, amd64 and arm64)\n"]
+parts = [f"PKP Go runtime third-party notices ({target}, {', '.join(architectures)})\n"]
 for key, files in sorted(modules.items()):
     parts.append(f'\n{"=" * 72}\n{key}\n')
     for file in sorted(files):

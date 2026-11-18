@@ -49,6 +49,17 @@ type Manifest struct {
 	PublishedAt string             `json:"publishedAt"`
 	Notes       string             `json:"notes"`
 	Packages    map[string]Package `json:"packages"`
+	// LinuxPackages is outside packages so older macOS/Windows clients keep
+	// their exact two-platform contract while authenticating the same bytes.
+	LinuxPackages map[string]Package `json:"linuxPackages,omitempty"`
+}
+
+func (m Manifest) Package(platform string) (Package, bool) {
+	if p, ok := m.Packages[platform]; ok {
+		return p, true
+	}
+	p, ok := m.LinuxPackages[platform]
+	return p, ok
 }
 
 // Version accepts stable three-part versions only. Unknown and development builds
@@ -141,6 +152,14 @@ func PackageName(version, platform string) string {
 		return "PKP-" + version + "-macos-universal.dmg"
 	case "windows-x64-arm64":
 		return "PKP-" + version + "-windows-x64-arm64-setup.exe"
+	case "linux-amd64-deb", "linux-arm64-deb":
+		return "PKP-" + version + "-linux-" + strings.TrimSuffix(strings.TrimPrefix(platform, "linux-"), "-deb") + ".deb"
+	case "linux-amd64-rpm", "linux-arm64-rpm":
+		return "PKP-" + version + "-linux-" + strings.TrimSuffix(strings.TrimPrefix(platform, "linux-"), "-rpm") + ".rpm"
+	case "linux-amd64-appimage", "linux-arm64-appimage":
+		return "PKP-" + version + "-linux-" + strings.TrimSuffix(strings.TrimPrefix(platform, "linux-"), "-appimage") + ".AppImage"
+	case "linux-amd64-sources", "linux-arm64-sources":
+		return "PKP-" + version + "-linux-" + strings.TrimSuffix(strings.TrimPrefix(platform, "linux-"), "-sources") + "-runtime-sources.tar.gz"
 	default:
 		return ""
 	}
@@ -161,6 +180,21 @@ func (m Manifest) Validate() error {
 		digest, err := hex.DecodeString(p.SHA256)
 		if !ok || p.Size <= 0 || p.Size > MaxPackage || err != nil || len(digest) != sha256.Size || !SupportsOS(p.MinOS, p.MinOS) || p.URL != AssetURL(m.Version, PackageName(m.Version, platform)) {
 			return ErrManifest
+		}
+	}
+	if m.LinuxPackages != nil {
+		if len(m.LinuxPackages) != 8 {
+			return ErrManifest
+		}
+		for _, arch := range [...]string{"amd64", "arm64"} {
+			for _, format := range [...]string{"deb", "rpm", "appimage", "sources"} {
+				platform := "linux-" + arch + "-" + format
+				p, ok := m.LinuxPackages[platform]
+				digest, err := hex.DecodeString(p.SHA256)
+				if !ok || p.Size <= 0 || p.Size > MaxPackage || err != nil || len(digest) != sha256.Size || p.MinOS != "2.39" || p.URL != AssetURL(m.Version, PackageName(m.Version, platform)) {
+					return ErrManifest
+				}
+			}
 		}
 	}
 	return nil
@@ -304,6 +338,11 @@ func (c *Client) Latest(ctx context.Context) (Manifest, error) {
 		return empty, ErrManifest
 	}
 	for platform, p := range m.Packages {
+		if assets[PackageName(version, platform)] != p.URL {
+			return empty, ErrManifest
+		}
+	}
+	for platform, p := range m.LinuxPackages {
 		if assets[PackageName(version, platform)] != p.URL {
 			return empty, ErrManifest
 		}

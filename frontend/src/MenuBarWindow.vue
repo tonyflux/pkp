@@ -12,7 +12,7 @@ import { DriveService, MenuBarService } from "../bindings/github.com/tonyflux/pk
 import type { Account, MenuBarState } from "../bindings/github.com/tonyflux/pkp/internal/services";
 import Icon from "./components/Icon.vue";
 import Logo from "./components/Logo.vue";
-import { onWindows } from "./dom";
+import { onMac } from "./dom";
 import { t } from "./i18n";
 import { countLine, inboxCard, panelCard, windowLine } from "./menubar";
 import { accountLabel } from "./store";
@@ -129,7 +129,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <main ref="panel" class="menubar" tabindex="-1" :aria-label="onWindows ? t('PKP 系统托盘状态') : t('PKP 菜单栏状态')">
+  <main ref="panel" class="menubar" tabindex="-1" :aria-label="onMac ? t('PKP 菜单栏状态') : t('PKP 系统托盘状态')">
     <div ref="body" class="body">
       <header class="head">
         <Logo :size="38" />
@@ -240,7 +240,7 @@ onBeforeUnmount(() => {
       <footer class="footer">
         <button v-if="locked" type="button" @click="open('app')">{{ t("解锁 PKP") }} <span aria-hidden="true">↗</span></button>
         <button v-else type="button" @click="open('app')">{{ t("打开 PKP") }} <span aria-hidden="true">↗</span></button>
-        <button type="button" class="quit" @click="quit">{{ t("退出 PKP") }} <span v-if="!onWindows" aria-hidden="true">⌘ Q</span></button>
+        <button type="button" class="quit" @click="quit">{{ t("退出 PKP") }} <span v-if="onMac" aria-hidden="true">⌘ Q</span></button>
       </footer>
     </div>
   </main>

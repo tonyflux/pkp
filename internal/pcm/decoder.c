@@ -1,4 +1,4 @@
-//go:build darwin && cgo
+//go:build (darwin || linux) && cgo
 
 #include "decoder.h"
 
@@ -69,6 +69,8 @@ int pkp_pcm_open(pkp_pcm *p, const char *url, int stream, int64_t from_ms) {
 	// A connection that stops delivering must fail, not hang the caller.
 	AVDictionary *opts = NULL;
 	av_dict_set(&opts, "rw_timeout", "20000000", 0);
+	// The Go loopback proxy owns upstream routing, never the process environment.
+	av_dict_set(&opts, "http_proxy", "", 0);
 	int ret = avformat_open_input(&p->fmt, url, NULL, &opts);
 	av_dict_free(&opts);
 	if (ret < 0) {
@@ -155,7 +157,8 @@ static int reserve(pkp_pcm *p, int bytes) {
 	return 0;
 }
 
-static int configure(pkp_pcm *p, const AVFrame *f) {
+// FFmpeg 6 requires a mutable input layout in swr_alloc_set_opts2.
+static int configure(pkp_pcm *p, AVFrame *f) {
 	if (p->swr != NULL && f->sample_rate == p->in_rate && f->format == p->in_format &&
 	    av_channel_layout_compare(&f->ch_layout, &p->in_layout) == 0) {
 		return 0;
@@ -200,7 +203,7 @@ static int emit(pkp_pcm *p, int got, int64_t ms, const uint8_t **data, int *len,
 	return 1;
 }
 
-static int convert(pkp_pcm *p, const AVFrame *f, const uint8_t **data, int *len, int64_t *pos_ms) {
+static int convert(pkp_pcm *p, AVFrame *f, const uint8_t **data, int *len, int64_t *pos_ms) {
 	if (f->nb_samples <= 0 || f->sample_rate <= 0) {
 		return 0;
 	}

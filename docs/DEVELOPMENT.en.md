@@ -6,7 +6,7 @@ Copyright (C) 2026 tonyflux. Building and running this repository’s source cod
 
 ## Prerequisites
 
-- These commands target macOS 12 or later and build a universal Apple silicon and Intel app; native builds on other hosts are outside this guide's scope.
+- The quick-start commands below target macOS 12+ and build a universal Apple silicon/Intel app; Linux has a separate section below.
 - Install Go 1.26, Node.js 24, Xcode Command Line Tools, CMake, and Python 3.10 or later; ensure `go`, `node`, `npm`, `cmake`, and `python3` are on `PATH`. Building libmpv downloads sources and tools and requires network access.
 - Install the pinned Wails CLI and add `$(go env GOPATH)/bin` to `PATH`. Although `make app-go` uses Go to build, its frontend target still needs `wails3` to generate bindings.
 - Keep signing private keys only in protected files outside the repository or in release-environment secrets; never commit them.
@@ -50,6 +50,31 @@ On the macOS host above, `make windows` builds x64 and ARM64 executables; these 
 
 CI reuses the macOS-built artifacts to run the same PCM timeline, audio-track, seeking and cancellation-recovery tests plus subtitle session, membership and quota integration tests on Windows x64 and ARM64. Compatibility-layer execution does not replace real-device player UI or installation/upgrade acceptance.
 
+## Linux builds
+
+Use native x86_64/ARM64 Ubuntu 24.04 or a matching-architecture container from `build/docker/Dockerfile.linux`; setting `GOOS` alone cannot replace CGO/system headers. Install Go 1.26, Node.js 24, the pinned Wails CLI and nFPM v2.43.0. The Dockerfile lists system build dependencies, including GTK4, WebKitGTK 6.0, libmpv, FFmpeg and libepoxy. Then run:
+
+```sh
+npm --prefix frontend ci
+make linux-package ARCH=arm64
+# Use ARCH=amd64 on x86_64; build other architectures inside a matching container.
+```
+
+Outputs are `bin/PKP-<version>-linux-<arch>.deb`, `.rpm`, `.AppImage`, and `-runtime-sources.tar.gz`. Deb uses distribution dependencies. RPM and AppImage include WebKit child processes, resources and the dynamic-library closure; a user namespace preserves compiled `/usr` paths without disabling the sandbox. Enable Ubuntu `deb-src` and retain APT indexes: packaging downloads exact corresponding sources and notices for the packages actually bundled. The pinned macOS/Windows media-source archive is not a substitute.
+
+```sh
+go test ./internal/mpv ./internal/pcm ./internal/audiotags ./internal/lanmedia
+PKP_TEST_VIDEO_SURFACE=1 xvfb-run -a go test -tags pkp_surface_test ./internal/mpv -run TestLinuxSurface -count=1
+```
+
+Run the same surface test under headless Weston for Wayland. CI checks frame pixels, capture and window reparenting on both protocols. Real GNOME/KDE keyrings, polkit, notifications, GPU drivers, power management and installation/upgrades still require desktop acceptance. Use an isolated `PKP_CONFIG_DIR`, never real account state. Linux AI subtitles share `internal/pcm/decoder.c` and link FFmpeg through pkg-config without decoder subprocesses. LAN compatibility copies use absolute system `/usr/bin/ffmpeg`/`ffprobe` or private AppImage tools, never CWD/PATH discovery; Linux H.264 encoding uses the distribution's libx264.
+
+The Linux filesystem trust boundary uses pinned directory descriptors, statx/filesystem identities and no-follow operations. Recursive inotify changes trigger revalidation and queue overflow causes a rescan. Ordinary ext4, XFS, Btrfs and tmpfs are supported; unrepresentable network/FUSE/overlay or directory-folding semantics are refused. Container CI mounts tmpfs `/tmp` so existing safety regressions execute rather than skip as unsupported. Unavailable Trash fails explicitly without permanent deletion.
+
+Linux 6.8 may preserve ctime/mtime across immediate same-size writes, so timestamps cannot authorize reuse of a cached content hash. Linux versions therefore include a content digest, reused within the operation and read again for stability verification. Large media scans still incur two content passes; do not hide this limit with delayed tests or weaker identity checks.
+
+Persistent LAN file tokens also fingerprint contents once for validation. Streaming checks a pinned-descriptor inotify proof before and after reads; writes, attribute changes or event overflow revoke it without rehashing an entire video for every network buffer.
+
 ## Repository language
 
 Use English for code comments, developer diagnostics, build output, internal model instructions, and non-localized administration pages. Public guides have linked English and Simplified Chinese versions.
@@ -68,7 +93,7 @@ make release-local RELEASE_NOTES=build/release-notes.md
 make release-verify
 ```
 
-This only generates eight assets locally; it does not upload them: two installers, `update.json`, `update.json.sig`, `PKP-<version>-source.tar.gz`, `libmpv-sources.tar.gz`, `LICENSE`, and `SHA256SUMS`. The PKP-owned source archive must contain the complete corresponding source and build scripts used for that version's installers; third-party corresponding source is provided separately. v0.2.0 is published on GitHub Releases (2026-11-01) with those eight assets. macOS builds remain ad hoc signed, notarization is still absent, and device acceptance is incomplete. Signing keys must not be committed or written to logs.
+Historical eight-asset releases remain verifiable. A Linux-inclusive release adds six packages and two per-architecture runtime-source archives, for sixteen assets. The signed manifest keeps the two legacy `packages` entries and authenticates additions in `linuxPackages`, preserving older clients. On the macOS signing host, supply `LINUX_RELEASE_DIR=/path/to/Linux/assets/from/the/same/source` to assemble both architectures. Commit a clean source snapshot before release. Building/signing does not upload or complete device acceptance/Apple notarization. Never commit signing keys or print them in logs.
 
 ## Content Excluded from This Repository
 

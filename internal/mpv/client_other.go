@@ -1,4 +1,4 @@
-//go:build !darwin && !windows
+//go:build !darwin && !windows && !linux
 
 package mpv
 
@@ -10,8 +10,7 @@ import (
 )
 
 // Client is the placeholder where no backend exists: embedded playback
-// needs a native surface under a transparent webview, and only macOS and
-// Windows have one so far.
+// needs a native surface under a transparent webview.
 //
 // Every method fails loudly rather than silently doing nothing, so a build
 // for another platform cannot look like it works.
@@ -46,6 +45,8 @@ func (c *Client) SurfaceStats() SurfaceStats { return SurfaceStats{} }
 func (c *Client) Capture(context.Context) (*image.RGBA, error) { return nil, ErrUnsupported }
 
 func (c *Client) Command(context.Context, ...any) error { return ErrUnsupported }
+
+func (c *Client) LoadFile(context.Context, string, float64) error { return ErrUnsupported }
 
 func (c *Client) GetProperty(context.Context, string, any) error { return ErrUnsupported }
 

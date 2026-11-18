@@ -1,7 +1,6 @@
-//go:build !darwin
+//go:build !darwin && (!linux || !cgo)
 
 package netproxy
 
-// readSystemProxy has nothing to read outside macOS: the environment is all
-// a desktop process is told, and System falls back to it.
+// Builds without a native desktop-settings backend use the environment.
 func readSystemProxy() (SystemInfo, bool) { return SystemInfo{}, false }

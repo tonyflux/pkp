@@ -11,7 +11,7 @@ import { computed, nextTick, onMounted, ref } from "vue";
 import Icon from "./Icon.vue";
 import SelectMenu, { type SelectOption } from "./SelectMenu.vue";
 import Toggle from "./Toggle.vue";
-import { onWindows } from "../dom";
+import { onMac, onWindows } from "../dom";
 import { t } from "../i18n";
 import { vSlide } from "../slide";
 import {
@@ -42,7 +42,9 @@ const methodNote = computed(() => {
   if (byPassword.value) return t("独立密码：只认这台电脑上的 PKP 密码，不依赖系统账户");
   if (state.value && !state.value.available)
     return t("系统验证不可用：{reason}。可以改用独立密码", { reason: state.value.unavailable || t("这台电脑无法弹出系统身份验证") });
-  return onWindows ? t("系统验证：Windows Hello（PIN、指纹或面部）") : t("系统验证：Touch ID 或这台 Mac 的登录密码");
+  return onWindows ? t("系统验证：Windows Hello（PIN、指纹或面部）")
+    : onMac ? t("系统验证：Touch ID 或这台 Mac 的登录密码")
+    : t("系统验证：由桌面环境通过 polkit 验证当前系统账户");
 });
 
 const passwordTitle = computed(() => (byPassword.value ? t("PKP 独立密码") : t("备用独立密码")));
@@ -116,7 +118,7 @@ const note = computed(() => {
               <h3>{{ t("应用锁") }}</h3>
               <p>{{ t("解锁方式二选一：这台电脑的系统验证，或 PKP 独立密码") }}</p>
             </div>
-            <Toggle :model-value="enabled" :label="t('开启应用锁')" :disabled="busy || !state" @update:model-value="setAppLockEnabled" />
+            <Toggle :model-value="enabled" :label="t('开启应用锁')" :disabled="busy || !state || (!enabled && !byPassword && !state.available)" @update:model-value="setAppLockEnabled" />
           </div>
           <p v-if="note" class="note" role="status">{{ note }}</p>
 
@@ -134,7 +136,7 @@ const note = computed(() => {
                 role="radio"
                 :aria-checked="!byPassword"
                 :class="{ on: !byPassword }"
-                :disabled="busy || !state"
+                :disabled="busy || !state?.available"
                 @click="setAppLockMethod('system')"
               >
                 {{ t("系统验证") }}
@@ -214,10 +216,11 @@ const note = computed(() => {
             <span class="small-icon" aria-hidden="true"><Icon name="laptop" :size="17" /></span>
             <div class="row-text">
               <strong>{{ t("锁定时隐藏内容") }}</strong>
-              <small>{{ onWindows ? t("窗口预览和系统托盘不展示账号与私人文件名") : t("窗口预览和菜单栏不展示账号与私人文件名") }}</small>
+              <small>{{ state?.screenshotProtectionAvailable ? (onMac ? t("窗口预览和菜单栏不展示账号与私人文件名") : t("窗口预览和系统托盘不展示账号与私人文件名")) : t("锁屏不显示文件、账号和任务详情；解锁后回到之前的位置。") }}</small>
             </div>
             <span class="always">{{ t("始终开启") }}</span>
           </div>
+          <p v-if="state && !state.screenshotProtectionAvailable" class="note" role="note">{{ t("Linux 无法保证阻止截图、录屏或桌面窗口预览。应用锁会隐藏 PKP 内的内容，但不能清除桌面环境已保存的画面。") }}</p>
         </div>
 
         <div class="section-title"><span>{{ t("快速操作") }}</span><span class="line" aria-hidden="true"></span></div>

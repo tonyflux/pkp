@@ -1,0 +1,11 @@
+abi <abi/4.0>,
+include <tunables/global>
+
+# Keep WebKit's own bubblewrap sandbox; permit its user namespace creation.
+profile pkp /usr/lib/pkp/pkp flags=(unconfined) {
+  userns,
+}
+
+profile pkp-runtime /opt/pkp/runtime/AppRun flags=(unconfined) {
+  userns,
+}
