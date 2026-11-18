@@ -2,6 +2,12 @@
 
 [简体中文](CHANGELOG.md) · English
 
+## Unreleased
+
+- Add panel background opacity (0–100%) under Settings → General, preserving the existing appearance by default and honoring reduce-transparency overrides.
+
+- Refine the desktop workspace with thumbnail-focused image and video grids, compact cards for other files, and clearer filters, navigation and privacy settings. List view, file actions, light and dark modes, accent colors and custom wallpapers remain available.
+
 ## 0.7.1 · 2026-11-18
 
 - Improve the usage-statistics dashboard on phones: adapt date filters, cards, charts and tables to narrow screens, support touch inspection and keep chart tooltips within the page.

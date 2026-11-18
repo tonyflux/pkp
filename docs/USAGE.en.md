@@ -4,6 +4,12 @@
 
 This document describes current product behavior and does not imply that a public release is available. See the [Installation Guide](INSTALL.en.md) for installation status and platform limitations.
 
+## Appearance
+
+Under “Settings → General,” set panel background opacity from 0–100%. The default, 100%, preserves the existing theme; lower values let built-in or custom wallpapers show through. This affects background panels only: dialogs, menus, and playback surfaces remain protected rather than becoming transparent. Low opacity or a busy wallpaper may make text difficult to read; increase opacity or enable “Reduce transparency” if needed.
+
+The application or system “Reduce transparency” setting overrides this control and disables the slider while enabled. Your chosen percentage is retained and takes effect again once both overrides are disabled.
+
 ## Accounts and Files
 
 Sign in with your own PikPak account. QR sign-in is selected by default: scan the code with the PikPak app and confirm on your phone to enter your drive. Refresh an expired code to try again. Adding accounts and reauthentication also support QR sign-in; when reauthenticating, select the matching account on your phone. QR codes contain temporary authorization information; do not publish screenshots or forward them.

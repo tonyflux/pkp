@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { canPasteHere, clipboard, copyToClipboard, drive, holePath, matchesCategory, pickShuffle, proxyDraftError, shareStatus, sortEntries, ui } from "./store";
+import { canPasteHere, clipboard, copyToClipboard, drive, holePath, matchesCategory, pickShuffle, proxyDraftError, setContentOpacity, setReduceTransparency, shareStatus, sortEntries, ui } from "./store";
 import type { DriveStatus, Entry, ShareSummary } from "../bindings/github.com/tonyflux/pkp/internal/services";
 
 const entry = (p: Partial<Entry>): Entry => ({ id: "", name: "", size: 0, modifiedTime: "", category: "other", ...p } as Entry);
@@ -102,5 +102,30 @@ describe("clipboard", () => {
     clipboard.mode = "";
     clipboard.items = [];
     drive.status = null;
+  });
+});
+
+describe("content opacity", () => {
+  it("retains the chosen opacity while reduced transparency overrides it", () => {
+    setContentOpacity(83);
+    expect(localStorage.getItem("pkp.contentOpacity")).toBe("83");
+    expect(document.documentElement.style.getPropertyValue("--content-opacity")).toBe("83%");
+    setReduceTransparency(true);
+    expect(document.documentElement.dataset.transparency).toBe("reduced");
+    expect(ui.contentOpacity).toBe(83);
+    setReduceTransparency(false);
+    expect(document.documentElement.dataset.transparency).toBeUndefined();
+    expect(document.documentElement.style.getPropertyValue("--content-opacity")).toBe("83%");
+    setContentOpacity(-1);
+    expect(ui.contentOpacity).toBe(0);
+    expect(localStorage.getItem("pkp.contentOpacity")).toBe("0");
+    expect(document.documentElement.style.getPropertyValue("--content-opacity")).toBe("0%");
+    expect(document.documentElement.style.getPropertyValue("--wallpaper-visibility")).toBe("1");
+    setContentOpacity(101);
+    expect(ui.contentOpacity).toBe(100);
+    setContentOpacity(Number.NaN);
+    expect(ui.contentOpacity).toBe(100);
+    localStorage.removeItem("pkp.contentOpacity");
+    localStorage.removeItem("pkp.reduceTransparency");
   });
 });

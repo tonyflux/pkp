@@ -43,6 +43,19 @@ import {
 } from "../store";
 
 const search = ref<HTMLInputElement>();
+const settingsSearchButton = ref<HTMLButtonElement>();
+const settingsSearchOpen = ref(false);
+
+async function focusSearch() {
+  if (ui.route === "settings") settingsSearchOpen.value = true;
+  await nextTick();
+  search.value?.focus();
+  search.value?.select();
+}
+
+watch(() => ui.route, (route) => {
+  if (route !== "settings") settingsSearchOpen.value = false;
+});
 
 const backTitle = computed(() =>
   t("{name}（{note}）", {
@@ -227,21 +240,18 @@ function onSearchKey(event: KeyboardEvent) {
 }
 
 // ⌘K / ⌘F (shortcuts.ts) put the cursor in the box.
-useCommand("search", () => {
-  search.value?.focus();
-  search.value?.select();
-});
+useCommand("search", () => void focusSearch());
 
-watch(() => savedHistoryFocus.serial, async () => {
-  await nextTick();
-  search.value?.focus();
-  search.value?.select();
-});
+watch(() => savedHistoryFocus.serial, () => void focusSearch());
 
 function onKey(event: KeyboardEvent) {
   if (event.key === "Escape" && document.activeElement === search.value) {
     searchModel.value = "";
     search.value?.blur();
+    if (ui.route === "settings") {
+      settingsSearchOpen.value = false;
+      void nextTick(() => settingsSearchButton.value?.focus());
+    }
   }
 }
 
@@ -266,7 +276,17 @@ onUnmounted(() => window.removeEventListener("keydown", onKey));
       <AccountAvatar :account="currentAccount" :size="32" />
     </button>
 
-    <template v-if="assistant">
+    <template v-if="ui.route === 'settings' && !settingsSearchOpen">
+      <div class="toolbar-spacer" />
+      <button ref="settingsSearchButton" class="quiet toolbar-action" type="button" style="--wails-draggable: no-drag" :aria-label="t('搜索文件或文件夹')" :title="t('搜索文件或文件夹')" @click="focusSearch">
+        <Icon name="search" :size="18" />
+      </button>
+      <button class="quiet toolbar-action" type="button" style="--wails-draggable: no-drag" :aria-label="t('云添加')" :title="t('云添加')" @click="ui.cloudAddOpen = true">
+        <Icon name="cloudAdd" :size="20" />
+      </button>
+    </template>
+
+    <template v-else-if="assistant">
       <div class="title">
         <Icon name="spark" :size="20" />
         <strong>{{ assistantTitle }}</strong>
@@ -420,7 +440,7 @@ onUnmounted(() => window.removeEventListener("keydown", onKey));
       </button>
 
       <button v-if="ui.route !== 'sync'" class="primary cloud" style="--wails-draggable: no-drag" :aria-label="t('云添加')" @click="ui.cloudAddOpen = true">
-        <Icon name="cloudAdd" :size="22" />
+        <Icon name="cloudAdd" :size="20" />
         <span class="label">{{ t("云添加") }}</span>
       </button>
     </template>
@@ -431,11 +451,12 @@ onUnmounted(() => window.removeEventListener("keydown", onKey));
 
 <style scoped>
 .toolbar {
+  flex: none;
   display: flex;
   align-items: center;
-  gap: 18px;
-  height: 60px;
-  padding: 0 8px;
+  gap: 8px;
+  height: 56px;
+  padding: 0 16px;
   border-radius: var(--radius-island);
 }
 
@@ -467,26 +488,23 @@ onUnmounted(() => window.removeEventListener("keydown", onKey));
   display: flex;
   align-items: center;
   gap: 0;
-  height: 44px;
-  padding: 0 2px;
-  border-radius: var(--radius-pill);
-  margin-right: 2px;
+  height: 40px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
 .nav-buttons button {
-  width: 44px;
+  width: 40px;
   height: 40px;
   min-height: 40px;
   color: var(--fg);
 }
 
-.nav-buttons button:first-child {
-  border-right: 1px solid color-mix(in srgb, var(--glass-rim) 18%, transparent);
-  border-radius: 999px 0 0 999px;
-}
-
+.nav-buttons button:first-child,
 .nav-buttons button:last-child {
-  border-radius: 0 999px 999px 0;
+  border-radius: 10px;
 }
 
 .search {
@@ -494,11 +512,12 @@ onUnmounted(() => window.removeEventListener("keydown", onKey));
   min-width: 0;
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding: 0 10px 0 18px;
-  height: 44px;
-  border-radius: var(--radius-pill);
+  gap: 10px;
+  padding: 0 10px 0 14px;
+  height: 40px;
+  border-radius: 10px;
   color: var(--fg-dim);
+  background: color-mix(in srgb, var(--fg) 5%, transparent);
   transition: background var(--dur) var(--ease), border-color var(--dur) var(--ease);
 }
 
@@ -506,6 +525,7 @@ onUnmounted(() => window.removeEventListener("keydown", onKey));
 .search:focus-within {
   background: color-mix(in srgb, var(--canvas) 70%, var(--glass-inset));
   border-color: color-mix(in srgb, var(--accent) 70%, transparent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 20%, transparent);
 }
 
 .search > svg {
@@ -519,7 +539,7 @@ onUnmounted(() => window.removeEventListener("keydown", onKey));
   border: none;
   background: none;
   color: var(--fg);
-  font-size: 16px;
+  font-size: 14px;
 }
 
 .search input:focus {
@@ -544,7 +564,7 @@ onUnmounted(() => window.removeEventListener("keydown", onKey));
   top: calc(100% + 14px);
   left: 0;
   right: 0;
-  min-width: 300px;
+  min-width: min(300px, calc(100vw - 32px));
   max-height: min(460px, calc(100dvh - 120px));
   overflow-y: auto;
   padding: 8px;
@@ -643,14 +663,14 @@ onUnmounted(() => window.removeEventListener("keydown", onKey));
 kbd {
   display: grid;
   place-items: center;
-  width: 24px;
-  height: 24px;
+  width: 22px;
+  height: 22px;
   font-family: inherit;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 500;
-  border-radius: 6px;
-  border: 1px solid color-mix(in srgb, var(--glass-rim) 30%, transparent);
-  background: color-mix(in srgb, var(--glass-control) 70%, transparent);
+  border-radius: 5px;
+  border: 1px solid var(--line);
+  background: transparent;
   color: var(--fg-dim);
 }
 
@@ -663,27 +683,42 @@ kbd {
 
 .panel-toggle {
   flex: none;
-  width: 44px;
-  height: 44px;
-  min-height: 44px;
+  width: 40px;
+  height: 40px;
+  min-height: 40px;
   padding: 0;
-  border-radius: 18px;
+  border-radius: 10px;
   color: var(--fg);
 }
 
 .panel-toggle.on {
+  color: var(--accent);
   background: var(--accent-soft);
-  border-color: color-mix(in srgb, var(--accent) 35%, transparent);
+  border-color: transparent;
 }
 
 .cloud {
   flex: none;
-  min-width: 180px;
-  height: 46px;
-  min-height: 46px;
-  padding: 0 24px;
-  gap: 10px;
-  font-size: 16px;
+  min-width: 120px;
+  height: 40px;
+  min-height: 40px;
+  padding: 0 16px;
+  gap: 8px;
+  font-size: 14px;
+}
+
+.toolbar-action {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  min-height: 40px;
+  padding: 0;
+  border-radius: 10px;
+}
+
+.toolbar-spacer {
+  flex: 1;
+  min-width: 0;
 }
 
 /* AI Assistant: the page's name where the search would be;
@@ -761,12 +796,16 @@ kbd {
 
 .ai-settings {
   flex: none;
-  width: 38px;
-  height: 38px;
-  min-height: 38px;
-  margin-right: 6px;
+  width: 40px;
+  height: 40px;
+  min-height: 40px;
   padding: 0;
-  border-radius: 12px;
+  border-radius: 10px;
+}
+
+.toolbar button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
 }
 
 @media (max-width: 700px) {
@@ -811,10 +850,6 @@ kbd {
 }
 
 @media (max-width: 1279px) {
-  .toolbar {
-    gap: 12px;
-  }
-
   .cloud {
     min-width: 0;
     padding: 0 18px;

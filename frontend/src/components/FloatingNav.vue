@@ -229,7 +229,7 @@ onBeforeUnmount(() => {
         :aria-expanded="markToggles ? false : undefined"
         @click="markToggles && setNavCompact(false)"
       >
-        <Logo :size="44" />
+        <Logo :size="36" />
         <Icon class="mark-icon" name="sidebar" :size="20" />
       </button>
       <div class="wordmark">
@@ -348,9 +348,7 @@ onBeforeUnmount(() => {
   display: flex;
   flex-direction: column;
   gap: 18px;
-  /* Top space keeps the brand clear of the traffic lights when the window
-     is short enough for them to sit level with the island's top edge. */
-  padding: 30px 18px 22px;
+  padding: 26px 18px 20px;
   overflow: hidden;
   /* Collapsing and expanding only move things sideways. Every row keeps
      its height and place in both widths, and text never wraps: it is
@@ -381,7 +379,7 @@ onBeforeUnmount(() => {
 .brand {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 12px;
   padding: 0 4px;
   transition: padding var(--dur) var(--ease);
 }
@@ -403,6 +401,10 @@ onBeforeUnmount(() => {
 .mark > * {
   grid-area: 1 / 1;
   transition: opacity 0.15s var(--ease);
+}
+
+.mark :deep(.logo) {
+  filter: none;
 }
 
 .mark-icon {
@@ -447,11 +449,10 @@ onBeforeUnmount(() => {
   white-space: nowrap;
 }
 
-/* Three capitals, set bold and tight as in the design's PKP brand block. */
 .wordmark strong {
-  font-size: 23px;
+  font-size: 18px;
   font-weight: 700;
-  letter-spacing: -0.04em;
+  letter-spacing: -0.025em;
 }
 
 .wordmark small {
@@ -461,11 +462,12 @@ onBeforeUnmount(() => {
 
 .new {
   width: 100%;
-  min-height: 48px;
-  padding: 0 20px 0 24px;
-  gap: 14px;
-  font-size: 17px;
+  min-height: 42px;
+  padding: 0 16px;
+  gap: 12px;
+  font-size: 14px;
   justify-content: flex-start;
+  border-radius: 10px;
   overflow: hidden;
   transition:
     padding var(--dur) var(--ease),
@@ -473,6 +475,19 @@ onBeforeUnmount(() => {
     border-color var(--dur) var(--ease),
     box-shadow var(--dur) var(--ease),
     transform 0.12s var(--ease);
+}
+
+button.new.primary,
+button.new.primary:hover:not(:disabled) {
+  color: var(--fg);
+  background: color-mix(in srgb, var(--glass-control) 55%, transparent);
+  border-color: var(--line);
+  box-shadow: none;
+  filter: none;
+}
+
+button.new.primary:hover:not(:disabled) {
+  background: var(--accent-soft);
 }
 
 .new .label {
@@ -503,7 +518,7 @@ onBeforeUnmount(() => {
   left: 0;
   min-width: 100%;
   width: max-content;
-  background: var(--canvas);
+  background: var(--glass-sheet);
 }
 
 .create .menu button {
@@ -516,7 +531,7 @@ onBeforeUnmount(() => {
   scrollbar-width: none;
   display: flex;
   flex-direction: column;
-  gap: 28px;
+  gap: 20px;
   /* Items run 8px from the island edge, wider than the brand and Create. */
   margin: 0 -10px;
   padding: 0 10px;
@@ -529,15 +544,15 @@ onBeforeUnmount(() => {
 .groups section {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 4px;
 }
 
 /* In the rail the heading fades but keeps its line: the empty line is the
    gap between the groups. */
 .groups h3 {
   margin: 0 0 4px 10px;
-  font-size: 13px;
-  font-weight: 500;
+  font-size: 12px;
+  font-weight: 600;
   color: var(--fg-dim);
   white-space: nowrap;
   overflow: hidden;
@@ -546,15 +561,15 @@ onBeforeUnmount(() => {
 .item {
   position: relative;
   width: 100%;
-  min-height: 46px;
+  min-height: 42px;
   justify-content: flex-start;
   gap: 12px;
-  padding: 0 20px 0 26px;
+  padding: 0 16px 0 20px;
   border: 1px solid transparent;
-  border-radius: var(--radius-pill);
+  border-radius: 10px;
   background: transparent;
   color: var(--fg);
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 500;
   overflow: hidden;
   transition:
@@ -566,7 +581,7 @@ onBeforeUnmount(() => {
 
 .item > svg {
   flex: none;
-  color: var(--fg);
+  color: var(--fg-dim);
 }
 
 .item .label {
@@ -580,16 +595,26 @@ onBeforeUnmount(() => {
   background: color-mix(in srgb, var(--glass-control) 55%, transparent);
 }
 
-/* The active item is a lens: a local lift of the same glass, not a second
-   pane stacked on top of it. */
 .item.active {
   font-weight: 600;
-  background: var(--glass-control);
-  border-color: var(--glass-edge);
-  box-shadow:
-    inset 0 1px 0 var(--glass-rim),
-    inset 0 -1px 0 color-mix(in srgb, var(--glass-rim) 20%, transparent),
-    0 8px 20px rgba(10, 30, 60, 0.16);
+  background: var(--accent-soft);
+  border-color: transparent;
+  box-shadow: none;
+}
+
+.item.active::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 11px;
+  bottom: 11px;
+  width: 3px;
+  border-radius: 3px;
+  background: var(--accent);
+}
+
+.item.active > svg {
+  color: var(--accent);
 }
 
 /* Badges reserve their width beside the label; in the rail they sit on the icon. */
@@ -625,8 +650,9 @@ onBeforeUnmount(() => {
 .foot {
   display: flex;
   flex-direction: column;
-  gap: 22px;
-  padding: 4px 2px 0;
+  gap: 18px;
+  padding: 12px 2px 0;
+  border-top: 1px solid var(--line);
   transition: padding var(--dur) var(--ease);
 }
 
@@ -667,9 +693,15 @@ onBeforeUnmount(() => {
   text-align: left;
 }
 
-.trigger:hover:not(:disabled) {
+.trigger:hover:not(:disabled),
+.trigger[aria-expanded="true"] {
   border-color: transparent;
-  background: transparent;
+  background: var(--accent-soft);
+}
+
+.nav button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
 }
 
 .trigger:hover .more,
@@ -711,13 +743,10 @@ onBeforeUnmount(() => {
 .account.current {
   margin: 0 -10px;
   padding: 6px 14px 6px 6px;
-  border-radius: var(--radius-pill);
-  border: 1px solid var(--glass-edge);
-  background: var(--glass-control);
-  box-shadow:
-    inset 0 1px 0 var(--glass-rim),
-    inset 0 -1px 0 color-mix(in srgb, var(--glass-rim) 20%, transparent),
-    0 8px 20px rgba(10, 30, 60, 0.16);
+  border-radius: 10px;
+  border: 1px solid transparent;
+  background: var(--accent-soft);
+  box-shadow: none;
 }
 
 .who.here {
@@ -814,7 +843,7 @@ onBeforeUnmount(() => {
 }
 
 .compact .foot {
-  padding: 4px 7px 0;
+  padding: 12px 7px 0;
 }
 
 /* On Settings the lens around the avatar is the rail's active lens: as wide as

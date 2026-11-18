@@ -1,16 +1,11 @@
 <script setup lang="ts">
-// Overview: the account, not the folder on screen. One chart —
-// the storage ring — and two blocks under it, set apart by space and a
-// hairline. Every figure comes from the account: a split of the storage by
-// kind only when the backend could vouch for it, transfers from the
-// transfer centre's own lists, plays from the play history. Missing data
-// says so; nothing is estimated to fill the space.
+// Account overview: storage, transfers and recent playback use backend data only.
 import { computed } from "vue";
 import { N_, t } from "../i18n";
 import Icon from "./Icon.vue";
 import Thumb from "./Thumb.vue";
 import MembershipBadge from "./MembershipBadge.vue";
-import { ago, bytes, clock, share, sizeParts } from "../format";
+import { ago, bytes, clock, share } from "../format";
 import {
   currentId,
   currentTasks,
@@ -28,12 +23,6 @@ import type { RecentPlay } from "../../bindings/github.com/tonyflux/pkp/internal
 
 /* ---------- storage ---------- */
 
-// r = 72 − stroke/2: the ring's outer edge is the 144px box.
-const R = 67;
-const C = 2 * Math.PI * R;
-// Under this share of the ring an arc is a speck; it is drawn with Other
-// (the legend still gives its own figure).
-const SPECK = 0.005;
 
 type Kind = "video" | "image" | "document" | "other";
 const KINDS: { key: Kind; label: string }[] = [
@@ -51,37 +40,19 @@ const remaining = computed(() => Math.max(0, limit.value - used.value));
 const full = computed(() => !unlimited.value && limit.value > 0 && remaining.value === 0);
 const breakdown = computed(() => quota.value?.breakdown ?? null);
 
-// What the ring is a share of: the total, or the usage when it overflows
-// the total, so the arcs never add up past the circle.
-const whole = computed(() => Math.max(limit.value, used.value));
-
-const arcs = computed(() => {
-  if (unlimited.value || whole.value <= 0) return [];
-  const parts: { key: string; value: number }[] = breakdown.value
-    ? KINDS.map((k) => ({ key: k.key, value: breakdown.value![k.key] }))
+// Bound each segment so a stale or inconsistent breakdown never overflows.
+const segments = computed(() => {
+  if (unlimited.value || limit.value <= 0) return [];
+  const parts = breakdown.value
+    ? KINDS.map((kind) => ({ key: kind.key, value: Math.max(0, breakdown.value![kind.key]) }))
     : [{ key: "used", value: used.value }];
-  // Specks join Other in the drawing only.
-  if (breakdown.value) {
-    const other = parts[parts.length - 1];
-    for (const part of parts.slice(0, -1)) {
-      if (part.value > 0 && part.value / whole.value < SPECK) {
-        other.value += part.value;
-        part.value = 0;
-      }
-    }
-  }
-  let start = 0;
-  return parts
-    .filter((p) => p.value > 0)
-    .map((p) => {
-      const length = Math.min(C - start, (p.value / whole.value) * C);
-      const arc = { key: p.key, length, start };
-      start += length;
-      return arc;
-    });
+  let remaining = Math.max(limit.value, used.value);
+  return parts.map((part) => {
+    const value = Math.min(remaining, part.value);
+    remaining -= value;
+    return { key: part.key, width: value / Math.max(limit.value, used.value) * 100 };
+  });
 });
-
-const centre = computed(() => sizeParts(unlimited.value ? used.value : remaining.value));
 const ringLabel = computed(() =>
   unlimited.value
     ? t("不限容量，已用 {used}", { used: bytes(used.value, "0 B", 1) })
@@ -156,9 +127,9 @@ function progressOf(play: RecentPlay): number {
       <!-- The plan the space comes with; keyed so another account reads its own. -->
       <MembershipBadge v-if="currentId" :key="currentId" :account="currentId" class="membership" />
 
-      <!-- Waiting: the ring's own size, and no figures — never a 0. -->
-      <div v-if="!quota && !drive.quotaError" class="ring" aria-busy="true" :aria-label="t('正在读取容量')">
-        <svg viewBox="0 0 144 144" aria-hidden="true"><circle class="track skel-ring" cx="72" cy="72" :r="R" /></svg>
+      <div v-if="!quota && !drive.quotaError" class="storage-loading" aria-busy="true" :aria-label="t('正在读取容量')">
+        <span class="skel storage-placeholder" />
+        <span class="skel storage-placeholder bar-placeholder" />
       </div>
 
       <div v-else-if="!quota" class="unavailable">
@@ -172,26 +143,11 @@ function progressOf(play: RecentPlay): number {
       </p>
 
       <template v-else>
-        <div class="ring">
-          <svg viewBox="0 0 144 144" role="img" :aria-label="ringLabel">
-            <circle class="track" cx="72" cy="72" :r="R" />
-            <g transform="rotate(-90 72 72)">
-              <circle
-                v-for="arc in arcs"
-                :key="arc.key"
-                class="arc"
-                :class="arc.key"
-                cx="72"
-                cy="72"
-                :r="R"
-                :stroke-dasharray="`${arc.length} ${C - arc.length}`"
-                :stroke-dashoffset="-arc.start"
-              />
-            </g>
-          </svg>
-          <div class="centre" aria-hidden="true">
-            <small>{{ unlimited ? t("已用空间") : t("剩余空间") }}</small>
-            <strong class="tnum">{{ centre.value }} <span>{{ centre.unit }}</span></strong>
+        <div class="storage-summary" role="img" :aria-label="ringLabel">
+          <small>{{ unlimited ? t("已用空间") : t("剩余空间") }}</small>
+          <strong class="tnum">{{ bytes(unlimited ? used : remaining, "0 B", 1) }}</strong>
+          <div v-if="!unlimited" class="storage-bar" aria-hidden="true">
+            <span v-for="segment in segments" :key="segment.key" :class="segment.key" :style="{ width: `${segment.width}%` }" />
           </div>
         </div>
 
@@ -353,6 +309,7 @@ function progressOf(play: RecentPlay): number {
   align-items: baseline;
   justify-content: space-between;
   gap: 8px;
+  flex-wrap: wrap;
   min-height: 24px;
 }
 
@@ -376,97 +333,59 @@ h2 {
   color: var(--fg-dim);
 }
 
-/* ---------- ring ---------- */
-
-.ring {
-  position: relative;
-  width: 144px;
-  height: 144px;
-  margin: 18px auto 14px;
-}
-
-.ring svg {
-  display: block;
-  width: 144px;
-  height: 144px;
-}
-
-.ring circle {
-  fill: none;
-  stroke-width: 10;
-}
-
-.track {
-  stroke: var(--chart-remaining);
-}
-
-/* Flat ends: a round cap would spill over its neighbour and hide a thin arc. */
-.arc {
-  stroke-linecap: butt;
-}
-
-.arc.video {
-  stroke: var(--chart-video);
-}
-
-.arc.image {
-  stroke: var(--chart-image);
-}
-
-.arc.document {
-  stroke: var(--chart-document);
-}
-
-.arc.other {
-  stroke: var(--chart-other);
-}
-
-.arc.used {
-  stroke: var(--accent);
-}
-
-.skel-ring {
-  animation: breathe 1.4s ease-in-out infinite;
-}
-
-@keyframes breathe {
-  50% {
-    opacity: 0.45;
-  }
-}
-
-.centre {
-  position: absolute;
-  inset: 0;
+.storage-summary,
+.storage-loading {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
+  gap: 5px;
+  margin: 16px 0 12px;
 }
 
-.centre small {
-  font-size: 12px;
+.storage-summary small {
   color: var(--fg-dim);
+  font-size: 12px;
 }
 
-.centre strong {
-  font-size: 30px;
-  line-height: 40px;
+.storage-summary strong {
+  font-size: 24px;
+  line-height: 30px;
   font-weight: 650;
-  letter-spacing: -0.03em;
+  letter-spacing: -0.02em;
 }
 
-.centre strong span {
-  font-size: 14px;
-  font-weight: 500;
-  letter-spacing: 0;
+.storage-bar {
+  display: flex;
+  height: 6px;
+  margin-top: 7px;
+  overflow: hidden;
+  border-radius: 3px;
+  background: var(--chart-remaining);
+}
+
+.storage-bar span { flex: none; }
+.storage-bar .video { background: var(--chart-video); }
+.storage-bar .image { background: var(--chart-image); }
+.storage-bar .document { background: var(--chart-document); }
+.storage-bar .other { background: var(--chart-other); }
+.storage-bar .used { background: var(--accent); }
+
+.storage-placeholder {
+  width: 48%;
+  height: 24px;
+}
+
+.bar-placeholder {
+  width: 100%;
+  height: 6px;
+  margin-top: 7px;
 }
 
 .caption {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: 8px;
+  flex-wrap: wrap;
+  gap: 2px 8px;
   font-size: 13px;
 }
 
@@ -481,26 +400,27 @@ h2 {
   color: var(--danger);
 }
 
-/* Auto tracks: each column as wide as its label and figure, so a long
-   label (ドキュメント) takes room from a short neighbour before it wraps. */
 .legend {
   display: grid;
-  grid-template-columns: auto auto;
-  gap: 8px 12px;
-  margin: 14px 0 0;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 108px), 1fr));
+  gap: 6px 12px;
+  margin: 10px 0 0;
   font-size: 12px;
 }
 
 .legend > div {
   display: flex;
+  min-width: 0;
   justify-content: space-between;
   gap: 6px;
 }
 
 .legend dt {
   display: flex;
+  min-width: 0;
   align-items: center;
   gap: 6px;
+  overflow-wrap: anywhere;
   color: var(--fg-dim);
 }
 
@@ -511,6 +431,7 @@ h2 {
 
 .legend i {
   width: 6px;
+  flex: none;
   height: 6px;
   border-radius: 50%;
 }
@@ -541,23 +462,20 @@ h2 {
 }
 
 .note {
-  margin: 10px 0 0;
+  margin: 8px 0 0;
   font-size: 11px;
   line-height: 16px;
   color: var(--fg-dim);
 }
 
 .unavailable {
-  margin: 14px 0 0;
-  padding: 18px 14px;
+  margin: 10px 0 0;
+  padding: 8px 0;
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: flex-start;
   gap: 6px;
-  text-align: center;
   text-wrap: balance;
-  border-radius: 14px;
-  background: color-mix(in srgb, var(--fg) 5%, transparent);
   font-size: 13px;
 }
 
@@ -591,8 +509,8 @@ h2 {
 /* ---------- blocks ---------- */
 
 .block {
-  margin-top: 24px;
-  padding-top: 20px;
+  margin-top: 16px;
+  padding-top: 12px;
   border-top: 1px solid var(--line);
 }
 
@@ -714,7 +632,7 @@ h2 {
 }
 
 .empty {
-  margin: 10px 0 0;
+  margin: 2px 0 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
