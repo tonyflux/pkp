@@ -145,13 +145,14 @@ const ownerTitle = computed(() =>
   padding: 0;
   border-radius: 50%;
   border: 1px solid transparent;
-  color: var(--accent);
-  background: var(--accent-soft);
+  color: var(--canvas-flat);
+  background: var(--fg);
 }
 
 .main:hover:not(:disabled) {
-  color: var(--accent);
-  background: color-mix(in srgb, var(--accent) 22%, transparent);
+  color: var(--canvas-flat);
+  background: color-mix(in srgb, var(--fg) 86%, var(--canvas-flat));
+  border-color: transparent;
 }
 
 .restore {

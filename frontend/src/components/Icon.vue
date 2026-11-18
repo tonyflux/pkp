@@ -133,7 +133,7 @@ const d = computed(() => paths[props.name] ?? paths.file);
     :height="size"
     viewBox="0 0 24 24"
     :fill="filled ? 'currentColor' : 'none'"
-    stroke="currentColor"
+    :stroke="filled && name === 'pause' ? 'none' : 'currentColor'"
     stroke-width="1.6"
     stroke-linecap="round"
     stroke-linejoin="round"

@@ -176,11 +176,6 @@ function coverOf(folder: Entry): Cover | null {
   return inBin.value ? null : (folderCovers.get(folder.id) ?? null);
 }
 
-function coverClass(folder: Entry): string {
-  const c = coverOf(folder);
-  if (!c) return "cover-plain";
-  return c.items.length ? `cover-n${c.items.length}` : "cover-empty";
-}
 
 function folderLine(folder: Entry): string {
   const c = coverOf(folder);
@@ -188,20 +183,6 @@ function folderLine(folder: Entry): string {
   return [count, when(folder, true)].filter(Boolean).join(" · ");
 }
 
-// A small tile names its entry without the extension; the large one, when
-// it has no picture, spells the whole name.
-function tileName(item: Entry, hero: boolean): string {
-  if (hero || item.folder) return item.name;
-  const dot = item.name.lastIndexOf(".");
-  return dot > 0 ? item.name.slice(0, dot) : item.name;
-}
-
-function tileGlyph(item: Entry): "folder" | "audio" | "document" | "media" {
-  if (item.folder) return "folder";
-  if (item.category === "audio") return "audio";
-  if (item.category === "video" || item.category === "image") return "media";
-  return "document";
-}
 
 // Covers are asked for while their card is on screen; the store batches
 // the cards entering together into one call.
@@ -1074,7 +1055,7 @@ watch(
               v-cover
               :data-entry="folder.id"
               class="folder"
-              :class="{ picked: isPicked(folder), starred: folder.starred, 'has-cover': !!coverOf(folder)?.items.length }"
+              :class="{ picked: isPicked(folder), starred: folder.starred }"
               :title="folder.name"
               :aria-pressed="isPicked(folder)"
               @dblclick="open(folder, $event)"
@@ -1084,31 +1065,13 @@ watch(
               <span class="check" :class="{ on: isPicked(folder) }" aria-hidden="true" @click.stop="togglePick(folder)" @dblclick.stop>
                 <Icon name="check" :size="13" />
               </span>
-              <!-- The cover: one large tile and two small ones of the
-                   folder's direct children. A tile without a
-                   picture, or whose picture fails, draws its kind. -->
-              <span class="folder-cover" :class="coverClass(folder)" aria-hidden="true">
-                <template v-if="coverOf(folder)?.items.length">
-                  <span
-                    v-for="(item, k) in coverOf(folder)!.items"
-                    :key="item.id"
-                    class="cover-tile"
-                    :class="[`glyph-${tileGlyph(item)}`, { hero: k === 0 }]"
-                  >
-                    <Thumb :src="item.folder ? '' : item.thumbnail" alt="" lazy>
-                      <span class="tile-glyph">
-                        <span v-if="tileGlyph(item) === 'folder'" class="mini-folder" />
-                        <span v-else-if="tileGlyph(item) === 'audio'" class="sound-bars"><i /><i /><i /><i /><i /></span>
-                        <Icon v-else-if="tileGlyph(item) === 'media'" :name="item.category" :size="k === 0 ? 30 : 22" />
-                        <span v-else class="mini-document"><i /><i /><i /></span>
-                        <small>{{ tileName(item, k === 0) }}</small>
-                      </span>
-                    </Thumb>
-                    <span v-if="k === 0 && item.category === 'video' && item.thumbnail" class="play-mark">
-                      <Icon name="play" :size="12" filled />
-                    </span>
-                  </span>
-                </template>
+              <span class="folder-cover" aria-hidden="true">
+                <Icon class="folder-placeholder" name="folder" :size="40" />
+                <span v-for="(item, index) in coverOf(folder)?.items" :key="item.id" class="cover-tile" :class="{ hero: index === 0 }">
+                  <Thumb :src="item.folder ? '' : item.thumbnail" alt="" lazy>
+                    <Icon class="cover-tile-placeholder" :name="item.folder ? 'folder' : item.category" :size="index === 0 ? 30 : 22" />
+                  </Thumb>
+                </span>
               </span>
               <span v-if="folder.starred" class="star-mark" role="img" :aria-label="t('已加星标')" :title="t('已加星标')">
                 <Icon name="star" :size="12" filled />
@@ -2148,13 +2111,6 @@ h2 + .folders + h2,
 
 .folders {
   --cover-bg: color-mix(in srgb, var(--canvas-flat) 94%, var(--fg) 6%);
-  --cover-line: var(--line);
-  --cover-empty: var(--surface);
-  --tile-photo: color-mix(in srgb, var(--canvas-flat) 92%, var(--fg) 8%);
-  --tile-glyph: var(--tile-photo);
-  --tile-document: var(--tile-photo);
-  --tile-audio: var(--tile-photo);
-  --tile-ink: var(--fg-dim);
 }
 
 
@@ -2175,14 +2131,24 @@ h2 + .folders + h2,
 }
 
 
-/* Fewer than three children: one fills the cover, two split it. */
-.folder-cover.cover-n1 {
-  grid-template-columns: minmax(0, 1fr);
+.folder-placeholder {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: var(--accent);
 }
 
-.folder-cover.cover-n1 .hero,
-.folder-cover.cover-n2 .cover-tile:not(.hero) {
-  grid-row: span 2;
+.folder-cover:not(:has(:deep(.thumb-img.loaded, .thumb-img.skel))) .folder-placeholder {
+  z-index: 1;
+}
+
+.folder-cover:not(:has(:deep(.thumb-img.loaded, .thumb-img.skel))) .cover-tile {
+  visibility: hidden;
+}
+
+.folder-cover:has(.cover-tile:only-of-type) {
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .cover-tile {
@@ -2190,70 +2156,26 @@ h2 + .folders + h2,
   min-width: 0;
   min-height: 0;
   overflow: hidden;
-  border-radius: 0;
-  background: var(--tile-photo);
+  background: var(--cover-bg);
 }
 
-.cover-tile.hero {
+.cover-tile-placeholder {
+  color: var(--fg-dim);
+}
+
+.cover-tile:first-of-type,
+.cover-tile:first-of-type:nth-last-of-type(2) ~ .cover-tile {
   grid-row: span 2;
+}
+
+.cover-tile :deep(.thumb-img:not(.loaded):not(.skel)) {
+  background: var(--cover-bg);
 }
 
 .cover-tile :deep(img) {
   filter: saturate(0.9) contrast(1.02);
 }
 
-.cover-tile.glyph-folder {
-  background: var(--tile-glyph);
-}
-
-.cover-tile.glyph-document {
-  background: var(--tile-document);
-}
-
-.cover-tile.glyph-audio {
-  background: var(--tile-audio);
-}
-
-.tile-glyph {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  /* Full width (it is centred in Thumb's grid), so the name below can
-     measure against the tile instead of collapsing to its ellipsis. */
-  width: 100%;
-  color: var(--tile-ink);
-}
-
-.tile-glyph small {
-  display: block;
-  max-width: calc(100% - 6px);
-  font-size: 10px;
-  line-height: 14px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.hero .tile-glyph {
-  gap: 9px;
-}
-
-.hero .tile-glyph small {
-  font-size: 11px;
-}
-
-.mini-folder {
-  position: relative;
-  display: block;
-  flex: none;
-  width: 20px;
-  height: 15px;
-  margin-top: 3px;
-  border-radius: 2px 3px 3px 3px;
-  background: var(--accent);
-}
 
 .folder-mark {
   flex: none;
@@ -2265,142 +2187,6 @@ h2 + .folders + h2,
   color: var(--accent);
   background: var(--accent-soft);
 }
-
-.mini-folder::before {
-  content: "";
-  position: absolute;
-  top: -4px;
-  left: 0;
-  width: 10px;
-  height: 5px;
-  border-radius: 3px 3px 0 0;
-  background: var(--accent);
-}
-
-.mini-folder {
-  width: 25px;
-  height: 18px;
-}
-
-.mini-folder::before {
-  width: 13px;
-}
-
-.mini-document {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  width: 23px;
-  height: 29px;
-  padding: 8px 4px 4px;
-  border-radius: 3px 5px 3px 3px;
-  background: #d9e4ec;
-  box-shadow: 0 2px 5px rgba(10, 28, 45, 0.2);
-}
-
-.mini-document::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  right: 0;
-  width: 7px;
-  height: 7px;
-  background: #9eb4ca;
-  clip-path: polygon(0 0, 100% 100%, 0 100%);
-}
-
-.mini-document i {
-  height: 2px;
-  border-radius: 2px;
-  background: #809db6;
-}
-
-.mini-document i:last-child {
-  width: 65%;
-}
-
-.hero .mini-document {
-  width: 37px;
-  height: 48px;
-  gap: 6px;
-  padding: 12px 7px 6px;
-}
-
-.hero .mini-document::before {
-  width: 11px;
-  height: 11px;
-}
-
-.sound-bars {
-  display: flex;
-  align-items: center;
-  gap: 3px;
-  height: 25px;
-}
-
-.sound-bars i {
-  width: 3px;
-  height: 13px;
-  border-radius: 3px;
-  background: #91c5e7;
-}
-
-:root[data-theme="light"] .sound-bars i {
-  background: #4f88b8;
-}
-
-.sound-bars i:nth-child(2),
-.sound-bars i:nth-child(4) {
-  height: 22px;
-}
-
-.sound-bars i:nth-child(3) {
-  height: 17px;
-}
-
-/* A video frame says so; a still does not. */
-.play-mark {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  display: grid;
-  place-items: center;
-  width: 30px;
-  height: 30px;
-  padding-left: 2px;
-  transform: translate(-50%, -50%);
-  border: 1px solid rgba(255, 255, 255, 0.68);
-  border-radius: 50%;
-  background: rgba(9, 23, 40, 0.48);
-  color: #fff;
-  pointer-events: none;
-}
-
-/* Only over a frame that arrived: a failed one shows its kind instead. */
-.thumb-img:not(.loaded) + .play-mark {
-  display: none;
-}
-
-/* Folders without a cover stay compact and foreground their names. */
-.folder-cover.cover-plain,
-.folder-cover.cover-empty {
-  display: none;
-}
-
-.folder:not(.has-cover) {
-  min-height: 72px;
-}
-
-.folder:not(.has-cover) .folder-meta {
-  padding-top: 0;
-}
-
-.folder:not(.has-cover) .folder-mark {
-  width: 44px;
-  height: 44px;
-}
-
 
 .folder-meta {
   display: flex;

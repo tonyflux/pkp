@@ -4,6 +4,10 @@
 
 ## Unreleased
 
+- Align expanded and collapsed playback buttons and clarify the pause icon in light and dark themes.
+
+- Simplify folder covers with one placeholder when thumbnails are unavailable, retain thumbnails and type hints in mixed folders, and keep card heights consistent.
+
 - Unify the desktop workspace frame across Files, AI Assistant, Transfers, Sync, Shares and other standard pages, while retaining detail columns and dedicated player and file-viewer layouts.
 
 - Refine the saved-search sidebar with a collapsed empty state and aligned heading; prevent startup from focusing it unexpectedly.
