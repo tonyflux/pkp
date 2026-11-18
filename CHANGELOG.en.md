@@ -7,6 +7,8 @@
 - Remove referral submissions after password and QR sign-in, and remove developer attribution parameters from the registration link. Relationships established by earlier versions are not automatically revoked.
 - Compact the file page and simplify the AI assistant home, use a neutral solid default backdrop, reduce blur and glow, and refine settings/seek icons and playback controls while retaining custom wallpaper, opacity and necessary consent disclosures.
 
+- Refine the video player title bar, controls and queue, with file details in the header, previous/next video controls and playback settings below the queue heading. Retain subtitle membership, quota and audio-sharing disclosures across light/dark themes, separate windows and narrow windows.
+
 - Add Linux x86_64/ARM64 native media, desktop integration, and deb/rpm/AppImage builds. Linux downloads are verified through the signed manifest and installed explicitly by the user without changing the legacy macOS/Windows update protocol. Password storage uses Secret Service; system authentication needs polkit policy and a desktop agent, which standalone AppImages do not install automatically. Linux does not promise capture protection and keeps the main window accessible without a tray host.
 - Complete Linux safe synchronization/LAN directory authorization, recursive change notifications and freedesktop Trash. Fix D-Bus startup failure when a profile digest begins with a digit, and inherited HTTP proxies intercepting native-media loopback requests.
 - Use named libmpv loading arguments across distribution mpv 0.37 and newer versions, retaining resume, quality switching, audio-track selection and AI-subtitle sessions.

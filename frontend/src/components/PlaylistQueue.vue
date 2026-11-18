@@ -23,6 +23,7 @@ onMounted(() => list.value?.querySelector(".on")?.scrollIntoView({ block: "neare
       :key="item.id"
       class="queue-item"
       :class="{ on: i === player.index }"
+      :aria-current="i === player.index ? 'true' : undefined"
       @click="playAt(i)"
     >
       <span class="queue-thumb">
@@ -43,11 +44,12 @@ onMounted(() => list.value?.querySelector(".on")?.scrollIntoView({ block: "neare
 <style scoped>
 .queue {
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
-  padding: 4px 10px 12px;
+  padding: 2px 10px 12px;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 3px;
 }
 
 /* flex: none — in a list that scrolls, shrinking items squeezed two-line
@@ -55,10 +57,10 @@ onMounted(() => list.value?.querySelector(".on")?.scrollIntoView({ block: "neare
 .queue-item {
   flex: none;
   justify-content: flex-start;
-  gap: 12px;
+  gap: 10px;
   padding: 8px;
-  min-height: 76px;
-  border-radius: 10px;
+  min-height: 64px;
+  border-radius: var(--radius-card);
   border: 1px solid transparent;
   background: transparent;
   text-align: left;
@@ -76,10 +78,10 @@ onMounted(() => list.value?.querySelector(".on")?.scrollIntoView({ block: "neare
 
 .queue-thumb {
   position: relative;
-  width: 96px;
-  height: 60px;
+  width: 80px;
+  height: 48px;
   flex: none;
-  border-radius: 7px;
+  border-radius: 6px;
   overflow: hidden;
   background: color-mix(in srgb, var(--fg) 12%, transparent);
   display: grid;
@@ -104,9 +106,9 @@ onMounted(() => list.value?.querySelector(".on")?.scrollIntoView({ block: "neare
 }
 
 .queue-name {
-  font-size: 14px;
-  font-weight: 600;
-  line-height: 1.3;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.4;
   /* Buttons do not wrap; a name takes up to two lines. */
   white-space: normal;
   display: -webkit-box;
@@ -114,6 +116,11 @@ onMounted(() => list.value?.querySelector(".on")?.scrollIntoView({ block: "neare
   -webkit-box-orient: vertical;
   overflow: hidden;
   overflow-wrap: anywhere;
+}
+
+.queue-item.on .queue-name {
+  color: var(--fg);
+  font-weight: 600;
 }
 
 .queue-text small {

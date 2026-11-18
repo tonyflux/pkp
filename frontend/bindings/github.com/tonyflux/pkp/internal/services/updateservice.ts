@@ -32,9 +32,9 @@ export function Ignore(): $CancellablePromise<void> {
 }
 
 /**
- * Install prepares the replacement before asking to quit. Cancellation or a
- * failed handoff leaves this process running; only the helper/installer replaces
- * files after the approved process has exited.
+ * Install rechecks the download before handoff. Linux reveals it for explicit
+ * package-manager/manual installation; other platforms prepare a replacement
+ * before asking to quit. A failed handoff leaves this process running.
  */
 export function Install(): $CancellablePromise<void> {
     return $Call.ByID(3562509175);

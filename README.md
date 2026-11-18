@@ -25,7 +25,7 @@ PKP is an independent desktop client for a PikPak account you already have. It i
   <img src="assets/screenshots/en/workspace-0.4.0.webp" alt="PKP files workspace in English, including LAN sharing and fictional demo folders" width="880">
 </p>
 
-<p align="center"><i>Current files workspace in an isolated browser preview, using fictional account, folders, storage figures and image previews. No production cloud data is shown.</i></p>
+<p align="center"><i>Current development UI in an isolated browser demo, using fictional accounts, folders and storage figures. The latest released download may look different. No production cloud data is shown.</i></p>
 
 ## What you can do
 
@@ -62,34 +62,30 @@ Since v0.2.0, releases use eight assets: the two installers, `update.json`, `upd
 <table>
   <tr>
     <td width="50%" valign="top">
-      <img src="assets/screenshots/en/assistant.webp" alt="English organization plan asking you to review renames and moves before they run">
-      <br><b>Review the plan</b> before a rename or move runs.
+      <img src="assets/screenshots/en/assistant.webp" alt="English AI assistant home in the isolated development demo">
+      <br><b>Organize with review.</b> Plans require confirmation before changes.
     </td>
     <td width="50%" valign="top">
-      <img src="assets/screenshots/en/sync.webp" alt="English new-sync sheet with two-way, backup, and download modes">
+      <img src="assets/screenshots/en/sync.webp" alt="English sync and backup view with a simulated folder pair">
       <br><b>Scan, then sync.</b> Confirm the preview first.
     </td>
   </tr>
   <tr>
-    <td width="50%" valign="top">
-      <img src="assets/screenshots/en/player.webp" alt="English libmpv player with a playlist and playback controls">
-      <br><b>Play with libmpv</b> inside the workspace.
-    </td>
-    <td width="50%" valign="top">
-      <img src="assets/screenshots/en/accounts.webp" alt="English account switcher with three demo accounts">
+    <td colspan="2" valign="top">
+      <img src="assets/screenshots/en/accounts.webp" alt="English account switcher with two demo accounts">
       <br><b>Switch accounts</b> without merging drives.
     </td>
   </tr>
 </table>
 
-The four images above are illustrations from [pkpapp.cc/en](https://pkpapp.cc/en), redrawn from the UI with fictional demo data. An English capture of local search is not in the repository yet.
+The screenshots show the current development UI with fictional data. The assistant has not run a model, and the sync pair is simulated; they do not demonstrate real cloud operations. The player is described above rather than illustrated with a simulated video.
 
 ## LAN sharing
 
 Choose a local folder or a fixed account and cloud folder, then set a separate password and start sharing. The visitor page is read-only. It can request file preparation if allowed; playback depends on the media and device. Sharing is off by default and stops when PKP exits.
 
 <p align="center">
-  <img src="assets/screenshots/en/lan-desktop.webp" alt="LAN sharing settings with sharing stopped and a demo local folder authorized" width="880">
+  <img src="assets/screenshots/en/lan-desktop.webp" alt="LAN sharing settings in the development demo with sharing stopped and a simulated cloud folder" width="880">
 </p>
 
 <p align="center"><b>Desktop:</b> choose the sharing scope and permissions.</p>
@@ -100,7 +96,7 @@ Choose a local folder or a fixed account and cloud folder, then set a separate p
 
 <p align="center"><b>Visitor:</b> browse the authorized files.</p>
 
-These captures use the current UI and a local, isolated example folder. The desktop capture uses a simulated demo account, path and network address; its sharing service is stopped. The mobile capture shows a real loopback visitor session with example files, not a real phone or production cloud content.
+The desktop capture is an isolated development demo with a simulated account, folder and network interface; it does not start sharing. The mobile capture shows a separate real loopback visitor session with example files, not a real phone or production cloud content.
 
 LAN access uses unencrypted HTTP: use it only on a trusted network and do not expose it to the public internet. See the [LAN sharing guide](docs/USAGE.en.md#lan-sharing) for setup, preparation, playback and security limits.
 

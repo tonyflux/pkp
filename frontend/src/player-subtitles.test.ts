@@ -8,6 +8,7 @@ const backend = vi.hoisted(() => ({
   chapters: vi.fn<() => Promise<Chapter[]>>(),
   select: vi.fn<(kind: string, id: number) => Promise<void>>(),
   ai: vi.fn<(on: boolean, language: string) => Promise<void>>(),
+  playFile: vi.fn<(account: string, id: string) => Promise<void>>(),
   membership: vi.fn<(account: string) => Promise<Membership>>(),
   stage: vi.fn<() => Promise<void>>(),
   windowButtons: vi.fn<() => Promise<void>>(),
@@ -21,7 +22,7 @@ vi.mock("../bindings/github.com/tonyflux/pkp/internal/services", async (importOr
       Tracks: backend.tracks, Chapters: backend.chapters, SelectTrack: backend.select,
       SetStage: backend.stage, ShowWindowButtons: backend.windowButtons,
     },
-    DriveService: { ...services.DriveService, SetAISubtitles: backend.ai, Membership: backend.membership },
+    DriveService: { ...services.DriveService, SetAISubtitles: backend.ai, Membership: backend.membership, PlayFile: backend.playFile },
   };
 });
 import PlayerView from "./components/PlayerView.vue";
@@ -82,6 +83,10 @@ async function mountPlayer(windowed = false, followRoute = false) {
   return host;
 }
 async function openSubtitles(host: HTMLElement, menu: Menu = "dock") {
+  if (menu === "sidebar") {
+    const settings = host.querySelector<HTMLDetailsElement>(".settings")!;
+    if (!settings.open) settings.querySelector<HTMLElement>("summary")!.click();
+  }
   const entry = menu === "dock"
     ? host.querySelector<HTMLButtonElement>('[data-fold="subtitles"] button.entry')
     : host.querySelector<HTMLElement>('.settings [role="combobox"][aria-label="字幕"]');
@@ -116,8 +121,10 @@ beforeEach(() => {
   vi.resetAllMocks();
   vi.stubGlobal("ResizeObserver", class { observe() {} disconnect() {} });
   vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockReturnValue(new DOMRect(0, 0, 640, 40));
+  Object.defineProperty(HTMLElement.prototype, "scrollIntoView", { configurable: true, value: vi.fn() });
   nativeSubtitle = 1;
   player.playlist = [];
+  player.mode = "sequential";
   player.index = -1;
   player.owner = "playing";
   player.ownerInfo = null;
@@ -142,6 +149,7 @@ beforeEach(() => {
   backend.chapters.mockResolvedValue([]);
   backend.stage.mockResolvedValue(undefined);
   backend.windowButtons.mockResolvedValue(undefined);
+  backend.playFile.mockResolvedValue(undefined);
   backend.membership.mockResolvedValue(member());
   backend.select.mockImplementation(async (kind, id) => {
     if (kind === "subtitle") nativeSubtitle = id;
@@ -157,6 +165,55 @@ afterEach(() => {
   vi.useRealTimers();
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
+});
+
+describe("player settings disclosure", () => {
+  it("lets Space open settings without triggering playback", async () => {
+    const host = await mountPlayer();
+    const settings = host.querySelector<HTMLDetailsElement>(".settings")!;
+    const summary = settings.querySelector<HTMLElement>("summary")!;
+    expect(settings.open).toBe(false);
+    const key = new KeyboardEvent("keydown", { key: " ", bubbles: true, cancelable: true });
+    summary.dispatchEvent(key);
+    expect(key.defaultPrevented).toBe(false);
+    summary.click(); // jsdom does not perform the native Space activation.
+    await settle();
+    expect(settings.open).toBe(true);
+    expect(settings.textContent).toContain("开启 AI 字幕会向 PikPak 发送音频和视频标识，并使用 AI 配额。");
+  });
+});
+
+describe("video queue controls", () => {
+  it.each([false, true])("switches to adjacent videos in windowed=%s", async (windowed) => {
+    player.playlist = ["first", "second", "third"].map((id) => ({ id, name: `${id}.mp4`, category: "video" }) as Entry);
+    player.index = 1;
+    player.mode = "sequential";
+    const host = await mountPlayer(windowed);
+    const previous = host.querySelector<HTMLButtonElement>('[aria-label="上一个视频"]')!;
+    const next = host.querySelector<HTMLButtonElement>('[aria-label="下一个视频"]')!;
+    previous.click();
+    await settle();
+    expect(backend.playFile).toHaveBeenLastCalledWith(windowed ? "" : "playing", "first");
+    expect(previous.disabled).toBe(true);
+    expect(next.disabled).toBe(false);
+    next.click();
+    await settle();
+    expect(backend.playFile).toHaveBeenLastCalledWith(windowed ? "" : "playing", "second");
+    next.click();
+    await settle();
+    expect(backend.playFile).toHaveBeenLastCalledWith(windowed ? "" : "playing", "third");
+    expect(next.disabled).toBe(true);
+  });
+
+  it("offers another video in shuffle at the end of the queue", async () => {
+    player.playlist = ["first", "second"].map((id) => ({ id, name: `${id}.mp4`, category: "video" }) as Entry);
+    player.index = 1;
+    player.mode = "shuffle";
+    const host = await mountPlayer();
+    host.querySelector<HTMLButtonElement>('[aria-label="下一个视频"]')!.click();
+    await settle();
+    expect(backend.playFile).toHaveBeenCalledWith("playing", "first");
+  });
 });
 
 describe("player subtitle selection after AI changes", () => {
@@ -721,6 +778,7 @@ describe("AI subtitle access and server quota", () => {
 
   it("rechecks access when a previously enabled sidebar dispatches a stale command", async () => {
     const host = await mountPlayer();
+    host.querySelector<HTMLElement>(".settings summary")!.click();
     const face = host.querySelector<HTMLElement>('.settings [role="combobox"][aria-label="字幕"]')!;
     const select = (face as HTMLElement & { __vueParentComponent: { emit: (name: string, value: string) => void } }).__vueParentComponent;
     memberships.playing.value = member(false);
@@ -747,6 +805,7 @@ describe("AI subtitle access and server quota", () => {
 
   it("keeps quota unknown until enabling, then reflects matching server snapshots and reset without ticking", async () => {
     const host = await mountPlayer();
+    host.querySelector<HTMLElement>(".settings summary")!.click();
     const choices = await openSubtitles(host);
     expect(choices.querySelector(".ai-status")?.textContent).toContain("AI 配额：开启后获取");
     expect(host.querySelector(".settings .ai-status")?.textContent).toContain("AI 配额：开启后获取");

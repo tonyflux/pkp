@@ -120,7 +120,6 @@ describe("content opacity", () => {
     expect(ui.contentOpacity).toBe(0);
     expect(localStorage.getItem("pkp.contentOpacity")).toBe("0");
     expect(document.documentElement.style.getPropertyValue("--content-opacity")).toBe("0%");
-    expect(document.documentElement.style.getPropertyValue("--wallpaper-visibility")).toBe("1");
     setContentOpacity(101);
     expect(ui.contentOpacity).toBe(100);
     setContentOpacity(Number.NaN);

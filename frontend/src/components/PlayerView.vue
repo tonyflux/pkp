@@ -33,8 +33,10 @@ import {
   loadMembership,
   memberships,
   nextUp,
+  canPlayNextTrack,
   nowPlaying,
   playAt,
+  playNextTrack,
   player,
   playerCommands,
   popOut,
@@ -196,6 +198,12 @@ const extension = computed(() => {
   const dot = name.lastIndexOf(".");
   return dot > 0 ? name.slice(dot + 1).toUpperCase() : "";
 });
+
+const fileInfo = computed(() => [
+  extension.value,
+  nowPlaying.value?.size ? bytes(nowPlaying.value.size) : "",
+  state.value.width && state.value.height ? `${state.value.width} × ${state.value.height}` : "",
+].filter(Boolean).join(" · "));
 
 // The dock, and in the separate window the title bar and the playlist, cover
 // the picture and the subtitles, so they only stay while there is a reason:
@@ -599,8 +607,13 @@ onBeforeUnmount(() => {
         {{ player.returnRoute === "history" ? t("返回播放历史") : t("收起并继续播放") }}
       </button>
       <span class="divider" />
-      <strong class="now" :title="nowPlaying?.name">{{ nowPlaying?.name ?? t("未选择文件") }}</strong>
-      <span class="path" :title="locationLabel">{{ locationLabel }}</span>
+      <div class="heading">
+        <div class="title-line">
+          <strong class="now" :title="nowPlaying?.name">{{ nowPlaying?.name ?? t("未选择文件") }}</strong>
+          <span v-if="fileInfo" class="file-info" :title="fileInfo">{{ fileInfo }}</span>
+        </div>
+        <span class="path" :title="locationLabel">{{ locationLabel }}</span>
+      </div>
       <span class="spacer" />
       <span v-if="showOwner" class="owner" :aria-label="t('所属账号')">
         <AccountIdentity :account="playingOwner" :size="24" dense />
@@ -765,8 +778,14 @@ onBeforeUnmount(() => {
           </div>
 
           <div ref="controlRow" class="controls" :class="{ crowded }">
+            <button class="icon ghost previous" :title="t('上一个视频')" :aria-label="t('上一个视频')" :disabled="player.index <= 0" @click="playAt(player.index - 1)">
+              <Icon name="skipPrevious" :size="20" filled />
+            </button>
             <button class="icon main" :title="state.paused ? t('播放') : t('暂停')" :aria-label="state.paused ? t('播放') : t('暂停')" @click="playerCommands.toggle()">
               <Icon :name="state.paused ? 'play' : 'pause'" :size="20" filled />
+            </button>
+            <button class="icon ghost" :title="t('下一个视频')" :aria-label="t('下一个视频')" :disabled="!canPlayNextTrack" @click="playNextTrack">
+              <Icon name="skipNext" :size="20" filled />
             </button>
 
             <button class="step" :title="t('后退 15 秒')" :aria-label="t('后退 15 秒')" @click="playerCommands.seek(-15)">
@@ -780,7 +799,7 @@ onBeforeUnmount(() => {
 
             <div class="volume">
               <button class="icon ghost" :title="state.muted ? t('取消静音') : t('静音')" @click="toggleMute">
-                <Icon :name="state.muted || state.volume <= 0 ? 'mute' : 'volume'" :size="19" />
+                <Icon :name="state.muted || state.volume <= 0 ? 'mute' : 'volume'" :size="20" />
               </button>
               <RangeSlider :label="t('音量')" :model-value="state.volume" @update:model-value="(v) => playerCommands.volume(v)" />
             </div>
@@ -933,7 +952,7 @@ onBeforeUnmount(() => {
                 :aria-expanded="tuneOpen"
                 @click="tuneOpen = !tuneOpen"
               >
-                <Icon name="tune" :size="19" />
+                <Icon name="tune" :size="20" />
               </button>
               <div v-if="tuneOpen" ref="tunePop" class="more-pop tune-pop" role="dialog" :aria-label="t('字幕与音画同步')">
                 <SubtitleSettings :kind="subKind" :subtitles="subShown" @close="closeTune" />
@@ -941,12 +960,12 @@ onBeforeUnmount(() => {
             </div>
 
             <button class="icon ghost" :title="t('截图（S），存到「图片 › PKP」')" @click="screenshot">
-              <Icon name="camera" :size="19" />
+              <Icon name="camera" :size="20" />
             </button>
             <button
               v-if="!bare || windowed"
               ref="listButton"
-              class="icon ghost"
+              class="icon ghost list-toggle"
               :class="{ on: sidebarOpen }"
               :title="sidebarOpen ? t('收起侧栏') : t('展开侧栏')"
               :aria-label="sidebarOpen ? t('收起侧栏') : t('展开侧栏')"
@@ -954,16 +973,16 @@ onBeforeUnmount(() => {
               aria-controls="player-sidebar"
               @click="sidebarOpen = !sidebarOpen"
             >
-              <Icon name="panel" :size="19" />
+              <Icon name="panel" :size="20" />
             </button>
             <button v-if="windowed" class="icon ghost" :title="t('回到主窗口播放')" @click="returnToMain">
-              <Icon name="popin" :size="19" />
+              <Icon name="popin" :size="20" />
             </button>
             <button v-else class="icon ghost" :title="t('在独立窗口播放')" @click="popOut">
-              <Icon name="popout" :size="19" />
+              <Icon name="popout" :size="20" />
             </button>
-            <button class="icon ghost" :title="ui.fullscreen ? t('退出全屏') : t('全屏')" @click="toggleFullscreen">
-              <Icon :name="ui.fullscreen ? 'exitFullscreen' : 'fullscreen'" :size="19" />
+            <button class="icon ghost screen-toggle" :title="ui.fullscreen ? t('退出全屏') : t('全屏')" @click="toggleFullscreen">
+              <Icon :name="ui.fullscreen ? 'exitFullscreen' : 'fullscreen'" :size="20" />
             </button>
           </div>
         </div>
@@ -1014,7 +1033,7 @@ onBeforeUnmount(() => {
         </transition>
       </section>
 
-      <aside v-if="!bare && dockedListOpen" id="player-sidebar" class="playlist glass glass-sheet" :aria-label="t('播放列表')">
+      <aside v-if="!bare && dockedListOpen" id="player-sidebar" class="playlist glass" :aria-label="t('播放列表')">
         <header>
           <div class="list-head">
             <div class="list-title">
@@ -1041,79 +1060,74 @@ onBeforeUnmount(() => {
           </button>
         </header>
 
-        <PlaylistQueue />
+        <details class="settings">
+          <summary @keydown.space.stop>
+            <span>{{ t("播放设置") }}</span>
+            <Icon name="chevronDown" :size="16" />
+          </summary>
+          <div class="settings-body">
+            <SelectMenu
+              v-if="showSubtitles"
+              class="row"
+              :label="t('字幕')"
+              :model-value="subValue"
+              :options="subOptions"
+              allow-reselect
+              @update:model-value="selectSubtitle"
+              @open="refreshAIMembership"
+            >
+              <Icon name="subtitles" :size="18" />
+              <span>{{ t("字幕") }}</span>
+              <b>{{ subLabel }}</b>
+              <Icon name="chevronRight" :size="15" />
+            </SelectMenu>
+            <div v-else class="row off">
+              <Icon name="subtitles" :size="18" />
+              <span>{{ t("字幕") }}</span>
+              <b>{{ t("无") }}</b>
+            </div>
+            <AISubtitleStatus
+              v-if="ai.available"
+              class="ai-sidebar-status"
+              :state="ai"
+              :account="subtitleAccount"
+              :access="aiAccess"
+              @retry="refreshAIMembership"
+            />
+            <p v-if="ai.available" class="ai-disclosure">
+              {{ t("开启 AI 字幕会向 PikPak 发送音频和视频标识，并使用 AI 配额。") }}
+            </p>
+            <SelectMenu
+              v-if="audios.length > 1"
+              class="row"
+              :label="t('音轨')"
+              :model-value="audioValue"
+              :options="audioOptions"
+              @update:model-value="setTrack('audio', $event)"
+            >
+              <Icon name="waveform" :size="18" />
+              <span>{{ t("音轨") }}</span>
+              <b>{{ audioLabel }}</b>
+              <Icon name="chevronRight" :size="15" />
+            </SelectMenu>
+            <div v-else class="row off">
+              <Icon name="waveform" :size="18" />
+              <span>{{ t("音轨") }}</span>
+              <b>{{ audioLabel }}</b>
+            </div>
+          </div>
+        </details>
 
-        <section class="settings">
-          <h4>{{ t("播放设置") }}</h4>
-          <SelectMenu
-            v-if="showSubtitles"
-            class="row"
-            :label="t('字幕')"
-            :model-value="subValue"
-            :options="subOptions"
-            allow-reselect
-            @update:model-value="selectSubtitle"
-            @open="refreshAIMembership"
-          >
-            <Icon name="subtitles" :size="18" />
-            <span>{{ t("字幕") }}</span>
-            <b>{{ subLabel }}</b>
-            <Icon name="chevronRight" :size="15" />
-          </SelectMenu>
-          <div v-else class="row off">
-            <Icon name="subtitles" :size="18" />
-            <span>{{ t("字幕") }}</span>
-            <b>{{ t("无") }}</b>
-          </div>
-          <AISubtitleStatus
-            v-if="ai.available"
-            class="ai-sidebar-status"
-            :state="ai"
-            :account="subtitleAccount"
-            :access="aiAccess"
-            @retry="refreshAIMembership"
-          />
-          <p v-if="ai.available" class="ai-disclosure">
-            {{ t("开启 AI 字幕会向 PikPak 发送音频和视频标识，并使用 AI 配额。") }}
-          </p>
-          <SelectMenu
-            v-if="audios.length > 1"
-            class="row"
-            :label="t('音轨')"
-            :model-value="audioValue"
-            :options="audioOptions"
-            @update:model-value="setTrack('audio', $event)"
-          >
-            <Icon name="waveform" :size="18" />
-            <span>{{ t("音轨") }}</span>
-            <b>{{ audioLabel }}</b>
-            <Icon name="chevronRight" :size="15" />
-          </SelectMenu>
-          <div v-else class="row off">
-            <Icon name="waveform" :size="18" />
-            <span>{{ t("音轨") }}</span>
-            <b>{{ audioLabel }}</b>
-          </div>
-        </section>
+        <PlaylistQueue />
       </aside>
     </div>
-
-    <footer v-if="!bare && nowPlaying" class="meta">
-      <Icon name="video" :size="18" />
-      <span class="meta-name" :title="nowPlaying.name">{{ nowPlaying.name }}</span>
-      <template v-if="extension"><i>·</i><span>{{ extension }}</span></template>
-      <template v-if="nowPlaying.size"><i>·</i><span>{{ bytes(nowPlaying.size) }}</span></template>
-      <template v-if="state.width && state.height">
-        <i>·</i><span class="mono">{{ state.width }} × {{ state.height }}</span>
-      </template>
-    </footer>
   </div>
 </template>
 
 <style scoped>
 .ai-disclosure {
   margin: 0;
-  padding: 0 14px 10px;
+  padding: 0 8px 4px;
   color: var(--fg-dim);
   font-size: 11px;
   line-height: 1.5;
@@ -1121,7 +1135,7 @@ onBeforeUnmount(() => {
 
 .ai-sidebar-status {
   margin: 0;
-  padding: 0 14px 6px;
+  padding: 0 8px;
   color: var(--fg-dim);
 }
 
@@ -1130,7 +1144,7 @@ onBeforeUnmount(() => {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 12px;
 }
 
 .player.fullscreen {
@@ -1146,9 +1160,9 @@ onBeforeUnmount(() => {
 .bar {
   display: flex;
   align-items: center;
-  gap: 14px;
-  min-height: 60px;
-  padding: 8px 18px 8px 14px;
+  gap: 12px;
+  min-height: 56px;
+  padding: 7px 16px 7px 10px;
   border-radius: var(--radius-island);
 }
 
@@ -1162,28 +1176,49 @@ onBeforeUnmount(() => {
   background: var(--line-strong);
 }
 
-.now {
-  flex: 0 1 auto;
+.heading {
+  flex: 1 1 auto;
   min-width: 0;
-  font-size: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.title-line {
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.now {
+  min-width: 0;
+  font-size: 16px;
   font-weight: 600;
   letter-spacing: -0.01em;
-  max-width: 34%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-/* The path gives way first: the title, the account and the button keep
-   their room, the path takes what is left and the spacer the rest. */
 .path {
-  flex: 0 100 auto;
   min-width: 0;
-  font-size: 13px;
+  font-size: 12px;
   color: var(--fg-dim);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.file-info {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--fg-dim);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
 }
 
 .spacer {
@@ -1198,7 +1233,7 @@ onBeforeUnmount(() => {
   flex: 1;
   min-height: 0;
   display: flex;
-  gap: 14px;
+  gap: 12px;
 }
 
 /* ---------- stage ---------- */
@@ -1301,7 +1336,7 @@ onBeforeUnmount(() => {
   position: absolute;
   top: 60px;
   right: 18px;
-  bottom: 162px;
+  bottom: 132px;
   width: min(320px, calc(100% - 36px));
   display: flex;
   flex-direction: column;
@@ -1335,6 +1370,10 @@ onBeforeUnmount(() => {
   .drawer {
     bottom: 12px;
   }
+}
+
+@container stage (max-width: 600px) and (min-height: 421px) {
+  .drawer { bottom: 180px; }
 }
 
 .drawer > header {
@@ -1371,7 +1410,7 @@ onBeforeUnmount(() => {
 }
 
 .playlist > header {
-  --close-top: 10px;
+  --close-top: 2px;
 }
 
 .drawer > header {
@@ -1419,7 +1458,6 @@ onBeforeUnmount(() => {
 .stage-wait,
 .stage-error,
 .next,
-.dock,
 .hover {
   background: rgba(28, 28, 30, 0.9);
   border: 1px solid rgba(255, 255, 255, 0.12);
@@ -1585,13 +1623,11 @@ onBeforeUnmount(() => {
   }
 }
 
-/* Above the dock, which sits 18px up and is 132px tall (two rows: the 30px
-   timeline and the 64px play button, 14px padding, 8px gap, its border);
-   118px left the notice under the dock's glass. */
+/* The notice stays above the compact dock. */
 .next {
   position: absolute;
   right: 18px;
-  bottom: 162px;
+  bottom: 132px;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -1611,6 +1647,10 @@ onBeforeUnmount(() => {
 .next.beside {
   right: auto;
   left: 18px;
+}
+
+@container stage (max-width: 600px) {
+  .next:not(.low) { bottom: 180px; }
 }
 
 /* No trailing button: even padding on both ends. */
@@ -1666,14 +1706,18 @@ onBeforeUnmount(() => {
 
 .dock {
   position: absolute;
-  left: 18px;
-  right: 18px;
-  bottom: 18px;
+  left: 12px;
+  right: 12px;
+  bottom: 12px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 14px 24px 14px 20px;
-  border-radius: 16px;
+  gap: 2px;
+  padding: 8px 14px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  background: rgba(22, 23, 27, 0.92);
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.18);
+  color: #f5f5f5;
   transition:
     opacity 0.35s var(--ease),
     transform 0.35s var(--ease);
@@ -1688,12 +1732,12 @@ onBeforeUnmount(() => {
 .timeline {
   display: flex;
   align-items: center;
-  gap: 16px;
-  height: 30px;
+  gap: 12px;
+  height: 28px;
 }
 
 .time {
-  font-size: 15px;
+  font-size: 12px;
   white-space: nowrap;
   color: #ededed;
   min-width: 50px;
@@ -1766,9 +1810,9 @@ onBeforeUnmount(() => {
 .knob {
   position: absolute;
   top: 50%;
-  width: 16px;
-  height: 16px;
-  margin: -8px 0 0 -8px;
+  width: 12px;
+  height: 12px;
+  margin: -6px 0 0 -6px;
   border-radius: 50%;
   background: #ffffff;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
@@ -1803,7 +1847,7 @@ onBeforeUnmount(() => {
 .controls {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 6px;
 }
 
 .main {
@@ -1828,14 +1872,18 @@ onBeforeUnmount(() => {
 /* The step amount sits inside the circular arrow, as on the design board. */
 .step {
   position: relative;
-  width: 46px;
-  height: 46px;
-  min-height: 46px;
+  width: 40px;
+  height: 40px;
+  min-height: 40px;
   padding: 0;
   border-radius: 50%;
   background: transparent;
   border-color: transparent;
   color: #ededed;
+}
+
+.main + .ghost {
+  margin-right: 8px;
 }
 
 .step em {
@@ -1853,8 +1901,8 @@ onBeforeUnmount(() => {
   color: #ededed;
 }
 
-.ghost:hover,
-.step:hover,
+.ghost:hover:not(:disabled),
+.step:hover:not(:disabled),
 .ghost.on {
   background: rgba(255, 255, 255, 0.12);
 }
@@ -1867,13 +1915,23 @@ onBeforeUnmount(() => {
   flex: none;
 }
 
+.dock .ghost {
+  width: 40px;
+  height: 40px;
+  min-height: 40px;
+}
+
+.dock .list-toggle {
+  margin-left: 8px;
+}
+
 .volume {
   display: flex;
   align-items: center;
   gap: 4px;
-  width: 170px;
-  margin-left: 6px;
-  padding-left: 10px;
+  width: 146px;
+  margin-left: 4px;
+  padding-left: 8px;
   border-left: 1px solid rgba(255, 255, 255, 0.14);
   color: #e0e0e0;
 }
@@ -1888,9 +1946,9 @@ onBeforeUnmount(() => {
   }
 
   .main {
-    width: 52px;
-    height: 52px;
-    min-height: 52px;
+    width: 44px;
+    height: 44px;
+    min-height: 44px;
     margin-right: 0;
   }
 
@@ -1911,12 +1969,14 @@ onBeforeUnmount(() => {
   .dock { padding: 10px 14px; }
   .timeline { gap: 10px; }
   .volume { width: 130px; }
+  .main + .ghost, .dock .list-toggle { margin: 0; }
 }
 
 @container stage (max-width: 360px) {
   .controls { gap: 4px; }
   .volume { width: 80px; padding-left: 4px; margin-left: 0; }
   .volume :deep(.rslider) { min-width: 0; }
+  .screen-toggle { margin-left: auto; }
 }
 
 /* ---------- Subtitles · Audio tracks · Quality · Speed: in the dock, or in More ---------- */
@@ -1967,10 +2027,32 @@ onBeforeUnmount(() => {
 }
 
 @container stage (max-width: 600px) {
-  .more-pop { max-height: calc(100cqh - 190px); }
-  :deep(.dock-menu .popover) {
+  :deep(.dock-menu .popover), .more-pop {
+    position: fixed;
+    left: 12px;
+    right: auto;
+    bottom: 170px;
+    width: min(300px, calc(100cqw - 24px));
     max-height: calc(100cqh - 190px);
     overflow-y: auto;
+  }
+  :deep(.dock-menu .popover::after) { display: none; }
+}
+
+@container stage (max-width: 360px) {
+  .drawer { bottom: 210px; }
+  .next:not(.low) { bottom: 210px; }
+  :deep(.dock-menu .popover), .more-pop {
+    bottom: 210px;
+    max-height: calc(100cqh - 230px);
+  }
+}
+
+@container stage (max-width: 600px) and (max-height: 420px) {
+  .drawer { bottom: 12px; }
+  :deep(.dock-menu .popover), .more-pop {
+    bottom: 110px;
+    max-height: calc(100cqh - 120px);
   }
 }
 
@@ -1983,12 +2065,15 @@ onBeforeUnmount(() => {
 /* ---------- playlist island ---------- */
 
 .playlist {
-  width: 330px;
+  width: clamp(240px, 24vw, 320px);
   flex: none;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  border-radius: var(--radius-sheet);
+  border-radius: var(--radius-island);
+  background: var(--glass-panel);
+  box-shadow: var(--shadow-island);
 }
 
 .bar .owner {
@@ -2001,18 +2086,18 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 20px 14px 14px 22px;
+  padding: 18px 12px 14px 18px;
 }
 
 .playlist header strong {
   display: block;
-  font-size: 24px;
+  font-size: 17px;
   font-weight: 600;
   letter-spacing: -0.01em;
 }
 
 .playlist header small {
-  font-size: 14px;
+  font-size: 12px;
   color: var(--fg-dim);
 }
 
@@ -2020,14 +2105,14 @@ onBeforeUnmount(() => {
 .pill.mode {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  min-height: 32px;
-  padding: 0 10px;
-  border-radius: 12px;
+  gap: 6px;
+  min-height: 30px;
+  padding: 0 9px;
+  border-radius: 9px;
   border: 1px solid var(--line-strong);
   background: color-mix(in srgb, var(--glass-control) 70%, transparent);
   color: var(--fg);
-  font-size: 15px;
+  font-size: 12px;
   font-weight: 500;
   white-space: nowrap;
 }
@@ -2037,30 +2122,67 @@ onBeforeUnmount(() => {
 }
 
 .settings {
-  padding: 14px 14px 16px;
-  border-top: 1px solid var(--line);
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+  flex: none;
+  max-height: min(55%, max(42px, calc(100% - 210px)));
+  min-height: min(100%, 42px);
+  overflow-y: auto;
+  border-bottom: 1px solid var(--line);
 }
 
-.settings h4 {
-  margin: 2px 8px 6px;
-  font-size: 17px;
+.settings summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 42px;
+  padding: 0 18px;
+  color: var(--fg);
+  font-size: 13px;
   font-weight: 600;
+  cursor: pointer;
+  list-style: none;
+}
+
+.settings summary::-webkit-details-marker {
+  display: none;
+}
+
+.settings summary:hover {
+  background: var(--glass-control);
+}
+
+.settings summary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -3px;
+}
+
+.settings summary svg {
+  color: var(--fg-dim);
+  transition: transform var(--dur) var(--ease);
+}
+
+.settings[open] summary svg {
+  transform: rotate(180deg);
+}
+
+.settings-body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 0 12px 14px;
 }
 
 /* A settings row reads the current value and opens its list. */
 .row {
   display: flex;
   align-items: center;
-  gap: 12px;
-  min-height: 50px;
-  padding: 0 12px 0 16px;
-  border-radius: 14px;
+  gap: 10px;
+  min-height: 40px;
+  padding: 0 10px 0 12px;
+  border-radius: var(--radius-card);
   border: 1px solid var(--line);
   background: color-mix(in srgb, var(--glass-control) 55%, transparent);
-  font-size: 15px;
+  font-size: 13px;
   font-weight: 500;
 }
 
@@ -2083,28 +2205,4 @@ onBeforeUnmount(() => {
   white-space: nowrap;
 }
 
-/* ---------- meta line ---------- */
-
-.meta {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 0 8px;
-  font-size: 13px;
-  color: var(--fg-dim);
-  min-height: 20px;
-}
-
-.meta-name {
-  color: var(--fg);
-  max-width: 40%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.meta i {
-  font-style: normal;
-  opacity: 0.6;
-}
 </style>

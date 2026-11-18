@@ -259,6 +259,8 @@ export default {
   播放控制: { tw: "播放控制", en: "Playback controls", ja: "再生コントロール", ko: "재생 컨트롤" },
   上一首: { tw: "上一首", en: "Previous", ja: "前の曲", ko: "이전 곡" },
   下一首: { tw: "下一首", en: "Next", ja: "次の曲", ko: "다음 곡" },
+  上一个视频: { tw: "上一個影片", en: "Previous video", ja: "前の動画", ko: "이전 동영상" },
+  下一个视频: { tw: "下一個影片", en: "Next video", ja: "次の動画", ko: "다음 동영상" },
   取消静音: { tw: "取消靜音", en: "Unmute", ja: "ミュート解除", ko: "음소거 해제" },
   静音: { tw: "靜音", en: "Mute", ja: "ミュート", ko: "음소거" },
   音量: { tw: "音量", en: "Volume", ja: "音量", ko: "볼륨" },

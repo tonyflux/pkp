@@ -681,10 +681,9 @@ button.new.primary:hover:not(:disabled) {
 .trigger {
   flex: 1;
   min-width: 0;
-  height: 40px;
-  min-height: 40px;
-  padding: 0;
-  gap: 14px;
+  min-height: 52px;
+  padding: 6px 8px;
+  gap: 12px;
   justify-content: flex-start;
   overflow: hidden;
   border: 0;
@@ -696,7 +695,7 @@ button.new.primary:hover:not(:disabled) {
 .trigger:hover:not(:disabled),
 .trigger[aria-expanded="true"] {
   border-color: transparent;
-  background: var(--accent-soft);
+  background: color-mix(in srgb, var(--fg) 6%, transparent);
 }
 
 .nav button:focus-visible {
@@ -741,10 +740,9 @@ button.new.primary:hover:not(:disabled) {
 }
 
 .account.current {
-  margin: 0 -10px;
-  padding: 6px 14px 6px 6px;
+  margin: 0;
+  padding: 0;
   border-radius: 10px;
-  border: 1px solid transparent;
   background: var(--accent-soft);
   box-shadow: none;
 }
@@ -846,12 +844,18 @@ button.new.primary:hover:not(:disabled) {
   padding: 12px 7px 0;
 }
 
-/* On Settings the lens around the avatar is the rail's active lens: as wide as
-   the others (54px) and a circle with an even ring, at the full nav's 54px
-   height so collapsing moves nothing up or down. */
 .compact .account.current {
   margin: 0 -7px;
-  padding: 6px;
+  padding: 0 7px;
+  background: transparent;
+}
+
+.compact .account.current .trigger {
+  background: var(--accent-soft);
+}
+
+.compact .trigger {
+  padding: 6px 0;
 }
 
 /* Level with the button; 21px clears the island's padding and edge by the
