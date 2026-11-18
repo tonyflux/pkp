@@ -32,8 +32,8 @@ export default {
   "filetask|本次保留 {n} 条任务记录": { tw: "本次保留 {n} 筆任務記錄", en: "{n} task results kept for this session", ja: "このセッションで {n} 件の操作結果を保持", ko: "이 세션에 작업 결과 {n}개 보관됨" },
   "filetask|{n} 项任务进行中": { tw: "{n} 項任務進行中", en: "{n} tasks active", ja: "{n} 件の操作が進行中", ko: "작업 {n}개 진행 중" },
   "filetask|{n} 条结果": { tw: "{n} 筆結果", en: "{n} results", ja: "操作結果 {n} 件", ko: "결과 {n}개" },
-  "filetask|只停掉还没发出的项目；已经发出去的会继续完成，不会撤销。": {
-    tw: "只停掉還沒發出的項目；已經發出去的會繼續完成，不會撤銷。",
+  "filetask|仅停止尚未发出的项目；已发出的操作将继续完成，不会撤销。": {
+    tw: "僅停止尚未發出的項目；已送出的操作將繼續完成，不會撤銷。",
     en: "Stops only unsent items. Items already sent will finish and won't be undone.",
     ja: "未送信の項目だけを止めます。送信済みの操作は完了まで続行され、取り消されません。",
     ko: "아직 보내지 않은 항목만 멈춥니다. 이미 보낸 작업은 끝까지 진행되며 취소되지 않습니다.",

@@ -247,8 +247,8 @@ export default {
   收起并继续播放: { tw: "收起並繼續播放", en: "Minimize & keep playing", ja: "閉じて再生を続ける", ko: "접고 계속 재생" },
   "{title} 的封面": { tw: "{title} 的封面", en: "Cover of {title}", ja: "{title} のカバー", ko: "{title} 커버" },
   来自你的云端收藏: { tw: "來自你的雲端收藏", en: "From your cloud collection", ja: "あなたのクラウドコレクションから", ko: "내 클라우드 컬렉션에서" },
-  "这首没能加载出来，可以重试一次": {
-    tw: "這首沒能載入，可以再試一次",
+  "音频加载失败，请重试": {
+    tw: "音訊載入失敗，請重試",
     en: "This track didn't load. You can try again.",
     ja: "この曲を読み込めませんでした。再試行できます。",
     ko: "이 곡을 불러오지 못했습니다. 다시 시도해 보세요.",
@@ -321,8 +321,8 @@ export default {
   未选择文件: { tw: "未選取檔案", en: "No selection", ja: "未選択", ko: "선택한 파일 없음" },
   下载到电脑: { tw: "下載到電腦", en: "Download to Computer", ja: "コンピュータにダウンロード", ko: "컴퓨터로 다운로드" },
   "正在加载…": { tw: "正在載入…", en: "Loading…", ja: "読み込み中…", ko: "불러오는 중…" },
-  "视频没能加载出来，可以重试一次": {
-    tw: "影片沒能載入，可以再試一次",
+  "视频加载失败，请重试": {
+    tw: "影片載入失敗，請重試",
     en: "The video didn't load. You can try again.",
     ja: "動画を読み込めませんでした。もう一度お試しください。",
     ko: "영상을 불러오지 못했습니다. 다시 시도해 보세요.",

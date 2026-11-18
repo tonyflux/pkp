@@ -113,7 +113,7 @@ func readTorrentFile(path string) (torrent.Meta, error) {
 	}
 	info, err := os.Stat(path)
 	if err != nil {
-		return torrent.Meta{}, i18n.Errorf("打不开这个种子文件：%w", err)
+		return torrent.Meta{}, i18n.Errorf("无法打开此种子文件：%w", err)
 	}
 	if info.Size() > torrent.MaxSize {
 		return torrent.Meta{}, i18n.Errorf("这个文件超过 %d MB，看起来不像种子文件", torrent.MaxSize>>20)

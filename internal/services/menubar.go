@@ -571,7 +571,7 @@ func (m *MenuBarService) requestUpdateInstall(start func() error, cancel func())
 	m.mu.Lock()
 	if m.app == nil || m.quitting.Load() || m.asking.Load() || m.updateQuit != nil {
 		m.mu.Unlock()
-		return i18n.New("已经在更新中了")
+		return i18n.New("更新已在进行中")
 	}
 	m.updateQuit = &updateQuit{start: start, cancel: cancel}
 	m.mu.Unlock()
@@ -672,7 +672,7 @@ func (m *MenuBarService) ShouldQuit() bool {
 	question := quitQuestion(m.drive.Uploads(), m.drive.Downloads(), unsaved)
 	if manager, err := m.drive.syncManager(); err == nil {
 		if n := manager.ActiveCount(); n > 0 {
-			question = i18n.F("还有 %d 组文件夹正在同步。退出会先停下来，下次打开会重新核对后再继续。", n) + question
+			question = i18n.F("仍有 %d 组文件夹正在同步。退出将暂停本地同步，下次启动时会在重新核对后继续。", n) + question
 		}
 	}
 	if question == "" || m.app == nil {
@@ -938,6 +938,6 @@ func quitQuestion(uploads []UploadTask, downloads []DownloadTask, unsaved string
 	if b.Len() == 0 {
 		return ""
 	}
-	b.WriteString(i18n.T("只是想先收起窗口，点「继续运行」就行。"))
+	b.WriteString(i18n.T("仅需收起窗口时，点击「继续运行」即可。"))
 	return b.String()
 }

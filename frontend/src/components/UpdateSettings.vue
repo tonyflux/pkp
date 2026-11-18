@@ -30,19 +30,19 @@ const errors: Record<string, string> = {
   signature: N_("更新签名无效，已停止更新。"),
   integrity: N_("安装包校验失败，请重新下载。"),
   manifest: N_("更新信息不完整或格式不正确，已停止更新。"),
-  noRelease: N_("暂时没有可用的正式发布，请稍后再检查。"),
+  noRelease: N_("暂无可用的正式版本，请稍后重试。"),
   rateLimit: N_("GitHub 暂时限制了请求，请稍后再试。"),
   storage: N_("无法保存更新文件或设置，请检查磁盘空间与目录权限。"),
   installLocation: N_("请将 PKP 安装到「应用程序」后再更新，不要从磁盘镜像、只读位置或临时隔离路径运行。"),
-  installPermission: N_("没有拿到替换应用的权限，请重试并允许 macOS 的权限弹窗。"),
-  installBusy: N_("另一个 PKP 窗口或进程还在跑，请先关掉它再重试。"),
-  install: onWindows ? N_("未能打开安装程序，当前应用继续运行。") : N_("更新没装成功，检查下磁盘空间和权限再试试，或者去官方 Release 重新下载安装。"),
-  installRollback: N_("更新失败了，原来的应用也没恢复过来，请从官方 Release 重装 PKP（账号和本地设置都在）。"),
+  installPermission: N_("未获得替换应用的权限，请重试并在 macOS 弹窗中允许授权。"),
+  installBusy: N_("检测到另一个 PKP 窗口或进程正在运行，请先关闭后重试。"),
+  install: onWindows ? N_("未能打开安装程序，当前应用继续运行。") : N_("更新安装失败，请检查磁盘空间与权限后重试，或前往官方 Release 重新下载安装。"),
+  installRollback: N_("更新失败且原应用未能恢复，请前往官方 Release 重新安装 PKP（账号与本地设置均会保留）。"),
 };
 const error = computed(() => updates.error || (state.value?.error ? t(errors[state.value.error] ?? errors.network) : ""));
 const status = computed(() => {
   if (!state.value) return t("正在读取…");
-  if (!state.value.supported) return t("当前是开发版，或这个平台暂不支持在应用里直接更新。");
+  if (!state.value.supported) return t("当前为开发版，或此平台暂不支持应用内更新。");
   switch (state.value.phase) {
     case "checking": return t("正在检查更新…");
     case "current": return t("已是最新正式版本");
@@ -91,7 +91,7 @@ async function openCommunity(href: string) {
 <template>
   <section class="update-settings" :aria-label="t('关于与更新')">
     <h2>{{ t("关于与更新") }}</h2>
-    <p class="lead">{{ t("看看有没有新版本、更新了什么，也可以下载官方安装包。") }}</p>
+    <p class="lead">{{ t("检查新版本、查看更新说明，或下载官方安装包。") }}</p>
     <div class="update-card glass-well version-card">
       <div class="version-row">
         <Logo :size="38" />
@@ -119,7 +119,7 @@ async function openCommunity(href: string) {
           <button class="pill" :disabled="busy" @click="remindUpdateLater">{{ t("稍后提醒") }}</button>
           <button class="quiet" :disabled="busy" @click="ignoreUpdate">{{ t("忽略此版本") }}</button>
         </div>
-        <p class="muted safety"><Icon name="shield" :size="13" />{{ t("不会自动安装，账号和本地设置都会留着。") }}</p>
+        <p class="muted safety"><Icon name="shield" :size="13" />{{ t("不会自动安装，账号与本地设置均会保留。") }}</p>
       </template>
     </div>
 
@@ -127,11 +127,11 @@ async function openCommunity(href: string) {
       <h3 id="release-notes-title">{{ t("更新说明") }}</h3>
       <div ref="notesRoot" class="notes"><MarkdownDoc :blocks="releaseNotes" @link="followReleaseLink" /></div>
       <p v-if="releaseError" class="error" role="alert">{{ releaseError }}</p>
-      <p class="muted install-note">{{ onWindows ? t("开始安装前会先问你是否退出，点取消不会关掉应用，账号和本地设置都会留着。") : t("退出后会替换为新版本再重新打开，账号和设置都留着。macOS 可能会弹出替换授权，新版打开时也照常走系统安全确认。") }}</p>
+      <p class="muted install-note">{{ onWindows ? t("安装前会提示确认退出；取消不会关闭应用，账号与本地设置均会保留。") : t("退出后将替换为新版本并自动重启，账号与设置均会保留。替换时 macOS 可能会请求权限，新版本启动时也将按系统安全策略进行验证。") }}</p>
     </section>
 
     <div class="update-card glass-well automatic">
-      <div><strong>{{ t("自动检查更新") }}</strong><p class="muted">{{ t("每次打开以及每隔 24 小时查一次新版本，不会悄悄自动下载或安装，也不会上传账号、文件信息或统计编号。") }}</p></div>
+      <div><strong>{{ t("自动检查更新") }}</strong><p class="muted">{{ t("启动时及每隔 24 小时检查一次新版本；不会在后台自动下载或安装，也不会上传账号、文件信息或统计标识符。") }}</p></div>
       <Toggle :model-value="!!state?.automatic" :label="t('自动检查更新')" :disabled="!state?.supported || busy" @update:model-value="setAutomaticUpdates" />
     </div>
 

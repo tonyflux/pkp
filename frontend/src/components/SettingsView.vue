@@ -134,7 +134,7 @@ const languageOptions = computed<SelectOption<LanguagePref>[]>(() => [{ value: "
 const languageNote = computed(() =>
   i18n.pref === "system"
     ? t("跟随系统当前语言（{name}）", { name: LOCALES.find((l) => l.value === i18n.locale)?.label ?? i18n.locale })
-    : t("界面文字会马上切换；系统的文件选择框和解锁弹窗在下次打开 PKP 时生效。"),
+    : t("界面文字将立即切换；系统文件选择对话框与解锁弹窗将在下次启动 PKP 时生效。"),
 );
 
 // The platform's own names, said in the UI's language.
@@ -431,7 +431,7 @@ const TEST_TEXT: Record<string, string> = {
   ok: N_("连接成功"),
   auth: N_("Key 无效或没有权限"),
   unreachable: N_("地址不可达"),
-  config: N_("还不能测试"),
+  config: N_("暂无法测试"),
 };
 const testText = computed(() => {
   const r = aiSettings.test;
@@ -550,10 +550,10 @@ function cancelTmdb() {
 const TMDB_TEST: Record<string, string> = {
   ok: N_("连接成功"),
   auth: N_("凭据无效或已停用"),
-  unreachable: N_("连不上 TMDB"),
+  unreachable: N_("无法连接 TMDB"),
   ratelimit: N_("请求过于频繁"),
   server: N_("TMDB 返回错误"),
-  config: N_("还不能测试"),
+  config: N_("暂无法测试"),
 };
 const tmdbTestText = computed(() => {
   const r = tmdb.test;
@@ -632,7 +632,7 @@ onBeforeUnmount(() => {
         <!-- ---------- General ---------- -->
         <template v-if="tab === 'basic'">
           <h2>{{ t("基本") }}</h2>
-          <p class="lead">{{ t("这些选项只影响这台电脑上的显示，不会同步到别处。") }}</p>
+          <p class="lead">{{ t("以下选项仅在本机生效，不会同步至其他设备。") }}</p>
 
           <div class="card">
             <div class="card-text">
@@ -695,8 +695,8 @@ onBeforeUnmount(() => {
           <div class="card">
             <div class="card-text">
               <strong>{{ t("壁纸") }}</strong>
-              <span v-if="ui.wallpaper">{{ t("正在用你选的图片。玻璃上的字看不清时，可以打开下面的「降低透明度」。") }}</span>
-              <span v-else>{{ t("内置的雪山湖景，随浅色、深色换明暗；也可以换成电脑里的一张图片。") }}</span>
+              <span v-if="ui.wallpaper">{{ t("当前使用自定义图片。若半透明背景上的文字不够清晰，可开启下方的「降低透明度」。") }}</span>
+              <span v-else>{{ t("内置雪山湖景壁纸，随浅色或深色模式自动切换；也可选择本地图片。") }}</span>
             </div>
             <div class="actions">
               <img class="wall-preview" :src="wallpaperSrc" :alt="t('当前壁纸')" />
@@ -708,7 +708,7 @@ onBeforeUnmount(() => {
           <div class="card">
             <div class="card-text">
               <strong>{{ t("降低透明度") }}</strong>
-              <span>{{ t("把半透明玻璃换成纯色底：再亮的壁纸也不挡字，顺便省点性能。") }}</span>
+              <span>{{ t("将半透明玻璃替换为纯色背景，提升文字对比度并减少图形渲染开销。") }}</span>
             </div>
             <Toggle :model-value="ui.reduceTransparency" :label="t('降低透明度')" @update:model-value="setReduceTransparency" />
           </div>
@@ -716,7 +716,7 @@ onBeforeUnmount(() => {
           <div class="card">
             <div class="card-text">
               <strong>{{ t("侧栏只显示图标") }}</strong>
-              <span>{{ t("把侧边栏收成一列图标，留出更多空间看文件；也可以按 {shortcut} 切换（窗口窄于 1080px 时会自动收起）。", { shortcut: `${modKey}\\` }) }}</span>
+              <span>{{ t("将侧边栏收起为图标列以扩大浏览区域；也可按 {shortcut} 切换（窗口宽度小于 1080px 时将自动收起）。", { shortcut: `${modKey}\\` }) }}</span>
             </div>
             <Toggle :model-value="ui.navCompact" :label="t('侧栏只显示图标')" @update:model-value="setNavCompact" />
           </div>
@@ -757,7 +757,7 @@ onBeforeUnmount(() => {
         <!-- ---------- Notifications (System notifications) ---------- -->
         <template v-else-if="tab === 'notify'">
           <h2>{{ t("通知") }}</h2>
-          <p class="lead">{{ onWindows ? t("PKP 在后台、或窗口关到系统托盘时，用系统通知告诉你传输和任务的结果。") : t("PKP 在后台、或窗口关到菜单栏时，用系统通知告诉你传输和任务的结果。") }}</p>
+          <p class="lead">{{ onWindows ? t("PKP 在后台或最小化至系统托盘时，通过系统通知提醒传输和任务结果。") : t("PKP 在后台或收起至菜单栏时，通过系统通知提醒传输和任务结果。") }}</p>
 
           <div class="card">
             <div class="card-text">
@@ -788,8 +788,8 @@ onBeforeUnmount(() => {
               <strong>{{ t("PKP 在前台时也通知") }}</strong>
               <span>{{
                 onWindows
-                  ? t("默认只在后台或缩到系统托盘时发通知；窗口就在眼前时就不打扰你了。")
-                  : t("默认只在后台或缩到菜单栏时发通知；窗口就在眼前时就不打扰你了。")
+                  ? t("默认仅在后台或最小化至系统托盘时发送通知，窗口位于前台时不打扰。")
+                  : t("默认仅在后台或收起至菜单栏时发送通知，窗口位于前台时不打扰。")
               }}</span>
             </div>
             <Toggle
@@ -802,9 +802,9 @@ onBeforeUnmount(() => {
 
           <div class="card">
             <div class="card-text">
-              <strong>{{ t("会通知的事") }}</strong>
+              <strong>{{ t("通知范围") }}</strong>
               <span>
-                {{ t("包括下载/上传出错或全部完成、云添加结果、文件整理与清理完成、账号登录过期。点通知会直接跳到对应页面；应用锁开启时，通知里会自动隐藏文件名和账号。") }}
+                {{ t("包括下载/上传出错或全部完成、云添加结果、文件整理与清理完成、账号登录过期。点击通知可直接跳转至对应页面；应用锁开启时，通知内将自动隐藏文件名与账号。") }}
               </span>
             </div>
           </div>
@@ -812,7 +812,7 @@ onBeforeUnmount(() => {
           <div class="card">
             <div class="card-text">
               <strong>{{ t("测试") }}</strong>
-              <span>{{ systemNotices.note || t("发一条通知，看看它在这台电脑上的样子。") }}</span>
+              <span>{{ systemNotices.note || t("发送一条测试通知，确认本机通知显示效果。") }}</span>
             </div>
             <div class="actions">
               <button class="pill" :disabled="!notices?.available || !notices.enabled" @click="sendTestNotice">{{ t("发送测试通知") }}</button>
@@ -830,7 +830,7 @@ onBeforeUnmount(() => {
         <!-- ---------- Account management ---------- -->
         <template v-else-if="tab === 'accounts'">
           <h2>{{ t("账号管理") }}</h2>
-          <p class="lead">{{ t("多个账号，放在一起管") }}</p>
+          <p class="lead">{{ t("统一管理多个 PikPak 账号") }}</p>
 
           <div class="section-head">
             <h3 class="group">
@@ -910,13 +910,13 @@ onBeforeUnmount(() => {
             </span>
           </div>
 
-          <p class="info-note">{{ t("切账号不会打断后台的下载、上传和云添加；如果要彻底移除账号，移除前会先把本地任务怎么处理说清楚。") }}</p>
+          <p class="info-note">{{ t("切换账号不会中断后台下载、上传或云添加任务；移除账号前会提示本地任务的处理方式。") }}</p>
         </template>
 
         <!-- ---------- Transfers ---------- -->
         <template v-else-if="tab === 'transfer'">
           <h2>{{ t("传输") }}</h2>
-          <p class="lead">{{ t("决定云添加的文件怎样存进云盘、本地上传中断后怎样继续、下载到电脑存到哪里，并查看本月的传输配额。") }}</p>
+          <p class="lead">{{ t("设置云添加保存规则、本地上传续传策略及下载保存路径，并查看本月传输配额。") }}</p>
 
           <h3 class="group">{{ t("云添加") }}</h3>
           <p class="scope">{{ t("以下偏好保存在账号里，对所有 PikPak 客户端生效。") }}</p>
@@ -952,7 +952,7 @@ onBeforeUnmount(() => {
             <div class="card">
               <div class="card-text">
                 <strong>{{ t("添加 Torrent 文件时自动解析") }}</strong>
-                <span>{{ t("添加种子文件后直接传输其中的文件，不再停下来等你挑选。") }}</span>
+                <span>{{ t("添加 Torrent 文件后自动开始传输全部文件，不再弹出文件选择确认。") }}</span>
               </div>
               <Toggle
                 :model-value="prefs.autoParseTorrent"
@@ -963,13 +963,13 @@ onBeforeUnmount(() => {
           </template>
 
           <h3 class="group">{{ t("本地上传") }}</h3>
-          <p class="scope">{{ t("以下设置只影响这台电脑。") }}</p>
+          <p class="scope">{{ t("以下设置仅在本机生效。") }}</p>
 
           <template v-if="connections.local">
             <div class="card">
               <div class="card-text">
                 <strong>{{ t("同时上传的文件数") }}</strong>
-                <span>{{ t("每个文件另有 4 路分片同时传。调高更容易占满上行带宽，网络不稳时调低更可靠。正在传的不受影响，排队的按新数量开始。") }}</span>
+                <span>{{ t("每个文件另有 4 路分片同时上传。调高可更充分利用上行带宽，网络不稳时建议调低。不影响正在上传的任务，排队任务按新数量开始。") }}</span>
               </div>
               <div v-slide class="seg glass-well" role="radiogroup" :aria-label="t('同时上传的文件数')">
                 <button
@@ -988,14 +988,14 @@ onBeforeUnmount(() => {
             <div class="card">
               <div class="card-text">
                 <strong>{{ t("断点续传") }}</strong>
-                <span>{{ t("上传失败或退出应用后，点「继续」从已上传的部分接着上传。上传凭证 12 小时后过期，过期了就重新申请、从头开始。关闭后，没上传完的上传不保留进度，重试都从头开始。") }}</span>
+                <span>{{ t("上传中断或退出应用后，点击「继续」可从已上传进度恢复。上传凭证 12 小时后过期，过期后需重新上传；关闭此选项将不保留未完成进度，重试时从头开始。") }}</span>
               </div>
               <Toggle :model-value="connections.local.resumableUploads" :label="t('断点续传')" @update:model-value="setResumableUploads" />
             </div>
           </template>
 
           <h3 class="group">{{ t("下载到电脑") }}</h3>
-          <p class="scope">{{ t("以下设置只影响这台电脑。") }}</p>
+          <p class="scope">{{ t("以下设置仅在本机生效。") }}</p>
 
           <template v-if="connections.local">
             <div class="card">
@@ -1079,7 +1079,7 @@ onBeforeUnmount(() => {
         <template v-else-if="tab === 'ai'">
           <p class="eyebrow">{{ t("设置 · AI") }}</p>
           <h2>{{ t("配置自己的模型，掌控发给 AI 的内容范围") }}</h2>
-          <p class="lead">{{ t("整理建议、本地搜索和新文件分类都不需要模型。接上你自己的模型后，就能直接对话问 AI；API Key 存在系统{store}里。", { store: keychainName }) }}</p>
+          <p class="lead">{{ t("整理建议、本地搜索与新文件分类均无需配置模型。接入自有模型后即可使用 AI 对话；API Key 安全保存于系统{store}。", { store: keychainName }) }}</p>
 
           <div v-if="!ai" class="late loading">
             <Orbit :size="18" :label="t('正在读取')" />
@@ -1144,7 +1144,7 @@ onBeforeUnmount(() => {
                 </SuggestMenu>
               </div>
               <p class="hint" :class="{ bad: sameModelConnection && modelList.error }" role="status">{{ modelHint }}</p>
-              <p v-if="sameModelConnection && modelList.ids !== null" class="hint">{{ t("原样显示接口返回的模型 ID；具体能不能调用，看你的账号权限和额度。") }}</p>
+              <p v-if="sameModelConnection && modelList.ids !== null" class="hint">{{ t("直接显示接口返回的模型 ID；实际是否可用取决于您的账号权限与额度。") }}</p>
 
               <div class="field">
                 <span id="ai-key">API Key</span>
@@ -1229,8 +1229,8 @@ onBeforeUnmount(() => {
                   {{
                     limitError ||
                     (unlimited
-                      ? t("不限制上限：聊天不会中途停下，每轮确认前还是会估一个预计用量；实际费用按你的模型服务商结算。")
-                      : t("一段对话累计达到上限后停止请求，保留已经得到的结果。"))
+                      ? t("不设上限：对话不会因用量中断，每轮确认前仍会显示预估消耗；实际费用由您的模型服务商结算。")
+                      : t("单段对话累计用量达到上限后将停止请求，并保留已获取的结果。"))
                   }}
                 </p>
               </section>
@@ -1256,7 +1256,7 @@ onBeforeUnmount(() => {
                 </template>
                 <p class="hint shield-note">
                   <Icon name="shield" :size="15" />
-                  <span>{{ t("给元数据选「始终允许」时不包括字幕内容；每个账号单独设置。真要改文件时还是会先给你预览确认。") }}</span>
+                  <span>{{ t("为元数据选择「始终允许」时不包含字幕内容，且各账号独立设置。涉及文件修改的操作仍会先预览并请求确认。") }}</span>
                 </p>
               </section>
             </div>
@@ -1326,7 +1326,7 @@ onBeforeUnmount(() => {
               </p>
               <template v-else>
                 <p class="hint">
-                  {{ t("填上你自己的 TMDB API Key（v3）或读访问令牌（v4）（去 themoviedb.org 的设置里申请），整理影视时用来更准地核对片名和年份；不填也能照常按规则和 AI 识别。") }}
+                  {{ t("填写您的 TMDB API Key（v3）或读取访问令牌（v4）（可在 themoviedb.org 账户设置中申请），用于在整理影视文件时精准匹配片名与年份；留空也可正常通过内置规则与 AI 识别。") }}
                 </p>
 
                 <div class="field">
@@ -1430,7 +1430,7 @@ onBeforeUnmount(() => {
                 </header>
 
                 <template v-if="proxy.mode === 'custom'">
-                  <p class="hint">{{ t("填上代理服务提供的地址和端口。只有 PKP 自己的请求会走它，不会影响电脑上的其他软件。") }}</p>
+                  <p class="hint">{{ t("填写代理服务提供的地址与端口。仅 PKP 的网络请求会通过此代理，不影响本机其他应用。") }}</p>
                   <label class="field">
                     <span>{{ t("类型") }}</span>
                     <span class="select glass-well">
@@ -1526,17 +1526,17 @@ onBeforeUnmount(() => {
                 </template>
 
                 <template v-else-if="proxy.mode === 'system'">
-                  <p class="hint">{{ t("按电脑当前的网络和代理设置连接（没设代理时会再看 http_proxy 等环境变量）；系统里的 VPN 照常生效。") }}</p>
+                  <p class="hint">{{ t("使用当前系统的网络与代理设置（未配置代理时读取 http_proxy 等环境变量）；系统 VPN 保持生效。") }}</p>
                   <p class="hint">{{ px.system }}</p>
                   <!-- Not red alone: the sentence says it and the sign shows it. -->
                   <p v-if="px.systemPac" class="hint bad icon-note" role="alert">
                     <Icon name="alert" :size="15" />
-                    <span>{{ t("电脑启用了 PAC 自动代理脚本，PKP 不支持运行它，请求会直连出去；要走指定代理请选「自定义代理」。") }}</span>
+                    <span>{{ t("当前系统已启用 PAC 自动代理脚本，PKP 暂不支持执行 PAC 脚本，请求将直连；如需指定代理，请选择「自定义代理」。") }}</span>
                   </p>
                 </template>
 
                 <template v-else>
-                  <p class="hint">{{ t("PKP 不走代理直接连网；不过电脑上开着的系统 VPN 或路由规则依然会生效（选「直连」并不代表绕过 VPN）。") }}</p>
+                  <p class="hint">{{ t("PKP 不通过代理直接连接网络，但系统当前启用的 VPN 或路由规则仍会生效（选择「直连」不会绕过 VPN）。") }}</p>
                 </template>
 
                 <!-- Advanced proxy bypass addresses are shared by custom and
@@ -1550,8 +1550,8 @@ onBeforeUnmount(() => {
                     <span>{{ t("不使用代理的地址") }}</span>
                     <textarea v-model="proxy.bypass" rows="2" spellcheck="false" :placeholder="t('例如 {example}', { example: 'localhost, *.example.com' })" :disabled="proxySettings.saving" />
                     <small>
-                      {{ t("用逗号、空格或换行隔开；留空就不设例外（127.0.0.1、localhost 本身始终直连）。") }}
-                      {{ t("像 192.168.0.0/16 这样的网段只管应用自身的请求；页面里的图片请直接写域名或 IP。") }}
+                      {{ t("使用逗号、空格或换行分隔；留空表示不设例外（127.0.0.1 与 localhost 始终直连）。") }}
+                      {{ t("类似 192.168.0.0/16 的 CIDR 网段仅作用于应用自身请求；页面内嵌图片请填写具体域名或 IP。") }}
                     </small>
                   </label>
                 </template>

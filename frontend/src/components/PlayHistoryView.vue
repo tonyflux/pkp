@@ -67,7 +67,7 @@ watch([currentId, () => ui.route], async ([id, route], previous) => {
     <header class="head">
       <div>
         <h1>{{ t("播放历史") }}</h1>
-        <p>{{ t("接着看没看完的视频，或重温看过的那几部。") }}</p>
+        <p>{{ t("继续观看未完成的视频，或重温已看过的影片。") }}</p>
       </div>
       <div class="head-actions">
         <button :disabled="playHistory.loading || playHistory.clearing" @click="loadPlayHistory()">
@@ -85,7 +85,7 @@ watch([currentId, () => ui.route], async ([id, route], previous) => {
 
     <fieldset v-if="confirming" class="clear-confirm" :disabled="playHistory.clearing">
       <ConfirmInline
-        :message="t('只清掉这台电脑上的播放记录，不删云盘文件，也不删云端记录。')"
+        :message="t('仅清除本机的播放记录，不会删除云盘文件或云端记录。')"
         :confirm-label="playHistory.clearing ? t('正在清除播放记录') : t('清除播放记录')"
         danger
         @confirm="clear"
@@ -129,7 +129,7 @@ watch([currentId, () => ui.route], async ([id, route], previous) => {
         <div v-if="!rows.length" class="empty" role="status">
           <Icon name="search" :size="32" />
           <h2>{{ playHistory.loading ? t("正在读取播放记录") : t("没有符合条件的播放记录") }}</h2>
-          <p>{{ playHistory.loading ? t("记录仍在读取，稍后可能会有更多结果。") : t("试试其他名称，或查看全部观看状态。") }}</p>
+          <p>{{ playHistory.loading ? t("记录仍在读取，稍后可能会有更多结果。") : t("请尝试其他名称，或切换为全部观看状态。") }}</p>
           <button @click="resetFilters">{{ t("查看全部") }}</button>
         </div>
         <ul v-else class="records" :class="layout">

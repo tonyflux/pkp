@@ -191,15 +191,15 @@ function layout(moves: readonly Change[], tree: Tree, changed: ReadonlySet<strin
         }
         const holders = names.get(nameKey(layer)) ?? [];
         if (holders.length > 1) {
-          error = t("这里有多个「{name}」", { name: layer });
+          error = t("当前位置存在多个「{name}」", { name: layer });
           break;
         }
         if (holders.length === 1) {
           const h = holders[0];
           if (!h.folder) error = t("「{name}」已被同名文件占用", { name: layer });
           else if (changed.has(h.id)) {
-            error = t("「{name}」本身也在这次计划里改动", { name: layer });
-            if (!errors.has(h.id)) errors.set(h.id, t("有项要移进这个文件夹，它不能同时改动"));
+            error = t("「{name}」本身也包含在本次计划中", { name: layer });
+            if (!errors.has(h.id)) errors.set(h.id, t("有项目将移入此文件夹，无法同时修改"));
           } else loc = `e:${h.id}`;
           if (error) break;
           continue;
@@ -245,8 +245,8 @@ export function problems(changes: readonly Change[], tree: Tree): Map<string, st
   for (const c of doing) {
     for (const up of tree.ancestorsOf(c.item.id)) {
       if (!changed.has(up)) continue;
-      fail(c.item.id, t("它所在的文件夹也在这次计划里改动，两者不能同时改"));
-      fail(up, t("文件夹里的项也在这次计划里改动，两者不能同时改"));
+      fail(c.item.id, t("其所在文件夹也包含在本次计划中，无法同时修改"));
+      fail(up, t("此文件夹内的项目也包含在本次计划中，无法同时修改"));
     }
   }
 
@@ -283,7 +283,7 @@ export function problems(changes: readonly Change[], tree: Tree): Map<string, st
       if (who.startsWith("c:")) fail(who.slice(2), t("目标位置重名，请修改名称或取消此项"));
       else if (who.startsWith("m:")) {
         const m = made.get(who.slice(2))!;
-        for (const id of m.via) fail(id, t("要新建的文件夹「{name}」和那里的其他项重名", { name: m.name }));
+        for (const id of m.via) fail(id, t("拟新建的文件夹「{name}」与目标位置已有项目重名", { name: m.name }));
       }
     }
   }

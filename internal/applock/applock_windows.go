@@ -267,9 +267,9 @@ func unavailableHRESULTMessage(err error) string {
 func consentUnavailableMessage(code int32) (msg string, ok bool) {
 	switch code {
 	case consentDeviceNotPresent:
-		return i18n.T("这台电脑没有可用的 Windows Hello 设备"), true
+		return i18n.T("本机没有可用的 Windows Hello 设备"), true
 	case consentNotConfiguredForUser:
-		return i18n.T("这台电脑没有设置 Windows Hello（PIN、指纹或面部）"), true
+		return i18n.T("本机未设置 Windows Hello（PIN、指纹或面部）"), true
 	case consentDisabledByPolicy:
 		return i18n.T("Windows Hello 已被系统策略停用"), true
 	}

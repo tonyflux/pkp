@@ -169,7 +169,7 @@ onBeforeUnmount(() => {
           :retry="turn.id === retryTurnId"
         />
 
-        <p v-if="!turns.length && !live" class="empty">{{ t("说一句想找什么、想怎么整理。本地能完成的先在本地完成，需要模型时会先问你。") }}</p>
+        <p v-if="!turns.length && !live" class="empty">{{ t("输入您想查找的内容或整理需求。本地可完成的操作将在本机执行，需要使用模型时会先征求您的确认。") }}</p>
 
         <p v-if="alwaysAllow && usage && usage.used > 0" class="usage tnum">
           {{ t("本对话已用约 {n} tokens", { n: formatTokens(usage.used) }) }}<template v-if="usage.limit"> / {{ t("上限 {n}", { n: formatTokens(usage.limit) }) }}</template>

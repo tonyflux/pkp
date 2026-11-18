@@ -129,8 +129,8 @@ const deleting = ref("");
       <div class="home-inner">
         <header class="intro">
           <span class="eyebrow"><Icon name="spark" :size="17" /> PKP ASSISTANT <span class="slash">/</span> <span class="who">{{ account }}</span></span>
-          <h1>{{ t("看看文件怎么整理") }}</h1>
-          <p>{{ t("整理建议直接来自本地索引；拿不准的才问你配好的 AI，改动云盘一定要你点确认。") }}</p>
+          <h1>{{ t("检查并整理文件") }}</h1>
+          <p>{{ t("整理建议直接来自本地索引；仅不确定项目会提交给已配置的 AI，修改云盘前均需您确认。") }}</p>
         </header>
 
         <section v-if="arrival && pendingArrivals.length === 1" class="inbox" aria-labelledby="ai-home-inbox">
@@ -145,7 +145,7 @@ const deleting = ref("");
           <div class="inbox-right">
             <span class="local-pill"><Icon name="check" :size="13" /> {{ t("不用模型") }}</span>
             <div class="inbox-actions">
-              <button class="quiet dismiss" type="button" :disabled="locked" :title="t('只是忽略提醒，云盘里的文件照样留着')" @click="dismissArrival(arrival)">{{ t("忽略") }}</button>
+              <button class="quiet dismiss" type="button" :disabled="locked" :title="t('仅忽略此提醒，云盘中的文件不受影响')" @click="dismissArrival(arrival)">{{ t("忽略") }}</button>
               <button class="primary go" type="button" :disabled="locked" @click="openArrival(arrival)">
                 {{ t("查看整理建议") }}
                 <Icon name="arrowRight" :size="15" />
@@ -169,7 +169,7 @@ const deleting = ref("");
           </ul>
           <footer class="arrival-batch-actions">
             <span class="minor">{{ t("已选 {n} 项", { n: selectedArrivals.length }) }}</span>
-            <button class="quiet dismiss" :disabled="batchLocked || !selectedArrivals.length" :title="t('只是忽略提醒，云盘里的文件照样留着')" @click="ignoreSelected">{{ t("忽略选中的提醒") }}</button>
+            <button class="quiet dismiss" :disabled="batchLocked || !selectedArrivals.length" :title="t('仅忽略此提醒，云盘中的文件不受影响')" @click="ignoreSelected">{{ t("忽略选中的提醒") }}</button>
             <button class="primary go" :disabled="batchLocked || !selectedArrivals.length" @click="openArrivals(selectedArrivals)">{{ t("一起看整理建议") }}<Icon name="arrowRight" :size="15" /></button>
           </footer>
         </section>
@@ -196,8 +196,8 @@ const deleting = ref("");
             <button class="action-row" type="button" @click="openLocalSearch('类型:视频 没看完')">
               <span class="action-icon soft"><Icon name="search" :size="19" /></span>
               <span class="action-copy">
-                <strong>{{ t("找上次没看完的视频") }}</strong>
-                <small>{{ t("只在本地索引里查，不发请求给模型") }}</small>
+                <strong>{{ t("查找未看完的视频") }}</strong>
+                <small>{{ t("仅在本地索引中查询，不向模型发送请求") }}</small>
               </span>
               <Icon class="row-arrow" name="chevronRight" :size="15" />
             </button>
@@ -213,7 +213,7 @@ const deleting = ref("");
               <span class="action-icon soft"><Icon name="spark" :size="19" /></span>
               <span class="action-copy">
                 <strong>{{ t("「{name}」", { name: text }) }}</strong>
-                <small>{{ t("会先填进下面输入框，你点发送才会发出去") }}</small>
+                <small>{{ t("将先填入下方输入框，点击发送后才会提交") }}</small>
               </span>
               <Icon class="row-arrow" name="chevronRight" :size="15" />
             </button>
@@ -221,8 +221,8 @@ const deleting = ref("");
 
           <aside class="side-note">
             <span class="kicker">{{ t("这次有什么不同") }}</span>
-            <h2>{{ t("AI 只帮你") }}<br />{{ t("处理拿不准的部分") }}</h2>
-            <p>{{ t("搜索和规则整理全都在本机跑；能对上 TMDB 的剧名和片名直接采用，不发给模型，拿不准的才留给你决定。") }}</p>
+            <h2>{{ t("AI 仅处理") }}<br />{{ t("不确定的项目") }}</h2>
+            <p>{{ t("搜索与规则整理均在本机运行；能匹配 TMDB 的剧名与片名将直接采用且不发送给模型，不确定的项目交由您决定。") }}</p>
             <div class="divider" />
             <span class="shield"><Icon name="shield" :size="15" /> {{ t("每次确认还是记住选择，由你决定") }}</span>
           </aside>
@@ -253,7 +253,7 @@ const deleting = ref("");
           <section aria-labelledby="ai-home-talks">
             <div class="list-head">
               <h3 id="ai-home-talks">{{ t("最近对话") }}</h3>
-              <span class="minor">{{ t("保存在这台电脑") }}</span>
+              <span class="minor">{{ t("保存在本机") }}</span>
             </div>
             <p v-if="!talks.length" class="empty">{{ t("还没有对话") }}</p>
             <ul v-else>
@@ -279,7 +279,7 @@ const deleting = ref("");
                 </div>
                 <ConfirmInline
                   v-if="deleting === c.id"
-                  :message="t('删掉对话只清除聊天记录，已经做过的整理和结果记录都在。')"
+                  :message="t('删除对话仅清除聊天记录，已执行的整理与结果记录仍会保留。')"
                   :confirm-label="t('删除对话')"
                   danger
                   @cancel="deleting = ''"

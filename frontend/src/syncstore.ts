@@ -182,7 +182,7 @@ export async function startSyncDraft(): Promise<void> {
     if (generation !== draftGeneration) return;
     if (result.preview) { syncDraft.preview = { ...result.preview, changes: result.preview.changes ?? [] }; syncDraft.changed = true; syncDraft.acknowledged = false; }
     else if (result.pair) { sync.selected = result.pair.id; sync.detail = true; sync.draftOpen = false; syncDraft.config = null; syncDraft.preview = null; await loadSync(); }
-    else syncDraft.error = t("没有收到最新的同步设置或预览，请重新检查一下。");
+    else syncDraft.error = t("未收到最新的同步设置或预览，请重新检查。");
   } catch (error) { if (generation === draftGeneration) syncDraft.error = errorText(error); }
   finally { if (generation === draftGeneration) syncDraft.starting = false; }
 }

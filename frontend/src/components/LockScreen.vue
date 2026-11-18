@@ -50,7 +50,7 @@ const passwordError = computed(() => {
 });
 
 const lead = computed(() =>
-  passwordShown.value ? t("输入 PKP 独立密码，解锁回到刚才的页面。") : t("验证一下身份，解锁回到刚才的页面。"),
+  passwordShown.value ? t("输入 PKP 独立密码以解锁并恢复原界面。") : t("完成身份验证以解锁并恢复原界面。"),
 );
 const hint = computed(() => {
   if (passwordShown.value) return "";
@@ -236,9 +236,9 @@ onBeforeUnmount(() => clearInterval(tick));
       <div class="forget" role="alertdialog" aria-modal="true" aria-labelledby="forget-title" aria-describedby="forget-text">
         <span class="forget-symbol" aria-hidden="true"><Icon name="key" :size="22" /></span>
         <span class="forget-kicker">NO RECOVERY</span>
-        <h2 id="forget-title">{{ t("独立密码没有找回通道") }}</h2>
+        <h2 id="forget-title">{{ t("独立密码无法找回") }}</h2>
         <p id="forget-text">
-          {{ t("这个密码没法通过邮箱或客服重置。要是真忘了，只能退出登录并清掉这台电脑的缓存，重新登录后再设一遍（云盘里的文件和下好的文件都不会丢）。") }}
+          {{ t("独立密码无法通过邮箱或客服重置。如已遗忘，只能退出登录并清除本机缓存，重新登录后再重新设置（云盘文件与已下载的本地文件均不受影响）。") }}
         </p>
         <p v-if="forgetError" class="forget-error" role="alert"><Icon name="alert" :size="15" />{{ forgetError }}</p>
         <div class="forget-actions">

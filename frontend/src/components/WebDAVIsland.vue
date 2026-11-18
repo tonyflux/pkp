@@ -187,7 +187,7 @@ async function confirmAction(client: WebDAVClient) {
           </button>
           <div v-if="legacyOpen" class="well-row">
             <div class="well-text">
-              <small>{{ t("旧版接入点 · 连不上主接入点时试试这个") }}</small>
+              <small>{{ t("旧版接入点 · 无法连接主接入点时可尝试此项") }}</small>
               <span class="mono">{{ host(webdav.legacyEndpoint) }}</span>
             </div>
             <button class="quiet icon" :title="t('复制旧版接入点')" @click="copyText(webdav.legacyEndpoint, t('旧版接入点'))"><Icon name="copy" :size="16" /></button>

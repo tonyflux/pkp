@@ -87,7 +87,7 @@ function openKeyPage() {
     <span class="sheet-eyebrow">{{ t("需要模型时再连接") }}</span>
     <h2 id="ai-connect-title">{{ sheet.hasLocal ? t("本地建议已经准备好。") : t("这一步需要连接模型。") }}</h2>
     <p class="sheet-lede">
-      {{ sheet.hasLocal ? t("还没接上你的模型。整理方案和本地搜索都能直接用；想继续问 AI，在这里填上就行。") : t("还没接上你的模型。本地搜索和规则整理不用模型就能跑；想接着问 AI，在这里填上就行。") }}
+      {{ sheet.hasLocal ? t("尚未配置模型。整理方案和本地搜索均可直接使用；如需继续向 AI 提问，可在此填写配置。") : t("尚未配置模型。本地搜索和规则整理无需模型即可使用；如需使用 AI 对话，可在此填写配置。") }}
     </p>
     <div class="steps">
       <span v-if="sheet.found !== null"><Icon name="check" :size="14" /> {{ t("本地索引：{n} 项已找到", { n: sheet.found }) }}</span>
@@ -129,7 +129,7 @@ function openKeyPage() {
         </label>
       </template>
     </div>
-    <p v-if="noKeychain" class="sheet-error">{{ t("这台电脑没有可用的{keychain}，无法保存 API Key。", { keychain: keychainName }) }}</p>
+    <p v-if="noKeychain" class="sheet-error">{{ t("本机没有可用的{keychain}，无法保存 API Key。", { keychain: keychainName }) }}</p>
     <p v-else-if="sheet.error" class="sheet-error" role="alert">{{ sheet.error }}</p>
     <div class="sheet-actions">
       <button v-if="preset.keyUrl && !preset.keyless" class="sheet-btn quiet key-link" type="button" @click="openKeyPage()">{{ t("如何获取 Key") }}</button>
@@ -141,7 +141,7 @@ function openKeyPage() {
         </button>
       </span>
     </div>
-    <p class="sheet-small">{{ t("密钥只保存在本机{keychain}。连接后发送任何文件信息前，仍会先问你。", { keychain: keychainName }) }}</p>
+    <p class="sheet-small">{{ t("密钥仅保存在本机{keychain}。连接后发送任何文件信息前，仍会先征求您的确认。", { keychain: keychainName }) }}</p>
   </AssistantSheet>
 </template>
 

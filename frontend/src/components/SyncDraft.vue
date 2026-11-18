@@ -35,13 +35,13 @@ watch(() => syncDraft.view, async () => { await nextTick(); heading.value?.focus
       <fieldset :disabled="syncDraft.scanning || syncDraft.picking"><legend>{{ t("同步方式") }}</legend>
         <label v-for="mode in syncModes" :key="mode.value" class="mode" :class="{ chosen: config.mode === mode.value }"><input v-model="config.mode" type="radio" name="sync-mode" :value="mode.value" /><span><strong>{{ t(mode.title) }}</strong><small>{{ t(mode.note) }}</small></span><Icon :name="mode.value === 'bidirectional' ? 'repeat' : mode.value === 'backup' ? 'upload' : 'download'" :size="19" /></label>
       </fieldset>
-      <div class="delete-choice"><div><strong>{{ t("跟随删除") }}</strong><p class="hint">{{ config.deletes[config.mode] ? t("一端删掉已同步的文件时，另一端也会一起移到回收站。") : t("一边删了文件，另一边还会留着，也不会清掉多余的文件。") }}</p></div><Toggle v-model="config.deletes[config.mode]" :label="t('跟随删除')" :disabled="syncDraft.scanning" /></div>
+      <div class="delete-choice"><div><strong>{{ t("跟随删除") }}</strong><p class="hint">{{ config.deletes[config.mode] ? t("一端删除已同步文件时，另一端也将同步移至回收站。") : t("单端删除文件时，另一端将保留对应文件，不会同步清理多余文件。") }}</p></div><Toggle v-model="config.deletes[config.mode]" :label="t('跟随删除')" :disabled="syncDraft.scanning" /></div>
       <p class="note">{{ config.id ? t("改了文件夹、同步方式或删除规则，需要重新预览。点取消会保留原来的设置。") : t("首次扫描不删除。冲突保留两者，确认预览前不写入。") }}</p>
       <p v-if="syncDraft.scanning" class="working" role="status"><Orbit :size="18" />{{ t("正在核对内容；尚未写入，可以取消。") }}</p>
     </template>
     <template v-else-if="preview">
       <p class="note">{{ t("还没有写入任何内容；下面是扫描两边得到的同步计划。") }}</p>
-      <p v-if="syncDraft.changed" class="warning" role="status">{{ t("文件内容或权限刚有变化，请看一眼更新后的计划再确认。") }}</p>
+      <p v-if="syncDraft.changed" class="warning" role="status">{{ t("文件内容或权限刚刚发生变更，请查看更新后的计划后再确认。") }}</p>
       <div class="preview-roots"><strong>{{ config.name }} · {{ syncModeName(config.mode) }}</strong><p>{{ config.localPath }}</p><p>{{ shownPath(config.cloudPath) }}</p></div>
       <dl class="totals"><div><dt>{{ t("上传") }}</dt><dd>{{ preview.uploads }}</dd></div><div><dt>{{ t("下载") }}</dt><dd>{{ preview.downloads }}</dd></div><div><dt>{{ t("保留两者") }}</dt><dd>{{ preview.conflicts }}</dd></div><div><dt>{{ t("跳过") }}</dt><dd>{{ preview.skipped }}</dd></div><div><dt>{{ t("移到回收站") }}</dt><dd>{{ preview.deletes }}</dd></div></dl>
       <p class="hint">{{ t("计划传输 {size} · 目录 {n} 个", { size: bytes(preview.bytes, '0 B'), n: preview.directories }) }}</p>
@@ -49,7 +49,7 @@ watch(() => syncDraft.view, async () => { await nextTick(); heading.value?.focus
       <p v-if="preview.blocked" class="warning">{{ t("有几项卡住了，请先处理好名称、权限或文件夹问题，再重新扫描。") }}</p>
       <ul class="changes"><li v-for="change in preview.changes" :key="change.id" :class="{ warning: change.action === 'blocked' || change.action === 'conflict' }"><div><strong>{{ change.path }}</strong><span>{{ syncActionName(change.action) }}</span></div><p v-if="change.reason" class="hint">{{ change.reason }}</p><p class="hint">{{ syncDirectionName(change.direction) }}<template v-if="change.keepName"> · {{ t("保留名称") }}: {{ change.keepName }}</template></p></li></ul>
       <p v-if="!preview.changes.length && !preview.error" class="hint">{{ t("完整核对后未发现待执行的变化。") }}</p>
-      <label class="ack"><input v-model="syncDraft.acknowledged" type="checkbox" :disabled="preview.blocked || !!preview.error || syncDraft.starting" /><span>{{ t("我看过计划了，冲突时会两边都留着，删除也会按现在的规则来。") }}</span></label>
+      <label class="ack"><input v-model="syncDraft.acknowledged" type="checkbox" :disabled="preview.blocked || !!preview.error || syncDraft.starting" /><span>{{ t("我已核对计划：冲突时保留双方版本，删除操作按当前规则执行。") }}</span></label>
     </template>
     <p v-if="syncDraft.error" class="error" role="alert">{{ syncDraft.error }}</p>
     <template #footer>

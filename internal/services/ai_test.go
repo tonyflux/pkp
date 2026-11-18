@@ -245,7 +245,7 @@ func TestModelWithoutKeychain(t *testing.T) {
 	if got := svc.AISettings(); got.Keychain {
 		t.Errorf("settings = %+v, want no keychain", got)
 	}
-	if _, err := svc.SetAIKey(modelKey); err == nil || err.Error() != "这台电脑没有可用的钥匙串，无法保存 API Key" {
+	if _, err := svc.SetAIKey(modelKey); err == nil || err.Error() != "本机没有可用的钥匙串，无法保存 API Key" {
 		t.Errorf("saving a key without a keychain: %v", err)
 	}
 	if res := svc.TestAIConnection(); res.OK || res.Kind != "config" {
@@ -346,7 +346,7 @@ func TestModelConnectionTest(t *testing.T) {
 	if res := svc.TestAIConnection(); res.OK || res.Kind != "unreachable" || res.Message == "" {
 		t.Errorf("closed port: %+v", res)
 	}
-	if _, err := svc.AIComplete("", modelRequest); err == nil || !strings.HasPrefix(err.Error(), "连不上模型服务：") {
+	if _, err := svc.AIComplete("", modelRequest); err == nil || !strings.HasPrefix(err.Error(), "无法连接模型服务：") {
 		t.Errorf("complete against a closed port: %v", err)
 	}
 }

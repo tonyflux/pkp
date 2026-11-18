@@ -76,7 +76,7 @@ var (
 // The keychain's errors name it as this platform does, in the language in
 // force.
 func errProxyNoKeychain() error {
-	return i18n.Errorf("这台电脑没有可用的%s，无法保存代理密码", keychainName())
+	return i18n.Errorf("本机没有可用的%s，无法保存代理密码", keychainName())
 }
 
 func errProxyPasswordStore() error {
@@ -309,7 +309,7 @@ func (d *DriveService) testProxyServer(cfg netproxy.Config, target *url.URL) (bo
 		case netproxy.ModeDirect:
 			return true, "", i18n.T("直连，无需代理")
 		default:
-			return true, "", i18n.T("这台电脑没有设置代理，无需代理")
+			return true, "", i18n.T("本机未设置代理，无需代理")
 		}
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), proxyHandshakeTimeout)
@@ -318,12 +318,12 @@ func (d *DriveService) testProxyServer(cfg netproxy.Config, target *url.URL) (bo
 		if errors.Is(err, netproxy.ErrDestination) {
 			// The proxy answered, it simply could not reach PKP; that is the
 			// second half's news, not the first's.
-			return true, "", i18n.F("代理服务器可连接（%s），但它连不到 PKP 服务", endpointWhere(endpoint))
+			return true, "", i18n.F("代理服务器可连接（%s），但无法连接 PKP 服务", endpointWhere(endpoint))
 		}
 		if errors.Is(err, netproxy.ErrProxyAuth) {
 			return false, proxyKindAuth, i18n.T("代理服务器拒绝了用户名或密码")
 		}
-		return false, "", i18n.F("连不上代理服务器 %s：%s", endpointWhere(endpoint), d.proxyFailure(cfg, err, i18n.T("代理服务器没有正常回应")))
+		return false, "", i18n.F("无法连接代理服务器 %s：%s", endpointWhere(endpoint), d.proxyFailure(cfg, err, i18n.T("代理服务器没有正常回应")))
 	}
 	return true, "", i18n.F("代理服务器可连接（%s）", endpointWhere(endpoint))
 }

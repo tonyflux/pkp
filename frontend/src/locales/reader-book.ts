@@ -35,7 +35,7 @@ export default {
   "下一阅读节": { tw: "下一閱讀節", en: "Next section", ja: "次のセクション", ko: "다음 구간" },
   "全书阅读进度": { tw: "全書閱讀進度", en: "Book progress", ja: "読書の進捗", ko: "책 읽기 진행률" },
   "第 {n} 节": { tw: "第 {n} 節", en: "Section {n}", ja: "セクション {n}", ko: "{n}번째 구간" },
-  "电子书文件格式异常，打不开": { tw: "電子書檔案格式異常，打不開", en: "The book contains an unsafe XML declaration", ja: "電子書籍のファイル形式が不正なため開けません", ko: "전자책 파일 형식이 올바르지 않아 열 수 없습니다" },
+  "电子书文件格式异常，无法打开": { tw: "電子書檔案格式異常，無法開啟", en: "The book contains an unsafe XML declaration", ja: "電子書籍のファイル形式が不正なため開けません", ko: "전자책 파일 형식이 올바르지 않아 열 수 없습니다" },
   "电子书结构损坏": { tw: "電子書結構損壞", en: "The book structure is invalid", ja: "電子書籍の構造が破損しています", ko: "전자책 구조가 손상되었습니다" },
   "不支持 DRM 或加密电子书": { tw: "不支援 DRM 或加密電子書", en: "DRM-protected or encrypted books are not supported", ja: "DRM保護または暗号化された書籍には対応していません", ko: "DRM 보호 또는 암호화된 책은 지원하지 않습니다" },
   "不支持固定版式 EPUB": { tw: "不支援固定版面 EPUB", en: "Fixed-layout EPUB is not supported", ja: "固定レイアウトのEPUBには対応していません", ko: "고정 레이아웃 EPUB는 지원하지 않습니다" },

@@ -78,7 +78,7 @@ var (
 
 var (
 	errPlanTooLarge = &lazyError{func() string { return i18n.F("单个计划不能超过 %d 项", maxPlan) }}
-	errOrganizing   = i18n.New("这个账号还在整理中，等这一轮弄完吧")
+	errOrganizing   = i18n.New("该账号正在整理中，请等待本轮完成")
 )
 
 // Why a change did not happen, as the receipt shows it.
@@ -104,10 +104,10 @@ func fmtFileOnPath(name string) string {
 }
 func fmtManyOnPath(name string) string { return i18n.F("这里有多个「%s」，未处理", name) }
 func fmtMakeFailed(name, cause string) string {
-	return i18n.F("没能新建「%s」：%s", name, cause)
+	return i18n.F("无法新建「%s」：%s", name, cause)
 }
 func fmtReadFailed(name, cause string) string {
-	return i18n.F("打不开「%s」查看里面有什么：%s", name, cause)
+	return i18n.F("无法读取「%s」中的内容：%s", name, cause)
 }
 func fmtNumbered(name string) string {
 	return i18n.F("目标名称已被占用，云盘改名为「%s」", name)

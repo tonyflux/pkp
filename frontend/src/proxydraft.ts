@@ -38,10 +38,10 @@ export const PROXY_SCHEMES: { value: string; label: string }[] = [
 // is never reported as a wrong address.
 const PROXY_TEST_TITLE: Record<string, string> = {
   ok: N_("测试通过"),
-  proxy: N_("连不上代理服务器"),
-  auth: N_("代理拒绝了账号密码"),
+  proxy: N_("无法连接代理服务器"),
+  auth: N_("代理认证失败，用户名或密码无效"),
   service: N_("代理可用，PKP 服务不可访问"),
-  config: N_("还不能测试"),
+  config: N_("暂无法测试"),
 };
 
 /*
@@ -149,7 +149,7 @@ export function useProxyDraft() {
       const detail = [test.proxyMessage, test.serviceMessage].filter(Boolean).join(t("；"));
       return { title, tone: test.ok ? "ok" : "bad", text: detail || title };
     }
-    if (proxy.mode === "direct") return { title: t("尚未测试"), tone: "", text: t("直连不走代理，测试只看能不能连上 PKP 服务。") };
+    if (proxy.mode === "direct") return { title: t("尚未测试"), tone: "", text: t("直连不使用代理，仅测试是否可连接至 PKP 服务。") };
     return { title: t("尚未测试"), tone: "", text: proxyDirty.value ? t("配置已更改，请重新测试。") : t("先测试连接，再应用设置。") };
   });
   const proxyElapsed = computed(() => {

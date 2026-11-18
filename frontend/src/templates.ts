@@ -81,7 +81,7 @@ function parse(template: string): { parts: Part[]; error: string } {
       if (end < 0) return fail(t("「{」没有对应的「}」"));
       const body = template.slice(i + 1, end);
       const m = /^([a-z]+)(?::(\d{1,2}))?$/.exec(body);
-      if (!m) return fail(t("「{token}」写法不对", { token: `{${body}}` }));
+      if (!m) return fail(t("「{token}」格式不正确", { token: `{${body}}` }));
       if (!VARIABLES[m[1]]) return fail(t("没有变量 {token}，可用 {title} {year} {season} {episode} {version}", { token: `{${m[1]}}` }));
       const width = m[2] === undefined ? 0 : Number(m[2]);
       if (m[2] !== undefined && m[1] !== "season" && m[1] !== "episode") return fail(t("只有 {season} 和 {episode} 可以补零"));

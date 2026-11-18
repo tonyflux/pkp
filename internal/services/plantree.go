@@ -19,7 +19,7 @@ import (
 const planTreeDepth = 64
 
 var (
-	errNotIndexed = i18n.New("新文件还没进入本地索引，请稍后再试")
+	errNotIndexed = i18n.New("新文件尚未进入本地索引，请稍后重试")
 	errOutOfScope = i18n.New("所选的文件不在这个文件夹里，可能已被移动或删除")
 )
 

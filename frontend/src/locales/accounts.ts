@@ -22,14 +22,14 @@ export default {
   刷新二维码: { tw: "重新整理 QR 碼", en: "Refresh QR code", ja: "QRコードを更新", ko: "QR 코드 새로고침" },
   "{n} 秒后失效": { tw: "{n} 秒後失效", en: "Expires in {n} seconds", ja: "あと{n}秒で期限切れ", ko: "{n}초 후 만료" },
   重试连接: { tw: "重試連線", en: "Retry connection", ja: "接続を再試行", ko: "연결 재시도" },
-  "不用在这里输账号密码": { tw: "不用在這裡輸帳號密碼", en: "No need to enter your password here", ja: "ここにパスワードを入力する必要はありません", ko: "여기에 암호를 입력할 필요가 없습니다" },
+  "无需在此输入账号密码": { tw: "無需在此輸入帳號密碼", en: "No password needed here", ja: "ここにパスワードを入力する必要はありません", ko: "여기에 암호를 입력할 필요가 없습니다" },
   // Account dialogs
   当前账号: { tw: "目前帳號", en: "Current account", ja: "現在のアカウント", ko: "현재 계정" },
   "重新登录「{name}」": { tw: "重新登入「{name}」", en: "Sign in to \"{name}\" again", ja: "「{name}」に再ログイン", ko: "“{name}”에 다시 로그인" },
   "添加 PikPak 账号": { tw: "新增 PikPak 帳號", en: "Add PikPak account", ja: "PikPak アカウントを追加", ko: "PikPak 계정 추가" },
   修改本机备注: { tw: "修改本機備註", en: "Edit local nickname", ja: "ローカルメモを編集", ko: "로컬 메모 편집" },
   "退出并移除此账号？": { tw: "登出並移除此帳號？", en: "Sign out and remove this account?", ja: "ログアウトして削除しますか？", ko: "로그아웃하고 이 계정을 제거할까요?" },
-  还有内容没提交: { tw: "還有內容沒送出", en: "Unsent items", ja: "未送信の内容があります", ko: "보내지 않은 내용이 있습니다" },
+  尚有未提交的内容: { tw: "尚有未送出的內容", en: "Unsubmitted changes", ja: "未送信の内容があります", ko: "보내지 않은 내용이 있습니다" },
   "播放此账号的视频？": { tw: "播放此帳號的影片？", en: "Play this account's video?", ja: "アカウントの動画を再生しますか？", ko: "이 계정의 동영상을 재생할까요?" },
   请填写账号和密码: { tw: "請填寫帳號和密碼", en: "Enter your account and password", ja: "アカウントとパスワードを入力してください", ko: "계정과 암호를 입력하세요" },
   "本机备注最多 {n} 个字": {
@@ -40,28 +40,28 @@ export default {
   },
   "登录失败，请稍后再试": { tw: "登入失敗，請稍後再試", en: "Sign-in failed. Try again later.", ja: "ログインに失敗しました。しばらくしてからもう一度お試しください", ko: "로그인에 실패했습니다. 잠시 후 다시 시도하세요" },
   请填写本机备注: { tw: "請填寫本機備註", en: "Enter a local nickname", ja: "ローカルメモを入力してください", ko: "로컬 메모를 입력하세요" },
-  "会先停掉这个账号的 {n} 个本机传输，再清掉它的登录状态和缓存（下好的文件会留着）。": {
-    tw: "會先停掉這個帳號的 {n} 個本機傳輸，再清掉登入狀態與快取（下載好的檔案會留著）。",
+  "将停止此账号在本机的 {n} 个传输任务，并清除登录状态与缓存，已下载的文件将保留。": {
+    tw: "將停止此帳號在本機的 {n} 個傳輸任務，並清除登入狀態與快取，已下載的檔案將保留。",
     en: (p) =>
-      `Stops ${p.n === "1" ? "1 local transfer" : `${p.n} local transfers`} for this account and clears its sign-in and cache. Downloaded files stay untouched.`,
+      `Stops ${p.n === "1" ? "1 local transfer" : `${p.n} local transfers`} for this account and clears its sign-in state and cache. Downloaded files are kept.`,
     ja: "このアカウントのローカル転送 {n} 件を停止し、ログイン状態とキャッシュを消去します。ダウンロード済みのファイルはそのまま残ります。",
     ko: "이 계정의 로컬 전송 {n}개를 멈추고 로그인 상태와 캐시를 지웁니다. 이미 내려받은 파일은 그대로 남습니다.",
   },
-  "会清掉这个账号在这台电脑上的登录状态和缓存（下好的文件会留着）。": {
-    tw: "會清掉這個帳號在這台電腦上的登入狀態與快取（下載好的檔案會留著）。",
-    en: "Clears this account's sign-in and cache on this computer. Downloaded files stay untouched.",
+  "将清除此账号在本机的登录状态和缓存，已下载的文件将保留。": {
+    tw: "將清除此帳號在本機的登入狀態與快取，已下載的檔案將保留。",
+    en: "Clears this account's sign-in state and cache on this computer. Downloaded files are kept.",
     ja: "このコンピュータにあるログイン状態とキャッシュを消去します。ダウンロード済みのファイルはそのまま残ります。",
     ko: "이 컴퓨터에 저장된 로그인 상태와 캐시를 지웁니다. 이미 내려받은 파일은 그대로 남습니다.",
   },
-  "暂时查不到云添加任务列表；移除账号也不会取消云端任务。": {
-    tw: "暫時查不到雲端新增任務清單；移除帳號也不會取消雲端任務。",
+  "暂无法获取云添加任务列表；移除账号不会取消云端任务。": {
+    tw: "暫無法取得雲端新增任務清單；移除帳號不會取消雲端任務。",
     en: "Can't check Cloud Add tasks right now; removing the account won't cancel anything on the cloud.",
     ja: "クラウド追加タスクを確認できませんが、アカウントを削除してもクラウド上のタスクはキャンセルされません。",
     ko: "지금은 클라우드 추가 작업 목록을 불러올 수 없습니다. 계정을 제거해도 클라우드 작업은 취소되지 않습니다.",
   },
   "正在检查云添加任务…": { tw: "正在檢查雲端新增任務…", en: "Checking Cloud Add tasks…", ja: "クラウド追加タスクを確認しています…", ko: "클라우드 추가 작업 확인 중…" },
-  "还有 {n} 个云添加任务可能在云端跑着；移除只会在本地停止关注，不会取消云端任务。": {
-    tw: "還有 {n} 個雲端新增任務可能在雲端執行中；移除只會停止在本機追蹤，不會取消雲端任務。",
+  "仍有 {n} 个云添加任务可能正在云端运行；移除账号仅停止本地追踪，不会取消云端任务。": {
+    tw: "仍有 {n} 個雲端新增任務可能正在雲端執行；移除帳號僅停止本機追蹤，不會取消雲端任務。",
     en: (p) =>
       `${p.n === "1" ? "1 Cloud Add task" : `${p.n} Cloud Add tasks`} may still be running in the cloud. Removing only stops tracking it here without cancelling the cloud task.`,
     ja: "{n} 件のクラウド追加タスクがクラウド上で動いている可能性があります。削除してもタスクはキャンセルされず、このアプリでの表示だけが終わります。",
@@ -79,15 +79,15 @@ export default {
     ja: "「{what}」は「{owner}」のもので、新しいアカウントには引き継がれません。",
     ko: "“{what}”은(는) “{owner}”에 속하며 새 계정으로 넘어가지 않습니다.",
   },
-  "重新登录这个账号就能继续用，原本的任务都还在它名下。": {
-    tw: "重新登入這個帳號就能繼續用，原本的任務也都會保留在它名下。",
-    en: "Sign in again to pick up where you left off—its tasks stay attached to this account.",
+  "重新登录此账号即可恢复使用，原有任务仍归属该账号。": {
+    tw: "重新登入此帳號即可恢復使用，原有任務仍歸屬該帳號。",
+    en: "Sign in again to continue using this account—its existing tasks remain intact.",
     ja: "このアカウントに再ログインするとアクセスが戻り、既存のタスクもそのまま残ります。",
     ko: "다시 로그인하면 이어서 사용할 수 있으며 기존 작업도 이 계정에 그대로 유지됩니다.",
   },
-  "再添加一个 PikPak 账号，备用号或不同盘都能一起管。": {
-    tw: "再新增一個 PikPak 帳號，備用號或不同雲端空間都能一起管理。",
-    en: "Add another PikPak account for a spare or separate library alongside your current ones.",
+  "添加更多 PikPak 账号，统一管理多个云盘空间。": {
+    tw: "新增更多 PikPak 帳號，統一管理多個雲端空間。",
+    en: "Add another PikPak account to manage multiple drives or separate libraries together.",
     ja: "別の PikPak アカウントを追加して、サブアカウントや別ライブラリをまとめて使えます。",
     ko: "다른 PikPak 계정을 추가해 보조 계정이나 별도 보관함도 함께 관리하세요.",
   },
@@ -97,9 +97,9 @@ export default {
   本机备注: { tw: "本機備註", en: "Local nickname", ja: "ローカルメモ", ko: "로컬 메모" },
   可选: { tw: "選填", en: "optional", ja: "任意", ko: "선택" },
   "例如：影视收藏": { tw: "例如：影視收藏", en: "e.g. Movies", ja: "例：映画コレクション", ko: "예: 영화 모음" },
-  "账号信息留在本地，密码会安全存进系统{keychain}": {
-    tw: "帳號資訊留在本機，密碼會安全存進系統{keychain}",
-    en: "Your account stays on this computer and your password goes into your system {keychain}",
+  "账号信息仅保存在本地，密码将加密存入系统{keychain}": {
+    tw: "帳號資訊僅儲存在本機，密碼將加密存入系統{keychain}",
+    en: "Your account stays on this computer and your password is stored securely in your system {keychain}",
     ja: "アカウント情報はこのコンピュータに、パスワードはシステムの{keychain}に保存されます",
     ko: "계정 정보는 이 컴퓨터에 남고 암호는 시스템 {keychain}에 안전하게 저장됩니다",
   },
@@ -121,16 +121,16 @@ export default {
     ja: "ログイン後このアカウントに切り替わります。同じアカウントは重複して追加されません。",
     ko: "로그인하면 이 계정으로 전환됩니다. 같은 계정은 중복 추가되지 않습니다.",
   },
-  "只改在 PKP 里显示的名字，不影响你在 PikPak 上的昵称。": {
-    tw: "只改在 PKP 裡顯示的名稱，不影響你在 PikPak 上的暱稱。",
-    en: "Only updates how it appears in PKP; your actual PikPak nickname won't change.",
+  "仅修改在本机显示的名称，不影响 PikPak 账号昵称。": {
+    tw: "僅修改在本機顯示的名稱，不影響 PikPak 帳號暱稱。",
+    en: "Only updates how this account appears in PKP; your PikPak nickname won't change.",
     ja: "PKP 上での表示名だけを変更し、PikPak 本体のニックネームは変わりません。",
     ko: "PKP에 표시되는 이름만 바뀌며 실제 PikPak 닉네임은 그대로입니다.",
   },
   保存备注: { tw: "儲存備註", en: "Save nickname", ja: "メモを保存", ko: "메모 저장" },
-  "只是从 PKP 移除登录状态，不会删云盘里的文件，也不会关掉已有分享。": {
-    tw: "只是從 PKP 移除登入狀態，不會刪雲端硬碟裡的檔案，也不會關閉已有的分享。",
-    en: "Only signs out on this computer—your PikPak account, drive files, and shares stay intact.",
+  "仅在本机移除登录状态，不会删除云盘文件或取消已有分享。": {
+    tw: "僅在本機移除登入狀態，不會刪除雲端硬碟檔案或取消已有分享。",
+    en: "Only signs out on this computer—your PikPak account, drive files, and shares remain intact.",
     ja: "PKP からサインアウトするだけで、アカウントの解約やファイル削除、共有の停止は行いません。",
     ko: "PKP에서 로그인 상태만 제거하며 PikPak 계정, 파일, 기존 공유는 그대로 유지됩니다.",
   },
@@ -171,9 +171,9 @@ export default {
   "正在切换到此账号…": { tw: "正在切換到此帳號…", en: "Switching to this account…", ja: "このアカウントに切り替え中…", ko: "이 계정으로 전환 중…" },
   正在载入此账号的文件与概览: { tw: "正在載入此帳號的檔案與概覽", en: "Loading this account's files and overview", ja: "このアカウントのファイルと概要を読み込んでいます", ko: "이 계정의 파일과 개요를 불러오는 중" },
   重新登录此账号: { tw: "重新登入此帳號", en: "Sign in to this account again", ja: "このアカウントに再ログイン", ko: "이 계정에 다시 로그인" },
-  "这个账号的登录过期了，重新登一下就能继续看文件，不影响其他账号和后台任务。": {
-    tw: "這個帳號的登入過期了，重新登入一下就能繼續看檔案，不影響其他帳號和背景任務。",
-    en: "This account's session expired. Sign in again to access its files—other accounts and background tasks keep running.",
+  "此账号登录状态已过期，重新登录后即可继续访问，不影响其他账号及后台任务。": {
+    tw: "此帳號登入狀態已過期，重新登入後即可繼續存取，不影響其他帳號及背景任務。",
+    en: "This account's session expired. Sign in again to continue—other accounts and background tasks keep running.",
     ja: "このアカウントのログイン期限が切れました。再ログインするとファイルを開けます（他のアカウントやバックグラウンド処理には影響しません）。",
     ko: "이 계정의 로그인이 만료되었습니다. 다시 로그인하면 파일에 접근할 수 있으며 다른 계정과 백그라운드 작업에는 영향이 없습니다.",
   },
@@ -189,9 +189,9 @@ export default {
     ko: "네트워크 및 프록시: PKP의 연결 방식 선택",
   },
   检查网络与代理: { tw: "檢查網路與代理", en: "Check network & proxy", ja: "ネットワークとプロキシを確認", ko: "네트워크 및 프록시 확인" },
-  "登录过期时自动重登，省得每次停在这儿": {
-    tw: "登入過期時自動重登，省得每次停在這一頁",
-    en: "Automatically sign back in with your saved password instead of stopping here",
+  "登录过期时自动重新登录，无需手动干预": {
+    tw: "登入過期時自動重新登入，無需手動介入",
+    en: "Automatically sign back in with your saved password when your session expires",
     ja: "ログインが切れたとき、この画面で止まらず保存したパスワードで自動ログインします",
     ko: "로그인이 만료되었을 때 이 화면에서 멈추지 않고 저장된 암호로 자동 로그인합니다",
   },
@@ -234,22 +234,22 @@ export default {
     ko: "암호는 이 컴퓨터의 {keychain}에 저장되며 설정 파일에 기록되지 않습니다.",
   },
   清除已保存的密码: { tw: "清除已儲存的密碼", en: "Clear saved password", ja: "保存済みのパスワードを消去", ko: "저장된 암호 지우기" },
-  "电脑启用了 PAC 自动代理脚本，PKP 不支持运行它，请求会直连出去；要走指定代理请选「自定义代理」。": {
-    tw: "電腦啟用了 PAC 自動代理指令碼，PKP 不支援執行它，請求會直接連出去；要走指定代理請選「自訂代理」。",
+  "当前系统已启用 PAC 自动代理脚本，PKP 暂不支持执行 PAC 脚本，请求将直连；如需指定代理，请选择「自定义代理」。": {
+    tw: "目前系統已啟用 PAC 自動代理指令碼，PKP 暫不支援執行 PAC 指令碼，請求將直連；如需指定代理，請選擇「自訂代理」。",
     en: "This computer uses a PAC script that PKP doesn't run, so traffic goes direct. Choose \"Custom proxy\" if you want a specific proxy.",
     ja: "このコンピュータは PAC スクリプトを使っていますが PKP は実行しないため直接接続します。特定の経路を使うには「カスタム」を選んでください。",
     ko: "컴퓨터에 PAC 스크립트가 설정되어 있지만 PKP는 실행하지 않으므로 직접 연결됩니다. 특정 프록시를 쓰려면 ‘사용자 지정 프록시’를 선택하세요.",
   },
-  "PKP 不走应用代理，直接连网；不过电脑上开着的 VPN 或系统路由依然会生效。": {
-    tw: "PKP 不走應用程式代理，直接連網；不過電腦上開著的 VPN 或系統路由依然會生效。",
-    en: "PKP connects directly without its own proxy; any active VPN or system routes on this computer still apply.",
+  "PKP 不使用应用代理，直接连接网络；系统当前启用的 VPN 或路由规则仍会生效。": {
+    tw: "PKP 不使用應用程式代理，直接連線網路；系統目前已啟用的 VPN 或路由規則仍會生效。",
+    en: "PKP connects directly without an app proxy; any active VPN or system routes on this computer still apply.",
     ja: "PKP はプロキシを使わず直接接続しますが、コンピュータで動いている VPN やシステムルートは有効のままです。",
     ko: "PKP는 별도 프록시 없이 직접 연결하지만 컴퓨터에 켜진 VPN이나 시스템 경로 설정은 그대로 적용됩니다.",
   },
   高级选项: { tw: "進階選項", en: "Advanced", ja: "詳細オプション", ko: "고급 옵션" },
   不使用代理的地址: { tw: "不使用代理的位址", en: "Bypass proxy for", ja: "プロキシを使わないアドレス", ko: "프록시 예외 주소" },
-  "用逗号、空格或换行隔开；留空就不设例外（本机地址默认直连）。": {
-    tw: "用逗號、空格或換行隔開；留空就不設例外（本機位址預設直連）。",
+  "使用逗号、空格或换行分隔；留空表示不设例外（本机地址始终直连）。": {
+    tw: "使用逗號、空格或換行分隔；留空表示不設例外（本機位址一律直連）。",
     en: "Separate with commas, spaces, or new lines; leave blank for no exceptions (local addresses always connect directly).",
     ja: "カンマ、スペース、改行で区切ります（空欄なら例外なし／ローカルアドレスは常に直接接続）。",
     ko: "쉼표, 공백 또는 줄바꿈으로 구분하세요. 비워 두면 예외가 없으며 로컬 주소는 항상 직접 연결됩니다.",
@@ -267,10 +267,10 @@ export default {
   自定义代理: { tw: "自訂代理", en: "Custom proxy", ja: "カスタム", ko: "사용자 지정 프록시" },
   "只为 PKP 指定服务器": { tw: "只為 PKP 指定伺服器", en: "A server for PKP only", ja: "PKP 専用のサーバーを指定", ko: "PKP 전용 서버 지정" },
   测试通过: { tw: "測試通過", en: "Test passed", ja: "テスト成功", ko: "테스트 통과" },
-  连不上代理服务器: { tw: "連不上代理伺服器", en: "Can't reach the proxy server", ja: "プロキシサーバーに接続できません", ko: "프록시 서버에 연결할 수 없음" },
-  代理拒绝了账号密码: { tw: "代理拒絕了帳號密碼", en: "Proxy rejected the username or password", ja: "プロキシが認証情報を拒否しました", ko: "프록시가 아이디와 암호를 거부함" },
+  无法连接代理服务器: { tw: "無法連線代理伺服器", en: "Cannot reach proxy server", ja: "プロキシサーバーに接続できません", ko: "프록시 서버에 연결할 수 없음" },
+  "代理认证失败，用户名或密码无效": { tw: "代理驗證失敗，使用者名稱或密碼無效", en: "Proxy rejected username or password", ja: "プロキシが認証情報を拒否しました", ko: "프록시가 아이디와 암호를 거부함" },
   "代理可用，PKP 服务不可访问": { tw: "代理可用，PKP 服務無法存取", en: "Proxy works, but PKP's service is unreachable", ja: "プロキシは使えますが、PKP サービスにアクセスできません", ko: "프록시는 작동하지만 PKP 서비스에 접근할 수 없음" },
-  还不能测试: { tw: "還不能測試", en: "Can't test yet", ja: "まだテストできません", ko: "아직 테스트할 수 없음" },
+  暂无法测试: { tw: "暫無法測試", en: "Cannot test yet", ja: "まだテストできません", ko: "아직 테스트할 수 없음" },
   "正在连接代理，并访问一次 PKP 服务。": {
     tw: "正在連線代理，並存取一次 PKP 服務。",
     en: "Connecting to the proxy and reaching PKP's service once.",
@@ -280,9 +280,9 @@ export default {
   连接失败: { tw: "連線失敗", en: "Connection failed", ja: "接続に失敗しました", ko: "연결 실패" },
   "；": { tw: "；", en: "; ", ja: "。", ko: "; " },
   尚未测试: { tw: "尚未測試", en: "Not tested", ja: "未テスト", ko: "테스트 안 함" },
-  "直连不走代理，测试只看能不能连上 PKP 服务。": {
-    tw: "直連不走代理，測試只看能不能連上 PKP 服務。",
-    en: "Direct skips any proxy—the test just checks if PKP's service is reachable.",
+  "直连不使用代理，仅测试是否可连接至 PKP 服务。": {
+    tw: "直連不使用代理，僅測試是否可連線至 PKP 服務。",
+    en: "Direct skips any proxy—the test checks whether PKP's service is reachable.",
     ja: "直接接続ではプロキシを使わず、PKP サービスに届くかだけを確認します。",
     ko: "직접 연결은 프록시를 거치지 않으므로 테스트에서는 PKP 서비스 연결 가능 여부만 확인합니다.",
   },
@@ -307,9 +307,9 @@ export default {
   账号设置: { tw: "帳號設定", en: "Account settings", ja: "アカウント設定", ko: "계정 설정" },
   查看并修改你的资料与偏好设置: { tw: "檢視並修改你的資料與偏好設定", en: "View and change your profile and preferences", ja: "プロフィールと設定の表示・変更", ko: "프로필 및 환경설정 보기와 변경" },
   创建个人访问令牌: { tw: "建立個人存取權杖", en: "Create personal access token", ja: "個人アクセストークンを作成", ko: "개인 액세스 토큰 만들기" },
-  "已经有 {n} 个有效令牌了，先删一个不用的再建新的。": {
-    tw: "已經有 {n} 個有效權杖了，先刪一個不用的再建新的。",
-    en: "You already have {n} active tokens—delete an unused one before making another.",
+  "有效令牌已达 {n} 个上限，请先删除不再使用的令牌后再新建。": {
+    tw: "有效權杖已達 {n} 個上限，請先刪除不再使用的權杖後再建立。",
+    en: "You've reached the {n}-token limit—delete an unused token before creating another.",
     ja: "有効なトークンがすでに {n} 個あります。不要なものを消してから新しく作ってください。",
     ko: "유효한 토큰이 이미 {n}개 있습니다. 안 쓰는 토큰을 지운 뒤 새로 만드세요.",
   },
@@ -318,9 +318,9 @@ export default {
   过期时间: { tw: "到期時間", en: "Expires in", ja: "有効期限", ko: "만료 기간" },
   文件权限: { tw: "檔案權限", en: "File permissions", ja: "ファイルの権限", ko: "파일 권한" },
   服务与账号: { tw: "服務與帳號", en: "Services and account", ja: "サービスとアカウント", ko: "서비스 및 계정" },
-  "想做永久删除或发邀请？请换用浏览器授权过的应用。": {
-    tw: "想做永久刪除或發邀請？請改用透過瀏覽器授權的應用程式。",
-    en: "Need to permanently delete files or send invites? Use an app signed in through your browser instead.",
+  "如需永久删除文件或发送邀请，请使用通过浏览器授权的应用。": {
+    tw: "如需永久刪除檔案或傳送邀請，請使用透過瀏覽器授權的應用程式。",
+    en: "Need to permanently delete files or send invites? Use an app authorized through your browser instead.",
     ja: "完全削除や招待を行いたい場合は、ブラウザで認可したアプリを使ってください。",
     ko: "영구 삭제나 초대가 필요하면 브라우저에서 인증한 앱을 사용하세요.",
   },

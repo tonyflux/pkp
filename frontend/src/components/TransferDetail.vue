@@ -146,21 +146,21 @@ const arrivalSource = computed(() => {
       </p>
       <p v-if="item.fileGone" class="note">
         <Icon name="info" :size="16" />
-        <span>{{ t("文件本来已经存好，但后来在云盘里被删掉了，所以云端记成了失败。重跑任务找不回它，如果还在回收站，可以去回收站还原。") }}</span>
+        <span>{{ t("文件曾已保存，但随后在云盘中被删除，因此云端将该任务标记为失败。重试任务无法找回文件；若仍在回收站中，可前往还原。") }}</span>
       </p>
       <p v-else-if="item.state === 'interrupted' && item.kind === 'download'" class="note">
         <Icon name="info" :size="16" />
-        <span v-if="item.resumable">{{ t("上次退出时还没下完，已下载的部分还留着，点继续会接着往下传。") }}</span>
+        <span v-if="item.resumable">{{ t("上次退出时下载未完成，已下载的部分仍保留在本地，点击继续可续传。") }}</span>
         <span v-else>{{ t("上次退出时还没下完，这次重新下载会从头开始。") }}</span>
       </p>
       <p v-else-if="item.state === 'interrupted'" class="note">
         <Icon name="info" :size="16" />
-        <span v-if="item.resumable">{{ t("上次退出时还没传完，已上传的部分还在云端，点继续会接着传。") }}</span>
+        <span v-if="item.resumable">{{ t("上次退出时上传未完成，已上传的部分仍保留在云端，点击继续可续传。") }}</span>
         <span v-else>{{ t("上次退出时还没传完，重传会从头开始，不能接上次的进度。") }}</span>
       </p>
       <p v-if="item.resumable && item.state === 'failed' && item.kind === 'upload'" class="note">
         <Icon name="info" :size="16" />
-        <span>{{ t("已经上传的部分还留在云端，点继续会接着传。") }}</span>
+        <span>{{ t("已上传的部分仍保留在云端，点击继续可续传。") }}</span>
       </p>
 
       <dl class="facts">

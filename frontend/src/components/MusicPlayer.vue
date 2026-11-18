@@ -245,7 +245,7 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onKey));
 
             <div v-if="state.error" class="problem" role="alert">
               <strong>{{ t("无法播放") }}</strong>
-              <p>{{ state.error === "playback failed" ? t("这首没能加载出来，可以重试一次") : state.error }}</p>
+              <p>{{ state.error === "playback failed" ? t("音频加载失败，请重试") : state.error }}</p>
               <div>
                 <button class="primary" @click="retry">{{ t("重试") }}</button>
                 <button @click="stopPlayback">{{ t("停止播放") }}</button>

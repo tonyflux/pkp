@@ -239,7 +239,7 @@ func (u *UpdateService) canStartLocked() error {
 		return i18n.New("当前版本不支持在应用里直接更新")
 	}
 	if u.cancel != nil || u.state.Phase == "installing" {
-		return i18n.New("已经在更新中了")
+		return i18n.New("更新已在进行中")
 	}
 	return nil
 }

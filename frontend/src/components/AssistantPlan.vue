@@ -425,7 +425,7 @@ async function keepAllAndConfirm() {
           <div class="plan-heading">
             <div class="heading-text">
               <span class="eyebrow">{{ cleanup ? t("清理计划 · {account}", { account }) : t("整理计划 · {account}", { account }) }} <span class="slash">/</span> {{ scopeLabel }}</span>
-              <h1>{{ cleanup ? t("先确认要清理的文件，再移到回收站。") : t("先核对清楚去哪儿，再决定改不改") }}</h1>
+              <h1>{{ cleanup ? t("先确认要清理的文件，再移到回收站。") : t("请先核对目标路径，再决定是否修改") }}</h1>
               <p>{{ plan.basis }}</p>
               <p v-if="hasTrashFolders">{{ t("文件夹移到回收站时会包含其中的全部内容。") }}</p>
             </div>
@@ -479,12 +479,12 @@ async function keepAllAndConfirm() {
               type="text"
               autocomplete="off"
               spellcheck="false"
-              :placeholder="t('补充要求，例如：动漫单独放、特别篇放进 Season 00')"
+              :placeholder="t('补充要求，例如：动漫单独存放、特别篇放入 Season 00')"
               :aria-label="t('补充要求')"
               :disabled="assistant.running"
             />
             <button class="primary" type="submit" :disabled="busy || !assistant.prompt.trim()">{{ t("重新生成") }}</button>
-            <small>{{ t("已取消的勾选和改过的名称会保留；需要模型时会先问你。") }}</small>
+            <small>{{ t("已取消的选择和修改后的名称将会保留；需要使用模型时会先征求您的确认。") }}</small>
           </form>
 
           <p v-if="!rows.length" class="none">{{ view === "source" ? t("没有选中的项。") : t("没有可以整理的项。") }}</p>
@@ -596,7 +596,7 @@ async function keepAllAndConfirm() {
 
           <div class="plan-caution">
             <Icon name="shield" :size="17" />
-            <p>{{ t("这次不会永久删除任何文件；动手前还会再检查一遍状态，重名或挪过位置的文件会自动跳过，并在结果里写清楚。") }}</p>
+            <p>{{ t("本次不会永久删除任何文件；执行前会再次校验云盘状态，重名或已移动的文件将自动跳过并在结果中说明。") }}</p>
           </div>
         </template>
       </div>

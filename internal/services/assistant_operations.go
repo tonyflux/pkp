@@ -56,12 +56,12 @@ type AssistantOperationResult struct {
 var (
 	errAssistantRequest      = i18n.New("操作参数有误，没有执行")
 	errAssistantAction       = i18n.New("暂时不支持这个操作")
-	errAssistantTarget       = i18n.New("找不到对应文件，或者没法做这个操作")
-	errAssistantState        = i18n.New("文件状态变了，现在没法做这个操作")
+	errAssistantTarget       = i18n.New("找不到对应文件，或无法执行此操作")
+	errAssistantState        = i18n.New("文件状态已变更，当前无法执行此操作")
 	errAssistantRecursive    = i18n.New("不能把文件夹复制到自身或其子文件夹")
 	errAssistantRetryHash    = i18n.New("此云端任务没有可用的种子哈希，不能重试")
-	errAssistantFailure      = i18n.New("操作没能完成（已隐藏敏感错误详情）")
-	errAssistantPageTooLarge = i18n.New("云盘这一页返回的数据太大，没法继续读取")
+	errAssistantFailure      = i18n.New("操作未能完成（已隐藏敏感错误详情）")
+	errAssistantPageTooLarge = i18n.New("云盘本页返回数据过大，无法继续读取")
 	assistantPrivateMetadata = regexp.MustCompile(`(?i)(?:[a-z][a-z0-9+.-]*://|magnet:\?)[^\s]+|(?:[a-z]:[\\/]|~[\\/]|/)[^\s]+|authorization\s*[:=]\s*[^\r\n]+|(?:password|pass_code|access_token|refresh_token|access_key_secret)\s*[:=]\s*[^\s]+|[a-f0-9]{40}`)
 )
 

@@ -14,5 +14,5 @@ export default {
   "漫画": { tw: "漫畫", en: "Comic", ja: "コミック", ko: "만화" },
   "表格": { tw: "表格", en: "Table", ja: "表", ko: "표" },
   "字幕与歌词": { tw: "字幕與歌詞", en: "Subtitles & lyrics", ja: "字幕と歌詞", ko: "자막 및 가사" },
-  "文档结构太复杂，暂时没法直接预览": { tw: "文件結構太複雜，暫時無法直接預覽", en: "Document structure is too complex to preview", ja: "文書構造が複雑すぎて直接プレビューできません", ko: "문서 구조가 너무 복잡해 바로 미리 볼 수 없습니다" },
+  "文档结构过于复杂，暂无法直接预览": { tw: "文件結構過於複雜，暫無法直接預覽", en: "Document structure is too complex to preview", ja: "文書構造が複雑すぎて直接プレビューできません", ko: "문서 구조가 너무 복잡해 바로 미리 볼 수 없습니다" },
 } satisfies Messages;

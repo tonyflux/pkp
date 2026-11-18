@@ -201,13 +201,13 @@ func TestMenuBarQuitAsksOnlyWhenSomethingStops(t *testing.T) {
 		{
 			name:      "one download, in the design's words",
 			downloads: []DownloadTask{down("a", "1", download.StateDownloading, "")},
-			want:      []string{"还有 1 项下载正在电脑上进行，退出会直接中断；云端离线任务不受影响。只是想先收起窗口，点「继续运行」就行。"},
+			want:      []string{"还有 1 项下载正在电脑上进行，退出会直接中断；云端离线任务不受影响。仅需收起窗口时，点击「继续运行」即可。"},
 		},
 		{
 			name:      "queued ones stop too, every account's",
 			uploads:   []UploadTask{up("a", "1", upload.StateQueued, ""), up("b", "2", upload.StateUploading, "")},
 			downloads: []DownloadTask{down("b", "3", download.StateQueued, "")},
-			want:      []string{"1 项下载和 2 项上传正在电脑上进行", "只是想先收起窗口"},
+			want:      []string{"1 项下载和 2 项上传正在电脑上进行", "仅需收起窗口"},
 		},
 		{
 			name:    "unsubmitted input alone",

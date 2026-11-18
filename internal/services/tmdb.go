@@ -22,7 +22,7 @@ const tmdbKeyAccount = "pkp-tmdb-key"
 
 var (
 	errTMDBNoKeychain = &lazyError{func() string {
-		return i18n.F("这台电脑没有可用的%s，无法保存 TMDB 凭据", keychainName())
+		return i18n.F("本机没有可用的%s，无法保存 TMDB 凭据", keychainName())
 	}}
 	errTMDBKeyStore   = &lazyError{func() string { return i18n.F("无法把 TMDB 凭据存进%s", keychainName()) }}
 	errTMDBKeyForget  = &lazyError{func() string { return i18n.F("无法从%s删除 TMDB 凭据", keychainName()) }}

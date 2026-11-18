@@ -24,7 +24,7 @@ defineProps<{ waiting?: boolean }>();
 function lost() {
   if (!ui.wallpaper) return;
   forgetWallpaper();
-  notify(t("壁纸加载失败，已切回默认壁纸"), "error");
+  notify(t("壁纸加载失败，已恢复默认壁纸"), "error");
 }
 
 const clip = computed(() => {

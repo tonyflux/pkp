@@ -194,7 +194,7 @@ function clearConditions() {
       </div>
 
       <template v-else-if="result">
-        <p v-if="!hits.length" class="fs-empty">{{ t("没有符合条件的文件。换个条件试试，或者清除条件。") }}</p>
+        <p v-if="!hits.length" class="fs-empty">{{ t("没有符合条件的文件，请尝试其他条件或清除筛选。") }}</p>
         <div v-else class="fs-list" :class="{ dim: stale }">
           <div class="fs-list-head">
             <label class="fs-pick">
@@ -230,7 +230,7 @@ function clearConditions() {
 
       <div class="fs-help">
         <Icon name="shield" :size="16" />
-        <span>{{ t("这里是按条件精确筛选；想按意思找，可以试试「问 AI」（发送前会先让你确认内容）。") }}</span>
+        <span>{{ t("此处按条件精确筛选；如需语义检索，可使用「问 AI」（发送前会先征求您的确认）。") }}</span>
         <button class="fs-ask" @click="askAssistant(ui.query.trim())"><Icon name="spark" :size="14" />{{ t("问 AI") }}</button>
       </div>
     </div>

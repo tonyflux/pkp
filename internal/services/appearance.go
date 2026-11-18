@@ -79,7 +79,7 @@ func (a *AppearanceService) SetWallpaper(path string) (string, error) {
 		return "", err
 	}
 	if info.Size() > maxWallpaperBytes {
-		return "", i18n.Errorf("「%s」超过 %d MB，换一张小一点的图片", filepath.Base(path), maxWallpaperBytes>>20)
+		return "", i18n.Errorf("「%s」超过 %d MB，请选择较小的图片", filepath.Base(path), maxWallpaperBytes>>20)
 	}
 	head := make([]byte, 512)
 	n, err := io.ReadFull(src, head)

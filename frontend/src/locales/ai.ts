@@ -10,32 +10,32 @@ export default {
 
   /* ---------------- assistantcore ---------------- */
   新对话: { tw: "新對話", en: "New conversation", ja: "新しい会話", ko: "새 대화" },
-  "只按本地文件名规则生成的，没用 AI 模型。": {
-    tw: "只按本機檔名規則產生的，沒用 AI 模型。",
+  "仅根据本地文件名规则生成，未使用 AI 模型。": {
+    tw: "僅根據本機檔名規則產生，未使用 AI 模型。",
     en: "Generated from local file-name rules only; no AI model used.",
     ja: "ローカルのファイル名ルールだけで作成し、AI モデルは使っていません。",
     ko: "로컬 파일 이름 규칙만으로 만들었으며 AI 모델은 쓰지 않았습니다.",
   },
-  "按本地规则和 TMDB 匹配生成的，需要你确认才会动云盘。": {
-    tw: "依本機規則與 TMDB 比對產生的，需要你確認才會動雲端硬碟。",
+  "根据本地规则与 TMDB 匹配生成，确认后才会修改云盘。": {
+    tw: "根據本機規則與 TMDB 比對產生，確認後才會修改雲端硬碟。",
     en: "Matched by local rules and TMDB; nothing touches your drive until you confirm.",
     ja: "ローカルルールと TMDB で照合しました。確認するまでクラウドドライブは変わりません。",
     ko: "로컬 규칙과 TMDB 대조로 만들었으며 직접 확인하기 전에는 드라이브가 바뀌지 않습니다.",
   },
-  "结合本地规则和 AI 识别生成的，需要你确认才会动云盘。": {
-    tw: "結合本機規則與 AI 辨識產生的，需要你確認才會動雲端硬碟。",
+  "结合本地规则与 AI 识别生成，确认后才会修改云盘。": {
+    tw: "結合本機規則與 AI 辨識產生，確認後才會修改雲端硬碟。",
     en: "Matched with local rules and AI; nothing touches your drive until you confirm.",
     ja: "ローカルルールと AI の識別で作成しました。確認するまでクラウドドライブは変わりません。",
     ko: "로컬 규칙과 AI 인식으로 만들었으며 직접 확인하기 전에는 드라이브가 바뀌지 않습니다.",
   },
-  "AI 在对话里建议的改动，经你逐项确认后才会动云盘。": {
-    tw: "AI 在對話裡建議的變更，經你逐項確認後才會動雲端硬碟。",
+  "AI 在对话中建议的更改，逐项确认后才会修改云盘。": {
+    tw: "AI 在對話中建議的變更，逐項確認後才會修改雲端硬碟。",
     en: "Changes suggested in chat—only items you confirm will touch your drive.",
     ja: "会話の中で AI が提案した変更です。あなたが 1 つずつ確認した後にだけ実行されます。",
     ko: "대화 중 AI가 제안한 변경입니다. 항목별로 확인한 뒤에만 드라이브에 반영됩니다.",
   },
-  "按你设定的改名规则生成，没用 AI 模型。": {
-    tw: "依你設定的改名規則產生，沒用 AI 模型。",
+  "根据您设置的重命名规则生成，未使用 AI 模型。": {
+    tw: "根據您設定的重新命名規則產生，未使用 AI 模型。",
     en: "Built from your rename rules; no AI model used.",
     ja: "設定した名前変更ルールだけで作成しました。AI モデルは使っていません。",
     ko: "설정한 이름 변경 규칙으로 만들었으며 AI 모델은 쓰지 않았습니다.",
@@ -86,7 +86,7 @@ export default {
     ja: "「{」に対応する「}」がありません",
     ko: "‘{’에 대응하는 ‘}’가 없습니다",
   },
-  "「{token}」写法不对": { tw: "「{token}」寫法不對", en: '"{token}" is not written correctly', ja: "「{token}」の書き方が正しくありません", ko: "‘{token}’ 형식이 올바르지 않습니다" },
+  "「{token}」格式不正确": { tw: "「{token}」格式不正確", en: '"{token}" is not formatted correctly', ja: "「{token}」の書き方が正しくありません", ko: "‘{token}’ 형식이 올바르지 않습니다" },
   "没有变量 {token}，可用 {title} {year} {season} {episode} {version}": {
     tw: "沒有變數 {token}，可用 {title} {year} {season} {episode} {version}",
     en: "There is no variable {token}; use {title} {year} {season} {episode} {version}",
@@ -170,8 +170,8 @@ export default {
     ja: "フォルダ名「{name}」は使えません：{error}",
     ko: "폴더 이름 ‘{name}’은(는) 사용할 수 없습니다: {error}",
   },
-  "这里有多个「{name}」": {
-    tw: "這裡有多個「{name}」",
+  "当前位置存在多个「{name}」": {
+    tw: "目前位置存在多個「{name}」",
     en: 'There is more than one "{name}" here',
     ja: "ここには「{name}」が複数あります",
     ko: "여기에 ‘{name}’이(가) 여러 개 있습니다",
@@ -182,27 +182,27 @@ export default {
     ja: "「{name}」は同名のファイルが使用しています",
     ko: "‘{name}’은(는) 같은 이름의 파일이 이미 사용 중입니다",
   },
-  "「{name}」本身也在这次计划里改动": {
-    tw: "「{name}」本身也在這次計畫裡變更",
-    en: '"{name}" itself is also changed in this plan',
+  "「{name}」本身也包含在本次计划中": {
+    tw: "「{name}」本身也包含在本次計畫中",
+    en: '"{name}" itself is also modified in this plan',
     ja: "「{name}」自体もこのプランで変更されます",
     ko: "‘{name}’ 자체도 이 계획에서 변경됩니다",
   },
-  "有项要移进这个文件夹，它不能同时改动": {
-    tw: "有項目要移進這個資料夾，它不能同時變更",
+  "有项目将移入此文件夹，无法同时修改": {
+    tw: "有項目將移入此資料夾，無法同時修改",
     en: "Items are moving into this folder, so it can't change at the same time",
     ja: "このフォルダに移動する項目があるため、同時に変更できません",
     ko: "이 폴더로 이동하는 항목이 있어 동시에 변경할 수 없습니다",
   },
-  "它所在的文件夹也在这次计划里改动，两者不能同时改": {
-    tw: "它所在的資料夾也在這次計畫裡變更，兩者不能同時改",
-    en: "Its folder is also changed in this plan; both can't change at once",
+  "其所在文件夹也包含在本次计划中，无法同时修改": {
+    tw: "其所在資料夾也包含在本次計畫中，無法同時修改",
+    en: "Its parent folder is also modified in this plan; both can't change at once",
     ja: "このプランでは親フォルダも変更されます。両方を同時には変更できません",
     ko: "상위 폴더도 이 계획에서 변경되므로 둘을 동시에 바꿀 수 없습니다",
   },
-  "文件夹里的项也在这次计划里改动，两者不能同时改": {
-    tw: "資料夾裡的項目也在這次計畫裡變更，兩者不能同時改",
-    en: "Items in this folder are also changed in this plan; both can't change at once",
+  "此文件夹内的项目也包含在本次计划中，无法同时修改": {
+    tw: "此資料夾內的項目也包含在本次計畫中，無法同時修改",
+    en: "Items in this folder are also modified in this plan; both can't change at once",
     ja: "このプランではフォルダ内の項目も変更されます。両方を同時には変更できません",
     ko: "폴더 안의 항목도 이 계획에서 변경되므로 둘을 동시에 바꿀 수 없습니다",
   },
@@ -212,9 +212,9 @@ export default {
     ja: "移動先に同じ名前があります。名前を変えるか、この項目を外してください",
     ko: "대상 위치에 같은 이름이 있습니다. 이름을 바꾸거나 이 항목을 해제하세요",
   },
-  "要新建的文件夹「{name}」和那里的其他项重名": {
-    tw: "要新建的資料夾「{name}」和那裡的其他項目名稱重複",
-    en: 'The new folder "{name}" has the same name as another item there',
+  "拟新建的文件夹「{name}」与目标位置已有项目重名": {
+    tw: "擬新建的資料夾「{name}」與目標位置已有項目重名",
+    en: 'The new folder "{name}" has the same name as an existing item there',
     ja: "新しく作るフォルダ「{name}」が、そこにある別の項目と同じ名前です",
     ko: "새로 만들 폴더 ‘{name}’이(가) 그곳의 다른 항목과 이름이 같습니다",
   },
@@ -280,22 +280,22 @@ export default {
     ko: "{key}은(는) YYYY-MM-DD 날짜여야 합니다",
   },
   影视识别: { tw: "影視辨識", en: "Video recognition", ja: "映像の識別", ko: "영상 인식" },
-  "{groups} 个候选组的统计信息，以及 {files} 个样本文件名、所在路径、大小与修改时间。路径里的文件夹名也会发送。": {
-    tw: "{groups} 個候選組的統計資訊，以及 {files} 個樣本檔名、所在路徑、大小與修改時間。路徑裡的資料夾名稱也會傳送。",
+  "{groups} 个候选组的统计信息，以及 {files} 个样本的文件名、路径、大小与修改时间（路径中的文件夹名称也会一并发送）。": {
+    tw: "{groups} 個候選組的統計資訊，以及 {files} 個樣本的檔名、路徑、大小與修改時間（路徑中的資料夾名稱也會一併傳送）。",
     en: (p) =>
       `Statistics of ${p.groups} candidate ${p.groups === "1" ? "group" : "groups"}, plus the names, paths, sizes and modified times of ${p.files} sample ${p.files === "1" ? "file" : "files"}. Folder names in the paths are sent too.`,
     ja: "{groups} 個の候補グループの統計情報と、サンプル {files} 件のファイル名・パス・サイズ・更新日時。パスに含まれるフォルダ名も送信されます。",
     ko: "후보 그룹 {groups}개의 통계와 샘플 파일 {files}개의 이름, 경로, 크기, 수정 시간. 경로 속 폴더 이름도 전송됩니다.",
   },
   回答: { tw: "回答", en: "The reply", ja: "回答", ko: "응답" },
-  "groups 里的每一项": { tw: "groups 裡的每一項", en: "Each item in groups", ja: "groups の各項目", ko: "groups의 각 항목" },
+  "groups 中的每一项": { tw: "groups 中的每一項", en: "Each item in groups", ja: "groups の各項目", ko: "groups의 각 항목" },
   按补充要求重新识别: { tw: "依補充要求重新辨識", en: "Recognize again with your note", ja: "補足に沿って再識別", ko: "추가 요청대로 다시 인식" },
-  "{groups} 个候选组的文件名模式和上一轮识别结果，以及你补充的这句话。不发送路径和样本。": {
-    tw: "{groups} 個候選組的檔名模式和上一輪辨識結果，以及你補充的這句話。不傳送路徑和樣本。",
+  "{groups} 个候选组的文件名模式、上一轮识别结果以及您补充的说明（不发送路径与样本）。": {
+    tw: "{groups} 個候選組的檔名模式、上一輪辨識結果以及您補充的說明（不傳送路徑與樣本）。",
     en: (p) =>
-      `File-name patterns and last results of ${p.groups} candidate ${p.groups === "1" ? "group" : "groups"}, plus the note you added. No paths or samples are sent.`,
-    ja: "{groups} 個の候補グループのファイル名パターンと前回の識別結果、そして追加した一文。パスとサンプルは送信しません。",
-    ko: "후보 그룹 {groups}개의 파일 이름 패턴과 이전 인식 결과, 그리고 추가한 문장. 경로와 샘플은 전송하지 않습니다.",
+      `File-name patterns and last results of ${p.groups} candidate ${p.groups === "1" ? "group" : "groups"}, plus your instructions. No paths or samples are sent.`,
+    ja: "{groups} 個の候補グループのファイル名パターンと前回の識別結果、そして追加の指示。パスとサンプルは送信しません。",
+    ko: "후보 그룹 {groups}개의 파일 이름 패턴과 이전 인식 결과, 그리고 추가 요청. 경로와 샘플은 전송하지 않습니다.",
   },
 
   /* ---------------- agent ---------------- */
@@ -344,13 +344,13 @@ export default {
   无法生成整理方案: { tw: "無法產生整理方案", en: "Couldn't draft a plan", ja: "整理プランを作成できません", ko: "정리 계획을 만들 수 없음" },
   正在准备云添加: { tw: "正在準備雲端新增", en: "Preparing Cloud Add", ja: "クラウド追加を準備中", ko: "클라우드 추가 준비 중" },
   已准备好云添加: { tw: "已準備好雲端新增", en: "Cloud Add ready", ja: "クラウド追加を準備しました", ko: "클라우드 추가 준비됨" },
-  没能准备好云添加: { tw: "沒能準備好雲端新增", en: "Couldn't prepare Cloud Add", ja: "クラウド追加を準備できません", ko: "클라우드 추가를 준비할 수 없음" },
+  无法准备云添加: { tw: "無法準備雲端新增", en: "Couldn't prepare Cloud Add", ja: "クラウド追加を準備できません", ko: "클라우드 추가를 준비할 수 없음" },
   正在准备下载: { tw: "正在準備下載", en: "Preparing download", ja: "ダウンロードを準備中", ko: "다운로드 준비 중" },
   已准备好下载: { tw: "已準備好下載", en: "Download ready", ja: "ダウンロードを準備しました", ko: "다운로드 준비됨" },
-  没能准备好下载: { tw: "沒能準備好下載", en: "Couldn't prepare download", ja: "ダウンロードを準備できません", ko: "다운로드를 준비할 수 없음" },
+  无法准备下载: { tw: "無法準備下載", en: "Couldn't prepare download", ja: "ダウンロードを準備できません", ko: "다운로드를 준비할 수 없음" },
   正在准备分享: { tw: "正在準備分享", en: "Preparing share", ja: "共有を準備中", ko: "공유 준비 중" },
   已准备好分享: { tw: "已準備好分享", en: "Share ready", ja: "共有を準備しました", ko: "공유 준비됨" },
-  没能准备好分享: { tw: "沒能準備好分享", en: "Couldn't prepare share", ja: "共有を準備できません", ko: "공유를 준비할 수 없음" },
+  无法准备分享: { tw: "無法準備分享", en: "Couldn't prepare share", ja: "共有を準備できません", ko: "공유를 준비할 수 없음" },
   "未知的编号：{handles}（只能使用工具结果里出现过的编号）": {
     tw: "未知的編號：{handles}（只能使用工具結果裡出現過的編號）",
     en: "Unknown handles: {handles} (only handles from tool results can be used)",
@@ -378,9 +378,9 @@ export default {
     ko: "{key}에는 폴더 경로를 사용하세요",
   },
   "{key} 不能为空": { tw: "{key} 不能為空", en: "{key} can't be empty", ja: "{key} は空にできません", ko: "{key}은(는) 비워 둘 수 없습니다" },
-  "items 里的每一项": { tw: "items 裡的每一項", en: "Each item in items", ja: "items の各項目", ko: "items의 각 항목" },
-  "{handle} 出现了不止一次": {
-    tw: "{handle} 出現了不止一次",
+  "items 中的每一项": { tw: "items 中的每一項", en: "Each item in items", ja: "items の各項目", ko: "items의 각 항목" },
+  "{handle} 重复出现": {
+    tw: "{handle} 重複出現",
     en: "{handle} appears more than once",
     ja: "{handle} が複数回出てきます",
     ko: "{handle}이(가) 두 번 이상 나옵니다",
@@ -397,8 +397,8 @@ export default {
     ja: "{n} 番目の項目の新しい名前は使えません：{error}",
     ko: "{n}번째 항목의 새 이름은 사용할 수 없습니다: {error}",
   },
-  "第 {n} 项没有目标位置、新名称或回收站": {
-    tw: "第 {n} 項沒有目標位置、新名稱或垃圾桶",
+  "第 {n} 项未指定目标位置、新名称或移至回收站": {
+    tw: "第 {n} 項未指定目標位置、新名稱或移至垃圾桶",
     en: "Item {n} has no destination, new name or Trash",
     ja: "{n} 番目の項目に移動先、新しい名前、ゴミ箱のいずれもありません",
     ko: "{n}번째 항목에 대상 위치, 새 이름, 휴지통이 모두 없습니다",
@@ -410,22 +410,22 @@ export default {
   "不支持的链接：{url}": { tw: "不支援的連結：{url}", en: "Unsupported link: {url}", ja: "対応していないリンク：{url}", ko: "지원하지 않는 링크: {url}" },
   看过: { tw: "看過", en: "Watched", ja: "視聴済み", ko: "시청함" },
   打开过: { tw: "開啟過", en: "Opened", ja: "開いたことあり", ko: "열어 봄" },
-  "没看完 {n}%": { tw: "沒看完 {n}%", en: "{n}% watched", ja: "{n}% まで視聴", ko: "{n}% 시청" },
-  "当前模型不支持工具调用，已切到单步模式（一次只能查一项，会慢一点）。": {
-    tw: "目前模型不支援工具呼叫，已切到單步模式（一次只能查一項，會慢一點）。",
-    en: "This model doesn't support tool calls, so PKP switched to step mode (one lookup per step, slightly slower).",
+  "已观看 {n}%": { tw: "已觀看 {n}%", en: "{n}% watched", ja: "{n}% まで視聴", ko: "{n}% 시청" },
+  "当前模型不支持工具调用，已切换至单步模式（每次仅查询一项，速度较慢）。": {
+    tw: "目前模型不支援工具呼叫，已切換至單步模式（每次僅查詢一項，速度較慢）。",
+    en: "This model doesn't support tool calls, so PKP switched to step mode (one lookup per step, slower).",
     ja: "このモデルはツール呼び出し非対応のため、1 ステップずつ調べるモードに切り替えました（回答は少し遅くなります）。",
     ko: "현재 모델이 도구 호출을 지원하지 않아 단계 모드로 전환했습니다(한 번에 하나씩만 조회하므로 다소 느립니다).",
   },
-  "这次对话到了用量上限，先停在这儿，前面查到的结果都留着。": {
-    tw: "這次對話到了用量上限，先停在這裡，前面查到的結果都留著。",
-    en: "Reached this chat's usage limit and paused here—results collected so far are still saved.",
+  "本次对话已达用量上限并暂停，已获取的结果仍会保留。": {
+    tw: "本次對話已達用量上限並暫停，已取得的結果仍會保留。",
+    en: "Reached this chat's usage limit and paused here—results collected so far are saved.",
     ja: "この会話の使用量上限に達したためここで止めました。これまでの結果は残っています。",
     ko: "이 대화의 사용량 한도에 도달해 여기서 멈췄습니다. 지금까지 나온 결과는 그대로 유지됩니다.",
   },
-  "可以去「AI 设置」调大单个对话上限或开启不限制，下一轮生效（费用仍按实际用量结算）。": {
-    tw: "可以去「AI 設定」調大單一對話上限或開啟不限制，下一輪生效（費用仍依實際用量結算）。",
-    en: "Increase “Per-chat limit” or switch on “No limit” in AI settings for the next turn (provider billing still follows actual usage).",
+  "可在「AI 设置」中调高单个对话上限或开启不限制，将于下一轮生效（费用仍按实际用量结算）。": {
+    tw: "可在「AI 設定」中調高單一對話上限或開啟不限制，將於下一輪生效（費用仍依實際用量結算）。",
+    en: "Increase “Per-chat limit” or enable “No limit” in AI settings for the next turn (billing still follows actual usage).",
     ja: "AI 設定で上限を上げるか「無制限」にすると次のターンから使えます（料金は実際の使用量で計算されます）。",
     ko: "AI 설정에서 대화당 한도를 높이거나 ‘제한 없음’을 켜면 다음 차례부터 적용됩니다(요금은 실제 사용량 기준으로 청구됩니다).",
   },
@@ -468,9 +468,9 @@ export default {
     ja: "{error}。何も実行していません",
     ko: "{error}. 아무 작업도 실행하지 않았습니다",
   },
-  "这一轮调用了 {n} 次模型，先暂停一下，你可以接着追问。": {
-    tw: "這一輪呼叫了 {n} 次模型，先暫停一下，你可以接著追問。",
-    en: "Paused after {n} model calls in this turn; feel free to ask a follow-up.",
+  "本轮已调用 {n} 次模型并暂停，您可以继续提问。": {
+    tw: "本輪已呼叫 {n} 次模型並暫停，您可以繼續提問。",
+    en: "Paused after {n} model calls in this turn; you can continue asking.",
     ja: "このターンでモデルを {n} 回呼び出したため一度止めました。続けて質問できます。",
     ko: "이번 차례에 모델을 {n}번 호출해 잠시 멈췄습니다. 이어서 계속 물어보실 수 있습니다.",
   },

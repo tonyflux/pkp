@@ -1115,7 +1115,7 @@ describe("AI assistant · Content moderation refusal", () => {
     expect(plan.lowGroups).toBe(1);
     expect(plan.modelIdentities.length).toBe(3);
     expect(assistant.noticeTone).toBe("warning");
-    expect(assistant.notice).toBe(`${REFUSED}。有 1 组没有识别，保持原样，其余照常识别；可能是这些组的文件名或路径里有它认为敏感的词，换个模型服务或改名后可以再试。`);
+    expect(assistant.notice).toBe(`${REFUSED}。1 组未能识别（保持原样），其余已正常识别；可能是文件名或路径中包含受限词汇，可更换模型服务或重命名后重试。`);
   });
 
   it("keeps every group as it was when the check refuses them all, in a bounded number of requests", async () => {
@@ -1124,7 +1124,7 @@ describe("AI assistant · Content moderation refusal", () => {
     expect(callsOf("AIComplete").length).toBe(7);
     expect(assistant.plan!.lowGroups).toBe(4);
     expect(assistant.noticeTone).toBe("warning");
-    expect(assistant.notice).toBe(`${REFUSED}。有 4 组没有识别，保持原样；可能是这些组的文件名或路径里有它认为敏感的词，换个模型服务或改名后可以再试。`);
+    expect(assistant.notice).toBe(`${REFUSED}。4 组未能识别（保持原样）；可能是文件名或路径中包含受限词汇，可更换模型服务或重命名后重试。`);
   });
 
   it("stops splitting after REFUSAL_SPLITS when the refusal is about what every batch shares", async () => {
@@ -1135,7 +1135,7 @@ describe("AI assistant · Content moderation refusal", () => {
     // 15 splits of two requests each, after the first: every other batch is refused whole.
     expect(callsOf("AIComplete").length).toBe(31);
     expect(assistant.plan!.lowGroups).toBe(low);
-    expect(assistant.notice).toContain(`有 ${low} 组没有识别`);
+    expect(assistant.notice).toContain(`${low} 组未能识别`);
   });
 
   it("still stops at any other error, the plan unchanged", async () => {

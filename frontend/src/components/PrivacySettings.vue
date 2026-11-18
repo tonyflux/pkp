@@ -39,7 +39,7 @@ const byPassword = computed(() => state.value?.method === "password");
 const busy = computed(() => asking.value || !!appLockSheet.mode);
 
 const methodNote = computed(() => {
-  if (byPassword.value) return t("只用这台电脑上单独设的 PKP 密码来解锁");
+  if (byPassword.value) return t("仅使用本机设置的 PKP 独立密码解锁");
   if (state.value && !state.value.available)
     return t("系统验证不可用：{reason}。可以改用独立密码", { reason: state.value.unavailable || t("这台电脑无法弹出系统身份验证") });
   return onWindows ? t("系统验证：Windows Hello（PIN、指纹或面部）") : t("系统验证：Touch ID 或这台 Mac 的登录密码");
@@ -48,8 +48,8 @@ const methodNote = computed(() => {
 const passwordTitle = computed(() => (byPassword.value ? t("PKP 独立密码") : t("备用独立密码")));
 const passwordNote = computed(() => {
   const has = !!state.value?.hasPassword;
-  if (byPassword.value) return has ? t("已设好，锁屏时直接输密码解锁") : t("开启应用锁时顺便设一个");
-  return has ? t("已设好，系统验证用不了的时候拿它兜底") : t("选填，万一系统验证用不了时有个退路");
+  if (byPassword.value) return has ? t("已设置，锁定时输入密码解锁") : t("开启应用锁时一并设置");
+  return has ? t("已设置，系统验证不可用时作为备用") : t("可选，系统验证不可用时的备用解锁方式");
 });
 
 /* ---------- Auto-lock After Leaving App: presets, the saved custom value, Custom… ---------- */
@@ -105,7 +105,7 @@ const note = computed(() => {
   <div class="privacy">
     <p class="eyebrow"><Icon name="shield" :size="16" />PRIVACY &amp; SECURITY</p>
     <h2>{{ t("隐私与安全") }}</h2>
-    <p class="lead">{{ t("人暂时离开电脑时，先锁住 PKP 里的文件、分享和播放界面，传输还是会照常跑。") }}</p>
+    <p class="lead">{{ t("暂时离开时锁定 PKP 内的文件、分享与播放界面，后台传输任务继续运行。") }}</p>
 
     <div class="grid">
       <section class="column" :aria-label="t('应用锁设置')">
@@ -114,7 +114,7 @@ const note = computed(() => {
             <span class="tile" aria-hidden="true"><Icon name="lock" :size="23" /></span>
             <div class="head-text">
               <h3>{{ t("应用锁") }}</h3>
-              <p>{{ t("可以用电脑本身的系统验证，也可以另设一个 PKP 独立密码") }}</p>
+              <p>{{ t("支持系统身份验证，或单独设置 PKP 独立密码") }}</p>
             </div>
             <Toggle :model-value="enabled" :label="t('开启应用锁')" :disabled="busy || !state" @update:model-value="setAppLockEnabled" />
           </div>
@@ -224,7 +224,7 @@ const note = computed(() => {
         <button type="button" class="action-card" :disabled="!enabled" @click="lockNow">
           <span class="action-icon" aria-hidden="true"><Icon name="lock" :size="17" /></span>
           <span class="action-text">
-            <strong>{{ t("现在锁定 PKP") }}</strong>
+            <strong>{{ t("立即锁定 PKP") }}</strong>
             <small>{{ enabled ? t("立即遮住文件与账号，传输保持运行") : t("回到应用时再验证；未开启应用锁时不可用") }}</small>
           </span>
           <Icon class="chevron" name="chevronRight" :size="15" />
@@ -236,7 +236,7 @@ const note = computed(() => {
             <span class="tile" aria-hidden="true"><Icon name="gauge" :size="23" /></span>
             <div class="head-text">
               <h3>{{ t("发送匿名使用统计") }}</h3>
-              <p>{{ t("只估算每天大概有多少人打开过 PKP，不会记录你点过什么、用过几次") }}</p>
+              <p>{{ t("仅统计每日启动情况，不会记录您的具体操作内容或使用频次") }}</p>
             </div>
             <Toggle
               :model-value="!!telemetry.state?.enabled"
@@ -261,7 +261,7 @@ const note = computed(() => {
               <small>{{ t("功能操作、使用次数、运行日志、账号、文件名、路径、搜索词或文件内容") }}</small>
             </div>
           </div>
-          <p class="note">{{ t("随时可以关掉；关掉就会删掉本地编号和待发记录（已经发出的服务端数据没法撤回），下次重开会生成新编号。") }}</p>
+          <p class="note">{{ t("可随时关闭；关闭后将清除本机随机编号及待发送记录（已上传至服务端的数据无法撤回），再次开启时将生成新编号。") }}</p>
           <p v-if="telemetry.error" class="note" role="alert">{{ telemetry.error }}</p>
         </div>
       </section>
@@ -275,12 +275,12 @@ const note = computed(() => {
             <i class="orbit one"></i>
             <i class="orbit two"></i>
           </div>
-          <h3>{{ t("人离开电脑，") }}<br />{{ t("界面先锁上。") }}</h3>
-          <p>{{ t("锁屏后不会露出文件、账号和任务详情，解锁就能回到刚才的位置。") }}</p>
-          <div class="foot"><i class="dot" aria-hidden="true"></i>{{ t("只在这台电脑生效") }}</div>
+          <h3>{{ t("暂时离开时，") }}<br />{{ t("界面自动锁定。") }}</h3>
+          <p>{{ t("锁定后将隐藏文件、账号与任务详情，解锁后即可恢复原界面。") }}</p>
+          <div class="foot"><i class="dot" aria-hidden="true"></i>{{ t("仅在本机生效") }}</div>
         </div>
         <p class="footnote">
-          {{ t("应用锁只是锁定 PKP 界面，不会退出账号，也不会加密下到硬盘里的文件。独立密码跟 PikPak 账号密码无关，忘了没法找回，只能退出登录后清掉本地数据重设。") }}
+          {{ t("应用锁仅用于锁定 PKP 界面，不会退出账号，也不会加密已下载到本地的文件。独立密码与 PikPak 账号密码相互独立，遗忘后无法找回，只能退出登录并清除本机数据后重设。") }}
         </p>
       </aside>
     </div>

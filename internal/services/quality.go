@@ -230,7 +230,7 @@ func find(rs []rendition, key string) (rendition, bool) {
 }
 
 // errSwitchBusy refuses a second switch while one is still loading.
-var errSwitchBusy = i18n.New("正在切换清晰度，请等这一次完成")
+var errSwitchBusy = i18n.New("正在切换清晰度，请等待本次操作完成")
 
 // SetPlaybackQuality saves the rendition preference — "auto", "origin" or a
 // tier such as "720" — and applies it to the video playing now, from the

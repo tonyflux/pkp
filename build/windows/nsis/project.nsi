@@ -144,11 +144,11 @@ ManifestDPIAware true
 
 LangString PKPBusy ${LANG_SIMPCHINESE} "PKP 或另一个安装程序正在运行。请先退出所有 PKP 窗口和托盘程序再试。"
 LangString PKPBusy ${LANG_ENGLISH} "PKP or another installer is still running. Quit all PKP windows and the system tray app, then try again."
-LangString PKPWait ${LANG_SIMPCHINESE} "PKP 在 30 秒内没能退出，安装已停止。请手动退出后再重新打开安装程序。"
+LangString PKPWait ${LANG_SIMPCHINESE} "PKP 未能在 30 秒内退出，安装已中止。请手动退出后重新运行安装程序。"
 LangString PKPWait ${LANG_ENGLISH} "PKP didn't exit within 30 seconds. Installation stopped. Quit PKP manually and run the installer again."
-LangString PKPFailed ${LANG_SIMPCHINESE} "安装没完成，升级取消；旧版本已尽量为你恢复。请检查磁盘空间和文件夹权限后再试。"
+LangString PKPFailed ${LANG_SIMPCHINESE} "安装未完成，已取消升级并尝试恢复旧版本。请检查磁盘空间与文件夹权限后重试。"
 LangString PKPFailed ${LANG_ENGLISH} "Installation failed. The previous version was restored if available. Check disk space and folder permissions, then try again."
-LangString PKPRecovery ${LANG_SIMPCHINESE} "旧版本没能自动恢复，备份还留在安装目录的 .pkp-previous 里；请退出 PKP 后重新安装。"
+LangString PKPRecovery ${LANG_SIMPCHINESE} "未能自动恢复旧版本，备份文件保留在安装目录的 .pkp-previous 中；请退出 PKP 后重新安装。"
 LangString PKPRecovery ${LANG_ENGLISH} "Couldn't restore the previous version automatically. Backups remain in .pkp-previous in the install folder; quit PKP and run the installer again."
 
 ## The following two statements can be used to sign the installer and the uninstaller. The path to the binaries are provided in %1

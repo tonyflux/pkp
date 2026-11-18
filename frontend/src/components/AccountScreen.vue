@@ -25,7 +25,7 @@ const masked = computed(() => maskLogin(account.value?.login || drive.status?.ac
   <section v-else class="account-screen canvas" aria-labelledby="account-screen-title">
     <AccountAvatar :account="account" :size="64" />
     <h1 id="account-screen-title">{{ name ? t("重新登录「{name}」", { name }) : t("重新登录此账号") }}</h1>
-    <p>{{ t("这个账号的登录过期了，重新登一下就能继续看文件，不影响其他账号和后台任务。") }}</p>
+    <p>{{ t("此账号登录状态已过期，重新登录后即可继续访问，不影响其他账号及后台任务。") }}</p>
     <small v-if="masked">{{ masked }}</small>
     <div class="actions">
       <button class="primary" @click="openSignIn(currentId)">{{ t("重新登录") }}</button>

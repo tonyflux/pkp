@@ -45,7 +45,7 @@ const dockTitle = computed(() => t("将处理 {n} 个顶层文件夹 · 连同 {
 const dockHint = computed(() =>
   tooMany.value
     ? t("一次最多处理 {n} 项，请缩小范围或取消部分勾选", { n: REMOVE_LIMIT })
-    : t("空文件夹不占空间，只能移到回收站；提交前会再逐个核对一遍。"),
+    : t("空文件夹不占用空间，仅支持移至回收站；提交前会逐项再次校验。"),
 );
 </script>
 
@@ -57,7 +57,7 @@ const dockHint = computed(() =>
           <span class="hero-mark" aria-hidden="true"><Icon name="folder" :size="26" /></span>
           <div class="hero-copy">
             <span class="kicker">{{ t("文件夹整理 · 不释放空间") }}</span>
-            <h2>{{ t("空文件夹也顺手清理掉") }}</h2>
+            <h2>{{ t("一并清理空文件夹") }}</h2>
             <p>{{ t("只显示最外层空文件夹；移走一项，里面的空文件夹也会一起进入回收站。") }}</p>
           </div>
           <div class="metric">
@@ -84,7 +84,7 @@ const dockHint = computed(() =>
           </div>
         </div>
 
-        <p v-if="e.error" class="error" role="alert">{{ t("没能读取：{error}", { error: e.error }) }}</p>
+        <p v-if="e.error" class="error" role="alert">{{ t("读取失败：{error}", { error: e.error }) }}</p>
 
         <div v-if="!folders.length && !e.loading" class="none">
           <Icon name="check" :size="22" />
@@ -111,7 +111,7 @@ const dockHint = computed(() =>
             <Icon name="folder" :size="20" />
             <div class="details">
               <strong :title="shownPath(f.path)">{{ shownPath(f.path) }}</strong>
-              <small>{{ f.nested ? t("里面还套着 {n} 个空文件夹", { n: f.nested }) : t("无嵌套空文件夹") }}</small>
+              <small>{{ f.nested ? t("内含 {n} 个嵌套空文件夹", { n: f.nested }) : t("无嵌套空文件夹") }}</small>
             </div>
             <div class="meta">
               <span :class="{ warn: !!reason(f) }">{{ reason(f) || t("可移到回收站") }}</span>

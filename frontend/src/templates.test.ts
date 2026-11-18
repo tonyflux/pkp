@@ -79,7 +79,7 @@ describe("templateError", () => {
   it("refuses unknown variables, bad widths and broken syntax", () => {
     expect(templateError("{name}/{episode}", "series")).toContain("没有变量 {name}");
     expect(templateError("{title:02}/{episode}", "series")).toBe("只有 {season} 和 {episode} 可以补零");
-    expect(templateError("{title}/{episode:x}", "series")).toContain("写法不对");
+    expect(templateError("{title}/{episode:x}", "series")).toContain("格式不正确");
     expect(templateError("{title}<<{year}>>/{episode}", "series")).toBe("可选段 <…> 不能嵌套");
     expect(templateError("{title}< ({year})/{episode}", "series")).toBe("可选段 <…> 里不能有 /");
   });

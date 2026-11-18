@@ -480,7 +480,7 @@ func (l *AppLockService) Unlock(ctx context.Context) AppLockResult {
 		return l.settled(AppLockResult{Result: "ok"})
 	}
 	if l.drive.LocalSettings().AppLockMethod == lockMethodPassword {
-		return l.settled(AppLockResult{Result: "unavailable", Message: i18n.T("这台电脑上的 PKP 只能用独立密码解锁")})
+		return l.settled(AppLockResult{Result: "unavailable", Message: i18n.T("本机的 PKP 仅支持使用独立密码解锁")})
 	}
 	r := l.ask(ctx, unlockReason())
 	if r.ok() {
@@ -497,7 +497,7 @@ func (l *AppLockService) UnlockWithPassword(password string) AppLockResult {
 		return l.settled(AppLockResult{Result: "ok"})
 	}
 	if !l.drive.LocalSettings().AppLockPassword {
-		return l.settled(AppLockResult{Result: "unavailable", Message: i18n.T("这台电脑上的 PKP 没有设置独立密码")})
+		return l.settled(AppLockResult{Result: "unavailable", Message: i18n.T("本机的 PKP 未设置独立密码")})
 	}
 	r := l.checkPassword(password)
 	if r.ok() {
@@ -533,7 +533,7 @@ func (l *AppLockService) ForgetAndSignOut() error {
 	}
 	if len(failed) > 0 {
 		l.log.Warn("applock: accounts not signed out", "error", errors.Join(failed...))
-		return i18n.Errorf("有 %d 个账号没能退出，PKP 保持锁定", len(failed))
+		return i18n.Errorf("有 %d 个账号未能退出登录，PKP 保持锁定", len(failed))
 	}
 	if err := l.secrets.Delete(); err != nil {
 		l.log.Warn("applock: password not cleared", "error", err)
@@ -597,7 +597,7 @@ func (l *AppLockService) checkPassword(password string) AppLockResult {
 	}
 	verifier, err := l.secrets.Load()
 	if errors.Is(err, errNoLockSecret) {
-		return AppLockResult{Result: "unavailable", Message: i18n.T("这台电脑上找不到 PKP 独立密码的记录")}
+		return AppLockResult{Result: "unavailable", Message: i18n.T("本机未找到 PKP 独立密码记录")}
 	}
 	if err != nil {
 		l.log.Warn("applock: password record not read", "error", err)
@@ -622,7 +622,7 @@ func (l *AppLockService) checkPassword(password string) AppLockResult {
 	if left := t.cooling(now); left > 0 {
 		return AppLockResult{Result: "cooldown", Message: cooldownMessage(left)}
 	}
-	return AppLockResult{Result: "wrong", Message: i18n.N(t.attemptsLeft(), "密码不正确，还可以再试 %d 次", t.attemptsLeft())}
+	return AppLockResult{Result: "wrong", Message: i18n.N(t.attemptsLeft(), "密码不正确，还可重试 %d 次", t.attemptsLeft())}
 }
 
 func (l *AppLockService) saveThrottle(t LockThrottle) {

@@ -179,7 +179,7 @@ func (d *DriveService) PollQRSignIn(id string) (QRSignInState, error) {
 		q.code, q.state.URL = "", ""
 		if commitErr != nil {
 			d.log.Error("drive: QR sign-in commit failed", "error", commitErr)
-			q.state.State, q.state.Message = "error", i18n.T("没能保存登录信息，请重试")
+			q.state.State, q.state.Message = "error", i18n.T("无法保存登录信息，请重试")
 			d.endQRSignIn(a)
 			return q.state, nil
 		}

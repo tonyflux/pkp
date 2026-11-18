@@ -5,8 +5,8 @@ const plural = (n: string, one: string, many: string) => (n === "1" ? one : many
 export default {
   // CleanupView
   清理: { tw: "清理", en: "Cleanup", ja: "クリーンアップ", ko: "클린업" },
-  "找出占地方的重复文件，顺手把空文件夹也清一清。": {
-    tw: "找出佔空間的重複檔案，順便把空資料夾也清一清。",
+  "查找占用空间的重复文件，并可一并清理空文件夹。": {
+    tw: "尋找佔用空間的重複檔案，並可一併清理空資料夾。",
     en: "Find space-wasting duplicates and clear out empty folders left behind.",
     ja: "容量を取る重複ファイルを見つけて、残った空のフォルダもまとめて片付けます。",
     ko: "공간을 차지하는 중복 파일을 찾고 남은 빈 폴더도 함께 정리합니다.",
@@ -100,8 +100,8 @@ export default {
     ja: "ゴミ箱で最上位フォルダを復元すると、中の空のフォルダも戻ります。",
     ko: "휴지통에서 최상위 폴더를 복원하면 안의 빈 폴더도 함께 돌아옵니다.",
   },
-  "已删掉，释放了 {size}，剩余空间马上会更新。": {
-    tw: "已刪除，釋放了 {size}，剩餘空間稍後會更新。",
+  "已彻底删除，释放 {size}，剩余空间将很快更新。": {
+    tw: "已永久刪除，釋放 {size}，剩餘空間稍後會更新。",
     en: "Deleted. Freed {size}; storage will refresh shortly.",
     ja: "削除しました。{size} を解放しました。容量はまもなく更新されます。",
     ko: "삭제했습니다. {size}를 확보했으며 저장 공간이 곧 새로 고쳐집니다.",
@@ -114,14 +114,14 @@ export default {
   },
   扫描中: { tw: "掃描中", en: "Scanning", ja: "スキャン中", ko: "스캔 중" },
   正在读取本地索引: { tw: "正在讀取本機索引", en: "Reading the local index", ja: "ローカルインデックスを読み込んでいます", ko: "로컬 인덱스를 읽는 중" },
-  "只在本地算一下，不会动你的文件。范围：{scope}": {
-    tw: "只在本機計算，不會更動你的檔案。範圍：{scope}",
+  "仅在本地计算，不会修改云盘文件。范围：{scope}": {
+    tw: "僅在本機計算，不會變更雲端硬碟檔案。範圍：{scope}",
     en: "Calculated locally only; none of your files will be touched. Scope: {scope}",
     ja: "ローカルで計算するだけで、ファイルには触れません。範囲：{scope}",
     ko: "로컬에서만 계산하며 파일은 건드리지 않습니다. 범위: {scope}",
   },
-  "每 100 项一批处理；点停止的话，还没发出的就不会继续。": {
-    tw: "每 100 項為一批處理；按停止的話，尚未送出的就不會繼續。",
+  "每 100 项分批处理；点击停止后，尚未发送的项目将不再继续。": {
+    tw: "每 100 項分批處理；點擊停止後，尚未送出的項目將不再繼續。",
     en: "Processed in batches of 100; stopping skips any batches not sent yet.",
     ja: "100 件ずつまとめて処理します。停止しても、まだ送信していない分だけが止まります。",
     ko: "100개씩 나누어 처리하며, 중지하면 아직 보내지 않은 묶음만 멈춥니다.",
@@ -153,7 +153,7 @@ export default {
     ja: "{scope}内の空のフォルダをローカルで探します。AI もダウンロードも使いません。",
     ko: "{scope}에서 빈 폴더를 로컬에서 찾습니다. AI나 다운로드를 쓰지 않습니다.",
   },
-  "没能扫描：{error}": { tw: "無法掃描：{error}", en: "Couldn't scan: {error}", ja: "スキャンできませんでした：{error}", ko: "스캔하지 못했습니다: {error}" },
+  "扫描失败：{error}": { tw: "掃描失敗：{error}", en: "Couldn't scan: {error}", ja: "スキャンできませんでした：{error}", ko: "스캔하지 못했습니다: {error}" },
   开始扫描: { tw: "開始掃描", en: "Start scan", ja: "スキャン開始", ko: "스캔 시작" },
 
   // CleanupEmptyFolders
@@ -173,14 +173,14 @@ export default {
     ja: "一度に処理できるのは {n} 件までです。範囲を絞るか、一部の選択を外してください",
     ko: "한 번에 최대 {n}개까지 처리할 수 있습니다. 범위를 줄이거나 일부 선택을 해제하세요",
   },
-  "空文件夹不占空间，只能移到回收站；提交前会再逐个核对一遍。": {
-    tw: "空資料夾不占空間，只能移至垃圾桶；送出前會再逐一確認。",
+  "空文件夹不占用空间，仅支持移至回收站；提交前会逐项再次校验。": {
+    tw: "空資料夾不佔用空間，僅支援移至垃圾桶；送出前會逐項再次校驗。",
     en: "Empty folders take no space and can only go to Trash; each is rechecked before sending.",
     ja: "空のフォルダは容量を使わず、ゴミ箱への移動のみ可能です。送信前に 1 つずつ再確認します。",
     ko: "빈 폴더는 공간을 차지하지 않으며 휴지통으로만 이동할 수 있습니다. 보내기 전에 하나씩 다시 확인합니다.",
   },
   "文件夹整理 · 不释放空间": { tw: "資料夾整理 · 不釋放空間", en: "Folder tidy-up · frees no space", ja: "フォルダ整理 · 容量は解放されません", ko: "폴더 정리 · 공간 확보 없음" },
-  "空文件夹也顺手清理掉": { tw: "空資料夾也順便清掉", en: "Tidy up the empty folders left behind", ja: "空のフォルダもまとめて整理", ko: "남은 빈 폴더도 함께 정리" },
+  "一并清理空文件夹": { tw: "一併清理空資料夾", en: "Tidy up the empty folders left behind", ja: "空のフォルダもまとめて整理", ko: "남은 빈 폴더도 함께 정리" },
   "只显示最外层空文件夹；移走一项，里面的空文件夹也会一起进入回收站。": {
     tw: "只顯示最外層空資料夾；移走一項，裡面的空資料夾也會一起移入垃圾桶。",
     en: "Only the outermost empty folders are listed; moving one sends the empty folders inside it to Trash too.",
@@ -195,7 +195,7 @@ export default {
   读取中: { tw: "讀取中", en: "Reading", ja: "読み込み中", ko: "읽는 중" },
   全选: { tw: "全選", en: "Select all", ja: "すべて選択", ko: "모두 선택" },
   全不选: { tw: "全不選", en: "Select none", ja: "選択解除", ko: "모두 해제" },
-  "没能读取：{error}": { tw: "無法讀取：{error}", en: "Couldn't load: {error}", ja: "読み込めませんでした：{error}", ko: "불러오지 못했습니다: {error}" },
+  "读取失败：{error}": { tw: "讀取失敗：{error}", en: "Couldn't load: {error}", ja: "読み込めませんでした：{error}", ko: "불러오지 못했습니다: {error}" },
   "只要文件夹和它下级里面都没有文件（不算回收站里的），就算空文件夹；「My Pack」等特殊文件夹和根目录除外。": {
     tw: "只要資料夾和它下層裡面都沒有檔案（不算垃圾桶裡的），就算空資料夾；「My Pack」等特殊資料夾和根目錄除外。",
     en: 'An empty folder has no non-Trash files anywhere inside it; special folders like "My Pack" and the root don\'t count.',
@@ -203,8 +203,8 @@ export default {
     ko: "하위 어느 곳에도 휴지통 밖 파일이 없는 폴더가 대상입니다. “My Pack” 같은 특수 폴더와 루트는 제외됩니다.",
   },
   "选择「{name}」": { tw: "選擇「{name}」", en: 'Select "{name}"', ja: "「{name}」を選択", ko: "“{name}” 선택" },
-  "里面还套着 {n} 个空文件夹": {
-    tw: "裡面還有 {n} 個巢狀空資料夾",
+  "内含 {n} 个嵌套空文件夹": {
+    tw: "內含 {n} 個巢狀空資料夾",
     en: (p) => plural(p.n, "Holds 1 more empty folder", `Holds ${p.n} more empty folders`),
     ja: "中にさらに {n} 個の空のフォルダがあります",
     ko: "안에 빈 폴더 {n}개가 더 있습니다",
@@ -364,8 +364,8 @@ export default {
     ja: "ドライブのインデックスを作成中のため、まだ全体を検索できません。階層ごとに参照できます。",
     ko: "드라이브 인덱스를 아직 만드는 중이라 전체 검색을 할 수 없습니다. 단계별로 탐색할 수 있습니다.",
   },
-  "没有找到文件夹，试试其他名称": {
-    tw: "沒有找到資料夾，試試其他名稱",
+  "未找到匹配文件夹，请尝试其他名称": {
+    tw: "未找到符合的資料夾，請嘗試其他名稱",
     en: "No folders found. Try another name",
     ja: "フォルダが見つかりません。別の名前を試してください",
     ko: "폴더를 찾지 못했습니다. 다른 이름을 시도해 보세요",
@@ -382,8 +382,8 @@ export default {
   关闭在线解压: { tw: "關閉線上解壓縮", en: "Close Extract online", ja: "オンライン解凍を閉じる", ko: "온라인 압축 해제 닫기" },
   正在读取压缩包: { tw: "正在讀取壓縮檔", en: "Reading archive", ja: "アーカイブを読み込み中", ko: "압축 파일을 읽는 중" },
   "正在获取文件列表…": { tw: "正在取得檔案清單…", en: "Getting the file list…", ja: "ファイル一覧を取得しています…", ko: "파일 목록을 가져오는 중…" },
-  "会先试着打开看看，真要密码了再请你输入。": {
-    tw: "會先試著開啟看看，真的需要密碼再請你輸入。",
+  "将先尝试直接读取；如需密码再提示您输入。": {
+    tw: "將先嘗試直接讀取；如需密碼再提示您輸入。",
     en: "Tries opening it first; you'll only be asked for a password if needed.",
     ja: "まず開いてみて、必要なときだけパスワードをお聞きします。",
     ko: "먼저 열어 보고 암호가 필요할 때만 입력을 요청합니다.",
@@ -421,14 +421,14 @@ export default {
   解压所选: { tw: "解壓縮所選項目", en: "Extract selected", ja: "選択項目を解凍", ko: "선택 항목 압축 해제" },
   云端任务进行中: { tw: "雲端任務進行中", en: "Cloud task in progress", ja: "クラウドタスク進行中", ko: "클라우드 작업 진행 중" },
   正在解压所选内容: { tw: "正在解壓縮所選內容", en: "Extracting the selection", ja: "選択した内容を解凍しています", ko: "선택한 항목의 압축을 푸는 중" },
-  "{what}会解压到 {place} 下的「{folder}」里，现在可以继续逛别的文件，弄好了底部会有提示。": {
-    tw: "{what}會解壓縮到 {place} 下的「{folder}」裡，現在可以繼續逛別的檔案，用好了底部會有提示。",
+  "{what}将解压至 {place} 下的「{folder}」，您可继续浏览其他文件，完成后将在底部提示。": {
+    tw: "{what}將解壓縮至 {place} 下的「{folder}」，您可繼續瀏覽其他檔案，完成後將在底部提示。",
     en: '{what} will be extracted into "{folder}" in {place}. Keep browsing; we\'ll let you know at the bottom when it\'s done.',
     ja: "{what}は {place} 内の「{folder}」に解凍されます。このままほかのファイルを見られますし、終わったら下部でお知らせします。",
     ko: "{what}은(는) {place} 아래 ‘{folder}’에 풀립니다. 다른 파일을 계속 둘러보셔도 되며, 끝나면 화면 아래에 알려 드립니다.",
   },
-  "这个压缩包已经在云端解压了，可以先看别的文件，弄好了底部会有提示。": {
-    tw: "這個壓縮檔已經在雲端解壓縮了，可以先看別的檔案，用好了底部會有提示。",
+  "此压缩包正在云端解压，您可先浏览其他文件，完成后将在底部提示。": {
+    tw: "此壓縮檔正在雲端解壓縮，您可先瀏覽其他檔案，完成後將在底部提示。",
     en: "This archive is already extracting in the cloud. Keep browsing; we'll let you know at the bottom when it's done.",
     ja: "このアーカイブはすでにクラウドで解凍中です。このままほかのファイルを見られますし、終わったら下部でお知らせします。",
     ko: "이 압축 파일은 이미 클라우드에서 압축 해제 중입니다. 다른 파일을 보셔도 되며, 끝나면 화면 아래에 알려 드립니다.",
@@ -461,8 +461,8 @@ export default {
 
   // extract.ts
   读取压缩包超时: { tw: "讀取壓縮檔逾時", en: "Reading the archive timed out", ja: "アーカイブの読み込みがタイムアウトしました", ko: "압축 파일 읽기 시간이 초과되었습니다" },
-  "云端读取列表超时了，稍等再试一次通常就行。": {
-    tw: "雲端讀取清單逾時了，稍等再試一次通常就行。",
+  "云端读取文件列表超时，请稍后重试。": {
+    tw: "雲端讀取檔案清單逾時，請稍後重試。",
     en: "Reading the file list timed out. Wait a moment and try again.",
     ja: "クラウドでの一覧読み込みがタイムアウトしました。少し待ってからもう一度お試しください。",
     ko: "클라우드에서 목록을 읽다 시간이 초과되었습니다. 잠시 후 다시 시도하면 대개 해결됩니다.",
@@ -496,8 +496,8 @@ export default {
     ko: "이 압축 파일을 온라인으로 풀려면 프리미엄이 필요합니다.",
   },
   云盘空间不足: { tw: "雲端硬碟空間不足", en: "Not enough drive storage", ja: "クラウドドライブの容量不足", ko: "클라우드 드라이브 공간 부족" },
-  "解压出的文件放不下了。清理一些空间后再试。": {
-    tw: "解壓縮出的檔案放不下了。清出一些空間後再試。",
+  "云盘剩余空间不足，无法容纳解压后的文件，请清理空间后重试。": {
+    tw: "雲端硬碟剩餘空間不足，無法容納解壓縮後的檔案，請清理空間後重試。",
     en: "The extracted files won't fit. Free up some space and try again.",
     ja: "解凍したファイルが入りきりません。空き容量を作ってから再試行してください。",
     ko: "압축을 푼 파일을 저장할 공간이 없습니다. 공간을 확보한 후 다시 시도하세요.",
@@ -518,14 +518,14 @@ export default {
   },
   没有读到压缩包: { tw: "無法讀取壓縮檔", en: "Couldn't read the archive", ja: "アーカイブを読み込めませんでした", ko: "압축 파일을 읽지 못했습니다" },
   "请检查网络后重试。": { tw: "請檢查網路後重試。", en: "Check your network and try again.", ja: "ネットワークを確認して再試行してください。", ko: "네트워크를 확인한 후 다시 시도하세요." },
-  "云端没说具体原因，可以过会儿再试。": {
-    tw: "雲端沒說明原因，可以過一會兒再試。",
+  "云端未返回具体原因，请稍后重试。": {
+    tw: "雲端未傳回具體原因，請稍後重試。",
     en: "The cloud didn't say why. Try again in a bit.",
     ja: "クラウドから詳しい理由が返りませんでした。少し時間を置いてもう一度お試しください。",
     ko: "클라우드가 구체적인 이유를 알려 주지 않았습니다. 잠시 후 다시 시도해 보세요.",
   },
-  "云盘空间不足，解压出的文件放不下。": {
-    tw: "雲端硬碟空間不足，解壓縮出的檔案放不下。",
+  "云盘剩余空间不足，无法容纳解压后的文件。": {
+    tw: "雲端硬碟剩餘空間不足，無法容納解壓縮後的檔案。",
     en: "Not enough drive storage for the extracted files.",
     ja: "クラウドドライブの容量が足りず、解凍したファイルが入りません。",
     ko: "클라우드 드라이브 공간이 부족해 압축을 푼 파일을 저장할 수 없습니다.",
@@ -536,14 +536,14 @@ export default {
     ja: "アーカイブ内に制限された内容を含むファイル名があり、クラウドに保存されませんでした。",
     ko: "압축 파일 안에 제한된 내용이 포함된 파일 이름이 있어 클라우드에 저장되지 않았습니다.",
   },
-  "云端保存解压出的文件时失败，可以稍后再试。": {
-    tw: "雲端儲存解壓縮出的檔案時失敗，可以稍後再試。",
+  "云端保存解压后的文件失败，请稍后重试。": {
+    tw: "雲端儲存解壓縮後的檔案失敗，請稍後重試。",
     en: "The cloud failed to save the extracted files. You can try again later.",
     ja: "クラウドで解凍したファイルの保存に失敗しました。しばらくして再試行できます。",
     ko: "클라우드가 압축을 푼 파일을 저장하지 못했습니다. 잠시 후 다시 시도할 수 있습니다.",
   },
-  "云端处理超时，可以稍后再试。": {
-    tw: "雲端處理逾時，可以稍後再試。",
+  "云端处理超时，请稍后重试。": {
+    tw: "雲端處理逾時，請稍後重試。",
     en: "The cloud timed out. You can try again later.",
     ja: "クラウドの処理がタイムアウトしました。しばらくして再試行できます。",
     ko: "클라우드 처리 시간이 초과되었습니다. 잠시 후 다시 시도할 수 있습니다.",
