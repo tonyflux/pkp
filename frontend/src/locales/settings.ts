@@ -8,35 +8,35 @@ export default {
   "WebDAV 服务": { tw: "WebDAV 服務", en: "WebDAV service", ja: "WebDAV サービス", ko: "WebDAV 서비스" },
   "文件服务": { tw: "檔案服務", en: "File service", ja: "ファイルサービス", ko: "파일 서비스" },
   "测试当前已应用的网络，不使用未保存的代理设置。": { tw: "測試目前已套用的網路，不使用未儲存的代理設定。", en: "Tests the applied network route, not unsaved proxy settings.", ja: "適用済みのネットワークをテストします。未保存のプロキシ設定は使いません。", ko: "저장하지 않은 프록시가 아닌 현재 적용된 네트워크를 테스트합니다." },
-  "打开应用后每 5 分钟会自动测一次。直连会自动选响应最快的 DNS 节点，走代理时则由代理决定节点。": { tw: "開啟應用後每 5 分鐘會自動測一次。直連會自動選回應最快的 DNS 節點，走代理時則由代理決定節點。", en: "Checks at launch and every 5 minutes. Direct connections pick the fastest reachable DNS node; proxies handle routing remotely.", ja: "起動時と 5 分おきに自動確認します。直接接続では最速の DNS ノードを選び、プロキシ経由時はプロキシ側に任せます。", ko: "실행 시 및 5분마다 자동으로 확인합니다. 직접 연결은 가장 빠른 DNS 노드를 고르고, 프록시 사용 시에는 프록시가 경로를 정합니다." },
-  "有些服务比较慢或连不上，检查下网络，或者开关、切换下 VPN 节点再试。": { tw: "有些服務比較慢或連不上，請檢查網路，或切換 VPN 節點後再試。", en: "Some services are slow or unreachable—check your network or try switching VPN nodes, then test again.", ja: "一部サービスの接続が遅いか失敗しています。ネットワークを確認するか VPN ノードを切り替えて再テストしてください。", ko: "일부 서비스 연결이 느리거나 되지 않습니다. 네트워크를 확인하거나 VPN 노드를 바꾼 뒤 다시 테스트해 보세요." },
+  "启动后及每 5 分钟自动检测一次。直连时自动选择响应最快的 DNS 节点；使用代理时由代理决定节点。": { tw: "啟動後及每 5 分鐘自動偵測一次。直連時自動選擇回應最快的 DNS 節點；使用代理時由代理決定節點。", en: "Checks at launch and every 5 minutes. Direct connections select the fastest reachable DNS node; proxies handle routing remotely.", ja: "起動時と 5 分おきに自動確認します。直接接続では最速の DNS ノードを選び、プロキシ経由時はプロキシ側に任せます。", ko: "실행 시 및 5분마다 자동으로 확인합니다. 직접 연결은 가장 빠른 DNS 노드를 고르고, 프록시 사용 시에는 프록시가 경로를 정합니다." },
+  "部分服务连接较慢或不可用，请检查网络或切换 VPN 节点后重试。": { tw: "部分服務連線較慢或無法使用，請檢查網路或切換 VPN 節點後重試。", en: "Some services are slow or unreachable. Check your network or switch VPN nodes, then try again.", ja: "一部サービスの接続が遅いか失敗しています。ネットワークを確認するか VPN ノードを切り替えて再テストしてください。", ko: "일부 서비스 연결이 느리거나 되지 않습니다. 네트워크를 확인하거나 VPN 노드를 바꾼 뒤 다시 테스트해 보세요." },
   "服务连接正常": { tw: "服務連線正常", en: "Services are reachable", ja: "サービスへの接続は正常です", ko: "서비스 연결 정상" },
   "连接节点": { tw: "連線節點", en: "Connected node", ja: "接続ノード", ko: "연결 노드" },
   "检测时间": { tw: "偵測時間", en: "Checked at", ja: "確認日時", ko: "확인 시간" },
-  "这里测的是 HTTPS 响应头延迟，不是下载速度（收到 401/403/404 也算连通）；不会发送账号密码，也不会改你的系统 VPN。": { tw: "這裡測的是 HTTPS 回應標頭延遲，不是下載速度（收到 401/403/404 也算連通）；不會傳送帳號密碼，也不會改系統 VPN。", en: "Measures HTTPS response latency, not download speed (401/403/404 still counts as reachable). Doesn't send credentials or touch your system VPN.", ja: "ダウンロード速度ではなく HTTPS 応答の遅延を測っています（401/403/404 も到達扱い）。認証情報は送らず、システム VPN も変更しません。", ko: "다운로드 속도가 아니라 HTTPS 응답 지연을 측정합니다(401/403/404도 연결됨으로 봅니다). 계정 정보는 보내지 않으며 시스템 VPN도 바꾸지 않습니다." },
+  "此处测量的是 HTTPS 响应头延迟，而非下载速度（返回 401/403/404 亦视为连通）；不会发送账号密码，也不会修改系统 VPN 设置。": { tw: "此處測量的是 HTTPS 回應標頭延遲，而非下載速度（傳回 401/403/404 亦視為連通）；不會傳送帳號密碼，也不會修改系統 VPN 設定。", en: "Measures HTTPS response latency, not download speed (401/403/404 still counts as reachable). Never sends credentials or changes your system VPN.", ja: "ダウンロード速度ではなく HTTPS 応答の遅延を測っています（401/403/404 も到達扱い）。認証情報は送らず、システム VPN も変更しません。", ko: "다운로드 속도가 아니라 HTTPS 응답 지연을 측정합니다(401/403/404도 연결됨으로 봅니다). 계정 정보는 보내지 않으며 시스템 VPN도 바꾸지 않습니다." },
   "服务连接较差，建议检查或切换 VPN 节点": { tw: "服務連線較差，建議檢查或切換 VPN 節點", en: "Poor service connection. Check your network or switch VPN nodes.", ja: "サービスへの接続が不安定です。ネットワークの確認やVPNノードの切替をお試しください。", ko: "서비스 연결이 불안정합니다. 네트워크를 확인하거나 VPN 노드를 변경하세요." },
   "检查网络": { tw: "檢查網路", en: "Check network", ja: "ネットワークを確認", ko: "네트워크 확인" },
   /* ---------- AppLockPasswordSheet ---------- */
   "设置 PKP 独立密码": { tw: "設定 PKP 獨立密碼", en: "Set PKP password", ja: "PKP パスワードを設定", ko: "PKP 암호 설정" },
-  "这个密码只用来锁这台电脑上的 PKP，跟 PikPak 账号无关；忘了没法找回，只能退出登录后清掉本地数据重设。": {
-    tw: "這個密碼只用來鎖這台電腦上的 PKP，和 PikPak 帳號無關；忘了無法找回，只能登出後清除本機資料重設。",
-    en: "Only locks PKP on this computer and is separate from your PikPak password. Make sure to remember it—there's no recovery other than signing out and clearing local data.",
+  "此密码仅用于锁定本机上的 PKP，与 PikPak 账号无关。遗忘后无法找回，只能退出登录并清除本机数据后重新设置。": {
+    tw: "此密碼僅用於鎖定本機上的 PKP，與 PikPak 帳號無關。遺忘後無法找回，只能登出並清除本機資料後重新設定。",
+    en: "Only locks PKP on this computer and is separate from your PikPak password. If forgotten, it cannot be recovered—you'll need to sign out and clear local data to reset it.",
     ja: "このコンピュータ上の PKP 専用パスワードで、PikPak アカウントとは別物です。忘れると復元できないため、ログアウトしてローカルデータを消去し再設定するしかありません。",
     ko: "이 컴퓨터의 PKP만 잠그는 암호이며 PikPak 계정과는 무관합니다. 잊어버리면 복구할 수 없어 로그아웃 후 로컬 데이터를 지우고 다시 설정해야 합니다.",
   },
   保存密码: { tw: "儲存密碼", en: "Save password", ja: "パスワードを保存", ko: "암호 저장" },
   "更改 PKP 独立密码": { tw: "變更 PKP 獨立密碼", en: "Change PKP password", ja: "PKP パスワードを変更", ko: "PKP 암호 변경" },
-  "先输一遍现在的密码，再设个新的。记住别忘啦，忘了只能退出登录清掉本地数据重设。": {
-    tw: "先輸入目前的密碼，再設定新的。請務必記好，忘了只能登出並清除本機資料重設。",
-    en: "Enter your current password, then choose a new one. Keep it somewhere safe—if forgotten, the only reset is signing out and clearing local data.",
+  "验证当前密码后即可设置新密码。请妥善保管，遗忘后无法找回，只能退出登录并清除本机数据后重设。": {
+    tw: "驗證目前密碼後即可設定新密碼。請妥善保管，遺忘後無法找回，只能登出並清除本機資料後重設。",
+    en: "Verify your current password, then set a new one. If forgotten, it cannot be recovered—you'll need to sign out and clear local data to reset it.",
     ja: "現在のパスワードを確認してから新しいものを設定します。忘れるとログアウトしてローカルデータを消去する以外に再設定できません。",
     ko: "현재 암호를 확인한 뒤 새 암호를 설정하세요. 잊어버리면 로그아웃하고 로컬 데이터를 지운 뒤 다시 설정하는 방법뿐입니다.",
   },
   保存新密码: { tw: "儲存新密碼", en: "Save new password", ja: "新しいパスワードを保存", ko: "새 암호 저장" },
   "验证 PKP 独立密码": { tw: "驗證 PKP 獨立密碼", en: "Verify PKP password", ja: "PKP パスワードを確認", ko: "PKP 암호 확인" },
-  "改应用锁设置前，先输一遍现在的独立密码确认下。": {
-    tw: "更改應用程式鎖設定前，請先輸入目前的獨立密碼確認。",
-    en: "Confirm your current PKP password before changing App Lock settings.",
+  "修改应用锁设置前，请先验证当前独立密码。": {
+    tw: "修改應用程式鎖設定前，請先驗證目前獨立密碼。",
+    en: "Verify your current PKP password before changing App Lock settings.",
     ja: "アプリロック設定を変える前に、現在の PKP パスワードを確認してください。",
     ko: "앱 잠금 설정을 바꾸기 전에 현재 PKP 암호를 먼저 확인하세요.",
   },
@@ -69,15 +69,15 @@ export default {
     ja: "5 回間違えました。{n} 秒後に再試行してください",
     ko: "암호를 5회 잘못 입력했습니다. {n}초 후 다시 시도하세요",
   },
-  "输入 PKP 独立密码，解锁回到刚才的页面。": {
-    tw: "輸入 PKP 獨立密碼，解鎖回到剛才的頁面。",
-    en: "Enter your PKP password to pick up right where you left off.",
+  "输入 PKP 独立密码以解锁并恢复原界面。": {
+    tw: "輸入 PKP 獨立密碼以解鎖並恢復原畫面。",
+    en: "Enter your PKP password to unlock and return to where you left off.",
     ja: "PKP パスワードを入力すると、直前の画面に戻れます。",
     ko: "PKP 암호를 입력하면 방금 전 화면으로 바로 돌아갑니다.",
   },
-  "验证一下身份，解锁回到刚才的页面。": {
-    tw: "驗證一下身分，解鎖回到剛才的頁面。",
-    en: "Verify it's you to jump right back where you left off.",
+  "完成身份验证以解锁并恢复原界面。": {
+    tw: "完成身分驗證以解鎖並恢復原畫面。",
+    en: "Authenticate to unlock and return to where you left off.",
     ja: "本人確認をすると、直前の画面に戻れます。",
     ko: "본인 확인 후 방금 전 화면으로 바로 돌아갑니다.",
   },
@@ -121,9 +121,9 @@ export default {
   },
   传输可继续运行: { tw: "傳輸可繼續執行", en: "Transfers keep running", ja: "転送は続行されます", ko: "전송은 계속 진행됩니다" },
   文件与账号信息已隐藏: { tw: "檔案與帳號資訊已隱藏", en: "Files and account info hidden", ja: "ファイルとアカウント情報は非表示です", ko: "파일 및 계정 정보 숨김" },
-  独立密码没有找回通道: { tw: "獨立密碼沒有找回管道", en: "The PKP password can't be recovered", ja: "PKP パスワードは復元できません", ko: "PKP 암호는 복구할 수 없습니다" },
-  "PKP 不保存密码原文，也不会通过邮箱或客服重置。要继续使用这台电脑上的 PKP，只能退出登录并清除本机缓存，重新登录后重新设置应用锁。云端文件和已下载到电脑的文件不受影响。": {
-    tw: "PKP 不儲存密碼原文，也不會透過電子郵件或客服重設。要繼續使用這台電腦上的 PKP，只能登出並清除本機快取，重新登入後重新設定應用程式鎖。雲端檔案和已下載到電腦的檔案不受影響。",
+  独立密码无法找回: { tw: "獨立密碼無法找回", en: "The PKP password cannot be recovered", ja: "PKP パスワードは復元できません", ko: "PKP 암호는 복구할 수 없습니다" },
+  "PKP 不保存密码原文，也不会通过邮箱或客服重置。要继续使用本机的 PKP，只能退出登录并清除本机缓存，重新登录后重新设置应用锁（云盘文件与已下载的本地文件均不受影响）。": {
+    tw: "PKP 不儲存密碼原文，也不會透過電子郵件或客服重設。要繼續使用本機的 PKP，只能登出並清除本機快取，重新登入後重新設定應用程式鎖（雲端檔案與已下載的本機檔案均不受影響）。",
     en: "PKP doesn't store your password and can't reset it by email or support. To keep using PKP on this computer, sign out and clear local data, then sign in again and set up App Lock again. Cloud files and files already downloaded aren't affected.",
     ja: "PKP はパスワードそのものを保存せず、メールやサポートでのリセットもできません。このコンピュータで PKP を使い続けるには、ログアウトしてローカルキャッシュを消去し、再ログイン後にアプリロックを設定し直してください。クラウドのファイルとダウンロード済みのファイルには影響しません。",
     ko: "PKP는 암호 원문을 저장하지 않으며 이메일이나 고객 지원으로 재설정할 수 없습니다. 이 컴퓨터에서 PKP를 계속 사용하려면 로그아웃하고 로컬 캐시를 지운 뒤 다시 로그인하여 앱 잠금을 다시 설정해야 합니다. 클라우드 파일과 이미 다운로드한 파일은 영향을 받지 않습니다.",
@@ -133,8 +133,8 @@ export default {
   退出登录并清除本机数据: { tw: "登出並清除本機資料", en: "Sign out and clear local data", ja: "ログアウトして本機データを消去", ko: "로그아웃 및 로컬 데이터 삭제" },
 
   /* ---------- PrivacySettings ---------- */
-  "只用这台电脑上单独设的 PKP 密码来解锁": {
-    tw: "只用這台電腦上單獨設的 PKP 密碼來解鎖",
+  "仅使用本机设置的 PKP 独立密码解锁": {
+    tw: "僅使用本機設定的 PKP 獨立密碼解鎖",
     en: "Unlocks using only the PKP password set on this computer",
     ja: "このコンピュータに設定した PKP パスワードのみで解除します",
     ko: "이 컴퓨터에 따로 설정한 PKP 암호로만 잠금을 해제합니다",
@@ -164,17 +164,17 @@ export default {
     ko: "시스템 인증: Touch ID 또는 이 Mac의 로그인 암호",
   },
   备用独立密码: { tw: "備用獨立密碼", en: "Backup PKP password", ja: "予備の PKP パスワード", ko: "백업 PKP 암호" },
-  "已设好，锁屏时直接输密码解锁": { tw: "已設好，鎖定畫面直接輸密碼解鎖", en: "Set — enter your password to unlock", ja: "設定済み（ロック画面でパスワード入力）", ko: "설정됨(잠금 화면에서 암호 입력)" },
-  "开启应用锁时顺便设一个": { tw: "開啟應用程式鎖時一併設定", en: "Required when turning on App Lock", ja: "アプリロックをオンにするときに設定", ko: "앱 잠금을 켤 때 함께 설정" },
-  "已设好，系统验证用不了的时候拿它兜底": {
-    tw: "已設好，系統驗證無法使用時用它備援",
-    en: "Set — fallback when system authentication isn't available",
+  "已设置，锁定时输入密码解锁": { tw: "已設定，鎖定時輸入密碼解鎖", en: "Set — enter your password to unlock", ja: "設定済み（ロック画面でパスワード入力）", ko: "설정됨(잠금 화면에서 암호 입력)" },
+  "开启应用锁时一并设置": { tw: "開啟應用程式鎖時一併設定", en: "Set when turning on App Lock", ja: "アプリロックをオンにするときに設定", ko: "앱 잠금을 켤 때 함께 설정" },
+  "已设置，系统验证不可用时作为备用": {
+    tw: "已設定，系統驗證無法使用時作為備用",
+    en: "Set — fallback when system authentication is unavailable",
     ja: "設定済み（システム認証が使えないときの予備）",
     ko: "설정됨(시스템 인증을 쓸 수 없을 때 대비)",
   },
-  "选填，万一系统验证用不了时有个退路": {
-    tw: "選填，萬一系統驗證無法使用時有備案",
-    en: "Optional fallback if system authentication ever fails",
+  "可选，系统验证不可用时的备用解锁方式": {
+    tw: "選填，系統驗證無法使用時的備用解鎖方式",
+    en: "Optional fallback when system authentication is unavailable",
     ja: "任意（システム認証が使えないときの予備として）",
     ko: "선택(시스템 인증이 안 될 때 사용할 예비 수단)",
   },
@@ -185,16 +185,16 @@ export default {
     ja: "1〜{max} の整数（分）を入力してください",
     ko: "1~{max} 사이의 정수(분)를 입력하세요",
   },
-  "人暂时离开电脑时，先锁住 PKP 里的文件、分享和播放界面，传输还是会照常跑。": {
-    tw: "暫時離開電腦時，先鎖住 PKP 裡的檔案、分享和播放畫面，傳輸仍會照常執行。",
-    en: "Lock your files, shares, and player whenever you step away—active transfers keep running in the background.",
+  "暂时离开时锁定 PKP 内的文件、分享与播放界面，后台传输任务继续运行。": {
+    tw: "暫時離開時鎖定 PKP 內的檔案、分享與播放畫面，背景傳輸任務繼續執行。",
+    en: "Lock your files, shares, and player whenever you step away—background transfers keep running.",
     ja: "席を外すときに PKP のファイルや共有、再生画面をロックします。実行中の転送はそのまま続きます。",
     ko: "잠시 자리를 비울 때 PKP의 파일, 공유, 재생 화면을 잠급니다. 진행 중인 전송은 그대로 계속됩니다.",
   },
   应用锁设置: { tw: "應用程式鎖設定", en: "App Lock settings", ja: "アプリロックの設定", ko: "앱 잠금 설정" },
   应用锁: { tw: "應用程式鎖", en: "App Lock", ja: "アプリロック", ko: "앱 잠금" },
-  "可以用电脑本身的系统验证，也可以另设一个 PKP 独立密码": {
-    tw: "可以用電腦本身的系統驗證，也可以另設一個 PKP 獨立密碼",
+  "支持系统身份验证，或单独设置 PKP 独立密码": {
+    tw: "支援系統身分驗證，或單獨設定 PKP 獨立密碼",
     en: "Unlock with your computer's authentication or a dedicated PKP password",
     ja: "コンピュータのシステム認証か、PKP 専用のパスワードで解除できます",
     ko: "컴퓨터 시스템 인증이나 별도의 PKP 암호 중 하나로 잠금 해제하세요",
@@ -232,7 +232,7 @@ export default {
   },
   始终开启: { tw: "一律開啟", en: "Always on", ja: "常にオン", ko: "항상 켜짐" },
   快速操作: { tw: "快速操作", en: "Quick actions", ja: "クイック操作", ko: "빠른 작업" },
-  "现在锁定 PKP": { tw: "立即鎖定 PKP", en: "Lock PKP now", ja: "今すぐ PKP をロック", ko: "지금 PKP 잠그기" },
+  "立即锁定 PKP": { tw: "立即鎖定 PKP", en: "Lock PKP now", ja: "今すぐ PKP をロック", ko: "지금 PKP 잠그기" },
   "立即遮住文件与账号，传输保持运行": {
     tw: "立即遮住檔案與帳號，傳輸保持執行",
     en: "Hide files and accounts now; transfers keep running",
@@ -245,26 +245,26 @@ export default {
     ja: "戻ったときに認証します。アプリロックがオフのときは使えません",
     ko: "돌아올 때 인증합니다. 앱 잠금이 꺼져 있으면 사용할 수 없습니다",
   },
-  "人离开电脑，": { tw: "暫時離開，", en: "Step away,", ja: "席を外しても、", ko: "자리를 비워도," },
-  "界面先锁上。": { tw: "畫面先鎖上。", en: "your screen stays private.", ja: "画面はしっかりロック。", ko: "화면은 안전하게 잠깁니다." },
-  "锁屏后不会露出文件、账号和任务详情，解锁就能回到刚才的位置。": {
-    tw: "鎖定後不會露出檔案、帳號和任務詳情，解鎖就能回到剛才的位置。",
+  "暂时离开时，": { tw: "暫時離開時，", en: "Step away,", ja: "席を外しても、", ko: "자리를 비워도," },
+  "界面自动锁定。": { tw: "畫面自動鎖定。", en: "your screen stays private.", ja: "画面はしっかりロック。", ko: "화면은 안전하게 잠깁니다." },
+  "锁定后将隐藏文件、账号与任务详情，解锁后即可恢复原界面。": {
+    tw: "鎖定後將隱藏檔案、帳號與任務詳情，解鎖後即可恢復原畫面。",
     en: "Locked screens hide files, accounts, and task details until you unlock right back where you were.",
     ja: "ロック中はファイル、アカウント、タスクの詳細を見せず、解除すればすぐ元の画面に戻れます。",
     ko: "잠금 상태에서는 파일, 계정, 작업 세부 정보를 숨기며, 잠금을 풀면 바로 이전 화면으로 돌아갑니다.",
   },
-  只在这台电脑生效: { tw: "只在這台電腦生效", en: "Applies to this computer only", ja: "このコンピュータでのみ有効", ko: "이 컴퓨터에만 적용" },
-  "应用锁只是锁定 PKP 界面，不会退出账号，也不会加密下到硬盘里的文件。独立密码跟 PikPak 账号密码无关，忘了没法找回，只能退出登录后清掉本地数据重设。": {
-    tw: "應用程式鎖只是鎖定 PKP 畫面，不會登出帳號，也不會加密下載到磁碟裡的檔案。獨立密碼與 PikPak 帳號密碼無關，忘了無法找回，只能登出並清除本機資料後重設。",
-    en: "App Lock only locks PKP's window—it doesn't sign out or encrypt downloaded files on disk. Your PKP password is separate from PikPak and can't be recovered if forgotten except by signing out and clearing local data.",
+  仅在本机生效: { tw: "僅在本機生效", en: "Applies to this computer only", ja: "このコンピュータでのみ有効", ko: "이 컴퓨터에만 적용" },
+  "应用锁仅用于锁定 PKP 界面，不会退出账号，也不会加密已下载到本地的文件。独立密码与 PikPak 账号密码相互独立，遗忘后无法找回，只能退出登录并清除本机数据后重设。": {
+    tw: "應用程式鎖僅用於鎖定 PKP 畫面，不會登出帳號，也不會加密已下載至本機的檔案。獨立密碼與 PikPak 帳號密碼相互獨立，遺忘後無法找回，只能登出並清除本機資料後重設。",
+    en: "App Lock only locks PKP's window—it doesn't sign out or encrypt downloaded files on disk. Your PKP password is separate from PikPak and cannot be recovered if forgotten except by signing out and clearing local data.",
     ja: "アプリロックは PKP の画面をロックするだけで、ログアウトや保存済みファイルの暗号化はしません。独立パスワードを忘れた場合、ログアウトしてローカルデータを消去する以外に再設定できません。",
     ko: "앱 잠금은 PKP 화면만 잠글 뿐 로그아웃하거나 저장된 파일을 암호화하지 않습니다. 별도 암호를 잊어버리면 로그아웃하고 로컬 데이터를 지운 뒤 다시 설정해야 합니다.",
   },
   使用统计: { tw: "使用統計", en: "Usage statistics", ja: "利用統計", ko: "사용 통계" },
   发送匿名使用统计: { tw: "傳送匿名使用統計", en: "Send anonymous usage statistics", ja: "匿名の利用統計を送信", ko: "익명 사용 통계 보내기" },
-  "只估算每天大概有多少人打开过 PKP，不会记录你点过什么、用过几次": {
-    tw: "只統計每天大概有多少人開啟過 PKP，不會記錄你點過什麼、用過幾次",
-    en: "Only counts daily active PKP installs—never tracks which features you click or how often.",
+  "仅统计每日启动情况，不会记录您的具体操作内容或使用频次": {
+    tw: "僅統計每日啟動情況，不會記錄您的具體操作內容或使用頻次",
+    en: "Only counts daily active PKP installs—never tracks which features you use or how often.",
     ja: "毎日どれくらいの人が PKP を開いているかだけを集計し、操作内容や使用回数は記録しません。",
     ko: "매일 PKP를 실행한 설치 수만 집계하며 어떤 기능을 몇 번 썼는지는 기록하지 않습니다.",
   },
@@ -280,9 +280,9 @@ export default {
     ja: "機能の操作、利用回数、実行ログ、アカウント、ファイル名、パス、検索語、ファイル内容。",
     ko: "기능 동작, 사용 횟수, 실행 로그, 계정, 파일 이름, 경로, 검색어 또는 파일 내용.",
   },
-  "随时可以关掉；关掉就会删掉本地编号和待发记录（已经发出的服务端数据没法撤回），下次重开会生成新编号。": {
-    tw: "隨時可以關掉；關掉就會刪掉本機編號與待傳送記錄（已傳出的伺服器資料無法撤回），下次重開會產生新編號。",
-    en: "You can turn this off anytime to wipe the local ID and pending events (data already received on the server can't be recalled). Turning it back on creates a fresh ID.",
+  "可随时关闭；关闭后将清除本机随机编号及待发送记录（已上传至服务端的数据无法撤回），再次开启时将生成新编号。": {
+    tw: "可隨時關閉；關閉後將清除本機隨機編號及待傳送記錄（已上傳至伺服器的資料無法撤回），再次開啟時將產生新編號。",
+    en: "You can turn this off anytime to clear the local ID and pending events (data already received on the server cannot be recalled). Turning it back on generates a new ID.",
     ja: "いつでもオフにでき、端末の ID と未送信データは消去されます（サーバー到着済みデータは取り消せません）。再度オンにすると新しい ID が作られます。",
     ko: "언제든 끌 수 있으며 끄면 로컬 ID와 대기 중인 기록이 삭제됩니다(이미 서버에 전송된 데이터는 회수 불가). 다시 켜면 새 ID가 만들어집니다.",
   },
@@ -292,9 +292,9 @@ export default {
     ja: "匿名の利用統計は初期設定でオンです",
     ko: "익명 사용 통계가 기본적으로 켜져 있습니다",
   },
-  "默认开启着，不想开的话随时去「设置 → 隐私与安全」关掉就行（关掉这条提示不会停用统计）。": {
-    tw: "預設開啟，不想開的話隨時到「設定 → 隱私與安全」關閉即可（關閉這則提示不會停用統計）。",
-    en: "On by default—feel free to turn it off anytime in Settings → Privacy & Security (closing this notice keeps it on).",
+  "该功能默认开启，您可随时前往「设置 → 隐私与安全」关闭（关闭此提示不会停用统计）。": {
+    tw: "此功能預設開啟，您可隨時前往「設定 → 隱私與安全」關閉（關閉此提示不會停用統計）。",
+    en: "On by default—you can turn it off anytime in Settings → Privacy & Security (closing this notice keeps it enabled).",
     ja: "初期設定でオンになっています。「設定 → プライバシーとセキュリティ」からいつでもオフにできます（この案内を閉じても統計は止まりません）。",
     ko: "기본적으로 켜져 있으며 ‘설정 → 개인정보 보호 및 보안’에서 언제든 끌 수 있습니다(이 안내를 닫아도 통계는 꺼지지 않습니다).",
   },
@@ -411,15 +411,15 @@ export default {
   每次询问: { tw: "每次詢問", en: "Ask every time", ja: "毎回確認", ko: "매번 묻기" },
   始终允许: { tw: "一律允許", en: "Always allow", ja: "常に許可", ko: "항상 허용" },
   凭据无效或已停用: { tw: "憑證無效或已停用", en: "Credential invalid or disabled", ja: "資格情報が無効か停止されています", ko: "자격 증명이 잘못되었거나 비활성화되었습니다" },
-  "连不上 TMDB": { tw: "連不上 TMDB", en: "Can't reach TMDB", ja: "TMDB に接続できません", ko: "TMDB에 연결할 수 없습니다" },
+  "无法连接 TMDB": { tw: "無法連線 TMDB", en: "Cannot reach TMDB", ja: "TMDB に接続できません", ko: "TMDB에 연결할 수 없습니다" },
   请求过于频繁: { tw: "請求過於頻繁", en: "Too many requests", ja: "リクエストが多すぎます", ko: "요청이 너무 많습니다" },
   "TMDB 返回错误": { tw: "TMDB 傳回錯誤", en: "TMDB returned an error", ja: "TMDB がエラーを返しました", ko: "TMDB가 오류를 반환했습니다" },
   已配置: { tw: "已設定", en: "Configured", ja: "設定済み", ko: "구성됨" },
   未配置: { tw: "未設定", en: "Not configured", ja: "未設定", ko: "구성 안 됨" },
   设置分组: { tw: "設定分組", en: "Settings sections", ja: "設定のカテゴリ", ko: "설정 섹션" },
-  "这些选项只影响这台电脑上的显示，不会同步到别处。": {
-    tw: "這些選項只影響這台電腦上的顯示，不會同步到別處。",
-    en: "These display preferences stay on this computer only.",
+  "以下选项仅在本机生效，不会同步至其他设备。": {
+    tw: "以下選項僅在本機生效，不會同步至其他裝置。",
+    en: "These display preferences apply to this computer only.",
     ja: "これらの表示設定はこのコンピュータにのみ適用されます。",
     ko: "이 표시 설정은 이 컴퓨터에만 적용됩니다.",
   },
@@ -470,8 +470,8 @@ export default {
     ja: "これらの設定をオフにすると、保存した割合が適用されます。",
     ko: "이 설정을 끄면 저장된 비율이 적용됩니다.",
   },
-  "正在使用你选择的图片；恢复默认将同时重置面板不透明度。": {
-    tw: "正在使用你選擇的圖片；恢復預設將同時重設面板不透明度。",
+  "正在使用您选择的图片；恢复默认将同时重置面板不透明度。": {
+    tw: "正在使用您選擇的圖片；恢復預設將同時重設面板不透明度。",
     en: "Using your selected image; restoring the default also resets panel opacity.",
     ja: "選択した画像を使用中です。既定に戻すとパネルの不透明度もリセットされます。",
     ko: "선택한 이미지를 사용 중입니다. 기본값을 복원하면 패널 불투명도도 초기화됩니다.",
@@ -492,9 +492,9 @@ export default {
     ko: "불투명한 패널을 사용하고 배경 흐림을 꺼서 글자를 선명하게 유지합니다.",
   },
   侧栏只显示图标: { tw: "側欄只顯示圖示", en: "Icon-only sidebar", ja: "サイドバーをアイコンのみ表示", ko: "사이드바 아이콘만 표시" },
-  "把侧边栏收成一列图标，留出更多空间看文件；也可以按 {shortcut} 切换（窗口窄于 1080px 时会自动收起）。": {
-    tw: "把側邊欄收成一列圖示，留出更多空間看檔案；也可以按 {shortcut} 切換（視窗窄於 1080px 時會自動收合）。",
-    en: "Collapse the sidebar to icons for more room, or press {shortcut} to toggle. Automatically collapses under 1080px wide.",
+  "将侧边栏收起为图标列以扩大浏览区域；也可按 {shortcut} 切换（窗口宽度小于 1080px 时将自动收起）。": {
+    tw: "將側邊欄收合為圖示欄以擴大瀏覽區域；也可按 {shortcut} 切換（視窗寬度小於 1080px 時將自動收合）。",
+    en: "Collapse the sidebar to icons for more space, or press {shortcut} to toggle. Automatically collapses below 1080px wide.",
     ja: "サイドバーをアイコンだけに畳んで画面を広く使います。{shortcut} でも切り替えられます（幅 1080px 未満では自動で畳まれます）。",
     ko: "사이드바를 아이콘만 남기고 접어 공간을 넓힙니다. {shortcut}로도 전환할 수 있으며 창 너비가 1080px 미만이면 자동으로 접힙니다.",
   },
@@ -518,15 +518,15 @@ export default {
   重建索引: { tw: "重建索引", en: "Rebuild index", ja: "インデックスを再構築", ko: "인덱스 재구성" },
 
   /* ---------- SettingsView: notifications ---------- */
-  "PKP 在后台、或窗口关到系统托盘时，用系统通知告诉你传输和任务的结果。": {
-    tw: "PKP 在背景、或視窗關到系統匣時，用系統通知告訴你傳輸和任務的結果。",
-    en: "When PKP is in the background or closed to the system tray, system notifications tell you how transfers and tasks went.",
+  "PKP 在后台或最小化至系统托盘时，通过系统通知提醒传输和任务结果。": {
+    tw: "PKP 在背景或最小化至系統匣時，透過系統通知提醒傳輸與任務結果。",
+    en: "When PKP is in the background or closed to the system tray, system notifications report transfer and task results.",
     ja: "PKP がバックグラウンドにあるときやシステムトレイに閉じているとき、転送やタスクの結果をシステム通知でお知らせします。",
     ko: "PKP가 백그라운드에 있거나 시스템 트레이로 닫혀 있을 때 전송과 작업 결과를 시스템 알림으로 알려 드립니다.",
   },
-  "PKP 在后台、或窗口关到菜单栏时，用系统通知告诉你传输和任务的结果。": {
-    tw: "PKP 在背景、或視窗關到選單列時，用系統通知告訴你傳輸和任務的結果。",
-    en: "When PKP is in the background or closed to the menu bar, system notifications tell you how transfers and tasks went.",
+  "PKP 在后台或收起至菜单栏时，通过系统通知提醒传输和任务结果。": {
+    tw: "PKP 在背景或收合至選單列時，透過系統通知提醒傳輸與任務結果。",
+    en: "When PKP is in the background or closed to the menu bar, system notifications report transfer and task results.",
     ja: "PKP がバックグラウンドにあるときやメニューバーに閉じているとき、転送やタスクの結果をシステム通知でお知らせします。",
     ko: "PKP가 백그라운드에 있거나 메뉴 막대로 닫혀 있을 때 전송과 작업 결과를 시스템 알림으로 알려 드립니다.",
   },
@@ -536,29 +536,29 @@ export default {
   "打开 Windows 设置": { tw: "開啟 Windows 設定", en: "Open Windows Settings", ja: "Windows の設定を開く", ko: "Windows 설정 열기" },
   打开系统设置: { tw: "開啟系統設定", en: "Open System Settings", ja: "システム設定を開く", ko: "시스템 설정 열기" },
   "PKP 在前台时也通知": { tw: "PKP 在前景時也通知", en: "Notify while PKP is in front", ja: "PKP が前面にあるときも通知", ko: "PKP가 앞에 있을 때도 알림" },
-  "默认只在后台或缩到系统托盘时发通知；窗口就在眼前时就不打扰你了。": {
-    tw: "預設只在背景或縮到系統匣時發通知；視窗就在眼前時就不打擾你了。",
-    en: "By default, notifies only when PKP is in the background or tucked in the system tray—no extra noise while you're looking right at it.",
+  "默认仅在后台或最小化至系统托盘时发送通知，窗口位于前台时不打扰。": {
+    tw: "預設僅在背景或最小化至系統匣時傳送通知，視窗位於前景時不打擾。",
+    en: "By default, notifies only when PKP is in the background or in the system tray, avoiding interruptions while in the foreground.",
     ja: "通常はバックグラウンド中やシステムトレイに閉じているときだけ通知します。手前で開いているときは通知しません。",
     ko: "기본적으로 백그라운드에 있거나 시스템 트레이로 접혀 있을 때만 알립니다. 화면이 바로 앞에 열려 있을 때는 방해하지 않습니다.",
   },
-  "默认只在后台或缩到菜单栏时发通知；窗口就在眼前时就不打扰你了。": {
-    tw: "預設只在背景或縮到選單列時發通知；視窗就在眼前時就不打擾你了。",
-    en: "By default, notifies only when PKP is in the background or tucked in the menu bar—no extra noise while you're looking right at it.",
+  "默认仅在后台或收起至菜单栏时发送通知，窗口位于前台时不打扰。": {
+    tw: "預設僅在背景或收合至選單列時傳送通知，視窗位於前景時不打擾。",
+    en: "By default, notifies only when PKP is in the background or in the menu bar, avoiding interruptions while in the foreground.",
     ja: "通常はバックグラウンド中やメニューバーに閉じているときだけ通知します。手前で開いているときは通知しません。",
     ko: "기본적으로 백그라운드에 있거나 메뉴 막대로 접혀 있을 때만 알립니다. 화면이 바로 앞에 열려 있을 때는 방해하지 않습니다.",
   },
-  会通知的事: { tw: "會通知的事", en: "What you'll be notified about", ja: "通知される内容", ko: "알림 대상" },
-  "包括下载/上传出错或全部完成、云添加结果、文件整理与清理完成、账号登录过期。点通知会直接跳到对应页面；应用锁开启时，通知里会自动隐藏文件名和账号。": {
-    tw: "包含下載/上傳出錯或全部完成、雲端新增結果、檔案整理與清理完成、帳號登入過期。點通知會直接跳到對應頁面；應用程式鎖鎖定時，通知會自動隱藏檔名和帳號。",
+  通知范围: { tw: "通知範圍", en: "Notification events", ja: "通知される内容", ko: "알림 대상" },
+  "包括下载/上传出错或全部完成、云添加结果、文件整理与清理完成、账号登录过期。点击通知可直接跳转至对应页面；应用锁开启时，通知内将自动隐藏文件名与账号。": {
+    tw: "包含下載/上傳出錯或全部完成、雲端新增結果、檔案整理與清理完成、帳號登入過期。點選通知可直接跳轉至對應頁面；應用程式鎖鎖定時，通知內將自動隱藏檔名與帳號。",
     en: "Covers download/upload failures or finished batches, Cloud Add results, organize/cleanup finishes, and expired sessions. Click a notification to jump straight to that view. While App Lock is locked, file names and accounts stay hidden.",
     ja: "ダウンロード・アップロードの失敗や完了、クラウド追加、整理やクリーンアップの終了、ログイン切れなどを通知します。クリックすると該当画面へ移動し、アプリロック中はファイル名やアカウントを隠します。",
     ko: "다운로드/업로드 오류 및 완료, 클라우드 추가 결과, 정리·클린업 완료, 로그인 만료를 알려 줍니다. 알림을 누르면 해당 화면으로 바로 이동하며 앱 잠금 중에는 파일 이름과 계정을 가립니다.",
   },
   测试: { tw: "測試", en: "Test", ja: "テスト", ko: "테스트" },
-  "发一条通知，看看它在这台电脑上的样子。": {
-    tw: "傳一則通知，看看它在這台電腦上的樣子。",
-    en: "Send a notification to see how it looks on this computer.",
+  "发送一条测试通知，确认本机通知显示效果。": {
+    tw: "傳送一則測試通知，確認本機通知顯示效果。",
+    en: "Send a test notification to preview how it appears on this computer.",
     ja: "通知を送って、このコンピュータでの表示を確認します。",
     ko: "알림을 보내 이 컴퓨터에서 어떻게 보이는지 확인합니다.",
   },
@@ -566,7 +566,7 @@ export default {
   系统通知设置: { tw: "系統通知設定", en: "System notification settings", ja: "システムの通知設定", ko: "시스템 알림 설정" },
 
   /* ---------- SettingsView: accounts ---------- */
-  "多个账号，放在一起管": { tw: "多個帳號，放在一起管理", en: "All your accounts in one place", ja: "複数アカウントをひとつに", ko: "여러 계정을 한곳에서 관리" },
+  "统一管理多个 PikPak 账号": { tw: "統一管理多個 PikPak 帳號", en: "Manage all your accounts in one place", ja: "複数アカウントをひとつに", ko: "여러 계정을 한곳에서 관리" },
   已添加账号: { tw: "已新增帳號", en: "Added accounts", ja: "追加済みのアカウント", ko: "추가된 계정" },
   "{n} 个账号": {
     tw: "{n} 個帳號",
@@ -604,17 +604,17 @@ export default {
   },
   已开启: { tw: "已開啟", en: "On", ja: "オン", ko: "켜짐" },
   已关闭: { tw: "已關閉", en: "Off", ja: "オフ", ko: "꺼짐" },
-  "切账号不会打断后台的下载、上传和云添加；如果要彻底移除账号，移除前会先把本地任务怎么处理说清楚。": {
-    tw: "切換帳號不會打斷背景的下載、上傳和雲端新增；如果要移除帳號，移除前會先說明本機任務會怎麼處理。",
-    en: "Switching accounts never interrupts background downloads, uploads, or Cloud Add. Before removing an account, PKP shows what will happen to its local tasks.",
+  "切换账号不会中断后台下载、上传或云添加任务；移除账号前会提示本地任务的处理方式。": {
+    tw: "切換帳號不會中斷背景下載、上傳或雲端新增任務；移除帳號前會提示本機任務的處理方式。",
+    en: "Switching accounts never interrupts background downloads, uploads, or Cloud Add. Before removing an account, PKP shows how its local tasks will be handled.",
     ja: "アカウントを切り替えてもバックグラウンドのダウンロード・アップロード・クラウド追加は止まりません。削除前にはローカルタスクの扱いを確認できます。",
     ko: "계정을 바꿔도 백그라운드 다운로드, 업로드, 클라우드 추가는 끊기지 않습니다. 계정을 제거할 때는 로컬 작업을 어떻게 처리하는지 먼저 안내해 드립니다.",
   },
 
   /* ---------- SettingsView: transfers ---------- */
-  "决定云添加的文件怎样存进云盘、本地上传中断后怎样继续、下载到电脑存到哪里，并查看本月的传输配额。": {
-    tw: "決定雲端新增的檔案怎樣存進雲端硬碟、本機上傳中斷後怎樣繼續、下載到電腦存到哪裡，並查看本月的傳輸配額。",
-    en: "Choose how Cloud Add files land in your drive, how interrupted uploads resume and where downloads are saved, and see this month's transfer quota.",
+  "设置云添加保存规则、本地上传续传策略及下载保存路径，并查看本月传输配额。": {
+    tw: "設定雲端新增儲存規則、本機上傳續傳原則及下載儲存路徑，並檢視本月傳輸配額。",
+    en: "Configure Cloud Add storage rules, resumable uploads, and download location, and view this month's transfer quota.",
     ja: "クラウド追加したファイルの保存方法、中断したアップロードの再開方法、ダウンロードの保存先を決め、今月の転送枠を確認します。",
     ko: "클라우드 추가 파일의 저장 방식, 중단된 업로드의 재개 방식, 다운로드 저장 위치를 정하고 이번 달 전송 할당량을 확인합니다.",
   },
@@ -646,25 +646,25 @@ export default {
   "filter|关闭": { tw: "關閉", en: "Off", ja: "オフ", ko: "끄기" },
   智能过滤: { tw: "智慧篩選", en: "Smart filter", ja: "スマートフィルタ", ko: "스마트 필터" },
   "添加 Torrent 文件时自动解析": { tw: "新增 Torrent 檔案時自動解析", en: "Auto-parse added torrent files", ja: "Torrent ファイル追加時に自動解析", ko: "Torrent 파일 추가 시 자동 분석" },
-  "添加种子文件后直接传输其中的文件，不再停下来等你挑选。": {
-    tw: "新增種子檔案後直接傳輸其中的檔案，不再停下來等你挑選。",
-    en: "Transfer a torrent's files right away without waiting for you to pick.",
+  "添加 Torrent 文件后自动开始传输全部文件，不再弹出文件选择确认。": {
+    tw: "新增 Torrent 檔案後自動開始傳輸全部檔案，不再彈出檔案選擇確認。",
+    en: "Transfer all files in an added torrent automatically without prompting to pick files.",
     ja: "Torrent ファイルを追加すると、選択を待たずに中のファイルを転送します。",
     ko: "토렌트 파일을 추가하면 선택을 기다리지 않고 바로 파일을 전송합니다.",
   },
   本地上传: { tw: "本機上傳", en: "Upload", ja: "アップロード", ko: "업로드" },
-  "以下设置只影响这台电脑。": { tw: "以下設定只影響這台電腦。", en: "These settings only affect this computer.", ja: "以下の設定はこのコンピュータにのみ影響します。", ko: "다음 설정은 이 컴퓨터에만 적용됩니다." },
+  "以下设置仅在本机生效。": { tw: "以下設定僅在本機生效。", en: "These settings apply to this computer only.", ja: "以下の設定はこのコンピュータにのみ影響します。", ko: "다음 설정은 이 컴퓨터에만 적용됩니다." },
   同时上传的文件数: { tw: "同時上傳的檔案數", en: "Simultaneous uploads", ja: "同時アップロード数", ko: "동시 업로드 수" },
-  "每个文件另有 4 路分片同时传。调高更容易占满上行带宽，网络不稳时调低更可靠。正在传的不受影响，排队的按新数量开始。": {
-    tw: "每個檔案另有 4 路分片同時傳。調高更容易占滿上行頻寬，網路不穩時調低更可靠。正在傳的不受影響，排隊的按新數量開始。",
-    en: "Each file also uploads 4 parts at once. Higher fills your upload bandwidth; lower is more reliable on unstable networks. Running uploads aren't affected; queued ones start with the new number.",
+  "每个文件另有 4 路分片同时上传。调高可更充分利用上行带宽，网络不稳时建议调低。不影响正在上传的任务，排队任务按新数量开始。": {
+    tw: "每個檔案另有 4 路分片同時上傳。調高可更充分利用上行頻寬，網路不穩時建議調低。不影響正在上傳的任務，排隊任務依新數量開始。",
+    en: "Each file also uploads in 4 concurrent parts. Higher values better utilize upload bandwidth; lower values are more reliable on unstable networks. Running uploads aren't affected; queued ones use the new count.",
     ja: "各ファイルはさらに 4 分割で同時に転送されます。増やすと上り帯域を使い切りやすく、不安定なネットワークでは減らすと安定します。転送中のものには影響せず、待機中のものから新しい数で開始します。",
     ko: "각 파일은 4개 조각으로 동시에 전송됩니다. 높이면 업로드 대역폭을 더 활용하고, 네트워크가 불안정하면 낮추는 것이 안정적입니다. 진행 중인 업로드는 영향을 받지 않으며 대기 중인 항목부터 새 수로 시작합니다.",
   },
   断点续传: { tw: "續傳", en: "Resumable uploads", ja: "レジューム", ko: "이어올리기" },
-  "上传失败或退出应用后，点「继续」从已上传的部分接着上传。上传凭证 12 小时后过期，过期了就重新申请、从头开始。关闭后，没上传完的上传不保留进度，重试都从头开始。": {
-    tw: "上傳失敗或結束應用程式後，點「繼續」從已上傳的部分接著上傳。上傳憑證 12 小時後過期，過期了就重新申請、從頭開始。關閉後，沒上傳完的上傳不保留進度，重試都從頭開始。",
-    en: "After a failure or quitting, click \"Continue\" to resume from what's already uploaded. Upload credentials expire after 12 hours; then the upload starts over. When off, unfinished uploads keep no progress and retries start over.",
+  "上传中断或退出应用后，点击「继续」可从已上传进度恢复。上传凭证 12 小时后过期，过期后需重新上传；关闭此选项将不保留未完成进度，重试时从头开始。": {
+    tw: "上傳中斷或結束應用程式後，點選「繼續」可從已上傳進度恢復。上傳憑證 12 小時後過期，過期後需重新上傳；關閉此選項將不保留未完成進度，重試時從頭開始。",
+    en: "After an interruption or quitting, click \"Continue\" to resume from uploaded progress. Upload credentials expire after 12 hours, requiring a restart. When off, unfinished uploads keep no progress and retries start over.",
     ja: "失敗や終了のあと、「続行」をクリックするとアップロード済みの部分から再開します。アップロードの資格情報は 12 時間で期限切れになり、その場合は最初からやり直します。オフにすると、未完了のアップロードは進行状況を保持せず、再試行は最初からになります。",
     ko: "실패하거나 앱을 종료한 후 ‘계속’을 클릭하면 이미 업로드된 부분부터 이어서 업로드합니다. 업로드 자격 증명은 12시간 후 만료되며, 만료되면 처음부터 다시 시작합니다. 끄면 완료되지 않은 업로드의 진행 상황이 유지되지 않고 다시 시도 시 처음부터 시작합니다.",
   },
@@ -707,9 +707,9 @@ export default {
   /* ---------- SettingsView: AI ---------- */
   "设置 · AI": { tw: "設定 · AI", en: "Settings · AI", ja: "設定 · AI", ko: "설정 · AI" },
   "配置自己的模型，掌控发给 AI 的内容范围": { tw: "設定自己的模型，掌控傳給 AI 的內容範圍", en: "Bring your own model and control what gets shared", ja: "自分のモデルを設定し、AI に送る範囲を管理", ko: "직접 모델을 연결하고 AI에 보낼 범위를 제어하세요" },
-  "整理建议、本地搜索和新文件分类都不需要模型。接上你自己的模型后，就能直接对话问 AI；API Key 存在系统{store}里。": {
-    tw: "整理建議、本機搜尋和新檔案分類都不需要模型。接上自己的模型後就能直接對話問 AI；API Key 存在系統{store}裡。",
-    en: "Organize suggestions, local search, and new-file sorting work without any model. Connect your own model to chat with AI; your API key stays in your system {store}.",
+  "整理建议、本地搜索与新文件分类均无需配置模型。接入自有模型后即可使用 AI 对话；API Key 安全保存于系统{store}。": {
+    tw: "整理建議、本機搜尋與新檔案分類均無需設定模型。接入自有模型後即可使用 AI 對話；API Key 安全儲存於系統{store}。",
+    en: "Organize suggestions, local search, and new-file sorting work without any model. Connect your own model to chat with AI; your API key is stored securely in your system {store}.",
     ja: "整理の提案やローカル検索、新着ファイルの仕分けにモデルは不要です。自分のモデルを接続すると AI に相談できます（API キーはシステムの{store}に保存）。",
     ko: "정리 제안, 로컬 검색, 새 파일 분류에는 모델이 필요 없습니다. 자신의 모델을 연결하면 AI와 바로 대화할 수 있고 API 키는 시스템 {store}에 저장됩니다.",
   },
@@ -731,9 +731,9 @@ export default {
     ja: "現在の接続先から {n} 個のモデルを取得しました。手動入力もできます。",
     ko: "현재 엔드포인트에서 모델 {n}개를 가져왔습니다. 직접 입력할 수도 있습니다.",
   },
-  "原样显示接口返回的模型 ID；具体能不能调用，看你的账号权限和额度。": {
-    tw: "原樣顯示介面傳回的模型 ID；實際能否呼叫取決於你的帳號權限與額度。",
-    en: "Shows raw model IDs returned by the endpoint; availability depends on your account permissions and quota.",
+  "直接显示接口返回的模型 ID；实际是否可用取决于您的账号权限与额度。": {
+    tw: "直接顯示介面傳回的模型 ID；實際是否可用取決於您的帳號權限與額度。",
+    en: "Displays raw model IDs returned by the endpoint; availability depends on your account permissions and quota.",
     ja: "API が返したモデル ID をそのまま表示します。実際に使えるかはアカウントの権限や利用枠によります。",
     ko: "서버가 반환한 모델 ID를 그대로 표시합니다. 사용 가능 여부는 계정 권한과 할당량에 따라 달라집니다.",
   },
@@ -785,23 +785,23 @@ export default {
   单个对话上限: { tw: "單一對話上限", en: "Per-chat limit", ja: "会話ごとの上限", ko: "대화당 한도" },
   不限制: { tw: "不限制", en: "No limit", ja: "無制限", ko: "제한 없음" },
   "Token 上限": { tw: "Token 上限", en: "Token limit", ja: "Token 上限", ko: "Token 한도" },
-  "不限制上限：聊天不会中途停下，每轮确认前还是会估一个预计用量；实际费用按你的模型服务商结算。": {
-    tw: "不限制上限：對話不會中途停下，每輪確認前還是會顯示預估用量；實際費用依你的模型服務商計算。",
-    en: "No cap: chats won't cut off mid-way, though each step still estimates token usage before you approve. Billing follows your provider.",
+  "不设上限：对话不会因用量中断，每轮确认前仍会显示预估消耗；实际费用由您的模型服务商结算。": {
+    tw: "不設上限：對話不會因用量中斷，每輪確認前仍會顯示預估消耗；實際費用依您的模型服務商結算。",
+    en: "No cap: conversations won't stop mid-way, though each step still estimates token usage before approval. Billing follows your provider.",
     ja: "上限なし：使用量で会話が止まりませんが、承認前には各ターンの推定量を表示します。実際の請求はモデル提供元の計算に従います。",
     ko: "제한 없음: 사용량 때문에 대화가 멈추지 않으며 승인 전 매 차례 예상 사용량을 보여 줍니다. 요금은 모델 제공업체 기준으로 청구됩니다.",
   },
-  "一段对话累计达到上限后停止请求，保留已经得到的结果。": {
-    tw: "一段對話累計達到上限後停止請求，保留已經得到的結果。",
-    en: "Once a chat reaches the limit, requests stop and the results so far are kept.",
+  "单段对话累计用量达到上限后将停止请求，并保留已获取的结果。": {
+    tw: "單段對話累計用量達到上限後將停止請求，並保留已取得的結果。",
+    en: "Once a conversation reaches the limit, requests stop and results so far are kept.",
     ja: "会話の累計が上限に達するとリクエストを停止し、得られた結果は保持します。",
     ko: "대화 누적 사용량이 한도에 도달하면 요청을 중지하고 지금까지의 결과는 유지합니다.",
   },
   "{account} · 发送给 AI 前": { tw: "{account} · 傳送給 AI 前", en: "{account} · Before sending to AI", ja: "{account} · AI に送信する前", ko: "{account} · AI에 보내기 전" },
   "发送给 AI 前": { tw: "傳送給 AI 前", en: "Before sending to AI", ja: "AI に送信する前", ko: "AI에 보내기 전" },
-  "给元数据选「始终允许」时不包括字幕内容；每个账号单独设置。真要改文件时还是会先给你预览确认。": {
-    tw: "中繼資料選「一律允許」時不包括字幕內容；每個帳號分開設定。真的要改檔案時還是會先讓你預覽確認。",
-    en: "\"Always allow\" for metadata never includes subtitles, and each account is configured separately. File changes always ask you to confirm first.",
+  "为元数据选择「始终允许」时不包含字幕内容，且各账号独立设置。涉及文件修改的操作仍会先预览并请求确认。": {
+    tw: "為中繼資料選擇「一律允許」時不包含字幕內容，且各帳號獨立設定。涉及檔案修改的操作仍會先預覽並請求確認。",
+    en: "\"Always allow\" for metadata excludes subtitles and is configured per account. Operations that modify files still ask for confirmation first.",
     ja: "メタデータの「常に許可」に字幕は含まれません。アカウントごとに設定でき、実際のファイル変更時は毎回プレビューで確認できます。",
     ko: "메타데이터 ‘항상 허용’에는 자막이 포함되지 않으며 계정마다 따로 설정합니다. 파일을 바꿀 때는 항상 먼저 미리 보기로 확인을 받습니다.",
   },
@@ -830,9 +830,9 @@ export default {
   /* ---------- SettingsView: AI · TMDB ---------- */
   "读取设置失败：{error}": { tw: "讀取設定失敗：{error}", en: "Couldn't load settings: {error}", ja: "設定を読み込めませんでした：{error}", ko: "설정을 불러오지 못했습니다: {error}" },
   "TMDB 精确匹配": { tw: "TMDB 精確比對", en: "TMDB exact match", ja: "TMDB 完全一致", ko: "TMDB 정확 일치" },
-  "填上你自己的 TMDB API Key（v3）或读访问令牌（v4）（去 themoviedb.org 的设置里申请），整理影视时用来更准地核对片名和年份；不填也能照常按规则和 AI 识别。": {
-    tw: "填上你自己的 TMDB API Key（v3）或讀取存取權杖（v4）（可在 themoviedb.org 設定頁申請），整理影視時用來更準確核對片名與年份；不填也能照常依規則與 AI 辨識。",
-    en: "Add your own TMDB API key (v3) or read access token (v4) from themoviedb.org to match movie and show titles more accurately. Without it, PKP still organizes using filename rules and AI.",
+  "填写您的 TMDB API Key（v3）或读取访问令牌（v4）（可在 themoviedb.org 账户设置中申请），用于在整理影视文件时精准匹配片名与年份；留空也可正常通过内置规则与 AI 识别。": {
+    tw: "填寫您的 TMDB API Key（v3）或讀取存取權杖（v4）（可在 themoviedb.org 帳戶設定中申請），用於在整理影視檔案時精準比對片名與年份；留空亦可正常透過內建規則與 AI 辨識。",
+    en: "Enter your TMDB API key (v3) or read access token (v4) from themoviedb.org to match movie and show titles more accurately. If left blank, PKP still organizes using built-in rules and AI.",
     ja: "ご自身の TMDB API キー（v3）または読み取りトークン（v4）（themoviedb.org の設定ページで取得）を入力すると、作品名や公開年をより正確に照合できます。未入力でもルールと AI だけで整理できます。",
     ko: "본인의 TMDB API 키(v3) 또는 읽기 액세스 토큰(v4)(themoviedb.org 설정에서 발급)을 입력하면 작품 제목과 연도를 더 정확히 대조합니다. 입력하지 않아도 규칙과 AI로 정리할 수 있습니다.",
   },
@@ -865,9 +865,9 @@ export default {
   代理服务器: { tw: "代理伺服器", en: "Proxy server", ja: "プロキシサーバー", ko: "프록시 서버" },
   这种方式的说明: { tw: "這種方式的說明", en: "About this method", ja: "この方法について", ko: "이 방식 안내" },
   未应用的更改: { tw: "未套用的變更", en: "Unapplied changes", ja: "未適用の変更", ko: "적용되지 않은 변경" },
-  "填上代理服务提供的地址和端口。只有 PKP 自己的请求会走它，不会影响电脑上的其他软件。": {
-    tw: "填入代理服務提供的位址和連接埠。只有 PKP 自己的請求會走這個代理，不影響電腦上的其他軟體。",
-    en: "Enter your proxy server's address and port. Only PKP's traffic goes through it; other apps on your computer stay unaffected.",
+  "填写代理服务提供的地址与端口。仅 PKP 的网络请求会通过此代理，不影响本机其他应用。": {
+    tw: "填寫代理服務提供的位址與連接埠。僅 PKP 的網路請求會透過此代理，不影響本機其他應用程式。",
+    en: "Enter your proxy server's address and port. Only PKP's traffic uses it; other apps on this computer stay unaffected.",
     ja: "プロキシのアドレスとポートを入力します。PKP の通信だけが経由し、他のアプリには影響しません。",
     ko: "프록시 서버 주소와 포트를 입력하세요. PKP의 요청만 프록시를 거치며 컴퓨터의 다른 앱에는 영향을 주지 않습니다.",
   },
@@ -896,28 +896,28 @@ export default {
     ko: "암호는 이 컴퓨터의 {store}에 저장되며 구성 파일에는 기록되지 않습니다.",
   },
   清除已保存的密码: { tw: "清除已儲存的密碼", en: "Clear saved password", ja: "保存済みのパスワードを消去", ko: "저장된 암호 지우기" },
-  "按电脑当前的网络和代理设置连接（没设代理时会再看 http_proxy 等环境变量）；系统里的 VPN 照常生效。": {
-    tw: "依電腦目前的網路與代理設定連線（未設定代理時會再看 http_proxy 等環境變數）；系統裡的 VPN 照常生效。",
-    en: "Follows your computer's network and proxy settings (falling back to http_proxy env vars if none is set); system VPNs work as usual.",
+  "使用当前系统的网络与代理设置（未配置代理时读取 http_proxy 等环境变量）；系统 VPN 保持生效。": {
+    tw: "使用目前系統的網路與代理設定（未設定代理時讀取 http_proxy 等環境變數）；系統 VPN 保持生效。",
+    en: "Follows your computer's network and proxy settings (falling back to http_proxy environment variables if unset); system VPNs remain active.",
     ja: "コンピュータの現在のネットワーク・プロキシ設定に従います（未設定時は http_proxy などの環境変数を参照）。システム VPN もそのまま効きます。",
     ko: "컴퓨터의 현재 네트워크 및 프록시 설정을 따르며(미설정 시 http_proxy 등 환경 변수 확인) 시스템 VPN도 그대로 적용됩니다.",
   },
-  "PKP 不走代理直接连网；不过电脑上开着的系统 VPN 或路由规则依然会生效（选「直连」并不代表绕过 VPN）。": {
-    tw: "PKP 不走代理直接連網；不過電腦上開著的系統 VPN 或路由規則依然會生效（選「直連」並不會繞過 VPN）。",
-    en: "PKP connects directly without an app proxy—though any active VPN or system routes still apply (Direct doesn't bypass your VPN).",
+  "PKP 不通过代理直接连接网络，但系统当前启用的 VPN 或路由规则仍会生效（选择「直连」不会绕过 VPN）。": {
+    tw: "PKP 不透過代理直接連線網路，但系統目前已啟用的 VPN 或路由規則仍會生效（選擇「直連」不會繞過 VPN）。",
+    en: "PKP connects directly without an app proxy—any active VPN or system routes still apply (Direct does not bypass your VPN).",
     ja: "PKP はアプリ用プロキシを使わず直接接続しますが、動作中の VPN やシステムルートは有効なままです（直接接続は VPN 回避ではありません）。",
     ko: "PKP는 앱 프록시 없이 직접 연결하지만, 실행 중인 VPN이나 시스템 라우팅은 그대로 적용됩니다(‘직접 연결’이 VPN 우회를 의미하지는 않습니다).",
   },
   高级选项: { tw: "進階選項", en: "Advanced", ja: "詳細オプション", ko: "고급 옵션" },
-  "用逗号、空格或换行隔开；留空就不设例外（127.0.0.1、localhost 本身始终直连）。": {
-    tw: "用逗號、空格或換行隔開；留空就不設例外（127.0.0.1、localhost 本身一律直連）。",
+  "使用逗号、空格或换行分隔；留空表示不设例外（127.0.0.1 与 localhost 始终直连）。": {
+    tw: "使用逗號、空格或換行分隔；留空表示不設例外（127.0.0.1 與 localhost 一律直連）。",
     en: "Separate with commas, spaces, or new lines; leave blank for no exceptions (127.0.0.1 and localhost always connect directly).",
     ja: "カンマ、スペース、改行で区切ります（空欄なら例外なし／127.0.0.1・localhost は常に直接接続）。",
     ko: "쉼표, 공백 또는 줄바꿈으로 구분하세요. 비워 두면 예외가 없으며 127.0.0.1과 localhost는 항상 직접 연결됩니다.",
   },
-  "像 192.168.0.0/16 这样的网段只管应用自身的请求；页面里的图片请直接写域名或 IP。": {
-    tw: "像 192.168.0.0/16 這樣的網段只管應用程式自身的請求；頁面裡的圖片請直接寫網域或 IP。",
-    en: "CIDR ranges (like 192.168.0.0/16) only apply to app requests; for in-page images, list hostnames or IPs.",
+  "类似 192.168.0.0/16 的 CIDR 网段仅作用于应用自身请求；页面内嵌图片请填写具体域名或 IP。": {
+    tw: "類似 192.168.0.0/16 的 CIDR 網段僅作用於應用程式自身請求；頁面內嵌圖片請填寫具體網域或 IP。",
+    en: "CIDR ranges (like 192.168.0.0/16) apply only to app requests; for in-page images, specify hostnames or IPs.",
     ja: "192.168.0.0/16 のようなサブネット指定はアプリ本体の通信のみ対象です。ページ内の画像にはホスト名か IP を指定してください。",
     ko: "192.168.0.0/16 같은 대역 표기는 앱 자체 요청에만 적용되며 화면 내 이미지는 호스트 이름이나 IP를 적어야 합니다.",
   },
@@ -947,9 +947,9 @@ export default {
 
   /* ---------- ShortcutsSettings, shortcuts.ts ---------- */
   快捷键: { tw: "快速鍵", en: "Shortcuts", ja: "ショートカット", ko: "단축키" },
-  "在输入框里打字时，方向键和单字母留给你正常输入；带修饰键的快捷键照常能用。": {
-    tw: "在輸入框中打字時，方向鍵和單個字母會留給輸入框；帶修飾鍵的快速鍵照常可用。",
-    en: "While you type in a field, arrow keys and single letters stay with the field; shortcuts with a modifier key still work.",
+  "在输入框中输入文字时，方向键与单字母键优先用于文本输入；带修饰键的快捷键仍可正常使用。": {
+    tw: "在輸入框中輸入文字時，方向鍵與單個字母鍵優先用於文字輸入；帶修飾鍵的快速鍵仍可正常使用。",
+    en: "While typing in a field, arrow keys and single letters apply to text input; shortcuts with modifier keys still work.",
     ja: "入力欄で入力している間、矢印キーと 1 文字のキーは入力欄で使われます。修飾キー付きのショートカットは通常どおり使えます。",
     ko: "입력란에 입력하는 동안 화살표 키와 단일 문자 키는 입력란에서 사용됩니다. 보조 키가 있는 단축키는 그대로 사용할 수 있습니다.",
   },

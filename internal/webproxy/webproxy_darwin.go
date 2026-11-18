@@ -27,7 +27,7 @@ func Supported() bool { return C.pkp_webproxy_supported() != 0 }
 
 // UnsupportedNote is what Settings · Network & Proxy says when Supported is false.
 func UnsupportedNote() string {
-	return i18n.T("这台电脑的系统版本无法让网页内容走代理，缩略图和头像会继续直连；需要 macOS 14 或更高版本。")
+	return i18n.T("当前系统版本不支持网页内容走代理，缩略图与头像将保持直连（需 macOS 14 或更高版本）。")
 }
 
 // Apply points the WKWebView inside nsWindow (an NSWindow, as Wails hands it

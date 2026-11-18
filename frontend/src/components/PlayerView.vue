@@ -672,7 +672,7 @@ onBeforeUnmount(() => {
         <div v-else-if="state.error" class="stage-error" role="alert">
           <span class="stage-error-icon"><Icon name="alert" :size="22" /></span>
           <strong>{{ t("无法播放") }}</strong>
-          <p>{{ state.error === "playback failed" ? t("视频没能加载出来，可以重试一次") : state.error }}</p>
+          <p>{{ state.error === "playback failed" ? t("视频加载失败，请重试") : state.error }}</p>
           <div class="stage-error-actions">
             <button class="primary" @click="retry">{{ t("重试") }}</button>
             <button v-if="windowed" @click="returnToMain">{{ t("回到主窗口") }}</button>

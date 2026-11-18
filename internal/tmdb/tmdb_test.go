@@ -147,7 +147,7 @@ func TestTMDBErrorsNeverCarryTheKey(t *testing.T) {
 	tm := New("http://"+ln.Addr().String()+"/3", nil)
 	err = tm.Test(context.Background(), v3Key)
 	var e *Error
-	if !errors.As(err, &e) || e.Kind != KindUnreachable || !strings.HasPrefix(err.Error(), "连不上 TMDB：") {
+	if !errors.As(err, &e) || e.Kind != KindUnreachable || !strings.HasPrefix(err.Error(), "无法连接 TMDB：") {
 		t.Fatalf("hang-up: %v", err)
 	}
 	if strings.Contains(err.Error(), v3Key) || strings.Contains(err.Error(), "api_key") {

@@ -17,7 +17,7 @@ export interface Failure {
 export function failureOf(status: string, text = ""): Failure {
   switch (status) {
     case "timeout":
-      return { title: t("读取压缩包超时"), detail: t("云端读取列表超时了，稍等再试一次通常就行。"), retry: true };
+      return { title: t("读取压缩包超时"), detail: t("云端读取文件列表超时，请稍后重试。"), retry: true };
     case "unsupported":
       return { title: t("无法读取这个压缩包"), detail: t("格式不受支持，或者文件已经损坏。在线解压支持 ZIP、RAR、7Z、TAR 等常见格式。"), retry: false };
     case "tooMany":
@@ -27,7 +27,7 @@ export function failureOf(status: string, text = ""): Failure {
     case "quota":
       return { title: t("当前账号不能在线解压"), detail: t("这个压缩包需要会员权益才能在线解压。"), retry: false };
     case "noSpace":
-      return { title: t("云盘空间不足"), detail: t("解压出的文件放不下了。清理一些空间后再试。"), retry: false };
+      return { title: t("云盘空间不足"), detail: t("云盘剩余空间不足，无法容纳解压后的文件，请清理空间后重试。"), retry: false };
     case "unfinished":
       return { title: t("压缩包还没有完整保存到云盘"), detail: t("等上传或云添加完成后再来解压。"), retry: true };
     case "refused":
@@ -42,11 +42,11 @@ export function failureOf(status: string, text = ""): Failure {
  * (the task's error_detail); "" when the service gave none.
  */
 export function taskFailure(code: string): string {
-  if (!code) return t("云端没说具体原因，可以过会儿再试。");
-  if (code === "file_space_not_enough") return t("云盘空间不足，解压出的文件放不下。");
+  if (!code) return t("云端未返回具体原因，请稍后重试。");
+  if (code === "file_space_not_enough") return t("云盘剩余空间不足，无法容纳解压后的文件。");
   if (code === "has_sensitive_words") return t("压缩包里有文件名包含受限内容，云端没有保存。");
-  if (code === "second_upload_file_failed") return t("云端保存解压出的文件时失败，可以稍后再试。");
-  if (/timeout/i.test(code)) return t("云端处理超时，可以稍后再试。");
+  if (code === "second_upload_file_failed") return t("云端保存解压后的文件失败，请稍后重试。");
+  if (/timeout/i.test(code)) return t("云端处理超时，请稍后重试。");
   return t("云端没有完成解压（{code}）。", { code });
 }
 

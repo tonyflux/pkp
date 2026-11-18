@@ -44,10 +44,10 @@ describe("zoom", () => {
 
 describe("viewerError", () => {
   it("puts the service's failures in words, keeping unknown Chinese ones as they are", () => {
-    expect(viewerError(new Error("drive: fetch text: upstream status 403"))).toBe("云盘没有返回文件内容（HTTP 403），可以稍后再试");
+    expect(viewerError(new Error("drive: fetch text: upstream status 403"))).toBe("云盘未返回文件内容（HTTP 403），请稍后重试");
     expect(viewerError(new Error("这个文件暂时没有可用的下载地址，可能还没有处理完"))).toMatch(/没有可用的下载地址/);
     expect(viewerError(new Error('Get "https://x": context deadline exceeded'))).toMatch(/读取超时/);
     expect(viewerError("回收站里已经没有这个文件")).toBe("回收站里已经没有这个文件");
-    expect(viewerError("something else")).toBe("没有读到文件内容，可以稍后再试");
+    expect(viewerError("something else")).toBe("未能读取文件内容，请稍后重试");
   });
 });

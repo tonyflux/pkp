@@ -67,7 +67,7 @@ function boldParts(sentence: string, values: Record<string, string>): { text: st
 }
 const marked = { what: `${MARK}what${MARK}`, place: `${MARK}place${MARK}` };
 const runningLead = computed(() =>
-  boldParts(t("{what}会解压到 {place} 下的「{folder}」里，现在可以继续逛别的文件，弄好了底部会有提示。", { ...marked, folder: madeFolder.value }), {
+  boldParts(t("{what}将解压至 {place} 下的「{folder}」，您可继续浏览其他文件，完成后将在底部提示。", { ...marked, folder: madeFolder.value }), {
     what: madeWhat.value,
     place: extract.task.place,
   }),
@@ -220,7 +220,7 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onKeydown, true));
             <template v-else-if="searching">
               <p v-if="extract.browser.searching" class="state picker-state"><Orbit :size="18" /> {{ t("正在搜索…") }}</p>
               <p v-else-if="!extract.browser.searchable" class="state picker-state">{{ t("云盘索引还在建立，暂时不能搜索全盘；可以逐层浏览。") }}</p>
-              <p v-else-if="!extract.browser.results.length" class="state picker-state">{{ t("没有找到文件夹，试试其他名称") }}</p>
+              <p v-else-if="!extract.browser.results.length" class="state picker-state">{{ t("未找到匹配文件夹，请尝试其他名称") }}</p>
               <button
                 v-for="folder in extract.browser.results"
                 v-else
@@ -288,7 +288,7 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onKeydown, true));
             <span class="emblem"><Icon name="archive" :size="34" /></span>
             <span class="gate-kicker">{{ t("正在读取压缩包") }}</span>
             <h3>{{ t("正在获取文件列表…") }}</h3>
-            <p>{{ t("会先试着打开看看，真要密码了再请你输入。") }}</p>
+            <p>{{ t("将先尝试直接读取；如需密码再提示您输入。") }}</p>
             <Orbit :size="20" />
           </div>
 
@@ -457,7 +457,7 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onKeydown, true));
                 <p v-if="extract.task.place" class="lead">
                   <template v-for="(part, i) in runningLead" :key="i"><strong v-if="part.bold">{{ part.text }}</strong><template v-else>{{ part.text }}</template></template>
                 </p>
-                <p v-else class="lead">{{ t("这个压缩包已经在云端解压了，可以先看别的文件，弄好了底部会有提示。") }}</p>
+                <p v-else class="lead">{{ t("此压缩包正在云端解压，您可先浏览其他文件，完成后将在底部提示。") }}</p>
                 <div class="progress-head">
                   <span>{{ t("正在处理") }}</span>
                   <span>{{

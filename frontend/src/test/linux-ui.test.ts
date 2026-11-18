@@ -62,7 +62,7 @@ describe("Linux desktop settings", () => {
     expect(install).toBeDefined();
     install!.click();
     expect(installUpdate).toHaveBeenCalledOnce();
-    expect(host.textContent).toContain("PKP keeps running");
+    expect(host.textContent).toContain("does not automatically write to system folders or replace the running app");
     expect(host.textContent).toContain("package manager");
     expect(host.textContent).toContain("replace the original file manually");
     expect(host.textContent).not.toMatch(/macOS|Windows|Gatekeeper|Restart & Update/);

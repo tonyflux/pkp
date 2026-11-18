@@ -362,7 +362,7 @@ export function identify(
     batches,
     disclosure: {
       title: t("影视识别"),
-      sends: t("{groups} 个候选组的统计信息，以及 {files} 个样本文件名、所在路径、大小与修改时间。路径里的文件夹名也会发送。", { groups: n, files: m }),
+      sends: t("{groups} 个候选组的统计信息，以及 {files} 个样本的文件名、路径、大小与修改时间（路径中的文件夹名称也会一并发送）。", { groups: n, files: m }),
       files: m,
       estimate: addRanges(batches.map((b) => estimateTokens(b.request, b.expectedOutput))),
     },
@@ -382,7 +382,7 @@ export function parseIdentities(output: unknown, groups: readonly Pick<MediaGrou
   const out: Identity[] = [];
   const seen = new Set<string>();
   for (const item of o.groups) {
-    const row = objectOf(item, t("groups 里的每一项"));
+    const row = objectOf(item, t("groups 中的每一项"));
     const id = text(row, "id", 16);
     const group = asked.get(id);
     const type: IdentityType = choice(row, "type", TYPES, "unknown");
@@ -469,7 +469,7 @@ export function followUp(
     expectedOutput,
     disclosure: {
       title: t("按补充要求重新识别"),
-      sends: t("{groups} 个候选组的文件名模式和上一轮识别结果，以及你补充的这句话。不发送路径和样本。", { groups: n }),
+      sends: t("{groups} 个候选组的文件名模式、上一轮识别结果以及您补充的说明（不发送路径与样本）。", { groups: n }),
       files: 0,
       estimate: estimateTokens(request, expectedOutput),
     },

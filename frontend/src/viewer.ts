@@ -105,7 +105,7 @@ export function zoomLabel(zoom: Zoom): string {
 export function viewerError(err: unknown): string {
   const raw = err instanceof Error ? err.message : String(err ?? "");
   const status = /upstream status (\d{3})/.exec(raw);
-  if (status) return t("云盘没有返回文件内容（HTTP {status}），可以稍后再试", { status: status[1] });
+  if (status) return t("云盘未返回文件内容（HTTP {status}），请稍后重试", { status: status[1] });
   // Go's errNoDownloadLink (services/drive.go), in its source words or the language in force.
   const noLink = N_("这个文件暂时没有可用的下载地址，可能还没有处理完");
   if (raw.includes(noLink) || raw.includes(t(noLink))) return t(noLink);
@@ -120,7 +120,7 @@ export function viewerError(err: unknown): string {
   // the two can't be told apart, so the message is shown as it is.
   if (!raw) return t("原因未知");
   if (i18n.locale === "en" || /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}]/u.test(raw)) return raw;
-  return t("没有读到文件内容，可以稍后再试");
+  return t("未能读取文件内容，请稍后重试");
 }
 
 /** What the stage says about a file it cannot show (unsupported or not yet complete). */
@@ -134,7 +134,7 @@ export function unsupportedCopy(entry: { category: string; phase: string }): {
     return {
       kicker: "NOT READY",
       title: t("文件还没有准备好"),
-      body: t("等上传或云添加完成后，就能查看内容了。文件信息可以在「详情」里看。"),
+      body: t("待上传或云添加完成后即可查看内容；文件信息可在「详情」中查看。"),
       note: t("文件尚未就绪"),
     };
   }
@@ -148,7 +148,7 @@ export function unsupportedCopy(entry: { category: string; phase: string }): {
   return {
     kicker: kicker[entry.category] ?? "FILE",
     title: t("此格式暂不支持预览"),
-    body: t("这种文件暂时不支持直接预览，具体信息和能做的操作都在「详情」里。"),
+    body: t("暂不支持直接预览此格式文件，详细信息与可用操作可在「详情」中查看。"),
     note: entry.category === "archive" ? t("暂不支持预览压缩包") : t("暂不支持直接预览"),
   };
 }

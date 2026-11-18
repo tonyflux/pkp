@@ -26,10 +26,10 @@ var (
 	ErrChanged  = i18n.New("云端文件与开始下载时不一致，请重新下载")
 	errMismatch = i18n.New("服务器返回的数据范围与请求不符")
 	errNoSpace  = i18n.New("磁盘空间不足")
-	errBusy     = i18n.New("下载并发数到了 PikPak 上限，等一会儿再点「继续」")
+	errBusy     = i18n.New("同时下载数已达 PikPak 上限，请稍后点击「继续」")
 	errStalled  = i18n.New("连接 30 秒没有收到数据")
 	errDropped  = i18n.New("服务器提前断开了连接")
-	errArchived = i18n.New("这个文件在云端归档（冷）存储里，暂时取不出来")
+	errArchived = i18n.New("该文件位于云端归档（冷）存储中，暂无法读取")
 )
 
 // linkError is the CDN turning the link down: it expired or was revoked,

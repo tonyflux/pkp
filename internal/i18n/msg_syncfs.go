@@ -6,7 +6,7 @@ func init() {
 		"同步磁盘或目录不可用":                  {Hant: "同步磁碟或目錄無法使用", En: "The sync disk or directory is unavailable", Ja: "同期ディスクまたはフォルダを利用できません", Ko: "동기화 디스크 또는 폴더를 사용할 수 없습니다"},
 		"没有同步目录的访问权限":                 {Hant: "沒有同步目錄的存取權限", En: "Access to the sync directory is denied", Ja: "同期フォルダへのアクセス権がありません", Ko: "동기화 폴더에 대한 접근 권한이 없습니다"},
 		"当前磁盘的文件系统不支持可靠同步":            {Hant: "目前磁碟的檔案系統不支援可靠同步", En: "This disk's filesystem doesn't support reliable sync", Ja: "このディスクのファイルシステムは安全な同期に対応していません", Ko: "이 디스크의 파일 시스템은 안정적인 동기화를 지원하지 않습니다"},
-		"同步路径里包含符号链接或不太安全，没法同步":       {Hant: "同步路徑包含符號連結或不太安全，無法同步", En: "The sync path isn't safe or contains a symbolic link", Ja: "同期パスにシンボリックリンクが含まれるか安全ではないため同期できません", Ko: "동기화 경로에 심볼릭 링크가 포함되었거나 안전하지 않습니다"},
+		"同步路径包含符号链接或存在安全风险，无法同步":       {Hant: "同步路徑包含符號連結或存在安全風險，無法同步", En: "The sync path isn't safe or contains a symbolic link", Ja: "同期パスにシンボリックリンクが含まれるか安全ではないため同期できません", Ko: "동기화 경로에 심볼릭 링크가 포함되었거나 안전하지 않습니다"},
 		"文件正在变化，请稍后重新扫描":              {Hant: "檔案正在變更，請稍後重新掃描", En: "Files are changing. Scan again shortly.", Ja: "ファイルが変更されています。しばらくしてから再スキャンしてください。", Ko: "파일이 변경 중입니다. 잠시 후 다시 검색하세요."},
 		".pkp-sync 已被用户文件占用，不能用于同步暂存": {Hant: ".pkp-sync 已被使用者檔案占用，不能用於同步暫存", En: ".pkp-sync is occupied by user files and cannot be used for sync staging", Ja: ".pkp-sync はユーザーのファイルで使用中のため、同期待機領域に使えません", Ko: ".pkp-sync가 사용자 파일에 사용되고 있어 동기화 임시 저장소로 사용할 수 없습니다"},
 		"文件名与现有名称冲突":                  {Hant: "檔案名稱與現有名稱衝突", En: "The filename conflicts with an existing name", Ja: "ファイル名が既存の名前と競合しています", Ko: "파일 이름이 기존 이름과 충돌합니다"},

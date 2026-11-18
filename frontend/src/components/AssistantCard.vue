@@ -16,7 +16,7 @@ import { assistant, discardCard, openPlanCard, revealFile, runCard, viewFile } f
 const props = defineProps<{ card: Card; turnId: string; number: number; live?: boolean; displayedCount?: number }>();
 
 const STATE_LABEL: Record<CardState, () => string> = {
-  draft: () => t("待你确认"),
+  draft: () => t("待确认"),
   running: () => t("正在执行"),
   done: () => t("已执行"),
   failed: () => t("未成功"),

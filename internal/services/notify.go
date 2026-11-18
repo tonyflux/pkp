@@ -221,7 +221,7 @@ func unavailableWhy(err error) string {
 	if strings.Contains(err.Error(), "bundle identifier") {
 		return i18n.T("请从「应用程序」里的 PKP.app 打开，系统才允许发通知")
 	}
-	return i18n.T("这台电脑不支持系统通知")
+	return i18n.T("本机不支持系统通知")
 }
 
 // State is Settings · Notifications as it stands.

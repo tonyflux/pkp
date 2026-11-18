@@ -80,7 +80,7 @@ func (d *DriveService) SyncPreview(requestID string, config foldersync.Config) (
 	}
 	if _, exists := d.syncPreviews[requestID]; exists {
 		d.syncPreviewMu.Unlock()
-		return foldersync.Preview{}, i18n.New("已经在扫描了，稍微等一下")
+		return foldersync.Preview{}, i18n.New("扫描正在进行中，请稍候")
 	}
 	d.syncPreviews[requestID] = cancel
 	d.syncPreviewMu.Unlock()
@@ -498,7 +498,7 @@ func (b *syncDriveBackend) Upload(ctx context.Context, request foldersync.Upload
 	var slot *drive.UploadSlot
 	if request.FileID != "" {
 		if len(request.Grant) == 0 {
-			return foldersync.Node{}, errors.Join(foldersync.ErrUnknown, i18n.New("上传凭证不完整，先停下自动重试"))
+			return foldersync.Node{}, errors.Join(foldersync.ErrUnknown, i18n.New("上传凭证不完整，已暂停自动重试"))
 		}
 		slot = &drive.UploadSlot{File: drive.File{ID: request.FileID}}
 		if err := json.Unmarshal(request.Grant, &slot.OSS); err != nil {
@@ -542,12 +542,12 @@ func (b *syncDriveBackend) Upload(ctx context.Context, request foldersync.Upload
 		case <-ctx.Done():
 			return node, errors.Join(foldersync.ErrUnknown, ctx.Err())
 		case <-deadline.C:
-			return node, errors.Join(foldersync.ErrUnknown, i18n.New("云端还没确认上传完成，旧版本先留着"))
+			return node, errors.Join(foldersync.ErrUnknown, i18n.New("云端尚未确认上传完成，已保留旧版本"))
 		case <-time.After(taskPoll):
 		}
 	}
 	if node.ParentID != request.ParentID || node.Name != request.Name {
-		return node, errors.Join(foldersync.ErrUnknown, i18n.New("云端存到的位置和预期对不上，两边版本都留着了"))
+		return node, errors.Join(foldersync.ErrUnknown, i18n.New("云端保存位置与预期不符，已保留双方版本"))
 	}
 	localHash, err := syncfs.Hash(ctx, request.Path)
 	if err != nil {
@@ -599,7 +599,7 @@ func (b *syncDriveBackend) Mkdir(ctx context.Context, parentID, name, operationI
 	}
 	node, err := b.Get(ctx, file.ID)
 	if err == nil && (node.ParentID != parentID || node.Name != name || !node.Directory) {
-		err = i18n.New("云端存到的位置和预期对不上，两边版本都留着了")
+		err = i18n.New("云端保存位置与预期不符，已保留双方版本")
 	}
 	if err != nil {
 		return node, errors.Join(foldersync.ErrUnknown, err)
@@ -667,7 +667,7 @@ func (b *syncDriveBackend) Move(ctx context.Context, node foldersync.Node, paren
 	}
 	got, err := b.Get(ctx, node.ID)
 	if err != nil || got.ParentID != parentID || got.Name != node.Name {
-		return got, errors.Join(foldersync.ErrUnknown, err, i18n.New("云端还没确认移动结果，两边版本都留着了"))
+		return got, errors.Join(foldersync.ErrUnknown, err, i18n.New("云端尚未确认移动结果，已保留双方版本"))
 	}
 	if got.Name != name {
 		return b.Rename(ctx, got, name, operationID)
@@ -695,7 +695,7 @@ func (b *syncDriveBackend) await(ctx context.Context, taskID string) error {
 		}
 		if task.Done() {
 			if task.Phase != drive.PhaseComplete {
-				return i18n.New("云端没确认同步是否完成，请重新核对一下")
+				return i18n.New("云端未确认同步是否完成，请重新核对")
 			}
 			return nil
 		}

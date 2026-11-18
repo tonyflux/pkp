@@ -197,11 +197,11 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onKeydown));
             <p class="hint">{{ px.system }}</p>
             <p v-if="px.systemPac" class="hint bad icon-note" role="alert">
               <Icon name="alert" :size="15" />
-              <span>{{ t("电脑启用了 PAC 自动代理脚本，PKP 不支持运行它，请求会直连出去；要走指定代理请选「自定义代理」。") }}</span>
+              <span>{{ t("当前系统已启用 PAC 自动代理脚本，PKP 暂不支持执行 PAC 脚本，请求将直连；如需指定代理，请选择「自定义代理」。") }}</span>
             </p>
           </template>
 
-          <p v-else class="hint">{{ t("PKP 不走应用代理，直接连网；不过电脑上开着的 VPN 或系统路由依然会生效。") }}</p>
+          <p v-else class="hint">{{ t("PKP 不使用应用代理，直接连接网络；系统当前启用的 VPN 或路由规则仍会生效。") }}</p>
 
           <template v-if="proxy.mode !== 'direct'">
             <button
@@ -217,7 +217,7 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onKeydown));
             <label v-if="proxyAdvanced" id="net-sheet-bypass" class="field">
               <span>{{ t("不使用代理的地址") }}</span>
               <textarea v-model="proxy.bypass" rows="2" spellcheck="false" :placeholder="t('例如 {example}', { example: 'localhost, *.example.com' })" :disabled="proxySettings.saving" />
-              <small>{{ t("用逗号、空格或换行隔开；留空就不设例外（本机地址默认直连）。") }}</small>
+              <small>{{ t("使用逗号、空格或换行分隔；留空表示不设例外（本机地址始终直连）。") }}</small>
             </label>
           </template>
 

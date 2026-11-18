@@ -15,7 +15,7 @@ const sources = computed(() => [{ label: t("本地文件夹"), node: syncDialog.
 const mapping = computed(() => {
   const issue = syncDialog.issue;
   if (!issue || !pair.value) return "";
-  if (!issue.local || !issue.cloud) return pair.value.mode === "bidirectional" ? t("留着现在的修改版本，并在缺少的那一边补回，不会顺带删除。") : t("只留着目标端修改后的版本，不动源端，也不会顺带删除。");
+  if (!issue.local || !issue.cloud) return pair.value.mode === "bidirectional" ? t("保留当前修改版本，并在缺失端补回对应文件，不会联动删除。") : t("仅保留目标端修改后的版本，不改动源端，也不会联动删除。");
   if (pair.value.mode === "bidirectional") return t("本地版本保留原名；云端版本保存为「{name}」，最终在两端补齐两个版本。", { name: issue.keepName });
   if (pair.value.mode === "backup") return t("云端编辑版本保存为「{name}」，本地源版本在云端保留原名；本地不变。", { name: issue.keepName });
   return t("本地编辑版本保存为「{name}」，云端源版本在本地保留原名；云端不变。", { name: issue.keepName });
@@ -26,8 +26,8 @@ const mapping = computed(() => {
     <p class="owner">{{ pair.name }} · {{ t("所属账号") }} · {{ accountName(pair.account) }}</p>
     <div class="roots"><p>{{ t("本地文件夹") }}: {{ pair.localPath }}</p><p>{{ t("云端文件夹") }}: {{ shownPath(pair.cloudPath) }}</p></div>
     <template v-if="syncDialog.kind === 'remove'">
-      <p>{{ t("停用并移除这条同步，已经同步完的本地和云端文件都会留着。") }}</p>
-      <p class="hint">{{ t("正在跑的操作会先把这一步收好尾再停；已经发到云端的请求没法撤回。以后再想同步，得重新建一次并预览。") }}</p>
+      <p>{{ t("停用并移除此同步任务后，已同步的本地与云端文件均会保留。") }}</p>
+      <p class="hint">{{ t("进行中的步骤将在完成后停止，已发往云端的请求无法撤回；后续如需同步，需重新创建并预览计划。") }}</p>
     </template>
     <template v-else-if="syncDialog.kind === 'conflict' && syncDialog.issue">
       <h3 class="path"><Icon name="file" :size="20" />{{ syncDialog.issue.path }}</h3>
@@ -45,7 +45,7 @@ const mapping = computed(() => {
       <p class="hint">{{ t("上一次同步记录了 {n} 个文件", { n: syncDialog.preview.tracked }) }}<template v-if="syncDialog.preview.tracked > 0"> · {{ t("占受跟踪文件的 {ratio}%", { ratio: (syncDialog.preview.deletes / syncDialog.preview.tracked * 100).toFixed(1) }) }}</template></p>
       <p>{{ t("请检查磁盘连接、文件夹权限和源端内容；这次确认只针对这一批，以后的删除保护依然有效。") }}</p>
       <details class="batch" open><summary>{{ t("查看本批全部删除项") }} · {{ deletions.length }}</summary><ul><li v-for="change in deletions" :key="change.id"><strong>{{ change.path }}</strong><small>{{ change.direction === 'upload' ? t('删除位置：PikPak 回收站') : change.direction === 'download' ? t('删除位置：本地系统回收站') : syncDirectionName(change.direction) }} · {{ change.directory ? t('文件夹') : t('文件') }}</small><small v-if="change.reason">{{ change.reason }}</small></li></ul></details>
-      <p class="note">{{ t("这些都会移进本地或 PikPak 回收站，不会直接永久删除；之后范围再变的话还得重新确认。") }}</p>
+      <p class="note">{{ t("这些项目将移至本地或 PikPak 回收站，不会永久删除；若后续范围发生变化，仍需重新确认。") }}</p>
       <label class="ack"><input v-model="syncDialog.acknowledged" type="checkbox" :disabled="changed || syncDialog.working" /><span>{{ t("我都核对好了，确认执行这批删除。") }}</span></label>
     </template>
     <p v-if="changed" class="error" role="alert">{{ t("计划已变化，请关闭后重新审阅。") }}</p>

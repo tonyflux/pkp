@@ -27,17 +27,17 @@ const error = computed(() => local.value || appLockSheet.error);
 const COPY = {
   set: {
     title: N_("设置 PKP 独立密码"),
-    text: N_("这个密码只用来锁这台电脑上的 PKP，跟 PikPak 账号无关；忘了没法找回，只能退出登录后清掉本地数据重设。"),
+    text: N_("此密码仅用于锁定本机上的 PKP，与 PikPak 账号无关。遗忘后无法找回，只能退出登录并清除本机数据后重新设置。"),
     action: N_("保存密码"),
   },
   change: {
     title: N_("更改 PKP 独立密码"),
-    text: N_("先输一遍现在的密码，再设个新的。记住别忘啦，忘了只能退出登录清掉本地数据重设。"),
+    text: N_("验证当前密码后即可设置新密码。请妥善保管，遗忘后无法找回，只能退出登录并清除本机数据后重设。"),
     action: N_("保存新密码"),
   },
   confirm: {
     title: N_("验证 PKP 独立密码"),
-    text: N_("改应用锁设置前，先输一遍现在的独立密码确认下。"),
+    text: N_("修改应用锁设置前，请先验证当前独立密码。"),
     action: N_("验证"),
   },
 };

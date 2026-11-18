@@ -24,11 +24,11 @@ var (
 	errShareInput       = i18n.New("分享链接或文件选择无效")
 	errShareUnavailable = i18n.New("分享已失效或无法访问，请重新检查链接和提取码")
 	errSharePreview     = i18n.New("此分享文件不支持预览")
-	errShareReceipt     = i18n.New("还不确定有没有转存成功，先看看目标文件夹，别重复点了")
+	errShareReceipt     = i18n.New("暂无法确认是否转存成功，请先查看目标文件夹，避免重复提交")
 	errShareMapping     = i18n.New("转存结果与所选文件或目标文件夹不一致")
 	errShareTask        = i18n.New("未找到此账号的分享转存任务")
 	errShareFailed      = i18n.New("分享转存失败")
-	errShareCapacity    = i18n.New("还在等确认的转存任务太多了，先去目标文件夹看看吧")
+	errShareCapacity    = i18n.New("待确认的转存任务过多，请先查看目标文件夹")
 )
 
 type ShareEntry struct {

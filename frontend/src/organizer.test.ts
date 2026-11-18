@@ -126,7 +126,7 @@ describe("problems", () => {
 
   it("refuses a layer several entries hold", () => {
     const t = scope();
-    expect(problems([move(t, "x", ["双"])], t).get("x")).toBe("这里有多个「双」");
+    expect(problems([move(t, "x", ["双"])], t).get("x")).toBe("当前位置存在多个「双」");
   });
 
   it("refuses destination folders with case-folded Unicode name collisions", () => {
@@ -160,7 +160,7 @@ describe("problems", () => {
   it("refuses moving into a folder the plan itself renames, on both sides", () => {
     const t = scope();
     const errors = problems([move(t, "D", [], "D2"), move(t, "x", ["D"])], t);
-    expect(errors.get("x")).toBe("「D」本身也在这次计划里改动");
+    expect(errors.get("x")).toBe("「D」本身也包含在本次计划中");
     expect(errors.has("D")).toBe(true);
   });
 
@@ -189,7 +189,7 @@ describe("problems", () => {
     const changes = [move(t, "x", ["D"], "Season 01"), move(t, "c", ["D", "Season 01"])];
     const errors = problems(changes, t);
     expect(errors.has("x")).toBe(true);
-    expect(errors.get("c")).toBe("要新建的文件夹「Season 01」和那里的其他项重名");
+    expect(errors.get("c")).toBe("拟新建的文件夹「Season 01」与目标位置已有项目重名");
   });
 
   it("checks generated and edited names alike", () => {

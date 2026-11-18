@@ -368,8 +368,8 @@ async function saveName() { const item = space.value; if (!item || !rename.value
           <div class="sleep-prevention-heading"><strong>{{ t('lan|共享期间防止电脑自动休眠') }}</strong><Toggle :model-value="!!lan.status?.preventSleep" :label="t('lan|共享期间防止电脑自动休眠')" :disabled="lan.busy || !lan.status || !lan.status.preventSleepSupported" aria-describedby="lan-sleep-description lan-sleep-limits" data-lan-prevent-sleep @update:model-value="changeLAN(() => LANService.SetPreventSleep($event))" /></div>
           <p v-if="lan.status?.preventSleep || lan.status?.preventSleepActive" class="sleep-prevention-state" role="status" data-lan-prevent-sleep-status>{{ lan.status.preventSleepActive ? t('lan|自动休眠保护已生效') : lan.status.running ? t('lan|自动休眠保护未生效') : t('lan|已开启，将在下次开始共享时生效') }}</p>
           <p v-if="lan.status && !lan.status.preventSleepSupported" role="status">{{ t('lan|此系统或构建不支持防止自动休眠。') }}</p>
-          <p id="lan-sleep-description">{{ t('lan|只在共享开着时阻止电脑自动休眠（屏幕还能正常熄灭）；关掉共享、退出 PKP 或关掉这个开关后就会恢复。') }}</p>
-          <p id="lan-sleep-limits">{{ t('lan|合盖、关机、手动休眠或断网还是会中断共享；开启会多耗一点电，建议插上电源。') }}</p>
+          <p id="lan-sleep-description">{{ t('lan|仅在开启共享时阻止本机自动休眠（屏幕仍可正常熄灭）；关闭共享、退出 PKP 或关闭此开关后即恢复默认。') }}</p>
+          <p id="lan-sleep-limits">{{ t('lan|合盖、关机、手动休眠或断网仍会中断共享；开启会增加耗电，建议连接电源。') }}</p>
         </section>
       </div><div class="qr-panel"><svg v-if="qr" data-lan-qr :viewBox="`0 0 ${qr.size} ${qr.size}`" role="img" :aria-label="t('lan|访问地址二维码')" shape-rendering="crispEdges"><rect width="100%" height="100%" fill="white"/><path :d="qr.path" fill="black"/></svg><div v-else class="qr-placeholder" aria-hidden="true"><Icon name="qrCode" :size="54"/></div><strong>{{ t('lan|扫码访问') }}</strong><small>{{ qr ? t('lan|二维码不含密码') : t('lan|开启后显示二维码') }}</small></div>
     </section>
@@ -385,7 +385,7 @@ async function saveName() { const item = space.value; if (!item || !rename.value
           <h2 :title="space.name">{{ space.name }}</h2><p>{{ sourceName(space) }}</p><p class="root">{{ space.localPath || space.rootId || t('lan|云盘根目录') }}</p><p>{{ t('lan|来源账号和根目录固定，切换桌面账号不会改变此空间。更换来源请新建空间。') }}</p><p v-if="space.error" class="error" role="alert">{{ space.error }}</p><label class="field">{{ t('lan|空间名称') }}<input v-model="rename" maxlength="120" /></label><button :disabled="lan.busy || !rename.trim() || rename.trim() === space.name" @click="saveName">{{ t('lan|保存名称') }}</button>
         </section>
         <section class="space-preparation">
-        <div class="setting"><div><strong>{{ t('lan|允许准备文件') }}</strong><p>{{ t('lan|允许后，访客打开云盘文件或需兼容播放的视频时，会由这台电脑下载或转码，占用一些网络、硬盘和性能（本地目录只生成兼容副本）。') }}</p></div><button role="switch" :aria-checked="space.allowPrepare" :disabled="lan.busy" data-lan-prepare @click="open('prepare')">{{ space.allowPrepare ? t('lan|已允许') : t('lan|未允许') }}</button></div>
+        <div class="setting"><div><strong>{{ t('lan|允许准备文件') }}</strong><p>{{ t('lan|开启后，访客打开云盘文件或需兼容播放的视频时，将由本机进行下载或转码，并占用部分网络、磁盘与性能（本地目录仅生成兼容副本）。') }}</p></div><button role="switch" :aria-checked="space.allowPrepare" :disabled="lan.busy" data-lan-prepare @click="open('prepare')">{{ space.allowPrepare ? t('lan|已允许') : t('lan|未允许') }}</button></div>
         <section v-if="space.kind === 'cloud'" data-lan-sync>
           <hr/><h3>{{ t('lan|准备文件') }}</h3>
           <p>{{ t('lan|同步里已经下载且核对无误的原件会直接复用；访客只会按需要触发准备，改不了你的同步设置。兼容格式副本由这里单独管理。') }}</p>
@@ -410,7 +410,7 @@ async function saveName() { const item = space.value; if (!item || !rename.value
         <div class="actions task-heading"><h2 ref="taskHeading" tabindex="-1">{{ t('lan|准备任务') }}</h2><button data-lan-dismiss-all :disabled="lan.busy || !hasFinishedTasks" @click="dismissHistory()">{{ t('lan|清空已结束记录') }}</button></div>
         <label class="field">{{ t('lan|任务范围') }}<span class="select glass-well"><SelectMenu v-model="selected" class="face" :options="spaceOptions" :label="t('lan|任务范围')" :disabled="lan.busy"/><Icon name="chevronDown" :size="16"/></span></label>
         <p>{{ t('lan|停止共享不自动取消电脑准备；恢复等待任务需重新确认授权。') }}</p>
-        <p>{{ t('lan|这里只会删掉电脑端已结束的任务记录，不会动源文件、缓存，也不影响访客。还在等处理的任务得先取消。') }}</p>
+        <p>{{ t('lan|此处仅清除本机已结束的任务记录，不会删除源文件或缓存，也不影响访客访问；等待中的任务需先取消。') }}</p>
         <p v-if="!tasks.length" class="empty">{{ t('lan|暂无准备任务') }}</p>
         <div v-else class="task-list" role="region" :aria-label="t('lan|准备任务')">
           <article v-for="item in tasks" :key="item.id" class="task task-row" :data-lan-task="item.id">
@@ -487,7 +487,7 @@ async function saveName() { const item = space.value; if (!item || !rename.value
                   <p v-if="folderSearching" class="folder-state picker-state" role="status"><Orbit :size="20"/>{{ t('正在搜索…') }}</p>
                   <div v-else-if="folderSearchError" class="folder-state picker-state"><p class="error" role="alert">{{ folderSearchError }}</p><button type="button" @click="searchFolders(folderQuery)">{{ t('重试') }}</button></div>
                   <p v-else-if="!folderSearchReady" class="folder-state picker-state" role="status">{{ t('云盘索引还在建立，暂时不能搜索全盘；可以逐层浏览。') }}</p>
-                  <p v-else-if="!folderMatches.length" class="folder-state picker-state" role="status">{{ t('没有找到文件夹，试试其他名称') }}</p>
+                  <p v-else-if="!folderMatches.length" class="folder-state picker-state" role="status">{{ t('未找到匹配文件夹，请尝试其他名称') }}</p>
                   <template v-else>
                     <button v-for="folder in folderMatches" :key="folder.id" type="button" class="quiet picker-item" :data-lan-folder-result="folder.id" :title="trailPath(folder.trail ?? [])" @click="browse(folder.trail ?? [])"><span class="picker-thumb"><Icon name="folder" :size="20" filled/></span><span class="picker-copy"><strong class="picker-name">{{ folder.name }}</strong><small class="picker-meta">{{ trailPath(folder.trail ?? []) }}</small></span><Icon class="picker-chevron" name="chevronRight" :size="16"/></button>
                     <p v-if="folderMatches.length >= 100" class="folder-search-limit picker-state">{{ t('lan|最多显示 100 个结果，请缩小搜索范围。') }}</p>
@@ -508,18 +508,18 @@ async function saveName() { const item = space.value; if (!item || !rename.value
           </div>
         </template>
         <label class="check"><input v-model="draft.allowPrepare" type="checkbox"/>{{ t('lan|允许准备文件') }}</label>
-        <p>{{ t('lan|允许后，访客打开云盘文件或需兼容播放的视频时，会由这台电脑下载或转码，占用一些网络、硬盘和性能（本地目录只生成兼容副本）。') }}</p>
-        <p>{{ t('lan|知道共享密码的人都能查看这里的文件（包括隐藏文件），别选放了敏感内容的文件夹。') }}</p>
+        <p>{{ t('lan|开启后，访客打开云盘文件或需兼容播放的视频时，将由本机进行下载或转码，并占用部分网络、磁盘与性能（本地目录仅生成兼容副本）。') }}</p>
+        <p>{{ t('lan|拥有共享密码的访客可查看此文件夹内的文件（含隐藏文件），请勿选择包含敏感内容的文件夹。') }}</p>
       </template>
       <template v-else-if="modal === 'password'"><p>{{ t('lan|密码独立于应用锁和云盘登录，两次输入一致即可。密码不会显示在二维码中。') }}</p><label class="field">{{ t('lan|共享密码') }}<input v-model="password" :type="showPassword ? 'text' : 'password'" autocomplete="new-password" required /></label><label class="field">{{ t('lan|再次输入密码') }}<input v-model="repeat" :type="showPassword ? 'text' : 'password'" autocomplete="new-password" required /></label><button type="button" :aria-pressed="showPassword" @click="showPassword = !showPassword">{{ showPassword ? t('隐藏密码') : t('显示密码') }}</button><p v-if="lan.status?.hasPassword">{{ t('lan|所有访客将退出，正在下载和播放会中断；已取得的文件无法收回。电脑准备不自动取消。') }}</p></template>
       <p v-else-if="modal === 'start'">{{ t('lan|走的是普通 HTTP、没有加密，同网络里抓包的人可能会看到密码和文件。请在家里或信任的 Wi-Fi 下使用。') }}</p>
       <p v-else-if="modal === 'stop'">{{ t('lan|所有访客会退出，下载到设备和播放会中断。已启动的电脑准备不自动取消，原件和完成结果会保留；若需结束准备，请到任务中取消。') }}</p>
       <p v-else-if="modal === 'cache'">{{ t('lan|仅清理本功能生成的兼容副本，正在使用的副本会跳过。不会删除源原件、已下载原件或其他下载结果。') }}</p>
-      <template v-else-if="modal === 'prepare'"><p>{{ t('lan|允许后，访客打开云盘文件或需兼容播放的视频时，会由这台电脑下载或转码，占用一些网络、硬盘和性能（本地目录只生成兼容副本）。') }}</p><p>{{ t('lan|关掉后，访客就不能让电脑新准备或下载文件，已经由访客发起、还在等待的也会暂停；你在电脑上自己发起的准备会继续跑完，弄好的文件访客仍可打开。') }}</p></template>
+      <template v-else-if="modal === 'prepare'"><p>{{ t('lan|开启后，访客打开云盘文件或需兼容播放的视频时，将由本机进行下载或转码，并占用部分网络、磁盘与性能（本地目录仅生成兼容副本）。') }}</p><p>{{ t('lan|关闭后，访客将无法触发新的文件准备或下载，已由访客发起并等待中的任务也会暂停；您在本机发起的准备会继续完成，已就绪的文件访客仍可打开。') }}</p></template>
       <p v-else-if="modal === 'cancel'">{{ t('lan|取消此电脑准备？所有等待此任务的访客都会受到影响。保留原件，未完成副本不会发布。') }}</p>
       <p v-else-if="modal === 'resume'">{{ t('lan|恢复会重新核验来源和准备权限，并继续占用网络、磁盘和算力。') }}</p>
       <p v-else>{{ t('lan|停用或移除会中断此空间的访问和传输，准备任务等待处理；不删除源文件和完成结果。启用后持有密码的访客可读取。') }}</p>
-      <p v-if="modal === 'create' && draft.kind === 'local'">{{ t('lan|文件夹里的隐藏文件也会被共享，别选放了敏感内容的文件夹（快捷方式、符号链接等不会共享出去）。') }}</p>
+      <p v-if="modal === 'create' && draft.kind === 'local'">{{ t('lan|文件夹内的隐藏文件也会被共享，请勿选择包含敏感内容的文件夹（快捷方式、符号链接等不会被共享）。') }}</p>
       <label v-if="needsAcknowledgement" class="check"><input v-model="acknowledged" type="checkbox" data-lan-ack/>{{ t('lan|我知道了，这类操作下次不再提醒') }}</label><p v-if="modalError" class="error" role="alert">{{ modalError }}</p>
       </div><footer><button type="button" :disabled="lan.busy || picking" @click="close">{{ t('lan|暂不操作') }}</button><button class="primary" data-lan-confirm :disabled="!canSubmit">{{ lan.busy ? t('lan|正在处理') : title }}</button></footer>
     </form></section></div></Teleport>

@@ -56,7 +56,7 @@ var (
 	ErrUnavailable   = i18n.New("同步磁盘或目录不可用")
 	ErrPermission    = i18n.New("没有同步目录的访问权限")
 	ErrUnsupported   = i18n.New("当前磁盘的文件系统不支持可靠同步")
-	ErrUnsafePath    = i18n.New("同步路径里包含符号链接或不太安全，没法同步")
+	ErrUnsafePath    = i18n.New("同步路径包含符号链接或存在安全风险，无法同步")
 	ErrUnstable      = i18n.New("文件正在变化，请稍后重新扫描")
 	ErrStageOccupied = i18n.New(".pkp-sync 已被用户文件占用，不能用于同步暂存")
 	ErrCollision     = i18n.New("文件名与现有名称冲突")

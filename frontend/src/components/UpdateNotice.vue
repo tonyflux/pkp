@@ -12,7 +12,7 @@ function open() { dismissIntro(); openSettings("updates"); }
 <template>
   <aside v-if="updates.state?.supported && (updates.state.notice || (!introduced && updates.state.automatic))" class="update-notice glass glass-sheet" role="status">
     <Icon name="info" :size="18" />
-    <span>{{ updates.state.notice ? t("PKP {version} 已发布", { version: updates.state.info?.version ?? '' }) : t("PKP 会自动从 GitHub 查新版本（不会自动下载或安装），不需要可以在「关于与更新」里关掉。") }}</span>
+    <span>{{ updates.state.notice ? t("PKP {version} 已发布", { version: updates.state.info?.version ?? '' }) : t("PKP 会自动从 GitHub 检查新版本（不会自动下载或安装），可在「关于与更新」中关闭。") }}</span>
     <div class="actions">
       <button class="quiet" @click="open">{{ t("查看更新") }}</button>
       <template v-if="updates.state.notice">

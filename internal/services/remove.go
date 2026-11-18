@@ -88,7 +88,7 @@ const (
 
 var (
 	errRemoveTooMany = &lazyError{func() string { return i18n.F("一次最多处理 %d 项，请缩小范围", maxRemove) }}
-	errRemoving      = i18n.New("这个账号还有删除在进行，等这一次弄完吧")
+	errRemoving      = i18n.New("该账号仍有删除任务进行中，请等待本次完成")
 )
 
 // Why an entry was not removed, as the receipt shows it.
@@ -97,7 +97,7 @@ func whyMoved() string    { return i18n.T("已被移到别的文件夹，未处�
 func whySpecial() string  { return i18n.T("特殊文件夹，未处理") }
 func whyNotEmpty() string { return i18n.T("已经不是空的，未处理") }
 func whyTooMany() string {
-	return i18n.T("里面的文件夹太多，没能确认是空的，未处理")
+	return i18n.T("内部包含的文件夹过多，无法确认是否为空，已跳过")
 }
 
 // RemoveFiles moves entries of an account ("" is the account on screen) to

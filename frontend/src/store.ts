@@ -1756,7 +1756,7 @@ function ask(question: Question): Promise<boolean> {
 async function leaveUnsubmitted(target: string): Promise<boolean> {
   if (!(await waitSavedHistoryLeave())) return false;
   if (syncDraft.busy) {
-    notify(t("正在保存同步设置，请稍等一下再切换账号"), "info");
+    notify(t("正在保存同步设置，请稍候再切换账号"), "info");
     return false;
   }
   if (shareImportBusy()) {
@@ -1819,7 +1819,7 @@ async function pauseOwner(): Promise<string> {
   }
   await stopPlayback();
   // Never Saved for a position that is not on disk.
-  if (saved === null) return t("已暂停「{name}」的播放，但进度没能保存到本机", { name });
+  if (saved === null) return t("已暂停「{name}」的播放，但进度未能保存至本机", { name });
   return saved ? t("已暂停「{name}」的播放，进度已保存", { name }) : t("已暂停「{name}」的播放", { name });
 }
 
@@ -2850,7 +2850,7 @@ function savedHistoryFailure(error: unknown): false {
 
 function validateSavedHistoryDraft(): void {
   if (!ui.query.trim()) throw new Error(t("请输入搜索条件"));
-  if (!savedHistoryCanSave.value) throw new Error(t("按勾选项目筛选的条件没法保存成动态搜索，先去掉范围限制再保存。"));
+  if (!savedHistoryCanSave.value) throw new Error(t("按勾选项目筛选的条件无法保存为动态搜索，请先移除范围限制。"));
 }
 
 export function saveSavedHistoryChanges(): boolean {
@@ -4565,7 +4565,7 @@ let held: Held | null = null;
 
 const LOW_REASON = N_("规则无法确定，可交给 AI 识别");
 // Go's errNotIndexed (plantree.go): it reaches the page in the page's language.
-const NOT_INDEXED = N_("新文件还没进入本地索引，请稍后再试");
+const NOT_INDEXED = N_("新文件尚未进入本地索引，请稍后重试");
 
 function say(text: string, tone: typeof assistant.noticeTone = "info") {
   assistant.notice = text;
@@ -4664,7 +4664,7 @@ function askConsent(sheet: Pick<ConsentSheet, "title" | "lede" | "sends" | "esti
   assistant.consent = {
     accountName: accountName(account),
     level: "metadata",
-    notSends: t("工具查询不会主动读取并发送文件内容、字幕、账号凭据、下载或分享链接、提取码、本地路径或 TMDB 资料（除非你自己贴在了提问里）。"),
+    notSends: t("工具查询不会主动读取并发送文件内容、字幕、账号凭据、下载或分享链接、提取码、本地路径或 TMDB 资料（除非您在提问中主动提供）。"),
     to: modelLine(),
     ...sheet,
   };
@@ -4786,7 +4786,7 @@ async function saveConversation(conv: ConversationView, account = assistant.acco
   try {
     await DriveService.SaveConversation(account, info, conversationBody(conv));
   } catch (err) {
-    if (account === currentId.value) say(t("这段对话没能保存：{error}", { error: errorText(err) }), "warning");
+    if (account === currentId.value) say(t("无法保存对话：{error}", { error: errorText(err) }), "warning");
     return false;
   }
   if (account === currentId.value) assistant.conversations = [info, ...assistant.conversations.filter((c) => c.id !== info.id)];
@@ -4951,7 +4951,7 @@ async function startTurn(text: string, range: AskScope = assistant.scope) {
       consent: (d: TurnDisclosure) =>
         askConsent({
           title: t("这一轮，要把哪些信息发给模型？"),
-          lede: t("这一轮只问你这一次：AI 查本地文件时找到的结果也会一起发过去，不会每一步都弹出来问。"),
+          lede: t("本轮仅确认这一次：AI 查询本地文件的结果也将一并发送，不会逐步弹窗确认。"),
           sends: d.sends + extra,
           estimate: d.estimate,
           limit: conv.usage.limit,
@@ -5628,12 +5628,12 @@ export async function runCard(turnId: string, cardId: string) {
   card.state = "running";
   card.note = "";
   const persist = async () => {
-    if (!(await saveConversation(conv, account, snapshot))) throw new Error(t("保存状态失败，先停在这里；已经提交的操作撤不回，建议查一下最新状态。"));
+    if (!(await saveConversation(conv, account, snapshot))) throw new Error(t("保存状态失败，已暂停后续操作；已提交的操作无法撤回，建议查询最新状态。"));
   };
   const check = () => {
     if (run.stop || currentId.value !== account || assistant.conversation !== conv) {
       if (card.kind === "operation") card.stopped = true;
-      throw new Error(t("剩下的已经停下了；不过前面发出去的操作撤不回，可能还会陆续完成。"));
+      throw new Error(t("已停止提交剩余项目；已发出的操作无法撤回，仍可能陆续完成。"));
     }
   };
   try {
@@ -5729,7 +5729,7 @@ export async function openPlanCard(cardId: string) {
   if (!plan) {
     const proposal = conv.plans[card.planId];
     if (!proposal) {
-      say(t("这份计划已无法重新生成，请再说一次要求"), "warning");
+      say(t("此计划已无法重新生成，请重新输入需求"), "warning");
       return;
     }
     const serial = taskSerial;
@@ -5881,7 +5881,7 @@ export async function connectModel(presetId: string, key: string, baseUrl?: stri
       (await saveAIConnection(preset.provider, (baseUrl ?? preset.baseUrl).trim(), (model ?? preset.model).trim())) &&
       (!key.trim() || (await saveAIKey(key.trim())));
     if (!saved) {
-      sheet.error = t("没能保存连接设置，请检查地址和模型名。");
+      sheet.error = t("无法保存连接设置，请检查地址和模型名称。");
       return false;
     }
     await testAIConnection();
@@ -6339,8 +6339,8 @@ async function identifyPlan(plan: AssistantPlan, serial: number, room: () => num
     const n = refused.length;
     notes.push(
       n < lowGroups.length
-        ? t("{reason}。有 {n} 组没有识别，保持原样，其余照常识别；可能是这些组的文件名或路径里有它认为敏感的词，换个模型服务或改名后可以再试。", { reason, n })
-        : t("{reason}。有 {n} 组没有识别，保持原样；可能是这些组的文件名或路径里有它认为敏感的词，换个模型服务或改名后可以再试。", { reason, n }),
+        ? t("{reason}。{n} 组未能识别（保持原样），其余已正常识别；可能是文件名或路径中包含受限词汇，可更换模型服务或重命名后重试。", { reason, n })
+        : t("{reason}。{n} 组未能识别（保持原样）；可能是文件名或路径中包含受限词汇，可更换模型服务或重命名后重试。", { reason, n }),
     );
   }
   if (stopped) notes.push(t("已达到 token 上限，{n} 组没有识别，保持原样。", { n: stopped }));
@@ -6811,7 +6811,7 @@ export async function runPlan(keepUndecided?: boolean) {
   assistant.receiptKept = kept;
   assistant.screen = "receipt";
   const pending = pendingArrivals.value.filter((a) => p!.arrivals.some((r) => r.id === a.id)).length;
-  if (pending) say(t("还有 {n} 条新文件提醒待定：没决定怎么处理或执行失败的还会留着。", { n: pending }), "warning");
+  if (pending) say(t("仍有 {n} 条新文件提醒待处理：未决定或执行失败的项目将保留在列表中。", { n: pending }), "warning");
   void loadAssistantHistory();
 }
 
@@ -7087,7 +7087,7 @@ export async function openArrivals(arrivals: Arrival[]) {
     if (chosen.some((a) => !a.fileId)) throw new Error(t("这个任务没有产出文件"));
     const ids = [...new Set(chosen.map((a) => a.fileId))];
     const plan = await selectionPlan(account, ids, { arrivals: chosen });
-    if (ids.some((id) => !plan.tree.byId.has(id))) throw new Error(t("有些新文件还没进本地索引，等几秒再试试"));
+    if (ids.some((id) => !plan.tree.byId.has(id))) throw new Error(t("部分新文件尚未进入本地索引，请稍后再试"));
     return { ...plan, title: t("批量整理 · {n} 个新文件", { n: chosen.length }), task: t("批量整理 · {n} 个新文件", { n: chosen.length }) };
   });
 }
@@ -8364,7 +8364,7 @@ export async function revokeSessions(ids: string[], what: string) {
     return true;
   });
   await reloadApps();
-  if (ok) notify(t("已移除「{what}」，它将立即无法访问你的 PikPak", { what }), "success");
+  if (ok) notify(t("已移除「{what}」，其将立即失去访问您 PikPak 的权限", { what }), "success");
   return !!ok;
 }
 
@@ -9245,7 +9245,7 @@ export async function play(entry: Entry, queue?: Entry[], startAt = 0): Promise<
     // Opening this video writes where the other one was left; asking first
     // is how a failure to keep it can be said.
     const saved = await DriveService.SavePlayback().catch(() => null);
-    if (saved === null) notify(t("没能保存「{name}」的播放进度", { name: accountName(owner) }), "error");
+    if (saved === null) notify(t("无法保存「{name}」的播放进度", { name: accountName(owner) }), "error");
   }
   if (!account || currentId.value !== account || accounts.switching) return "cancelled";
   // A queue is of one kind: music plays on into music

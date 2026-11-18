@@ -691,7 +691,7 @@ export const TOOL_DEFS: readonly ToolDef[] = [
     plan: true,
     running: N_("正在准备云添加"),
     done: N_("已准备好云添加"),
-    failed: N_("没能准备好云添加"),
+    failed: N_("无法准备云添加"),
     schema: {
       type: "object",
       properties: {
@@ -707,7 +707,7 @@ export const TOOL_DEFS: readonly ToolDef[] = [
     plan: true,
     running: N_("正在准备下载"),
     done: N_("已准备好下载"),
-    failed: N_("没能准备好下载"),
+    failed: N_("无法准备下载"),
     schema: { type: "object", properties: { handles: HANDLES_FIELD }, required: ["handles"] },
   },
   {
@@ -716,7 +716,7 @@ export const TOOL_DEFS: readonly ToolDef[] = [
     plan: true,
     running: N_("正在准备分享"),
     done: N_("已准备好分享"),
-    failed: N_("没能准备好分享"),
+    failed: N_("无法准备分享"),
     schema: { type: "object", properties: { handles: HANDLES_FIELD }, required: ["handles"] },
   },
   {
@@ -743,7 +743,7 @@ export const TOOL_DEFS: readonly ToolDef[] = [
     plan: true,
     running: N_("正在准备操作"),
     done: N_("已准备好操作"),
-    failed: N_("没能准备好操作"),
+    failed: N_("无法准备操作"),
     schema: {
       type: "object",
       properties: {
@@ -871,13 +871,13 @@ function parseItems(o: Record<string, unknown>, handles: Handles): ProposedItem[
   const seen = new Set<string>();
   const bad: string[] = [];
   rows.forEach((row, i) => {
-    const item = objectOf(row, t("items 里的每一项"));
+    const item = objectOf(row, t("items 中的每一项"));
     const r = resolveHandle(item.handle, handles, ["file", "folder"], "handle");
     if (typeof r === "string") {
       bad.push(r);
       return;
     }
-    if (seen.has(r.id)) throw new ModelOutputError(t("{handle} 出现了不止一次", { handle: r.handle }));
+    if (seen.has(r.id)) throw new ModelOutputError(t("{handle} 重复出现", { handle: r.handle }));
     seen.add(r.id);
     const trash = flag(item, "trash");
     let toPath: string[] | null = null;
@@ -895,7 +895,7 @@ function parseItems(o: Record<string, unknown>, handles: Handles): ProposedItem[
       const why = nameError(name);
       if (why) throw new ModelOutputError(t("第 {n} 项的新名称不可用：{error}", { n: i + 1, error: why }));
     }
-    if (!trash && toPath === null && !name) throw new ModelOutputError(t("第 {n} 项没有目标位置、新名称或回收站", { n: i + 1 }));
+    if (!trash && toPath === null && !name) throw new ModelOutputError(t("第 {n} 项未指定目标位置、新名称或移至回收站", { n: i + 1 }));
     out.push({ ...target(r), toPath, name, trash });
   });
   if (bad.length) throw unknownHandles(bad);
@@ -1050,7 +1050,7 @@ export function playState(position: number | undefined, duration: number | undef
   if (p >= 0.98 * d || d - p <= 10) return shown ? t("看过") : "Watched";
   if (p < 5) return shown ? t("打开过") : "Opened";
   const percent = Math.floor((p / d) * 100);
-  return shown ? t("没看完 {n}%", { n: percent }) : `Unfinished ${percent}%`;
+  return shown ? t("已观看 {n}%", { n: percent }) : `Unfinished ${percent}%`;
 }
 
 function size(n: number): string {
@@ -1705,14 +1705,14 @@ export async function runTurn(deps: AgentDeps, state: ConversationState, userTex
   const estimate = (): TokenRange => (turn.mode === "tools" ? chatEstimate(chatRequest()) : estimateTokens(jsonRequest(), STEP_OUTPUT));
   const switchToJson = () => {
     turn.mode = "json";
-    turn.modeNote = t("当前模型不支持工具调用，已切到单步模式（一次只能查一项，会慢一点）。");
+    turn.modeNote = t("当前模型不支持工具调用，已切换至单步模式（每次仅查询一项，速度较慢）。");
     plain = toPlain(chatMessages);
   };
   if (turn.mode === "json") plain = toPlain(chatMessages);
 
   const used = () => turn.usage.input + turn.usage.output;
   const overBudget = () => used() + estimate().low > deps.budget;
-  const BUDGET_NOTICE = t("这次对话到了用量上限，先停在这儿，前面查到的结果都留着。");
+  const BUDGET_NOTICE = t("本次对话已达用量上限并暂停，已获取的结果仍会保留。");
 
   // One consent for the whole turn, before anything is sent.
   if (overBudget()) return finish("budget", BUDGET_NOTICE);
@@ -1720,9 +1720,9 @@ export async function runTurn(deps: AgentDeps, state: ConversationState, userTex
     const go = await deps.consent({
       title: t("这一轮要发给模型的内容"),
       sends: t(
-        "会把你现在发的问题、前面聊过的内容，以及工具查到的文件名、路径、大小、时间、回收站/分享/传输任务元数据（每页最多 40 条）发给模型——对话里如果写了敏感信息也会一并带上。",
+        "将发送您本次输入的问题、历史对话记录，以及工具查询到的文件名、路径、大小、时间、回收站/分享/传输任务元数据（每页最多 40 条）；对话中包含的敏感信息也会一并发送。",
       ),
-      notSent: t("工具查询不会主动读取并发送文件内容、字幕、账号凭据、下载或分享链接、提取码、本地路径或 TMDB 资料（除非你自己贴在了提问里）。"),
+      notSent: t("工具查询不会主动读取并发送文件内容、字幕、账号凭据、下载或分享链接、提取码、本地路径或 TMDB 资料（除非您在提问中主动提供）。"),
       estimate: estimate(),
       level: "metadata",
     });
@@ -1896,5 +1896,5 @@ export async function runTurn(deps: AgentDeps, state: ConversationState, userTex
     const result = await execute(call.tool, call.args);
     plain.push({ role: "user", content: `Tool ${call.tool} results:\n${result}` });
   }
-  return finish("limit", t("这一轮调用了 {n} 次模型，先暂停一下，你可以接着追问。", { n: MAX_CALLS }));
+  return finish("limit", t("本轮已调用 {n} 次模型并暂停，您可以继续提问。", { n: MAX_CALLS }));
 }

@@ -6,7 +6,7 @@ export default {
   "分享中": { tw: "分享中", en: "Shared", ja: "共有中", ko: "공유 중" },
   "操作目标": { tw: "操作目標", en: "Operation targets", ja: "操作対象", ko: "작업 대상" },
   "操作进度": { tw: "操作進度", en: "Operation progress", ja: "操作の進捗", ko: "작업 진행 상황" },
-  "确认没问题再点下面执行，避免误操作。": { tw: "確認沒問題再點下面執行，避免誤操作。", en: "Double-check the items above before running.", ja: "問題ないか確認してから実行してください。", ko: "실수를 방지하려면 위 내용을 확인한 뒤 실행하세요." },
+  "请核对以上项目后再执行，避免误操作。": { tw: "請核對以上項目後再執行，避免誤操作。", en: "Double-check the items above before running.", ja: "問題ないか確認してから実行してください。", ko: "실수를 방지하려면 위 내용을 확인한 뒤 실행하세요." },
   "整理方案": { tw: "整理方案", en: "Plan preview", ja: "整理プラン", ko: "정리 미리보기" },
   "清理预览 · {n} 项": { tw: "清理預覽 · {n} 項", en: (p) => `Cleanup preview · ${items(p.n, "1 item", `${p.n} items`)}`, ja: "クリーンアップのプレビュー · {n} 件", ko: "정리 삭제 미리보기 · {n}개" },
   "只更新预览，不会执行文件操作。": { tw: "僅更新預覽，不會執行檔案操作。", en: "Updates the preview only; no file operations are executed.", ja: "プレビューのみを更新し、ファイル操作は実行しません。", ko: "미리보기만 업데이트하며 파일 작업을 실행하지 않습니다." },
@@ -116,7 +116,7 @@ export default {
   "忽略选中的提醒": { tw: "忽略選中的提醒", en: "Ignore selected reminders", ja: "選んだ通知を無視", ko: "선택한 알림 무시" },
   "一起看整理建议": { tw: "一起看整理建議", en: "Review selected files", ja: "整理案をまとめて見る", ko: "정리 제안 함께 보기" },
   "批量整理 · {n} 个新文件": { tw: "批次整理 · {n} 個新檔案", en: "Organize · {n} new files", ja: "一括整理 · 新着 {n} 件", ko: "일괄 정리 · 새 파일 {n}개" },
-  "有些新文件还没进本地索引，等几秒再试试": { tw: "有些新檔案還沒進本機索引，等幾秒再試試", en: "Some new files aren't in the local index yet—try again in a moment.", ja: "一部の新着ファイルはまだローカル索引に入っていません。少し待ってから再試行してください。", ko: "일부 새 파일이 아직 로컬 색인에 들어오지 않았습니다. 잠시 후 다시 시도하세요." },
+  "部分新文件尚未进入本地索引，请稍后再试": { tw: "部分新檔案尚未進入本機索引，請稍後再試", en: "Some new files aren't in the local index yet. Try again in a moment.", ja: "一部の新着ファイルはまだローカル索引に入っていません。少し待ってから再試行してください。", ko: "일부 새 파일이 아직 로컬 색인에 들어오지 않았습니다. 잠시 후 다시 시도하세요." },
   "更新新文件提醒": { tw: "更新新檔案提醒", en: "Update new-file reminders", ja: "新着ファイル通知を更新", ko: "새 파일 알림 업데이트" },
   "项可执行": { tw: "項可執行", en: "actionable", ja: "件実行可能", ko: "개 실행 가능" },
   "「{name}」": { tw: "「{name}」", en: "“{name}”", ja: "「{name}」", ko: "‘{name}’" },
@@ -150,7 +150,7 @@ export default {
   // ---------- AssistantPlan ----------
   "保存处理决定": { tw: "儲存處理決定", en: "Save review decisions", ja: "処理の判断を保存", ko: "처리 결정 저장" },
   "处理决定已保存，云盘文件未改动": { tw: "處理決定已儲存，雲端硬碟檔案未變更", en: "Review decisions saved; drive files are unchanged", ja: "判断を保存しました。クラウド上のファイルは変更していません", ko: "처리 결정을 저장했습니다. 클라우드 파일은 변경되지 않았습니다" },
-  "还有 {n} 条新文件提醒待定：没决定怎么处理或执行失败的还会留着。": { tw: "還有 {n} 則新檔案提醒待定：沒決定怎麼處理或執行失敗的還會留著。", en: "{n} new-file reminders still open—anything undecided or failed stays in the list.", ja: "新着ファイルの通知が {n} 件残っています。未決定または失敗した項目はそのまま残ります。", ko: "새 파일 알림 {n}개가 아직 남아 있습니다. 결정하지 않았거나 실패한 항목은 목록에 남습니다." },
+  "仍有 {n} 条新文件提醒待处理：未决定或执行失败的项目将保留在列表中。": { tw: "仍有 {n} 則新檔案提醒待處理：未決定或執行失敗的項目將保留在列表中。", en: "{n} new-file reminders still open—anything undecided or failed stays in the list.", ja: "新着ファイルの通知が {n} 件残っています。未決定または失敗した項目はそのまま残ります。", ko: "새 파일 알림 {n}개가 아직 남아 있습니다. 결정하지 않았거나 실패한 항목은 목록에 남습니다." },
   "保留并完成": { tw: "保留並完成", en: "Keep as is · done", ja: "そのままで完了", ko: "그대로 유지하고 완료" },
   "确认保留": { tw: "確認保留", en: "Confirm keep", ja: "現状維持を確認", ko: "유지 확인" },
   "全部确认保留": { tw: "全部確認保留", en: "Confirm keep all", ja: "すべて現状維持を確認", ko: "모두 유지 확인" },
@@ -244,8 +244,8 @@ export default {
   尚未执行: { tw: "尚未執行", en: "Not run yet", ja: "未実行", ko: "아직 실행 안 함" },
   "正在准备计划…": { tw: "正在準備計畫…", en: "Preparing the plan…", ja: "プランを準備しています…", ko: "계획을 준비하는 중…" },
   "整理计划 · {account}": { tw: "整理計畫 · {account}", en: "Organize plan · {account}", ja: "整理プラン · {account}", ko: "정리 계획 · {account}" },
-  "先核对清楚去哪儿，再决定改不改": {
-    tw: "先核對清楚去哪裡，再決定改不改",
+  "请先核对目标路径，再决定是否修改": {
+    tw: "請先核對目標路徑，再決定是否變更",
     en: "Check where everything goes before making any changes.",
     ja: "どこへ移るか確認してから実行しましょう。",
     ko: "어디로 가는지 먼저 확인한 뒤 실행하세요.",
@@ -256,15 +256,15 @@ export default {
   补充要求: { tw: "補充要求", en: "Add instructions", ja: "追加の指示", ko: "추가 요청" },
   命名模板: { tw: "命名範本", en: "Naming template", ja: "命名テンプレート", ko: "이름 템플릿" },
   自定义模板: { tw: "自訂範本", en: "Custom templates", ja: "カスタムテンプレート", ko: "사용자 지정 템플릿" },
-  "补充要求，例如：动漫单独放、特别篇放进 Season 00": {
-    tw: "補充要求，例如：動漫單獨放、特別篇放進 Season 00",
+  "补充要求，例如：动漫单独存放、特别篇放入 Season 00": {
+    tw: "補充要求，例如：動漫單獨存放、特別篇放入 Season 00",
     en: "Add instructions, e.g. keep anime separate, put specials in Season 00",
     ja: "追加の指示（例：アニメは別に、特別編は Season 00 へ）",
     ko: "추가 요청 (예: 애니메이션은 따로, 스페셜은 Season 00에)",
   },
   重新生成: { tw: "重新產生", en: "Regenerate", ja: "再生成", ko: "다시 생성" },
-  "已取消的勾选和改过的名称会保留；需要模型时会先问你。": {
-    tw: "已取消的勾選和改過的名稱會保留；需要模型時會先問你。",
+  "已取消的选择和修改后的名称将会保留；需要使用模型时会先征求您的确认。": {
+    tw: "已取消的選取與修改後的名稱將會保留；需要使用模型時會先徵求您的確認。",
     en: "Unticked items and edited names are kept; you'll be asked before a model is used.",
     ja: "外したチェックと変更した名前は保持されます。モデルが必要な場合は先に確認します。",
     ko: "해제한 선택과 바꾼 이름은 유지됩니다. 모델이 필요하면 먼저 묻습니다.",
@@ -289,8 +289,8 @@ export default {
     ja: "モデルを設定すると残り {n} グループを識別できます",
     ko: "모델을 설정하면 남은 {n}개 그룹을 인식할 수 있습니다",
   },
-  "这次不会永久删除任何文件；动手前还会再检查一遍状态，重名或挪过位置的文件会自动跳过，并在结果里写清楚。": {
-    tw: "這次不會永久刪除任何檔案；執行前還會再檢查一次狀態，重名或移動過位置的檔案會自動略過，並在結果裡寫清楚。",
+  "本次不会永久删除任何文件；执行前会再次校验云盘状态，重名或已移动的文件将自动跳过并在结果中说明。": {
+    tw: "本次不會永久刪除任何檔案；執行前會再次校驗雲端硬碟狀態，重名或已移動的檔案將自動略過並在結果中說明。",
     en: "Nothing gets permanently deleted. Before running, PKP checks the drive again—any renamed or moved items are skipped cleanly in the results.",
     ja: "完全削除は行いません。実行前に状態を確認し直し、名前変更や移動があった項目はスキップして結果に表示します。",
     ko: "이번에는 영구 삭제되지 않습니다. 실행 전에 상태를 다시 확인하며 이름이 바뀌거나 옮겨진 항목은 건너뛰고 결과에 표시합니다.",
@@ -315,16 +315,16 @@ export default {
   整理: { tw: "整理", en: "Organize", ja: "整理", ko: "정리" },
   "{n} 项 · {status}": { tw: "{n} 項 · {status}", en: (p) => `${items(p.n, "1 item", `${p.n} items`)} · ${p.status}`, ja: "{n} 項目 · {status}", ko: "{n}개 항목 · {status}" },
   可撤销: { tw: "可復原", en: "Can undo", ja: "元に戻せます", ko: "실행 취소 가능" },
-  "整理建议直接来自本地索引；拿不准的才问你配好的 AI，改动云盘一定要你点确认。": {
-    tw: "整理建議直接來自本機索引；拿不準的才問你設好的 AI，更動雲端硬碟一定要你點確認。",
+  "整理建议直接来自本地索引；仅不确定项目会提交给已配置的 AI，修改云盘前均需您确认。": {
+    tw: "整理建議直接來自本機索引；僅不確定項目會提交給已設定的 AI，變更雲端硬碟前均需您確認。",
     en: "Suggestions start from your local index; your model only steps in when needed, and drive changes always wait for your confirmation.",
     ja: "提案はローカルインデックスから作られ、必要なときだけ AI に頼ります。ドライブの変更は必ずあなたが確認します。",
     ko: "제안은 로컬 인덱스로 만들고 필요할 때만 AI를 쓰며, 드라이브 변경은 반드시 직접 확인한 뒤 실행됩니다.",
   },
   "刚存进来的新文件": { tw: "剛存進來的新檔案", en: "New file · your call", ja: "新着ファイル", ko: "새로 들어온 파일" },
   不用模型: { tw: "不用模型", en: "No model", ja: "モデル不要", ko: "모델 불필요" },
-  "只是忽略提醒，云盘里的文件照样留着": {
-    tw: "只是忽略提醒，雲端硬碟裡的檔案照樣留著",
+  "仅忽略此提醒，云盘中的文件不受影响": {
+    tw: "僅忽略此提醒，雲端硬碟中的檔案不受影響",
     en: "Just hides this reminder—your drive files stay untouched",
     ja: "通知を消すだけで、クラウド上のファイルには触れません",
     ko: "알림만 지울 뿐 드라이브 파일에는 손대지 않습니다",
@@ -344,25 +344,25 @@ export default {
     ja: "{where} · ルールで先に振り分け、残りを AI に",
     ko: "{where} · 규칙으로 먼저 분류하고 나머지는 AI에게",
   },
-  找上次没看完的视频: { tw: "找上次沒看完的影片", en: "Find videos I didn't finish", ja: "見終わっていない動画を探す", ko: "다 보지 않은 동영상 찾기" },
-  "只在本地索引里查，不发请求给模型": {
-    tw: "只在本機索引裡查，不發請求給模型",
+  查找未看完的视频: { tw: "尋找未看完的影片", en: "Find videos I didn't finish", ja: "見終わっていない動画を探す", ko: "다 보지 않은 동영상 찾기" },
+  "仅在本地索引中查询，不向模型发送请求": {
+    tw: "僅在本機索引中查詢，不向模型傳送請求",
     en: "Searches locally—never calls an AI model",
     ja: "ローカルインデックスだけで検索（モデルは使いません）",
     ko: "로컬 인덱스에서만 찾으며 모델 요청 없음",
   },
   继续上一次整理: { tw: "繼續上一次整理", en: "Continue last organize", ja: "前回の整理を続ける", ko: "지난 정리 계속" },
-  "会先填进下面输入框，你点发送才会发出去": {
-    tw: "會先填進下面輸入框，你點傳送才會送出去",
+  "将先填入下方输入框，点击发送后才会提交": {
+    tw: "將先填入下方輸入框，點擊傳送後才會送出",
     en: "Prefills the box below; nothing is sent until you press Send",
     ja: "下の入力欄に入力します。送信ボタンを押すまで送られません",
     ko: "아래 입력란에 채워지며 전송을 누르기 전에는 보내지 않습니다",
   },
-  "搜索和规则整理全都在本机跑；能对上 TMDB 的剧名和片名直接采用，不发给模型，拿不准的才留给你决定。": {
-    tw: "搜尋和規則整理全都在本機跑；能對上 TMDB 的劇名和片名直接採用，不傳給模型，拿不準的才留給你決定。",
-    en: "Search and rule-based sorting run on this computer. Matched TMDB titles are used directly without asking a model; unclear ones stay up to you.",
-    ja: "検索とルール整理はすべてこのコンピュータで処理します。TMDB で確定できた作品名はモデルに送らずそのまま使い、迷うものだけあなたが決めます。",
-    ko: "검색과 규칙 정리는 모두 이 컴퓨터에서 처리됩니다. TMDB로 확인된 작품명은 모델에 보내지 않고 바로 쓰며, 애매한 항목만 직접 결정합니다.",
+  "搜索与规则整理均在本机运行；能匹配 TMDB 的剧名与片名将直接采用且不发送给模型，不确定的项目交由您决定。": {
+    tw: "搜尋與規則整理均在本機執行；能匹配 TMDB 的劇名與片名將直接採用且不傳送給模型，不確定的項目交由您決定。",
+    en: "Search and rule-based sorting run locally. Matched TMDB titles are used directly without asking a model; uncertain ones stay up to you.",
+    ja: "検索とルール整理はすべてローカルで処理します。TMDB で確定できた作品名はモデルに送らずそのまま使い、迷うものだけあなたが決めます。",
+    ko: "검색과 규칙 정리는 모두 로컬에서 처리됩니다. TMDB로 확인된 작품명은 모델에 보내지 않고 바로 쓰며, 애매한 항목만 직접 결정합니다.",
   },
   "每次确认还是记住选择，由你决定": {
     tw: "每次確認還是記住選擇，由你決定",
@@ -375,22 +375,22 @@ export default {
   "读取最近任务失败：{error}": { tw: "讀取最近任務失敗：{error}", en: "Couldn't load recent tasks: {error}", ja: "最近のタスクを読み込めません：{error}", ko: "최근 작업을 불러오지 못했습니다: {error}" },
   还没有整理记录: { tw: "還沒有整理紀錄", en: "No organize history yet", ja: "整理の紀錄はまだありません", ko: "아직 정리 기록이 없습니다" },
   最近对话: { tw: "最近對話", en: "Recent conversations", ja: "最近の会話", ko: "최근 대화" },
-  保存在这台电脑: { tw: "儲存在這台電腦", en: "Saved on this computer", ja: "このコンピュータに保存", ko: "이 컴퓨터에 저장됨" },
+  保存在本机: { tw: "儲存在本機", en: "Saved locally", ja: "ローカルに保存", ko: "로컬에 저장됨" },
   还没有对话: { tw: "還沒有對話", en: "No conversations yet", ja: "会話はまだありません", ko: "아직 대화가 없습니다" },
   未命名的对话: { tw: "未命名的對話", en: "Untitled conversation", ja: "無題の会話", ko: "제목 없는 대화" },
   "{n} 轮": { tw: "{n} 輪", en: (p) => items(p.n, "1 turn", `${p.n} turns`), ja: "{n} 往復", ko: "{n}회" },
   计划尚未执行: { tw: "計畫尚未執行", en: "Plan not run", ja: "プラン未実行", ko: "계획 미실행" },
   "删除对话「{name}」": { tw: "刪除對話「{name}」", en: "Delete conversation “{name}”", ja: "会話「{name}」を削除", ko: "대화 ‘{name}’ 삭제" },
   删除对话: { tw: "刪除對話", en: "Delete conversation", ja: "会話を削除", ko: "대화 삭제" },
-  "删掉对话只清除聊天记录，已经做过的整理和结果记录都在。": {
-    tw: "刪掉對話只會清除聊天紀錄，已經做過的整理和結果紀錄都在。",
+  "删除对话仅清除聊天记录，已执行的整理与结果记录仍会保留。": {
+    tw: "刪除對話僅清除聊天紀錄，已執行的整理與結果紀錄仍會保留。",
     en: "Deleting removes only the chat history on this computer; finished organizes and their records stay untouched.",
     ja: "削除すると会話履歴だけが消え、実行済みの整理と結果の記録はそのまま残ります。",
     ko: "대화를 지워도 채팅 기록만 사라지며, 이미 실행한 정리와 작업 결과는 그대로 남습니다.",
   },
 
   // ---------- AssistantCard ----------
-  待你确认: { tw: "待你確認", en: "Needs your OK", ja: "確認待ち", ko: "확인 대기" },
+  待确认: { tw: "待確認", en: "Needs confirmation", ja: "確認待ち", ko: "확인 대기" },
   正在执行: { tw: "正在執行", en: "Running", ja: "実行中", ko: "실행 중" },
   已执行: { tw: "已執行", en: "Done", ja: "実行済み", ko: "실행됨" },
   未成功: { tw: "未成功", en: "Failed", ja: "失敗", ko: "실패" },
@@ -536,14 +536,14 @@ export default {
   需要模型时再连接: { tw: "需要模型時再連線", en: "Connect a model when needed", ja: "必要なときにモデルを接続", ko: "필요할 때 모델 연결" },
   "本地建议已经准备好。": { tw: "本機建議已經準備好。", en: "Local suggestions are ready.", ja: "ローカルの提案は準備できています。", ko: "로컬 제안이 준비되었습니다." },
   "这一步需要连接模型。": { tw: "這一步需要連線模型。", en: "This step needs a model.", ja: "この手順にはモデルの接続が必要です。", ko: "이 단계에는 모델 연결이 필요합니다." },
-  "还没接上你的模型。整理方案和本地搜索都能直接用；想继续问 AI，在这里填上就行。": {
-    tw: "還沒接上你的模型。整理方案和本機搜尋都能直接用；想繼續問 AI，在這裡填上就好。",
+  "尚未配置模型。整理方案和本地搜索均可直接使用；如需继续向 AI 提问，可在此填写配置。": {
+    tw: "尚未設定模型。整理方案與本機搜尋均可直接使用；如需繼續向 AI 提問，可在此填寫設定。",
     en: "No model connected yet—organize plans and local search still work. Add one here whenever you want AI's help.",
     ja: "モデルはまだ接続されていません。整理プランとローカル検索はすぐ使えますし、AI に相談したくなったらいつでもここで設定できます。",
     ko: "아직 모델이 연결되지 않았습니다. 정리 계획과 로컬 검색은 바로 쓸 수 있고, AI에게 묻고 싶을 때 여기서 설정하면 됩니다.",
   },
-  "还没接上你的模型。本地搜索和规则整理不用模型就能跑；想接着问 AI，在这里填上就行。": {
-    tw: "還沒接上你的模型。本機搜尋和規則整理不用模型就能跑；想接著問 AI，在這裡填上就好。",
+  "尚未配置模型。本地搜索和规则整理无需模型即可使用；如需使用 AI 对话，可在此填写配置。": {
+    tw: "尚未設定模型。本機搜尋與規則整理無需模型即可使用；如需使用 AI 對話，可在此填寫設定。",
     en: "No model connected yet—local search and rule-based organizing don't need one. Add a model here whenever you want to ask AI.",
     ja: "モデルはまだ接続されていません。ローカル検索とルール整理はモデル不要で使え、AI に聞きたくなったらいつでもここで設定できます。",
     ko: "아직 모델이 연결되지 않았습니다. 로컬 검색과 규칙 정리는 모델 없이도 작동하며, AI에게 묻고 싶을 때 여기서 설정하면 됩니다.",
@@ -568,16 +568,16 @@ export default {
   "本机服务，不需要 API Key。": { tw: "本機服務，不需要 API Key。", en: "Local service; no API key needed.", ja: "ローカルサービスのため API Key は不要です。", ko: "로컬 서비스이므로 API Key가 필요 없습니다." },
   模型名: { tw: "模型名稱", en: "Model name", ja: "モデル名", ko: "모델 이름" },
   "例如 qwen-plus": { tw: "例如 qwen-plus", en: "e.g. qwen-plus", ja: "例：qwen-plus", ko: "예: qwen-plus" },
-  "这台电脑没有可用的{keychain}，无法保存 API Key。": {
-    tw: "這台電腦沒有可用的{keychain}，無法儲存 API Key。",
-    en: "{keychain} isn't available on this computer, so the API key can't be saved.",
+  "本机没有可用的{keychain}，无法保存 API Key。": {
+    tw: "本機沒有可用的{keychain}，無法儲存 API Key。",
+    en: "{keychain} isn't available on this device, so the API key can't be saved.",
     ja: "このコンピュータでは{keychain}を利用できないため、API Key を保存できません。",
     ko: "이 컴퓨터에서 {keychain}을(를) 사용할 수 없어 API Key를 저장할 수 없습니다.",
   },
   "如何获取 Key": { tw: "如何取得 Key", en: "How to get a key", ja: "Key の取得方法", ko: "Key 받는 방법" },
   连接并继续: { tw: "連線並繼續", en: "Connect and continue", ja: "接続して続ける", ko: "연결 후 계속" },
-  "密钥只保存在本机{keychain}。连接后发送任何文件信息前，仍会先问你。": {
-    tw: "金鑰只儲存在本機{keychain}。連線後傳送任何檔案資訊前，仍會先問你。",
+  "密钥仅保存在本机{keychain}。连接后发送任何文件信息前，仍会先征求您的确认。": {
+    tw: "金鑰僅儲存在本機{keychain}。連線後傳送任何檔案資訊前，仍會先徵求您的確認。",
     en: "The key stays in {keychain} on this computer. Even once connected, you'll be asked before any file info is sent.",
     ja: "キーはこのコンピュータの{keychain}にのみ保存されます。接続後も、ファイル情報を送信する前に確認します。",
     ko: "키는 이 컴퓨터의 {keychain}에만 저장됩니다. 연결 후에도 파일 정보를 보내기 전에 먼저 묻습니다.",
@@ -607,8 +607,8 @@ export default {
   移动与改名: { tw: "移動與重新命名", en: "Move & rename", ja: "移動と名前変更", ko: "이동 및 이름 변경" },
   "新建 {n} 个文件夹": { tw: "新建 {n} 個資料夾", en: (p) => items(p.n, "1 new folder", `${p.n} new folders`), ja: "新規フォルダ {n} 個", ko: "새 폴더 {n}개" },
   "另有 {n} 处": { tw: "另有 {n} 處", en: (p) => items(p.n, "1 more place", `${p.n} more places`), ja: "ほか {n} か所", ko: "외 {n}곳" },
-  "动手前还会再对一遍云盘最新状态；期间改过名、移走或删掉的文件会跳过，并在结果里写清楚。": {
-    tw: "執行前還會再確認一次雲端硬碟最新狀態；期間改過名、移走或刪掉的檔案會略過，並在結果裡寫清楚。",
+  "执行前会再次核对云盘最新状态；期间已重命名、移动或删除的文件将自动跳过并在结果中说明。": {
+    tw: "執行前會再次核對雲端硬碟最新狀態；期間已重新命名、移動或刪除的檔案將自動略過並在結果中說明。",
     en: "PKP checks the latest drive state right before running—anything renamed, moved, or deleted in the meantime is skipped and listed in the results.",
     ja: "実行直前にドライブの最新状態を再確認します。その間に名前変更・移動・削除された項目はスキップし、結果に表示します。",
     ko: "실행 직전에 드라이브 최신 상태를 다시 확인합니다. 그동안 이름이 바뀌거나 이동·삭제된 항목은 건너뛰고 결과에 안내합니다.",
@@ -643,8 +643,8 @@ export default {
     ko: "이 대화는 {who}의 것입니다. 실행 대기 중인 계획이 없습니다.",
   },
   "一段对话 · 一份计划": { tw: "一段對話 · 一份計畫", en: "One conversation · one plan", ja: "1 つの会話 · 1 つのプラン", ko: "대화 하나 · 계획 하나" },
-  "说一句想找什么、想怎么整理。本地能完成的先在本地完成，需要模型时会先问你。": {
-    tw: "說一句想找什麼、想怎麼整理。本機能完成的先在本機完成，需要模型時會先問你。",
+  "输入您想查找的内容或整理需求。本地可完成的操作将在本机执行，需要使用模型时会先征求您的确认。": {
+    tw: "輸入您想尋找的內容或整理需求。本機可完成的操作將在本機執行，需要使用模型時會先徵求您的確認。",
     en: "Say what to find or how to organize. Whatever can be done locally is done locally; you'll be asked before a model is used.",
     ja: "探したいものや整理の仕方を一言どうぞ。ローカルでできることはローカルで行い、モデルが必要なときは先に確認します。",
     ko: "무엇을 찾거나 어떻게 정리할지 말해 주세요. 로컬에서 가능한 일은 로컬에서 처리하고, 모델이 필요하면 먼저 묻습니다.",
@@ -708,8 +708,8 @@ export default {
     ja: "{n} 項目の名前をまとめて変更",
     ko: "{n}개 항목 이름 일괄 변경",
   },
-  "只改名字，不移动位置；生成计划后逐项确认才会执行。": {
-    tw: "只改名稱，不移動位置；產生計畫後逐項確認才會執行。",
+  "仅重命名，不移动位置；生成计划后逐项确认才会执行。": {
+    tw: "僅重新命名，不移動位置；產生計畫後逐項確認才會執行。",
     en: "Only names change, not locations; nothing runs until you confirm each item in the plan.",
     ja: "名前だけを変更し、場所は動かしません。プランを作成して項目ごとに確認してから実行します。",
     ko: "이름만 바꾸고 위치는 옮기지 않습니다. 계획을 만든 뒤 항목별로 확인해야 실행됩니다.",
@@ -741,7 +741,7 @@ export default {
     ja: "{n} 項目の名前が変わります",
     ko: "{n}개 항목 이름이 바뀝니다",
   },
-  没有名字会改变: { tw: "沒有名稱會改變", en: "No names will change", ja: "変わる名前はありません", ko: "바뀌는 이름이 없습니다" },
+  无名称变更: { tw: "無名稱變更", en: "No names will change", ja: "変わる名前はありません", ko: "바뀌는 이름이 없습니다" },
   "{n} 项不变": { tw: "{n} 項不變", en: (p) => `${items(p.n, "1 item", `${p.n} items`)} unchanged`, ja: "{n} 項目は変更なし", ko: "{n}개 항목 변경 없음" },
   不变: { tw: "不變", en: "Unchanged", ja: "変更なし", ko: "변경 없음" },
   "其余 {n} 项在计划里查看": {
@@ -794,8 +794,8 @@ export default {
   "云添加中有未提交的内容，请先完成或清除": { tw: "雲端新增中有尚未提交的內容，請先完成或清除", en: "Finish or clear the unsubmitted cloud-add contents first", ja: "クラウド追加の未送信内容を先に完了または消去してください", ko: "먼저 클라우드 추가의 미제출 내용을 완료하거나 지우세요" },
   "云添加任务": { tw: "雲端新增任務", en: "Cloud-add task", ja: "クラウド追加タスク", ko: "클라우드 추가 작업" },
   "云端目标：{path}": { tw: "雲端目標：{path}", en: "Cloud destination: {path}", ja: "クラウドの保存先：{path}", ko: "클라우드 대상: {path}" },
-  "删掉上传记录会停掉还没传完的任务并清除续传进度；电脑原文件和传好的云端文件都会留着。": { tw: "刪掉上傳紀錄會停掉還沒傳完的任務並清除續傳進度；電腦原檔和傳好的雲端檔案都會留著。", en: "Removes upload records, stopping unfinished uploads and clearing resume progress; your local originals and completed cloud files stay untouched.", ja: "未完了のアップロードを停止して再開用データを消去します。ローカルの元ファイルと完了済みのクラウドファイルはそのまま残ります。", ko: "미완료 업로드를 멈추고 이어올리기 진행 상황을 지웁니다. 로컬 원본과 이미 올라간 클라우드 파일은 그대로 남습니다." },
-  "删掉下载记录会停掉还没下完的任务并删掉临时分片；下好的文件和云端文件都会留着。": { tw: "刪掉下載紀錄會停掉還沒下完的任務並刪掉暫存分片；下好的檔案和雲端檔案都會留著。", en: "Removes download records, stopping unfinished downloads and clearing temp parts; completed files and cloud files stay untouched.", ja: "未完了のダウンロードを停止して一時データを削除します。完了済みのファイルとクラウドのファイルはそのまま残ります。", ko: "미완료 다운로드를 멈추고 임시 조각을 지웁니다. 이미 받은 파일과 클라우드 파일은 그대로 남습니다." },
+  "删除上传记录将停止未完成的任务并清除续传进度；本地原文件和已上传的云端文件均会保留。": { tw: "刪除上傳紀錄將停止未完成的任務並清除續傳進度；本機原檔案與已上傳的雲端檔案均會保留。", en: "Removes upload records, stopping unfinished uploads and clearing resume progress; your local originals and completed cloud files stay untouched.", ja: "未完了のアップロードを停止して再開用データを消去します。ローカルの元ファイルと完了済みのクラウドファイルはそのまま残ります。", ko: "미완료 업로드를 멈추고 이어올리기 진행 상황을 지웁니다. 로컬 원본과 이미 올라간 클라우드 파일은 그대로 남습니다." },
+  "删除下载记录将停止未完成的任务并删除临时分片；已下载的文件和云端文件均会保留。": { tw: "刪除下載紀錄將停止未完成的任務並刪除臨時分片；已下載的檔案與雲端檔案均會保留。", en: "Removes download records, stopping unfinished downloads and clearing temp parts; completed files and cloud files stay untouched.", ja: "未完了のダウンロードを停止して一時データを削除します。完了済みのファイルとクラウドのファイルはそのまま残ります。", ko: "미완료 다운로드를 멈추고 임시 조각을 지웁니다. 이미 받은 파일과 클라우드 파일은 그대로 남습니다." },
   "仅移除云添加任务，保留已保存的云端文件。": { tw: "僅移除雲端新增任務，保留已儲存的雲端檔案。", en: "Removes only the cloud-add task; saved cloud files are kept.", ja: "クラウド追加タスクのみを削除し、保存済みのクラウドファイルは保持します。", ko: "클라우드 추가 작업만 제거하며 저장된 클라우드 파일은 유지합니다." },
   "从回收站恢复": { tw: "從垃圾桶還原", en: "Restore from Trash", ja: "ゴミ箱から復元", ko: "휴지통에서 복원" },
   "传输任务": { tw: "傳輸任務", en: "Transfer tasks", ja: "転送タスク", ko: "전송 작업" },
@@ -812,7 +812,7 @@ export default {
   "将这些项目从回收站恢复，不会永久删除文件。": { tw: "將這些項目從垃圾桶還原，不會永久刪除檔案。", en: "Restore these items from Trash; no files are permanently deleted.", ja: "これらの項目をゴミ箱から復元します。ファイルの完全削除は行いません。", ko: "이 항목들을 휴지통에서 복원하며 파일을 영구 삭제하지 않습니다." },
   "将重新开始下载；已有下载进度可能被丢弃。": { tw: "將重新開始下載；已有下載進度可能被捨棄。", en: "Restart the download; existing progress may be discarded.", ja: "ダウンロードを最初からやり直します。既存の進捗が失われる場合があります。", ko: "다운로드를 다시 시작하며 기존 진행 상황이 삭제될 수 있습니다." },
   "已停止提交": { tw: "已停止提交", en: "Submission stopped", ja: "送信を停止しました", ko: "제출 중지됨" },
-  "剩下的已经停下了；不过前面发出去的操作撤不回，可能还会陆续完成。": { tw: "剩下的已經停下了；不過前面送出去的操作無法回復，可能還會陸續完成。", en: "Stopped sending the rest; anything already submitted can't be rolled back and may still finish.", ja: "残りの送信を止めました。すでに送信した分は取り消せず、そのまま完了することがあります。", ko: "나머지 제출을 멈췄습니다. 이미 보낸 작업은 되돌릴 수 없어 완료될 수 있습니다." },
+  "已停止提交剩余项目；已发出的操作无法撤回，仍可能陆续完成。": { tw: "已停止提交剩餘項目；已送出的操作無法撤回，仍可能陸續完成。", en: "Stopped sending the rest; anything already submitted can't be rolled back and may still finish.", ja: "残りの送信を止めました。すでに送信した分は取り消せず、そのまま完了することがあります。", ko: "나머지 제출을 멈췄습니다. 이미 보낸 작업은 되돌릴 수 없어 완료될 수 있습니다." },
   "已准备好操作": { tw: "已準備好操作", en: "Operation ready", ja: "操作の準備完了", ko: "작업 준비됨" },
   "已加载 {n} 项": { tw: "已載入 {n} 項", en: "Loaded {n} items", ja: "{n} 件を読み込みました", ko: "{n}개 항목 로드됨" },
   "已处理 {done} / {total} 项": { tw: "已處理 {done} / {total} 項", en: "Processed {done} / {total} items", ja: "{done} / {total} 件を処理しました", ko: "{done} / {total}개 항목 처리됨" },
@@ -830,7 +830,7 @@ export default {
   "操作目标：{n} 项": { tw: "操作目標：{n} 項", en: "Operation targets: {n} items", ja: "操作対象：{n} 件", ko: "작업 대상: {n}개" },
   "操作范围或账号已变化，请重新发起": { tw: "操作範圍或帳號已變更，請重新發起", en: "The scope or account changed. Start again", ja: "操作範囲またはアカウントが変更されました。やり直してください", ko: "작업 범위 또는 계정이 변경되었습니다. 다시 시작하세요" },
   "文件夹名称：{name}": { tw: "資料夾名稱：{name}", en: "Folder name: {name}", ja: "フォルダ名：{name}", ko: "폴더 이름: {name}" },
-  "没能准备好操作": { tw: "沒能準備好操作", en: "Could not prepare the operation", ja: "操作を準備できません", ko: "작업을 준비할 수 없습니다" },
+  "无法准备操作": { tw: "無法準備操作", en: "Could not prepare the operation", ja: "操作を準備できません", ko: "작업을 준비할 수 없습니다" },
   "无法查看分享": { tw: "無法檢視分享", en: "Could not view shares", ja: "共有を確認できません", ko: "공유를 조회할 수 없습니다" },
   "无法查看回收站": { tw: "無法檢視垃圾桶", en: "Could not view Trash", ja: "ゴミ箱を確認できません", ko: "휴지통을 조회할 수 없습니다" },
   "暂停所选下载，可稍后继续。": { tw: "暫停所選下載，可稍後繼續。", en: "Pause the selected downloads; resume them later.", ja: "選択したダウンロードを一時停止します。後で再開できます。", ko: "선택한 다운로드를 일시 중지하며 나중에 계속할 수 있습니다." },
@@ -848,9 +848,9 @@ export default {
   "此操作不接受目标文件夹": { tw: "此操作不接受目標資料夾", en: "This operation does not accept a destination folder", ja: "この操作には保存先フォルダを指定できません", ko: "이 작업에는 대상 폴더를 지정할 수 없습니다" },
   "添加种子": { tw: "新增種子", en: "Add torrent", ja: "トレントを追加", ko: "토렌트 추가" },
   "目标文件夹已变化，请重新选择": { tw: "目標資料夾已變更，請重新選擇", en: "The destination folder changed. Select it again", ja: "保存先フォルダが変更されました。再選択してください", ko: "대상 폴더가 변경되었습니다. 다시 선택하세요" },
-  "确认后会打开文件选择器，只上传你亲手选中的文件或文件夹。": { tw: "確認後會開啟檔案選擇器，只上傳你親手選取的檔案或資料夾。", en: "Opens your file picker so you only upload what you choose.", ja: "確認後にファイル選択画面が開き、自分で選んだファイルやフォルダだけをアップロードします。", ko: "확인 후 파일 선택기가 열리며 직접 고른 파일이나 폴더만 업로드합니다." },
-  "确认后会打开种子添加窗口；具体挑哪个文件、点提交还要你自己确认。": { tw: "確認後會開啟種子新增視窗；具體挑哪個檔案、點提交還要你自己確認。", en: "Opens the torrent window so you can review and submit it yourself.", ja: "確認後にトレント追加画面を開きます。内容の確認と送信はご自身で行います。", ko: "확인 후 토렌트 추가 창을 엽니다. 파일 선택과 제출은 직접 진행해야 합니다." },
-  "确认后会打开解压窗口，密码和要解哪些文件都在里面选，不会直接自动解压。": { tw: "確認後會開啟解壓縮視窗，密碼和要解哪些檔案都在裡面選，不會直接自動解壓。", en: "Opens extraction settings where you enter the password and choose files—nothing unpacks on its own.", ja: "確認後に展開画面を開き、パスワードや対象ファイルを選びます。勝手には展開しません。", ko: "확인 후 압축 해제 창을 열어 암호와 파일을 직접 고르며 자동으로 풀리지 않습니다." },
+  "确认后将打开文件选择器，仅上传您所选的文件或文件夹。": { tw: "確認後將開啟檔案選擇器，僅上傳您所選的檔案或資料夾。", en: "Opens your file picker so you only upload what you choose.", ja: "確認後にファイル選択画面が開き、自分で選んだファイルやフォルダだけをアップロードします。", ko: "확인 후 파일 선택기가 열리며 직접 고른 파일이나 폴더만 업로드합니다." },
+  "确认后将打开种子添加窗口，需由您手动选择文件并确认提交。": { tw: "確認後將開啟種子新增視窗，需由您手動選擇檔案並確認提交。", en: "Opens the torrent window so you can review and submit it yourself.", ja: "確認後にトレント追加画面を開きます。内容の確認と送信はご自身で行います。", ko: "확인 후 토렌트 추가 창을 엽니다. 파일 선택과 제출은 직접 진행해야 합니다." },
+  "确认后将打开解压窗口，需在窗口内输入密码并选择要解压的文件，不会自动解压。": { tw: "確認後將開啟解壓縮視窗，需在視窗內輸入密碼並選擇要解壓縮的檔案，不會自動解壓縮。", en: "Opens extraction settings where you enter the password and choose files—nothing unpacks on its own.", ja: "確認後に展開画面を開き、パスワードや対象ファイルを選びます。勝手には展開しません。", ko: "확인 후 압축 해제 창을 열어 암호와 파일을 직접 고르며 자동으로 풀리지 않습니다." },
   "确认执行": { tw: "確認執行", en: "Confirm execution", ja: "実行を確認", ko: "실행 확인" },
   "移除上传记录": { tw: "移除上傳記錄", en: "Remove upload record", ja: "アップロード履歴を削除", ko: "업로드 기록 제거" },
   "移除下载记录": { tw: "移除下載記錄", en: "Remove download record", ja: "ダウンロード履歴を削除", ko: "다운로드 기록 제거" },
@@ -861,12 +861,12 @@ export default {
   "继续设置": { tw: "繼續設定", en: "Continue setup", ja: "設定を続ける", ko: "설정 계속" },
   "该项请求已提交": { tw: "該項請求已提交", en: "This item's request was submitted", ja: "この項目のリクエストを送信しました", ko: "이 항목의 요청이 제출되었습니다" },
   "请选择可在线解压的压缩包": { tw: "請選擇可線上解壓縮的壓縮檔", en: "Select an archive that supports online extraction", ja: "オンライン展開に対応する圧縮ファイルを選択してください", ko: "온라인 압축 해제를 지원하는 압축 파일을 선택하세요" },
-  "下面还有更多结果，可以让 AI 接着查下一页。": { tw: "下面還有更多結果，可以讓 AI 接著查下一頁。", en: "More results are available—ask the assistant to fetch the next page.", ja: "まだ続きがあります。AI に次のページを読み込ませられます。", ko: "결과가 더 있습니다. AI에게 다음 페이지를 불러오라고 할 수 있습니다." },
+  "下方仍有更多结果，可让 AI 继续查询下一页。": { tw: "下方仍有更多結果，可讓 AI 繼續查詢下一頁。", en: "More results are available—ask the assistant to fetch the next page.", ja: "まだ続きがあります。AI に次のページを読み込ませられます。", ko: "결과가 더 있습니다. AI에게 다음 페이지를 불러오라고 할 수 있습니다." },
   "逐项结果": { tw: "逐項結果", en: "Per-item results", ja: "項目ごとの結果", ko: "항목별 결과" },
   "重新提交所选上传任务。": { tw: "重新提交所選上傳任務。", en: "Resubmit the selected upload tasks.", ja: "選択したアップロードタスクを再送信します。", ko: "선택한 업로드 작업을 다시 제출합니다." },
   "重新提交所选云添加任务。": { tw: "重新提交所選雲端新增任務。", en: "Resubmit the selected cloud-add tasks.", ja: "選択したクラウド追加タスクを再送信します。", ko: "선택한 클라우드 추가 작업을 다시 제출합니다." },
   "重试云添加任务": { tw: "重試雲端新增任務", en: "Retry cloud-add task", ja: "クラウド追加タスクを再試行", ko: "클라우드 추가 작업 다시 시도" },
-  "刚才的操作中断了（没有自动重试），建议先查一下现在的状态。": { tw: "剛才的操作中斷了（沒有自動重試），建議先查一下現在的狀態。", en: "The last action cut off and wasn't retried automatically—check its current status first.", ja: "直前の操作が中断されました（自動再試行なし）。現在の状態を確認してみてください。", ko: "이전 작업이 중단되어 자동 재시도하지 않았습니다. 현재 상태를 다시 확인해 보세요." },
-  "会把你现在发的问题、前面聊过的内容，以及工具查到的文件名、路径、大小、时间、回收站/分享/传输任务元数据（每页最多 40 条）发给模型——对话里如果写了敏感信息也会一并带上。": { tw: "會把你現在發的問題、前面聊過的內容，以及工具查到的檔名、路徑、大小、時間、垃圾桶/分享/傳輸任務中繼資料（每頁最多 40 筆）傳給模型——對話裡如果寫了敏感資訊也會一併帶上。", en: "Sends your message, chat history, and metadata retrieved by tools—file names, drive paths, sizes, dates, Trash items, share status, and transfer tasks (up to 40 per page). Any sensitive details you wrote in the chat are included too.", ja: "今回の質問、これまでのやり取り、ツールで調べたファイル名・パス・サイズ・日時・ゴミ箱/共有/転送状況（1ページ最大40件）をモデルに送ります。会話内に書いた機密情報もあわせて送信されます。", ko: "지금 보낸 질문, 이전 대화 내용, 도구로 조회한 파일 이름·경로·크기·시간·휴지통/공유/전송 메타데이터(페이지당 최대 40개)를 모델에 보냅니다. 대화에 적은 민감한 내용도 함께 전송됩니다." },
-  "工具查询不会主动读取并发送文件内容、字幕、账号凭据、下载或分享链接、提取码、本地路径或 TMDB 资料（除非你自己贴在了提问里）。": { tw: "工具查詢不會主動讀取並傳送檔案內容、字幕、帳號憑證、下載或分享連結、提取碼、本機路徑或 TMDB 資料（除非你自己貼在提問裡）。", en: "Tool lookups don't read or send file contents, subtitles, credentials, download/share links, passcodes, local paths, or TMDB data on their own (unless you pasted them into the chat).", ja: "ツールの参照ではファイルの中身、字幕、認証情報、ダウンロード/共有リンク、パスコード、ローカルパス、TMDB 情報は送りません（ご自身で会話に貼り付けた場合を除きます）。", ko: "도구 조회는 파일 내용, 자막, 계정 정보, 다운로드·공유 링크, 암호, 로컬 경로, TMDB 자료를 알아서 보내지 않습니다(질문에 직접 적은 내용은 제외)." },
+  "上一操作已中断（未自动重试），建议先查询当前状态。": { tw: "上一操作已中斷（未自動重試），建議先查詢目前狀態。", en: "The last action cut off and wasn't retried automatically—check its current status first.", ja: "直前の操作が中断されました（自動再試行なし）。現在の状態を確認してみてください。", ko: "이전 작업이 중단되어 자동 재시도하지 않았습니다. 현재 상태를 다시 확인해 보세요." },
+  "将发送您本次输入的问题、历史对话记录，以及工具查询到的文件名、路径、大小、时间、回收站/分享/传输任务元数据（每页最多 40 条）；对话中包含的敏感信息也会一并发送。": { tw: "將傳送您本次輸入的問題、歷史對話紀錄，以及工具查詢到的檔名、路徑、大小、時間、垃圾桶/分享/傳輸任務中繼資料（每頁最多 40 筆）；對話中包含的敏感資訊也會一併傳送。", en: "Sends your message, chat history, and metadata retrieved by tools—file names, drive paths, sizes, dates, Trash items, share status, and transfer tasks (up to 40 per page). Any sensitive details you wrote in the chat are included too.", ja: "今回の質問、これまでのやり取り、ツールで調べたファイル名・パス・サイズ・日時・ゴミ箱/共有/転送状況（1ページ最大40件）をモデルに送ります。会話内に書いた機密情報もあわせて送信されます。", ko: "지금 보낸 질문, 이전 대화 내용, 도구로 조회한 파일 이름·경로·크기·시간·휴지통/공유/전송 메타데이터(페이지당 최대 40개)를 모델에 보냅니다. 대화에 적은 민감한 내용도 함께 전송됩니다." },
+  "工具查询不会主动读取并发送文件内容、字幕、账号凭据、下载或分享链接、提取码、本地路径或 TMDB 资料（除非您在提问中主动提供）。": { tw: "工具查詢不會主動讀取並傳送檔案內容、字幕、帳號憑證、下載或分享連結、提取碼、本機路徑或 TMDB 資料（除非您在提問中主動提供）。", en: "Tool lookups don't read or send file contents, subtitles, credentials, download/share links, passcodes, local paths, or TMDB data on their own (unless you pasted them into the chat).", ja: "ツールの参照ではファイルの中身、字幕、認証情報、ダウンロード/共有リンク、パスコード、ローカルパス、TMDB 情報は送りません（ご自身で会話に貼り付けた場合を除きます）。", ko: "도구 조회는 파일 내용, 자막, 계정 정보, 다운로드·공유 링크, 암호, 로컬 경로, TMDB 자료를 알아서 보내지 않습니다(질문에 직접 적은 내용은 제외)." },
 } satisfies Messages;

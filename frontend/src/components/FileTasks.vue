@@ -219,7 +219,7 @@ watch(() => [selected.value?.id, fileTasks.open] as const, async ([id, open], [p
         {{ activeCount ? t('filetask|{n} 项任务进行中', { n: activeCount }) : t('filetask|{n} 条结果', { n: history.length }) }}
       </span>
       <button v-if="!taskFinished(selected)" class="quiet strip-stop" data-file-task-stop :disabled="selected.stopping"
-        :title="t('filetask|只停掉还没发出的项目；已经发出去的会继续完成，不会撤销。')" @click="stopFileTask(selected.id)">
+        :title="t('filetask|仅停止尚未发出的项目；已发出的操作将继续完成，不会撤销。')" @click="stopFileTask(selected.id)">
         <Icon name="stop" :size="15" />{{ selected.stopping ? t('filetask|正在停止') : t('filetask|停止剩余提交') }}
       </button>
       <button v-if="!activeCount" class="quiet icon" data-file-task-hide :aria-label="t('filetask|收起文件任务')"
@@ -261,7 +261,7 @@ watch(() => [selected.value?.id, fileTasks.open] as const, async ([id, open], [p
           {{ t('已加入下载队列，进度可在「传输中心」查看。') }}
         </p>
         <p v-if="!taskFinished(selected) || selected.phase === 'stopped'" class="receipt-note">
-          {{ t('filetask|只停掉还没发出的项目；已经发出去的会继续完成，不会撤销。') }}
+          {{ t('filetask|仅停止尚未发出的项目；已发出的操作将继续完成，不会撤销。') }}
         </p>
         <p v-if="counts.unknown" class="receipt-note unknown">
           {{ t('filetask|部分结果无法确认，可能已生效。请先检查云端结果；这些项目不能直接重试。') }}

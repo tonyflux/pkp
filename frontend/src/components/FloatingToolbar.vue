@@ -297,7 +297,7 @@ onUnmounted(() => window.removeEventListener("keydown", onKey));
         :class="{ on: aiReady }"
         type="button"
         style="--wails-draggable: no-drag"
-        :title="aiReady ? t('模型：{model}，点击打开 AI 设置', { model: aiSettings.value?.model ?? '' }) : t('还没配置模型，点击去设置')"
+        :title="aiReady ? t('模型：{model}，点击打开 AI 设置', { model: aiSettings.value?.model ?? '' }) : t('尚未配置模型，点击前往设置')"
         @click="openAISettings"
       >
         <i aria-hidden="true" />
@@ -314,7 +314,7 @@ onUnmounted(() => window.removeEventListener("keydown", onKey));
         <strong>{{ assistantAccount }}</strong>
         <span>{{ cleanupScope }}</span>
       </div>
-      <span class="local" :title="t('只在本地索引里查，不会请求云端')">
+      <span class="local" :title="t('仅检索本地索引，不请求云端')">
         <Icon name="shield" :size="16" />
         {{ t("本地索引扫描") }}
       </span>
@@ -375,9 +375,9 @@ onUnmounted(() => window.removeEventListener("keydown", onKey));
           <div v-if="dropChips.length" class="drop-chips" aria-hidden="true">
             <span v-for="c in dropChips" :key="c.key">{{ c.label }}</span>
           </div>
-          <p v-if="!indexReady" class="drop-note">{{ t("本地索引建立中，暂时只能按名称筛选当前文件夹") }}</p>
+          <p v-if="!indexReady" class="drop-note">{{ t("本地索引建立中，当前仅支持按名称筛选此文件夹") }}</p>
           <p v-else-if="dropLoading && !dropHits.length" class="drop-note">{{ t("正在本地索引中查找…") }}</p>
-          <p v-else-if="!dropHits.length" class="drop-note">{{ t("没有即时结果，按回车在全部文件中筛选") }}</p>
+          <p v-else-if="!dropHits.length" class="drop-note">{{ t("无即时匹配结果，按回车键在全部文件中筛选") }}</p>
           <div
             v-for="(hit, i) in dropHits"
             :id="`search-drop-${i}`"
@@ -418,7 +418,7 @@ onUnmounted(() => window.removeEventListener("keydown", onKey));
             @click="askAI"
           >
             <Icon name="spark" :size="16" />
-            <span class="drop-words"><strong>{{ t("问 AI：{text}", { text: dropText }) }}</strong><small>{{ t("发给 AI 前会让你先确认范围") }}</small></span>
+            <span class="drop-words"><strong>{{ t("问 AI：{text}", { text: dropText }) }}</strong><small>{{ t("发送给 AI 前需先确认数据范围") }}</small></span>
           </div>
         </div>
       </div>

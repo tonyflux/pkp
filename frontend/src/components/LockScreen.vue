@@ -51,7 +51,7 @@ const passwordError = computed(() => {
 });
 
 const lead = computed(() =>
-  passwordShown.value ? t("输入 PKP 独立密码，解锁回到刚才的页面。") : t("验证一下身份，解锁回到刚才的页面。"),
+  passwordShown.value ? t("输入 PKP 独立密码以解锁并恢复原界面。") : t("完成身份验证以解锁并恢复原界面。"),
 );
 const hint = computed(() => {
   if (passwordShown.value) return "";
@@ -240,9 +240,9 @@ onBeforeUnmount(() => clearInterval(tick));
     <div v-if="forgetting" class="forget-scrim" @click.self="closeForget" @keydown.esc.prevent="closeForget">
       <div class="forget" role="alertdialog" aria-modal="true" aria-labelledby="forget-title" aria-describedby="forget-text">
         <span class="forget-symbol" aria-hidden="true"><Icon name="key" :size="22" /></span>
-        <h2 id="forget-title">{{ passwordShown ? t("独立密码没有找回通道") : t("无法使用系统验证？") }}</h2>
+        <h2 id="forget-title">{{ passwordShown ? t("独立密码无法找回") : t("无法使用系统验证？") }}</h2>
         <p id="forget-text">
-          {{ passwordShown ? t("PKP 不保存密码原文，也不会通过邮箱或客服重置。要继续使用这台电脑上的 PKP，只能退出登录并清除本机缓存，重新登录后重新设置应用锁。云端文件和已下载到电脑的文件不受影响。") : t("请先尝试恢复系统验证。若仍无法解锁，可退出所有账号并清除本机账号数据、索引、记录与未完成的本地传输，然后重新登录。云端文件和已下载到电脑的文件不受影响。") }}
+          {{ passwordShown ? t("PKP 不保存密码原文，也不会通过邮箱或客服重置。要继续使用本机的 PKP，只能退出登录并清除本机缓存，重新登录后重新设置应用锁（云盘文件与已下载的本地文件均不受影响）。") : t("请先尝试恢复系统验证。若仍无法解锁，可退出所有账号并清除本机账号数据、索引、记录与未完成的本地传输，然后重新登录。云端文件和已下载到电脑的文件不受影响。") }}
         </p>
         <p v-if="forgetError" class="forget-error" role="alert"><Icon name="alert" :size="15" />{{ forgetError }}</p>
         <div class="forget-actions">

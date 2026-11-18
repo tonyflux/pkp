@@ -148,7 +148,7 @@ onBeforeUnmount(() => {
     <Teleport to="body" :disabled="!compact">
       <div v-if="!compact || open" v-show="compact || !collapsed" ref="panel" class="saved-panel" :class="{ 'saved-popover': compact, glass: compact }" :style="compact ? position : undefined" :role="compact ? 'dialog' : 'group'" :aria-label="t('已保存搜索')" :tabindex="compact ? -1 : undefined" data-saved-searches @keydown.stop>
         <div v-if="compact" class="saved-popover-head"><strong>{{ t("已保存搜索") }}</strong><button type="button" :aria-label="t('关闭')" @click="close(true)"><Icon name="close" :size="15" /></button></div>
-        <p v-if="storageError" class="saved-error" role="alert">{{ t("没能读取已保存的搜索：{error}", { error: storageError }) }} <button type="button" @click="loadSavedSearches(currentId)">{{ t("重试") }}</button></p>
+        <p v-if="storageError" class="saved-error" role="alert">{{ t("读取已保存的搜索失败：{error}", { error: storageError }) }} <button type="button" @click="loadSavedSearches(currentId)">{{ t("重试") }}</button></p>
         <p v-else-if="!items.length" class="saved-empty">{{ t("暂无已保存的搜索") }}</p>
         <div v-for="item in items" :key="item.id" class="saved-row">
           <button type="button" class="saved-open" :class="{ current: ui.route === 'files' && currentSavedSearch?.id === item.id }" :aria-current="ui.route === 'files' && currentSavedSearch?.id === item.id ? 'page' : undefined" :title="item.query" @click="run(item)"><Icon name="search" :size="14" /><span>{{ item.name }}</span></button>

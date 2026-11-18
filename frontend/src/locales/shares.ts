@@ -35,8 +35,8 @@ export default {
   已创建: { tw: "已建立", en: "Created", ja: "作成済み", ko: "생성됨" },
   已失效: { tw: "已失效", en: "Expired", ja: "無効", ko: "만료됨" },
   复制链接: { tw: "複製連結", en: "Copy link", ja: "リンクをコピー", ko: "링크 복사" },
-  "这个分享已经失效，复制的链接别人打不开，取消分享也无法恢复。": {
-    tw: "這個分享已經失效，複製的連結別人打不開，取消分享也無法復原。",
+  "此分享已失效，链接已无法访问，取消分享后也无法恢复。": {
+    tw: "此分享已失效，連結已無法存取，取消分享後也無法復原。",
     en: "This share has expired — the link won't open for others, and stopping the share won't restore it.",
     ja: "この共有はすでに無効です。リンクを開いても閲覧できず、共有を解除しても元には戻りません。",
     ko: "이 공유는 이미 만료되어 링크가 열리지 않으며 공유를 취소해도 복원되지 않습니다.",
@@ -118,8 +118,8 @@ export default {
     ja: "Claude、Cursor、Cherry Studio などの AI ツールの MCP 設定に追加します。",
     ko: "Claude, Cursor, Cherry Studio 등 AI 도구의 MCP 설정에 추가합니다.",
   },
-  "工具会自动打开浏览器跳到 PikPak 授权页，点 Authorize 同意就行。": {
-    tw: "工具會自動開啟瀏覽器跳轉到 PikPak 授權頁，點 Authorize 同意就好。",
+  "工具将自动打开浏览器跳转至 PikPak 授权页，点击 Authorize 完成授权即可。": {
+    tw: "工具將自動開啟瀏覽器跳轉至 PikPak 授權頁，點擊 Authorize 完成授權即可。",
     en: "The tool opens PikPak's authorization page in your browser — click Authorize to allow access.",
     ja: "ツールがブラウザで PikPak の認可ページを開きます。Authorize をクリックして許可してください。",
     ko: "도구가 브라우저에서 PikPak 인증 페이지를 엽니다. Authorize를 눌러 허용하면 됩니다.",
@@ -137,8 +137,8 @@ export default {
     ja: "接続中の AI ツールはまだありません。上の手順で追加するとここに表示されます。",
     ko: "아직 연결된 AI 도구가 없습니다. 위 단계대로 추가하면 여기에 표시됩니다.",
   },
-  "「{name}」的令牌只显示这一次，关掉后无法再查看，请妥善保存。": {
-    tw: "「{name}」的權杖只顯示這一次，關閉後無法再查看，請妥善保存。",
+  "「{name}」的令牌仅显示一次，关闭后将无法再次查看，请妥善保存。": {
+    tw: "「{name}」的權杖僅顯示一次，關閉後將無法再次檢視，請妥善保存。",
     en: "The token for \"{name}\" is shown only this once and can't be viewed again after closing. Store it safely.",
     ja: "「{name}」のトークンは今回だけ表示され、閉じると再表示できません。安全に保管してください。",
     ko: "“{name}”의 토큰은 이번 한 번만 표시되며 닫으면 다시 볼 수 없습니다. 안전하게 보관하세요.",
@@ -177,8 +177,8 @@ export default {
   从未: { tw: "從未", en: "never", ja: "なし", ko: "없음" },
   "本月 {usage}": { tw: "本月 {usage}", en: "This month: {usage}", ja: "今月 {usage}", ko: "이번 달 {usage}" },
   未产生流量: { tw: "未產生流量", en: "no traffic", ja: "通信なし", ko: "트래픽 없음" },
-  "移除后「{name}」立刻就不能再访问你的 PikPak 了，想再用得去对应应用里重新连接。": {
-    tw: "移除後「{name}」立刻就無法再存取你的 PikPak 了，想再用得到對應應用程式裡重新連線。",
+  "移除后「{name}」将立即失去访问您 PikPak 的权限，如需继续使用请在对应应用中重新连接。": {
+    tw: "移除後「{name}」將立即失去存取您 PikPak 的權限，如需繼續使用請在對應應用程式中重新連線。",
     en: "\"{name}\" loses access to your PikPak right away. Reconnect in that app if you need it again.",
     ja: "削除すると「{name}」はすぐ PikPak にアクセスできなくなります。もう一度使うときはそのアプリから再接続してください。",
     ko: "제거하면 “{name}”은(는) 즉시 PikPak에 접근할 수 없게 됩니다. 다시 쓰려면 해당 앱에서 연결해야 합니다.",
@@ -187,8 +187,8 @@ export default {
   "管理 WebDAV 凭证": { tw: "管理 WebDAV 憑證", en: "Manage WebDAV credentials", ja: "WebDAV 認証情報を管理", ko: "WebDAV 자격 증명 관리" },
   重新生成: { tw: "重新產生", en: "Regenerate", ja: "再生成", ko: "다시 생성" },
   "创建于 {date}": { tw: "建立於 {date}", en: "Created {date}", ja: "作成 {date}", ko: "생성 {date}" },
-  "移除后「{name}」立刻就不能再访问你的 PikPak 了，想再用需要重新连接。": {
-    tw: "移除後「{name}」立刻就無法再存取你的 PikPak 了，想再用需要重新連線。",
+  "移除后「{name}」将立即失去访问您 PikPak 的权限，如需继续使用需重新连接。": {
+    tw: "移除後「{name}」將立即失去存取您 PikPak 的權限，如需繼續使用需重新連線。",
     en: "\"{name}\" loses access to your PikPak right away. Reconnect if you want to use it again.",
     ja: "削除すると「{name}」はすぐ PikPak にアクセスできなくなります。再び使うには再接続が必要です。",
     ko: "제거하면 “{name}”은(는) 즉시 PikPak에 접근할 수 없게 됩니다. 다시 쓰려면 재연결해야 합니다.",
@@ -232,8 +232,8 @@ export default {
   连接点: { tw: "連線端點", en: "Endpoint", ja: "エンドポイント", ko: "엔드포인트" },
   复制连接点: { tw: "複製連線端點", en: "Copy endpoint", ja: "エンドポイントをコピー", ko: "엔드포인트 복사" },
   备用接入点: { tw: "備用端點", en: "Fallback endpoint", ja: "予備のエンドポイント", ko: "대체 엔드포인트" },
-  "旧版接入点 · 连不上主接入点时试试这个": {
-    tw: "舊版端點 · 連不上主要端點時試試這個",
+  "旧版接入点 · 无法连接主接入点时可尝试此项": {
+    tw: "舊版端點 · 無法連線主端點時可嘗試此項",
     en: "Legacy endpoint · try this if the main one won't connect",
     ja: "旧エンドポイント · メインに接続できないときに試してください",
     ko: "이전 엔드포인트 · 기본 엔드포인트에 연결되지 않을 때 사용",

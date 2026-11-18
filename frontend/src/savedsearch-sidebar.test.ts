@@ -75,7 +75,7 @@ describe("saved searches sidebar", () => {
     localStorage.setItem(`pkp.savedSearches.${account}`, "invalid");
     drive.status = { accountId: account, configured: true } as DriveStatus;
     await nextTick();
-    expect(host.querySelector('[role="alert"]')?.textContent).toContain("没能读取已保存的搜索");
+    expect(host.querySelector('[role="alert"]')?.textContent).toContain("读取已保存的搜索失败");
     expect(host.querySelector("[data-saved-history-heading]")?.getAttribute("aria-expanded")).toBe("true");
   });
 

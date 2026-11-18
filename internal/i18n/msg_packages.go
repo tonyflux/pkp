@@ -12,8 +12,8 @@ func init() {
 		"系统身份验证不可用":                         {Hant: "系統驗證無法使用", En: "System authentication is unavailable", Ja: "システム認証を使用できません", Ko: "시스템 인증을 사용할 수 없습니다"},
 		"这个系统上的 PKP 还不能使用系统身份验证":            {Hant: "此系統上的 PKP 尚不支援系統驗證", En: "PKP can't use system authentication on this system yet", Ja: "このシステムの PKP はまだシステム認証に対応していません", Ko: "이 시스템의 PKP는 아직 시스템 인증을 사용할 수 없습니다"},
 		"无法使用 Windows Hello（%v）":            {Hant: "無法使用 Windows Hello（%v）", En: "Can't use Windows Hello (%v)", Ja: "Windows Hello を使用できません（%v）", Ko: "Windows Hello를 사용할 수 없습니다(%v)"},
-		"这台电脑没有可用的 Windows Hello 设备":        {Hant: "這台電腦沒有可用的 Windows Hello 裝置", En: "This computer has no Windows Hello device available", Ja: "このコンピュータには使用できる Windows Hello デバイスがありません", Ko: "이 컴퓨터에는 사용할 수 있는 Windows Hello 장치가 없습니다"},
-		"这台电脑没有设置 Windows Hello（PIN、指纹或面部）": {Hant: "這台電腦沒有設定 Windows Hello（PIN、指紋或臉部）", En: "Windows Hello (PIN, fingerprint or face) isn't set up on this computer", Ja: "このコンピュータでは Windows Hello（PIN、指紋、顔）が設定されていません", Ko: "이 컴퓨터에 Windows Hello(PIN, 지문 또는 얼굴)가 설정되어 있지 않습니다"},
+		"本机没有可用的 Windows Hello 设备":        {Hant: "本機沒有可用的 Windows Hello 裝置", En: "This computer has no Windows Hello device available", Ja: "このコンピュータには使用できる Windows Hello デバイスがありません", Ko: "이 컴퓨터에는 사용할 수 있는 Windows Hello 장치가 없습니다"},
+		"本机未设置 Windows Hello（PIN、指纹或面部）": {Hant: "本機未設定 Windows Hello（PIN、指紋或臉部）", En: "Windows Hello (PIN, fingerprint or face) isn't set up on this computer", Ja: "このコンピュータでは Windows Hello（PIN、指紋、顔）が設定されていません", Ko: "이 컴퓨터에 Windows Hello(PIN, 지문 또는 얼굴)가 설정되어 있지 않습니다"},
 		"Windows Hello 已被系统策略停用":            {Hant: "Windows Hello 已被系統原則停用", En: "Windows Hello is disabled by system policy", Ja: "Windows Hello はシステムポリシーで無効になっています", Ko: "Windows Hello가 시스템 정책으로 비활성화되었습니다"},
 		"Windows Hello 不可用（状态 %d）":          {Hant: "Windows Hello 無法使用（狀態 %d）", En: "Windows Hello is unavailable (status %d)", Ja: "Windows Hello を使用できません（状態 %d）", Ko: "Windows Hello를 사용할 수 없습니다(상태 %d)"},
 		"Windows Hello 正忙，请稍后再试":            {Hant: "Windows Hello 忙碌中，請稍後再試", En: "Windows Hello is busy. Try again later", Ja: "Windows Hello は使用中です。しばらくしてからもう一度お試しください", Ko: "Windows Hello가 사용 중입니다. 잠시 후 다시 시도하세요"},
@@ -21,7 +21,7 @@ func init() {
 		"Windows Hello 返回了未知结果（%d）":         {Hant: "Windows Hello 傳回了未知的結果（%d）", En: "Windows Hello returned an unknown result (%d)", Ja: "Windows Hello から不明な結果が返されました（%d）", Ko: "Windows Hello가 알 수 없는 결과를 반환했습니다(%d)"},
 
 		// webproxy
-		"这台电脑的系统版本无法让网页内容走代理，缩略图和头像会继续直连；需要 macOS 14 或更高版本。": {Hant: "這台電腦的系統版本無法讓網頁內容透過代理連線，縮圖和頭像會繼續直接連線；需要 macOS 14 或更新版本。", En: "This computer's system version can't send web content through the proxy, so thumbnails and avatars keep connecting directly. macOS 14 or later is required.", Ja: "このコンピュータのシステムバージョンではウェブコンテンツをプロキシ経由にできないため、サムネイルとアバターは引き続き直接接続します。macOS 14 以降が必要です。", Ko: "이 컴퓨터의 시스템 버전에서는 웹 콘텐츠가 프록시를 거치게 할 수 없어 썸네일과 프로필 사진은 계속 직접 연결됩니다. macOS 14 이상이 필요합니다."},
+		"当前系统版本不支持网页内容走代理，缩略图与头像将保持直连（需 macOS 14 或更高版本）。": {Hant: "目前系統版本不支援網頁內容透過代理連線，縮圖與頭像將保持直接連線（需 macOS 14 或更新版本）。", En: "This computer's system version can't send web content through the proxy, so thumbnails and avatars keep connecting directly. macOS 14 or later is required.", Ja: "このコンピュータのシステムバージョンではウェブコンテンツをプロキシ経由にできないため、サムネイルとアバターは引き続き直接接続します。macOS 14 以降が必要です。", Ko: "이 컴퓨터의 시스템 버전에서는 웹 콘텐츠가 프록시를 거치게 할 수 없어 썸네일과 프로필 사진은 계속 직접 연결됩니다. macOS 14 이상이 필요합니다."},
 		"这个版本暂时无法让网页内容走这里的代理，缩略图和头像按系统的网络设置连接。":              {Hant: "此版本暫時無法讓網頁內容透過這裡的代理連線，縮圖和頭像會依系統的網路設定連線。", En: "This version can't send web content through this proxy yet; thumbnails and avatars connect according to the system's network settings.", Ja: "このバージョンではまだウェブコンテンツをこのプロキシ経由にできません。サムネイルとアバターはシステムのネットワーク設定に従って接続します。", Ko: "이 버전에서는 아직 웹 콘텐츠가 이 프록시를 거치게 할 수 없습니다. 썸네일과 프로필 사진은 시스템 네트워크 설정에 따라 연결됩니다."},
 
 		// drive
@@ -33,10 +33,10 @@ func init() {
 		"云端文件与开始下载时不一致，请重新下载":          {Hant: "雲端檔案與開始下載時不一致，請重新下載", En: "The file in the drive changed since the download started. Download it again", Ja: "クラウドのファイルがダウンロード開始時から変更されました。もう一度ダウンロードしてください", Ko: "클라우드 파일이 다운로드를 시작했을 때와 다릅니다. 다시 다운로드하세요"},
 		"服务器返回的数据范围与请求不符":              {Hant: "伺服器傳回的資料範圍與請求不符", En: "The server returned a different data range than requested", Ja: "サーバーが返したデータ範囲がリクエストと一致しません", Ko: "서버가 반환한 데이터 범위가 요청과 다릅니다"},
 		"磁盘空间不足":                       {Hant: "磁碟空間不足", En: "Not enough disk space", Ja: "ディスクの空き容量が不足しています", Ko: "디스크 공간이 부족합니다"},
-		"下载并发数到了 PikPak 上限，等一会儿再点「继续」": {Hant: "下載連線數達到 PikPak 上限，稍後再點「繼續」", En: "Simultaneous downloads hit PikPak's limit—click \"Resume\" in a moment", Ja: "このアカウントの同時ダウンロード接続数が上限に達しました（PikPak の制限）。しばらくしてから「再開」をクリックしてください", Ko: "동시 다운로드 연결이 PikPak 한도에 도달했습니다. 잠시 후 ‘계속’을 눌러 주세요"},
+		"同时下载数已达 PikPak 上限，请稍后点击「继续」": {Hant: "同時下載數已達 PikPak 上限，請稍後點擊「繼續」", En: "Simultaneous downloads hit PikPak's limit—click \"Resume\" in a moment", Ja: "このアカウントの同時ダウンロード接続数が上限に達しました（PikPak の制限）。しばらくしてから「再開」をクリックしてください", Ko: "동시 다운로드 연결이 PikPak 한도에 도달했습니다. 잠시 후 ‘계속’을 눌러 주세요"},
 		"连接 30 秒没有收到数据":                {Hant: "連線 30 秒未收到資料", En: "No data received for 30 seconds", Ja: "30 秒間データを受信していません", Ko: "30초 동안 데이터를 받지 못했습니다"},
 		"服务器提前断开了连接":                   {Hant: "伺服器提前中斷了連線", En: "The server closed the connection early", Ja: "サーバーが接続を途中で切断しました", Ko: "서버가 연결을 일찍 끊었습니다"},
-		"这个文件在云端归档（冷）存储里，暂时取不出来":       {Hant: "這個檔案在雲端封存（冷）儲存中，暫時無法讀取", En: "This file is in cloud archive (cold) storage and can't be read right now", Ja: "クラウドのファイルはアーカイブ（コールド）ストレージにあるため、現在取り出せません", Ko: "클라우드 파일이 보관(콜드) 저장소에 있어 지금은 가져올 수 없습니다"},
+		"该文件位于云端归档（冷）存储中，暂无法读取":       {Hant: "此檔案位於雲端封存（冷）儲存中，暫無法讀取", En: "This file is in cloud archive (cold) storage and can't be read right now", Ja: "クラウドのファイルはアーカイブ（コールド）ストレージにあるため、現在取り出せません", Ko: "클라우드 파일이 보관(콜드) 저장소에 있어 지금은 가져올 수 없습니다"},
 		"下载链接被拒绝（HTTP %d）":             {Hant: "下載連結遭拒（HTTP %d）", En: "Download link refused (HTTP %d)", Ja: "ダウンロードリンクが拒否されました（HTTP %d）", Ko: "다운로드 링크가 거부되었습니다(HTTP %d)"},
 		"服务器繁忙":                        {Hant: "伺服器忙碌中", En: "Server busy", Ja: "サーバーが混み合っています", Ko: "서버가 혼잡합니다"},
 		"无法创建文件夹：%v":                   {Hant: "無法建立資料夾：%v", En: "Can't create the folder: %v", Ja: "フォルダを作成できません：%v", Ko: "폴더를 만들 수 없습니다: %v"},
@@ -93,7 +93,7 @@ func init() {
 		// tmdb
 		"请求超时":                  {Hant: "請求逾時", En: "Request timed out", Ja: "リクエストがタイムアウトしました", Ko: "요청 시간이 초과되었습니다"},
 		"请求已取消":                 {Hant: "請求已取消", En: "Request cancelled", Ja: "リクエストはキャンセルされました", Ko: "요청이 취소되었습니다"},
-		"连不上 %s：%s":             {Hant: "無法連線到 %s：%s", En: "Can't reach %s: %s", Ja: "%s に接続できません：%s", Ko: "%s에 연결할 수 없습니다: %s"},
+		"无法连接 %s：%s":             {Hant: "無法連線 %s：%s", En: "Can't reach %s: %s", Ja: "%s に接続できません：%s", Ko: "%s에 연결할 수 없습니다: %s"},
 		"还没有配置 TMDB 凭据":         {Hant: "尚未設定 TMDB 憑證", En: "No TMDB credentials set up yet", Ja: "TMDB の認証情報がまだ設定されていません", Ko: "아직 TMDB 자격 증명을 설정하지 않았습니다"},
 		"TMDB 请求过于频繁，请 %d 秒后重试": {Hant: "TMDB 請求過於頻繁，請於 %d 秒後重試", En: "Too many TMDB requests. Try again in %d s", Ja: "TMDB へのリクエストが多すぎます。%d 秒後にもう一度お試しください", Ko: "TMDB 요청이 너무 많습니다. %d초 후 다시 시도하세요"},
 		"TMDB 没有这个条目":           {Hant: "TMDB 沒有這個項目", En: "TMDB has no such entry", Ja: "TMDB にこの項目はありません", Ko: "TMDB에 이 항목이 없습니다"},

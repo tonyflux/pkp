@@ -83,7 +83,7 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onKeydown, true));
           <div class="titles">
             <span class="rr-eyebrow">{{ t("按规则改名 · 本地规则") }}</span>
             <h2 id="rename-rules-title">{{ t("给 {n} 项统一改名", { n: renameSheet.entries.length }) }}</h2>
-            <p>{{ t("只改名字，不移动位置；生成计划后逐项确认才会执行。") }}</p>
+            <p>{{ t("仅重命名，不移动位置；生成计划后逐项确认才会执行。") }}</p>
           </div>
           <button class="icon close" :title="t('关闭')" @click="close"><Icon name="close" :size="16" /></button>
         </header>
@@ -115,7 +115,7 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onKeydown, true));
         <div class="rr-preview" aria-live="polite">
           <div class="rr-preview-head">
             <strong>{{ t("预览") }}</strong>
-            <span>{{ changed ? t("{n} 项会改名", { n: changed }) : t("没有名字会改变") }}<template v-if="changed < renameSheet.entries.length"> · {{ t("{n} 项不变", { n: renameSheet.entries.length - changed }) }}</template></span>
+            <span>{{ changed ? t("{n} 项会改名", { n: changed }) : t("无名称变更") }}<template v-if="changed < renameSheet.entries.length"> · {{ t("{n} 项不变", { n: renameSheet.entries.length - changed }) }}</template></span>
           </div>
           <ul>
             <li v-for="r in preview" :key="r.entry.id" :class="{ same: r.name === r.entry.name }">

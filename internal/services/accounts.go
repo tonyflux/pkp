@@ -49,7 +49,7 @@ const (
 )
 
 var (
-	errNoSuchAccount = i18n.New("这台电脑上没有这个账号")
+	errNoSuchAccount = i18n.New("本机未保存此账号")
 	errLabelRequired = i18n.New("请填写账号备注")
 	errLabelTooLong  = &lazyError{func() string { return i18n.F("账号备注最多 %d 个字符", maxLabelRunes) }}
 )
@@ -342,7 +342,7 @@ func (d *DriveService) RemoveAccount(id string) (DriveStatus, error) {
 	s.mu.RUnlock()
 	if tokens != nil {
 		if err := tokens.Forget(); err != nil {
-			return d.Status(), i18n.Errorf("没能清除这个账号的登录信息，账号已保留：%w", err)
+			return d.Status(), i18n.Errorf("无法清除该账号的登录信息，账号已保留：%w", err)
 		}
 	}
 

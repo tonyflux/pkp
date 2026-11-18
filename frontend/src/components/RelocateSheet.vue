@@ -204,7 +204,7 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onKeydown, true));
           <template v-if="searching">
             <p v-if="relocate.searching" class="state picker-state"><Orbit :size="18" /> {{ t("正在搜索…") }}</p>
             <p v-else-if="!relocate.searchable" class="state picker-state">{{ t("云盘索引还在建立，暂时不能搜索全盘；可以逐层浏览。") }}</p>
-            <p v-else-if="!relocate.results.length" class="state picker-state">{{ t("没有找到文件夹，试试其他名称") }}</p>
+            <p v-else-if="!relocate.results.length" class="state picker-state">{{ t("未找到匹配文件夹，请尝试其他名称") }}</p>
             <button
               v-for="folder in relocate.results"
               v-else

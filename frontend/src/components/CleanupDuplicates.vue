@@ -206,7 +206,7 @@ function turn(forward: boolean) {
           <span class="sync"><Icon name="clock" :size="14" />{{ synced }}</span>
         </div>
 
-        <p v-if="d.error" class="error" role="alert">{{ t("没能读取：{error}", { error: d.error }) }}</p>
+        <p v-if="d.error" class="error" role="alert">{{ t("读取失败：{error}", { error: d.error }) }}</p>
 
         <div v-if="!groups.length && !d.loading" class="none">
           <Icon name="check" :size="22" />

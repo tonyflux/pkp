@@ -63,7 +63,7 @@ var (
 	errAINotConfigured = i18n.New("还没有配置模型")
 	errAINoModel       = i18n.New("还没有填写模型")
 	errAINoKey         = i18n.New("还没有保存 API Key")
-	errAINoKeychain    = &lazyError{func() string { return i18n.F("这台电脑没有可用的%s，无法保存 API Key", keychainName()) }}
+	errAINoKeychain    = &lazyError{func() string { return i18n.F("本机没有可用的%s，无法保存 API Key", keychainName()) }}
 	errAIKeyStore      = &lazyError{func() string { return i18n.F("无法把 API Key 存进%s", keychainName()) }}
 	errAIKeyForget     = &lazyError{func() string { return i18n.F("无法从%s删除 API Key", keychainName()) }}
 	errAIKeyFormat     = i18n.New("API Key 不能包含空格或换行")
@@ -635,7 +635,7 @@ func (d *DriveService) aiFailure(err error) error {
 	case ai.KindAuth:
 		return i18n.Errorf("API Key 无效或没有权限：%s", e.Message)
 	case ai.KindUnreachable:
-		return i18n.Errorf("连不上模型服务：%s", e.Message)
+		return i18n.Errorf("无法连接模型服务：%s", e.Message)
 	case ai.KindServer:
 		return i18n.Errorf("模型服务返回错误（HTTP %d）：%s", e.Status, e.Message)
 	case ai.KindTruncated:

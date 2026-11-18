@@ -11,11 +11,11 @@ export default {
     ja: "システムの言語設定に従います（現在は{name}）",
     ko: "시스템 언어 설정을 따릅니다(현재 {name})",
   },
-  "界面文字会马上切换；系统的文件选择框和解锁弹窗在下次打开 PKP 时生效。": {
-    tw: "介面文字會馬上切換；系統的檔案選擇框與解鎖視窗將在下次開啟 PKP 時生效。",
-    en: "App text updates right away; system file dialogs and auth prompts switch next time PKP opens.",
-    ja: "アプリ内の表示はすぐに切り替わります。システムのファイル選択パネルや認証画面は次回起動時に反映されます。",
-    ko: "앱 화면은 바로 바뀌며, 시스템 파일 선택 창과 인증 창은 다음에 PKP를 열 때 적용됩니다.",
+  "界面文字将立即切换；系统文件选择对话框与解锁弹窗将在下次启动 PKP 时生效。": {
+    tw: "介面文字將立即切換；系統檔案選擇對話方塊與解鎖視窗將在下次啟動 PKP 時生效。",
+    en: "App text updates immediately; system file dialogs and auth prompts update next time PKP opens.",
+    ja: "アプリ内の表示はすぐに切り替わります。システムのファイル選択ダイアログや認証画面は次回起動時に反映されます。",
+    ko: "앱 화면의 텍스트는 즉시 바뀌며, 시스템 파일 선택 대화상자와 인증 창은 다음에 PKP를 실행할 때 적용됩니다.",
   },
   保存界面语言: { tw: "儲存介面語言", en: "Save language", ja: "表示言語の保存", ko: "언어 저장" },
 

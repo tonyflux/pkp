@@ -69,7 +69,7 @@ const title = computed(() => {
     case "remove":
       return t("退出并移除此账号？");
     case "leave":
-      return t("还有内容没提交");
+      return t("尚有未提交的内容");
     case "replace":
       return t("播放此账号的视频？");
   }
@@ -196,20 +196,20 @@ const localCount = computed(() => {
 
 const localText = computed(() =>
   localCount.value
-    ? t("会先停掉这个账号的 {n} 个本机传输，再清掉它的登录状态和缓存（下好的文件会留着）。", { n: localCount.value })
-    : t("会清掉这个账号在这台电脑上的登录状态和缓存（下好的文件会留着）。"),
+    ? t("将停止此账号在本机的 {n} 个传输任务，并清除登录状态与缓存，已下载的文件将保留。", { n: localCount.value })
+    : t("将清除此账号在本机的登录状态和缓存，已下载的文件将保留。"),
 );
 
 // Cloud-add tasks carry on on the server whatever happens here.
 const cloudNote = computed(() => {
   const d = dialog.value;
   if (d?.kind !== "remove") return "";
-  if (subject.value?.needsPassword) return t("暂时查不到云添加任务列表；移除账号也不会取消云端任务。");
+  if (subject.value?.needsPassword) return t("暂无法获取云添加任务列表；移除账号不会取消云端任务。");
   if (removal.checking) return t("正在检查云添加任务…");
   const running = cloudOf(d.account).tasks.filter(
     (task) => task.phase !== "PHASE_TYPE_COMPLETE" && task.phase !== "PHASE_TYPE_ERROR",
   ).length;
-  return running ? t("还有 {n} 个云添加任务可能在云端跑着；移除只会在本地停止关注，不会取消云端任务。", { n: running }) : "";
+  return running ? t("仍有 {n} 个云添加任务可能正在云端运行；移除账号仅停止本地追踪，不会取消云端任务。", { n: running }) : "";
 });
 
 async function confirmRemove() {
@@ -402,7 +402,7 @@ onBeforeUnmount(() => {
         <!-- Add account / Sign in again -->
         <form v-if="dialog.kind === 'signin'" class="body" novalidate @submit.prevent="submitSignin">
           <p class="lead">
-            {{ reauth ? t("重新登录这个账号就能继续用，原本的任务都还在它名下。") : t("再添加一个 PikPak 账号，备用号或不同盘都能一起管。") }}
+            {{ reauth ? t("重新登录此账号即可恢复使用，原有任务仍归属该账号。") : t("添加更多 PikPak 账号，统一管理多个云盘空间。") }}
           </p>
           <div class="signin-tabs" role="tablist" :aria-label="t('登录方式')" @keydown.left.prevent="setMode(mode === 'qr' ? 'password' : 'qr')" @keydown.right.prevent="setMode(mode === 'qr' ? 'password' : 'qr')">
             <button id="account-qr-tab" type="button" role="tab" :aria-selected="mode === 'qr'" aria-controls="account-qr-panel" :tabindex="mode === 'qr' ? 0 : -1" @click="setMode('qr')">{{ t("扫码登录") }}</button>
@@ -463,7 +463,7 @@ onBeforeUnmount(() => {
               :class="{ on: signin.remember }"
               role="checkbox"
               :aria-checked="signin.remember"
-              :title="t('账号信息留在本地，密码会安全存进系统{keychain}', { keychain: keychainName })"
+              :title="t('账号信息仅保存在本地，密码将加密存入系统{keychain}', { keychain: keychainName })"
               @click="toggleRemember"
             >
               <i class="box"><Icon v-if="signin.remember" name="check" :size="12" /></i>
@@ -498,7 +498,7 @@ onBeforeUnmount(() => {
 
         <!-- Local note -->
         <form v-else-if="dialog.kind === 'rename'" class="body" novalidate @submit.prevent="saveRename">
-          <p class="lead">{{ t("只改在 PKP 里显示的名字，不影响你在 PikPak 上的昵称。") }}</p>
+          <p class="lead">{{ t("仅修改在本机显示的名称，不影响 PikPak 账号昵称。") }}</p>
           <label class="field">
             <span>{{ t("本机备注") }}</span>
             <input ref="renameField" v-model="rename.name" :maxlength="LABEL_MAX" required data-autofocus />
@@ -517,9 +517,9 @@ onBeforeUnmount(() => {
         <div v-else-if="dialog.kind === 'remove'" class="body">
           <AccountIdentity class="owner" :account="subject" />
           <p class="lead">{{ localText }}</p>
-          <p class="note">{{ t("这个账号的同步也会一并取消，已经同步完的本地和云端文件都会留着。") }}</p>
+          <p class="note">{{ t("该账号的同步任务也将一并取消，已同步完成的本地与云端文件均会保留。") }}</p>
           <p v-if="cloudNote" class="note" role="status">{{ cloudNote }}</p>
-          <p class="foot">{{ t("只是从 PKP 移除登录状态，不会删云盘里的文件，也不会关掉已有分享。") }}</p>
+          <p class="foot">{{ t("仅在本机移除登录状态，不会删除云盘文件或取消已有分享。") }}</p>
           <div class="actions">
             <button type="button" data-autofocus @click="dismiss">{{ t("保留账号") }}</button>
             <button

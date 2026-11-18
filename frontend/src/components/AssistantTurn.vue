@@ -157,7 +157,7 @@ const shown = computed(() => {
           <button v-if="retry && !indexRetry" type="button" class="quiet retry" @click="retryTurn(turnId)"><Icon name="restore" :size="13" />{{ t("重试") }}</button>
         </p>
         <p v-if="turn?.stop === 'budget'" class="ending info">
-          {{ t("可以去「AI 设置」调大单个对话上限或开启不限制，下一轮生效（费用仍按实际用量结算）。") }}
+          {{ t("可在「AI 设置」中调高单个对话上限或开启不限制，将于下一轮生效（费用仍按实际用量结算）。") }}
           <button type="button" class="quiet retry" @click="openAISettings()">{{ t("前往 AI 设置") }}<Icon name="arrowRight" :size="13" /></button>
         </p>
         <p v-if="turn?.modeNote" class="ending info">{{ turn.modeNote }}</p>

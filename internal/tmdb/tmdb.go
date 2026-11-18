@@ -122,7 +122,7 @@ func (t *Client) get(ctx context.Context, key, path string, query url.Values, ou
 			secs, known := retryAfter(header.Get("Retry-After"))
 			if attempt == 0 && known && secs <= autoRetryLimit {
 				if err := sleepCtx(ctx, time.Duration(secs)*time.Second); err != nil {
-					return tmdbError(KindUnreachable, 0, 0, i18n.F("连不上 %s：%s", "TMDB", transportCause(err)))
+					return tmdbError(KindUnreachable, 0, 0, i18n.F("无法连接 %s：%s", "TMDB", transportCause(err)))
 				}
 				continue
 			}
@@ -160,12 +160,12 @@ func (t *Client) exchange(ctx context.Context, endpoint, key string, bearer bool
 		if errors.Is(err, errCrossHost) {
 			return 0, nil, nil, tmdbError(KindServer, 0, 0, i18n.T("TMDB 地址跳转到了其他站点，已拒绝"))
 		}
-		return 0, nil, nil, tmdbError(KindUnreachable, 0, 0, i18n.F("连不上 %s：%s", "TMDB", transportCause(err, key)))
+		return 0, nil, nil, tmdbError(KindUnreachable, 0, 0, i18n.F("无法连接 %s：%s", "TMDB", transportCause(err, key)))
 	}
 	defer resp.Body.Close()
 	body, err := io.ReadAll(io.LimitReader(resp.Body, tmdbMaxBody+1))
 	if err != nil {
-		return 0, nil, nil, tmdbError(KindUnreachable, 0, 0, i18n.F("连不上 %s：%s", "TMDB", transportCause(err, key)))
+		return 0, nil, nil, tmdbError(KindUnreachable, 0, 0, i18n.F("无法连接 %s：%s", "TMDB", transportCause(err, key)))
 	}
 	if len(body) > tmdbMaxBody {
 		return 0, nil, nil, tmdbError(KindInvalid, 0, 0, i18n.T("TMDB 返回了无法识别的数据"))

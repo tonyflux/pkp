@@ -201,7 +201,7 @@ function netApplied() {
           :class="{ on: form.remember }"
           role="checkbox"
           :aria-checked="form.remember"
-          :title="t('账号信息留在本地，密码会安全存进系统{keychain}', { keychain: keychainName })"
+          :title="t('账号信息仅保存在本地，密码将加密存入系统{keychain}', { keychain: keychainName })"
           @click="toggleRemember"
         >
           <i class="box"><Icon v-if="form.remember" name="check" :size="12" /></i>
@@ -213,7 +213,7 @@ function netApplied() {
           :class="{ on: form.autoSignIn }"
           role="checkbox"
           :aria-checked="form.autoSignIn"
-          :title="t('登录过期时自动重登，省得每次停在这儿')"
+          :title="t('登录过期时自动重新登录，无需手动干预')"
           @click="toggleAutoSignIn"
         >
           <i class="box"><Icon v-if="form.autoSignIn" name="check" :size="12" /></i>

@@ -51,7 +51,7 @@ const receiptLine = computed(() => {
   const r = receipt.value;
   if (!r) return "";
   if (!dup.value) return t("在回收站还原顶层文件夹时，里面的空文件夹也会回来。");
-  if (r.permanent) return t("已删掉，释放了 {size}，剩余空间马上会更新。", { size: bytes(r.bytes, "0 B") });
+  if (r.permanent) return t("已彻底删除，释放 {size}，剩余空间将很快更新。", { size: bytes(r.bytes, "0 B") });
   return t("{size} 可以从回收站还原；彻底删除后空间才会释放。", { size: bytes(r.bytes, "0 B") });
 });
 
@@ -65,13 +65,13 @@ function scan() {
     <template v-if="state.stage === 'scanning'">
       <span class="mark"><Orbit :size="24" :label="t('扫描中')" /></span>
       <h2>{{ t("正在读取本地索引") }}</h2>
-      <p>{{ t("只在本地算一下，不会动你的文件。范围：{scope}", { scope: cleanupScopeLabel }) }}</p>
+      <p>{{ t("仅在本地计算，不会修改云盘文件。范围：{scope}", { scope: cleanupScopeLabel }) }}</p>
     </template>
 
     <template v-else-if="state.stage === 'running'">
       <span class="mark"><Icon name="transfer" :size="26" /></span>
       <h2>{{ runTitle }}</h2>
-      <p>{{ t("每 100 项一批处理；点停止的话，还没发出的就不会继续。") }}</p>
+      <p>{{ t("每 100 项分批处理；点击停止后，尚未发送的项目将不再继续。") }}</p>
       <div
         class="track"
         role="progressbar"
@@ -122,7 +122,7 @@ function scan() {
             : t("在{scope}里查找空文件夹；纯本地扫描，不用 AI 也不会下载文件。", { scope: cleanupScopeLabel })
         }}
       </p>
-      <p v-if="state.error" class="error" role="alert">{{ t("没能扫描：{error}", { error: state.error }) }}</p>
+      <p v-if="state.error" class="error" role="alert">{{ t("扫描失败：{error}", { error: state.error }) }}</p>
       <button class="primary" :disabled="state.loading" @click="scan">{{ t("开始扫描") }}</button>
     </template>
   </div>

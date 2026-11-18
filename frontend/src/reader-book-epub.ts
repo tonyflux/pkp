@@ -13,7 +13,7 @@ const DROP_TAGS: Record<string, true> = { script:true, style:true, link:true, me
 const SAFE_ATTRIBUTES: Record<string, true> = { id:true, title:true, lang:true, dir:true, colspan:true, rowspan:true, start:true, value:true, scope:true, alt:true };
 
 export function epubXml(source: string): Document {
-  if (/<!ENTITY|<!DOCTYPE[^>]*\[/i.test(source)) throw new Error(t("电子书文件格式异常，打不开"));
+  if (/<!ENTITY|<!DOCTYPE[^>]*\[/i.test(source)) throw new Error(t("电子书文件格式异常，无法打开"));
   checkXmlComplexity(source, 120000);
   // A declaration is never needed for rendering. Strip ordinary XHTML doctypes
   // rather than allowing the parser to resolve any external DTD.

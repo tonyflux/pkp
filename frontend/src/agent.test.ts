@@ -854,9 +854,9 @@ describe("parseToolCall", () => {
     });
     expect(() => parseToolCall("propose_changes", { title: "x", items: [{ handle: file, toPath: ["a/b"] }] }, handles)).toThrow("不可用");
     expect(() => parseToolCall("propose_changes", { title: "x", items: [{ handle: file, name: "a:b" }] }, handles)).toThrow("不可用");
-    expect(() => parseToolCall("propose_changes", { title: "x", items: [{ handle: file }] }, handles)).toThrow("没有目标位置");
+    expect(() => parseToolCall("propose_changes", { title: "x", items: [{ handle: file }] }, handles)).toThrow("未指定目标位置");
     expect(() => parseToolCall("propose_changes", { title: "x", items: [{ handle: file, trash: true }, { handle: file, trash: true }] }, handles)).toThrow(
-      "不止一次",
+      "重复出现",
     );
     expect(() => parseToolCall("propose_changes", { title: "x", items: [] }, handles)).toThrow("不能为空");
   });

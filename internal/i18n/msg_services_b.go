@@ -9,7 +9,7 @@ func init() {
 		"还没有配置模型":                       {Hant: "尚未設定模型", En: "No model is set up yet", Ja: "モデルがまだ設定されていません", Ko: "아직 모델이 설정되지 않았습니다"},
 		"还没有填写模型":                       {Hant: "尚未填寫模型", En: "No model name entered yet", Ja: "モデル名がまだ入力されていません", Ko: "아직 모델 이름을 입력하지 않았습니다"},
 		"还没有保存 API Key":                 {Hant: "尚未儲存 API Key", En: "No API key saved yet", Ja: "API キーがまだ保存されていません", Ko: "아직 API 키를 저장하지 않았습니다"},
-		"这台电脑没有可用的%s，无法保存 API Key":      {Hant: "這台電腦沒有可用的%s，無法儲存 API Key", En: "%s is not available on this computer, so the API key can't be saved", Ja: "このコンピュータでは%sを使用できないため、API キーを保存できません", Ko: "이 컴퓨터에서 %s을(를) 사용할 수 없어 API 키를 저장할 수 없습니다"},
+		"本机没有可用的%s，无法保存 API Key":      {Hant: "本機沒有可用的%s，無法儲存 API Key", En: "%s is not available on this computer, so the API key can't be saved", Ja: "このコンピュータでは%sを使用できないため、API キーを保存できません", Ko: "이 컴퓨터에서 %s을(를) 사용할 수 없어 API 키를 저장할 수 없습니다"},
 		"无法把 API Key 存进%s":              {Hant: "無法將 API Key 存入%s", En: "Couldn't save the API key to %s", Ja: "API キーを%sに保存できませんでした", Ko: "API 키를 %s에 저장할 수 없습니다"},
 		"无法从%s删除 API Key":               {Hant: "無法從%s刪除 API Key", En: "Couldn't delete the API key from %s", Ja: "%sから API キーを削除できませんでした", Ko: "%s에서 API 키를 삭제할 수 없습니다"},
 		"API Key 不能包含空格或换行":             {Hant: "API Key 不能包含空格或換行", En: "The API key can't contain spaces or line breaks", Ja: "API キーに空白や改行は使えません", Ko: "API 키에는 공백이나 줄바꿈을 넣을 수 없습니다"},
@@ -27,7 +27,7 @@ func init() {
 		"模型服务的内容审核拒绝了这次请求：%s":        {Hant: "模型服務的內容審核拒絕了這次請求：%s", En: "The model service's content moderation refused this request: %s", Ja: "モデルサービスのコンテンツ審査がこのリクエストを拒否しました：%s", Ko: "모델 서비스의 콘텐츠 검토가 이 요청을 거부했습니다: %s"},
 		"授权级别只能是 metadata 或 content": {Hant: "授權層級只能是 metadata 或 content", En: "The permission level must be metadata or content", Ja: "許可レベルは metadata または content のみです", Ko: "허용 수준은 metadata 또는 content만 가능합니다"},
 		"API Key 无效或没有权限：%s":         {Hant: "API Key 無效或沒有權限：%s", En: "The API key is invalid or lacks permission: %s", Ja: "API キーが無効か、権限がありません：%s", Ko: "API 키가 잘못되었거나 권한이 없습니다: %s"},
-		"连不上模型服务：%s":                 {Hant: "無法連線到模型服務：%s", En: "Couldn't reach the model service: %s", Ja: "モデルサービスに接続できません：%s", Ko: "모델 서비스에 연결할 수 없습니다: %s"},
+		"无法连接模型服务：%s":                 {Hant: "無法連線模型服務：%s", En: "Couldn't reach the model service: %s", Ja: "モデルサービスに接続できません：%s", Ko: "모델 서비스에 연결할 수 없습니다: %s"},
 		"模型服务返回错误（HTTP %d）：%s":       {Hant: "模型服務傳回錯誤（HTTP %d）：%s", En: "The model service returned an error (HTTP %d): %s", Ja: "モデルサービスがエラーを返しました（HTTP %d）：%s", Ko: "모델 서비스가 오류를 반환했습니다(HTTP %d): %s"},
 		"模型输出不完整（达到输出上限）":            {Hant: "模型輸出不完整（達到輸出上限）", En: "The model's output is incomplete (output limit reached)", Ja: "モデルの出力が不完全です（出力上限に達しました）", Ko: "모델 출력이 불완전합니다(출력 한도 도달)"},
 		"模型没有按要求的格式回答：%s":            {Hant: "模型沒有依要求的格式回答：%s", En: "The model didn't answer in the required format: %s", Ja: "モデルが指定の形式で回答しませんでした：%s", Ko: "모델이 요구된 형식으로 답하지 않았습니다: %s"},
@@ -70,7 +70,7 @@ func init() {
 		"无法打开查看窗口":                          {Hant: "無法開啟檢視視窗", En: "Couldn't open the viewer window", Ja: "表示ウィンドウを開けません", Ko: "보기 창을 열 수 없습니다"},
 		"PKP 播放器":                           {Hant: "PKP 播放器", En: "PKP Player", Ja: "PKP プレーヤー", Ko: "PKP 플레이어"},
 		"找不到要放入视频的窗口":                       {Hant: "找不到要放入影片的視窗", En: "Couldn't find the window to put the video in", Ja: "動画を表示するウインドウが見つかりません", Ko: "동영상을 넣을 창을 찾을 수 없습니다"},
-		"正在切换清晰度，请等这一次完成":                   {Hant: "正在切換畫質，請等這次完成", En: "Already switching quality; wait for it to finish", Ja: "画質を切り替え中です。完了までお待ちください", Ko: "화질을 전환하는 중입니다. 완료될 때까지 기다리세요"},
+		"正在切换清晰度，请等待本次操作完成":                   {Hant: "正在切換畫質，請等待本次操作完成", En: "Already switching quality; wait for it to finish", Ja: "画質を切り替え中です。完了までお待ちください", Ko: "화질을 전환하는 중입니다. 완료될 때까지 기다리세요"},
 		"不支持的清晰度「%s」":                       {Hant: "不支援的畫質「%s」", En: "Unsupported quality \"%s\"", Ja: "未対応の画質「%s」", Ko: "지원하지 않는 화질 ‘%s’"},
 		"云盘已经不再提供这个清晰度":                     {Hant: "雲端硬碟已不再提供這個畫質", En: "The drive no longer offers this quality", Ja: "クラウドドライブはこの画質を提供しなくなりました", Ko: "클라우드 드라이브가 더 이상 이 화질을 제공하지 않습니다"},
 		"字幕大小需在 %v 到 %v 之间":                 {Hant: "字幕大小需介於 %v 到 %v 之間", En: "Subtitle size must be between %v and %v", Ja: "字幕サイズは %v〜%v の範囲にしてください", Ko: "자막 크기는 %v~%v 사이여야 합니다"},
@@ -90,7 +90,7 @@ func init() {
 		"无法交给系统打开":                           {Hant: "無法交給系統開啟", En: "Couldn't open it with the system", Ja: "システムで開けませんでした", Ko: "시스템으로 열 수 없습니다"},
 		"保存到的文件夹已经不在了":                       {Hant: "儲存目的地資料夾已不存在", En: "The destination folder no longer exists", Ja: "保存先のフォルダはもう存在しません", Ko: "저장할 폴더가 더 이상 없습니다"},
 		"没有选择种子文件":                           {Hant: "沒有選擇種子檔案", En: "No torrent file selected", Ja: "トレントファイルが選択されていません", Ko: "토렌트 파일을 선택하지 않았습니다"},
-		"打不开这个种子文件：%w":                       {Hant: "打不開這個種子檔案：%w", En: "Couldn't open this torrent file: %w", Ja: "このトレントファイルを開けません：%w", Ko: "이 토렌트 파일을 열 수 없습니다: %w"},
+		"无法打开此种子文件：%w":                       {Hant: "無法開啟此種子檔案：%w", En: "Couldn't open this torrent file: %w", Ja: "このトレントファイルを開けません：%w", Ko: "이 토렌트 파일을 열 수 없습니다: %w"},
 		"这个文件超过 %d MB，看起来不像种子文件":             {Hant: "這個檔案超過 %d MB，看起來不像種子檔案", En: "This file is over %d MB—doesn't look like a torrent", Ja: "このファイルは %d MB を超えており、トレントではないようです", Ko: "이 파일은 %d MB가 넘어 토렌트 파일이 아닌 것 같습니다"},
 		"读取种子文件失败：%w":                        {Hant: "讀取種子檔案失敗：%w", En: "Couldn't read the torrent file: %w", Ja: "トレントファイルを読み込めません：%w", Ko: "토렌트 파일을 읽을 수 없습니다: %w"},
 		"这是 BitTorrent v2 种子，云盘目前只认 v1 磁力链接": {Hant: "這是 BitTorrent v2 種子，雲端硬碟目前只認 v1 磁力連結", En: "This is a BitTorrent v2 torrent; the drive currently only accepts v1 magnet links", Ja: "これは BitTorrent v2 のトレントです。クラウドドライブは現在 v1 のマグネットリンクのみ対応しています", Ko: "BitTorrent v2 토렌트입니다. 클라우드 드라이브는 현재 v1 마그넷 링크만 지원합니다"},
@@ -104,7 +104,7 @@ func init() {
 		"每组至少要保留一份：「%s」的所有副本都被选中了，没有删除任何文件": {Hant: "每組至少要保留一份：「%s」的所有副本都被選取了，沒有刪除任何檔案", En: "Each group must keep one copy: every copy of \"%s\" was selected, so nothing was deleted", Ja: "各グループで 1 つは残す必要があります：「%s」のすべてのコピーが選択されているため、何も削除しませんでした", Ko: "각 그룹에서 하나는 남겨야 합니다: ‘%s’의 모든 사본이 선택되어 아무 파일도 삭제하지 않았습니다"},
 
 		// TMDB
-		"这台电脑没有可用的%s，无法保存 TMDB 凭据": {Hant: "這台電腦沒有可用的%s，無法儲存 TMDB 憑證", En: "%s is not available on this computer, so the TMDB credential can't be saved", Ja: "このコンピュータでは%sを使用できないため、TMDB 認証情報を保存できません", Ko: "이 컴퓨터에서 %s을(를) 사용할 수 없어 TMDB 자격 증명을 저장할 수 없습니다"},
+		"本机没有可用的%s，无法保存 TMDB 凭据": {Hant: "本機沒有可用的%s，無法儲存 TMDB 憑證", En: "%s is not available on this computer, so the TMDB credential can't be saved", Ja: "このコンピュータでは%sを使用できないため、TMDB 認証情報を保存できません", Ko: "이 컴퓨터에서 %s을(를) 사용할 수 없어 TMDB 자격 증명을 저장할 수 없습니다"},
 		"无法把 TMDB 凭据存进%s":          {Hant: "無法將 TMDB 憑證存入%s", En: "Couldn't save the TMDB credential to %s", Ja: "TMDB 認証情報を%sに保存できませんでした", Ko: "TMDB 자격 증명을 %s에 저장할 수 없습니다"},
 		"无法从%s删除 TMDB 凭据":          {Hant: "無法從%s刪除 TMDB 憑證", En: "Couldn't delete the TMDB credential from %s", Ja: "%sから TMDB 認証情報を削除できませんでした", Ko: "%s에서 TMDB 자격 증명을 삭제할 수 없습니다"},
 		"TMDB 凭据不能包含空格或换行":         {Hant: "TMDB 憑證不能包含空格或換行", En: "The TMDB credential can't contain spaces or line breaks", Ja: "TMDB 認証情報に空白や改行は使えません", Ko: "TMDB 자격 증명에는 공백이나 줄바꿈을 넣을 수 없습니다"},
@@ -114,7 +114,7 @@ func init() {
 
 		// Organize
 		"单个计划不能超过 %d 项":             {Hant: "單一計畫不能超過 %d 項", En: "A plan can't have more than %d items", Ja: "1 つのプランは %d 項目までです", Ko: "한 계획에 항목이 %d개를 넘을 수 없습니다"},
-		"这个账号还在整理中，等这一轮弄完吧":         {Hant: "這個帳號還在整理中，請等這輪完成", En: "This account is already organizing; wait for it to finish", Ja: "このアカウントは整理中です。完了までお待ちください", Ko: "이 계정은 정리 중입니다. 끝날 때까지 기다려 주세요"},
+		"该账号正在整理中，请等待本轮完成":         {Hant: "該帳號正在整理中，請等待本輪完成", En: "This account is already organizing; wait for it to finish", Ja: "このアカウントは整理中です。完了までお待ちください", Ko: "이 계정은 정리 중입니다. 끝날 때까지 기다려 주세요"},
 		"已被移动或删除，未处理":               {Hant: "已被移動或刪除，未處理", En: "Moved or deleted; skipped", Ja: "移動または削除されたため、未処理", Ko: "이동되었거나 삭제되어 처리하지 않음"},
 		"已被改名，未处理":                  {Hant: "已被改名，未處理", En: "Renamed; skipped", Ja: "名前が変更されたため、未処理", Ko: "이름이 바뀌어 처리하지 않음"},
 		"不支持的操作，未处理":                {Hant: "不支援的操作，未處理", En: "Unsupported action; skipped", Ja: "未対応の操作のため、未処理", Ko: "지원하지 않는 작업이라 처리하지 않음"},
@@ -130,8 +130,8 @@ func init() {
 		"云盘没有确认这一步，未处理":             {Hant: "雲端硬碟沒有確認這一步，未處理", En: "The drive didn't confirm this step; skipped", Ja: "クラウドドライブがこの操作を確認しなかったため、未処理", Ko: "클라우드 드라이브가 이 단계를 확인하지 않아 처리하지 않음"},
 		"「%s」已被同名文件占用，未处理":          {Hant: "「%s」已被同名檔案佔用，未處理", En: "\"%s\" is taken by a file with the same name; skipped", Ja: "「%s」は同名のファイルが使用しているため、未処理", Ko: "‘%s’을(를) 같은 이름의 파일이 쓰고 있어 처리하지 않음"},
 		"这里有多个「%s」，未处理":             {Hant: "這裡有多個「%s」，未處理", En: "There are several \"%s\" here; skipped", Ja: "ここに「%s」が複数あるため、未処理", Ko: "여기에 ‘%s’이(가) 여러 개 있어 처리하지 않음"},
-		"没能新建「%s」：%s":               {Hant: "無法新建「%s」：%s", En: "Couldn't create \"%s\": %s", Ja: "「%s」を作成できませんでした：%s", Ko: "‘%s’을(를) 만들지 못했습니다: %s"},
-		"打不开「%s」查看里面有什么：%s":         {Hant: "打不開「%s」查看裡面有什麼：%s", En: "Couldn't read what's inside \"%s\": %s", Ja: "「%s」の中身を開けませんでした：%s", Ko: "‘%s’ 안의 내용을 읽지 못했습니다: %s"},
+		"无法新建「%s」：%s":               {Hant: "無法新建「%s」：%s", En: "Couldn't create \"%s\": %s", Ja: "「%s」を作成できませんでした：%s", Ko: "‘%s’을(를) 만들지 못했습니다: %s"},
+		"无法读取「%s」中的内容：%s":         {Hant: "無法讀取「%s」中的內容：%s", En: "Couldn't read what's inside \"%s\": %s", Ja: "「%s」の中身を開けませんでした：%s", Ko: "‘%s’ 안의 내용을 읽지 못했습니다: %s"},
 		"目标名称已被占用，云盘改名为「%s」":        {Hant: "目標名稱已被佔用，雲端硬碟改名為「%s」", En: "The name was taken; the drive renamed it to \"%s\"", Ja: "名前が使用済みのため、クラウドドライブが「%s」に変更しました", Ko: "이름이 이미 쓰여 클라우드 드라이브가 ‘%s’(으)로 바꿨습니다"},
 		"保存整理记录失败，操作没执行：%w":         {Hant: "儲存整理紀錄失敗，操作未執行：%w", En: "Couldn't save the organize record, so nothing ran: %w", Ja: "整理の記録を保存できなかったため、実行しませんでした：%w", Ko: "정리 기록을 저장하지 못해 실행하지 않았습니다: %w"},
 		"有文件夹超过 %d 项，无法核对，请选择更小的范围": {Hant: "有資料夾超過 %d 項，無法核對，請選擇較小的範圍", En: "A folder has more than %d items and can't be checked; choose a smaller scope", Ja: "%d 項目を超えるフォルダがあり確認できません。範囲を狭めてください", Ko: "항목이 %d개를 넘는 폴더가 있어 확인할 수 없습니다. 더 작은 범위를 선택하세요"},
@@ -146,7 +146,7 @@ func init() {
 		"读取这一项失败，已跳过":               {Hant: "讀取這一項失敗，已略過", En: "Couldn't read this item; skipped", Ja: "この項目を読み取れないため、スキップしました", Ko: "이 항목을 읽지 못해 건너뛰었습니다"},
 		"已恢复；原位置已有同名项，云盘改名为「%s」":    {Hant: "已還原；原位置已有同名項目，雲端硬碟改名為「%s」", En: "Restored; the name was taken, so the drive renamed it to \"%s\"", Ja: "復元しました。元の場所に同名の項目があったため、クラウドドライブが「%s」に変更しました", Ko: "복원함. 원래 위치에 같은 이름이 있어 클라우드 드라이브가 ‘%s’(으)로 바꿨습니다"},
 		"保存整理记录失败，撤销没执行：%w":         {Hant: "儲存整理紀錄失敗，復原未執行：%w", En: "Couldn't save the organize record, so nothing was undone: %w", Ja: "整理の記録を保存できなかったため、元に戻しませんでした：%w", Ko: "정리 기록을 저장하지 못해 실행 취소하지 않았습니다: %w"},
-		"新文件还没进入本地索引，请稍后再试":         {Hant: "新檔案尚未進入本機索引，請稍後再試", En: "New files aren't in the local index yet; try again later", Ja: "新しいファイルはまだローカルインデックスにありません。しばらくしてからもう一度お試しください", Ko: "새 파일이 아직 로컬 인덱스에 없습니다. 잠시 후 다시 시도하세요"},
+		"新文件尚未进入本地索引，请稍后重试":         {Hant: "新檔案尚未進入本機索引，請稍後重試", En: "New files aren't in the local index yet; try again later", Ja: "新しいファイルはまだローカルインデックスにありません。しばらくしてからもう一度お試しください", Ko: "새 파일이 아직 로컬 인덱스에 없습니다. 잠시 후 다시 시도하세요"},
 		"所选的文件不在这个文件夹里，可能已被移动或删除":   {Hant: "所選的檔案不在這個資料夾中，可能已被移動或刪除", En: "The selected files aren't in this folder; they may have been moved or deleted", Ja: "選択したファイルはこのフォルダにありません。移動または削除された可能性があります", Ko: "선택한 파일이 이 폴더에 없습니다. 이동되었거나 삭제되었을 수 있습니다"},
 
 		// Background file batches
@@ -156,12 +156,12 @@ func init() {
 
 		// Remove (cleanup)
 		"一次最多处理 %d 项，请缩小范围":    {Hant: "一次最多處理 %d 項，請縮小範圍", En: "Up to %d items at once; narrow the scope", Ja: "一度に処理できるのは最大 %d 項目です。範囲を狭めてください", Ko: "한 번에 최대 %d개 항목만 처리할 수 있습니다. 범위를 줄이세요"},
-		"这个账号还有删除在进行，等这一次弄完吧":  {Hant: "這個帳號還有刪除在進行，請等這次完成", En: "A delete is still running for this account; wait for it to finish", Ja: "このアカウントでは削除処理が進行中です。完了までお待ちください", Ko: "이 계정에서 삭제 작업이 진행 중입니다. 끝날 때까지 기다려 주세요"},
+		"该账号仍有删除任务进行中，请等待本次完成":  {Hant: "該帳號仍有刪除任務進行中，請等待本次完成", En: "A delete is still running for this account; wait for it to finish", Ja: "このアカウントでは削除処理が進行中です。完了までお待ちください", Ko: "이 계정에서 삭제 작업이 진행 중입니다. 끝날 때까지 기다려 주세요"},
 		"云盘里已经没有这一项，未处理":       {Hant: "雲端硬碟裡已經沒有這一項，未處理", En: "No longer in the drive; skipped", Ja: "クラウドドライブにもうないため、未処理", Ko: "클라우드 드라이브에 더 이상 없어 처리하지 않음"},
 		"已被移到别的文件夹，未处理":        {Hant: "已被移到別的資料夾，未處理", En: "Moved to another folder; skipped", Ja: "別のフォルダに移動されたため、未処理", Ko: "다른 폴더로 이동되어 처리하지 않음"},
 		"特殊文件夹，未处理":            {Hant: "特殊資料夾，未處理", En: "Special folder; skipped", Ja: "特別なフォルダのため、未処理", Ko: "특수 폴더라 처리하지 않음"},
 		"已经不是空的，未处理":           {Hant: "已經不是空的，未處理", En: "No longer empty; skipped", Ja: "空ではなくなったため、未処理", Ko: "더 이상 비어 있지 않아 처리하지 않음"},
-		"里面的文件夹太多，没能确认是空的，未处理": {Hant: "裡面的資料夾太多，無法確認是空的，未處理", En: "Too many folders inside to confirm it's empty; skipped", Ja: "中のフォルダが多すぎて空か確認できないため、未処理", Ko: "안에 폴더가 너무 많아 비어 있는지 확인하지 못해 처리하지 않음"},
+		"内部包含的文件夹过多，无法确认是否为空，已跳过": {Hant: "內部包含的資料夾過多，無法確認是否為空，已略過", En: "Too many folders inside to confirm it's empty; skipped", Ja: "中のフォルダが多すぎて空か確認できないため、未処理", Ko: "안에 폴더가 너무 많아 비어 있는지 확인하지 못해 처리하지 않음"},
 		"获取这些文件的最新状态失败：%w":     {Hant: "取得這些檔案的最新狀態失敗：%w", En: "Couldn't get the latest status of these files: %w", Ja: "これらのファイルの最新状態を取得できませんでした：%w", Ko: "이 파일들의 최신 상태를 가져오지 못했습니다: %w"},
 		"读取回收站失败：%w":           {Hant: "讀取垃圾桶失敗：%w", En: "Couldn't read the Trash: %w", Ja: "ゴミ箱を読み取れませんでした：%w", Ko: "휴지통을 읽지 못했습니다: %w"},
 	})

@@ -53,10 +53,10 @@ func (m *Manager) roots(ctx context.Context, c Config, id syncfs.Identity, owner
 		}
 		o := other.record
 		if syncfs.Overlaps(id, o.Identity) {
-			return nil, Node{}, i18n.Errorf("本地同步文件夹和现有的重复了：%s", o.Pair.Name+" · "+o.Pair.LocalPath)
+			return nil, Node{}, i18n.Errorf("本地同步文件夹与现有任务重叠：%s", o.Pair.Name+" · "+o.Pair.LocalPath)
 		}
 		if c.Account == o.Pair.Account && cloudOverlap(r, o.Root) {
-			return nil, Node{}, i18n.Errorf("云端同步文件夹和现有的重复了：%s", o.Pair.Name+" · "+o.Pair.CloudPath)
+			return nil, Node{}, i18n.Errorf("云端同步文件夹与现有任务重叠：%s", o.Pair.Name+" · "+o.Pair.CloudPath)
 		}
 	}
 	return b, r, nil
@@ -146,7 +146,7 @@ func (m *Manager) collect(ctx context.Context, c Config, id syncfs.Identity, own
 			}
 			n.Path = path.Join(rel, n.Name)
 			if old, exists := s.Cloud[n.Path]; exists && old.ID != n.ID {
-				s.Issues = append(s.Issues, Issue{ID: digest([]string{n.Path, old.ID, n.ID})[:24], Path: n.Path, Kind: "name", Reason: i18n.F("云端有重名文件，没法一一对应：%s", n.Path), Cloud: new(n)})
+				s.Issues = append(s.Issues, Issue{ID: digest([]string{n.Path, old.ID, n.ID})[:24], Path: n.Path, Kind: "name", Reason: i18n.F("云端存在重名项目，无法一一对应：%s", n.Path), Cloud: new(n)})
 				continue
 			}
 			if m.reserved(c.ID, n.ID, n.Name) {

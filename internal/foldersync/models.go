@@ -21,7 +21,7 @@ var (
 	ErrNotFound   = i18n.New("同步项目不存在")
 	ErrUnknown    = i18n.New("同步操作结果待确认，已停止自动重试")
 	ErrRepair     = i18n.New("同步记录对不上了，请重新扫描并关联文件夹")
-	ErrChanged    = i18n.New("两边文件又变了，先重新预览确认一下")
+	ErrChanged    = i18n.New("本地或云端文件已变更，请重新预览并确认")
 )
 
 type Config struct {

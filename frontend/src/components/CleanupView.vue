@@ -50,7 +50,7 @@ watch([currentId, indexReady], () => enterCleanupTab(cleanup.tab), { immediate: 
         <div>
           <p class="eyebrow">DRIVE CLEANUP · PKP</p>
           <h1>{{ t("清理") }}</h1>
-          <p class="lede">{{ t("找出占地方的重复文件，顺手把空文件夹也清一清。") }}</p>
+          <p class="lede">{{ t("查找占用空间的重复文件，并可一并清理空文件夹。") }}</p>
         </div>
         <span class="mark" aria-hidden="true"><Icon name="layers" :size="26" /></span>
       </header>

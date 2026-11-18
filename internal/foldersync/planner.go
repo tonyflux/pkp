@@ -258,7 +258,7 @@ func makePlan(c Config, id syncfs.Identity, s *snapshot, base map[string]baselin
 			if b.Preserved == "local" && l == nil || b.Preserved == "cloud" && r == nil {
 				changed := b.Preserved == "local" && !same(r, b.Cloud) || b.Preserved == "cloud" && !same(l, b.Local)
 				if changed {
-					issue(rel, "conflict", i18n.T("这边删了，但另一端后来又改过，先确认下留哪边"), l, r)
+					issue(rel, "conflict", i18n.T("本地已删除但另一端随后有修改，请确认保留版本"), l, r)
 				} else {
 					p.observed[rel] = baseline{Local: b.Local, Cloud: b.Cloud, Preserved: b.Preserved}
 				}
@@ -266,7 +266,7 @@ func makePlan(c Config, id syncfs.Identity, s *snapshot, base map[string]baselin
 			}
 			// A restored/new entry is a new event; never reuse old deletion approval.
 			if l != nil && r != nil {
-				issue(rel, "conflict", i18n.T("删过的文件又出现了，先核对下两边内容"), l, r)
+				issue(rel, "conflict", i18n.T("已删除的文件重新出现，请先核对两端内容"), l, r)
 				continue
 			}
 		}
