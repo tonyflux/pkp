@@ -21,7 +21,7 @@ export default {
   "找不到这条已保存的搜索了，请重新打开列表": { tw: "找不到這筆已儲存的搜尋了，請重新開啟清單", en: "That saved search is no longer there. Reopen the list.", ja: "この保存した検索は見つかりません。リストを開き直してください。", ko: "이 저장한 검색을 찾을 수 없습니다. 목록을 다시 여세요." },
   "请先选择账号": { tw: "請先選擇帳號", en: "Select an account first", ja: "先にアカウントを選択してください", ko: "먼저 계정을 선택하세요" },
   "没能读取已保存的搜索：{error}": { tw: "無法讀取已儲存的搜尋：{error}", en: "Couldn't load saved searches: {error}", ja: "保存した検索を読み込めませんでした：{error}", ko: "저장한 검색을 불러오지 못했습니다: {error}" },
-  "搜索后选择“保存搜索”，在此快速打开。": { tw: "搜尋後選擇「儲存搜尋」，即可在此快速開啟。", en: "Choose “Save search” after searching to open it quickly here.", ja: "検索後に「検索を保存」を選ぶと、ここからすぐに開けます。", ko: "검색 후 ‘검색 저장’을 선택하면 여기에서 빠르게 열 수 있습니다." },
+  "暂无已保存的搜索": { tw: "暫無已儲存的搜尋", en: "No saved searches yet", ja: "保存した検索はまだありません", ko: "저장한 검색이 없습니다" },
   "管理搜索：{name}": { tw: "管理搜尋：{name}", en: "Manage saved search: {name}", ja: "保存した検索の管理：{name}", ko: "저장한 검색 관리: {name}" },
   "重命名保存的搜索": { tw: "重新命名已儲存的搜尋", en: "Rename saved search", ja: "保存した検索の名前を変更", ko: "저장한 검색 이름 바꾸기" },
   "只更改名称，不会更改保存的搜索条件。": { tw: "只變更名稱，不會變更已儲存的搜尋條件。", en: "Only the name changes. Saved search conditions stay the same.", ja: "名前のみを変更します。保存した検索条件は変わりません。", ko: "이름만 변경됩니다. 저장된 검색 조건은 그대로 유지됩니다." },

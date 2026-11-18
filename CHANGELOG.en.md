@@ -4,6 +4,10 @@
 
 ## Unreleased
 
+- Unify the desktop workspace frame across Files, AI Assistant, Transfers, Sync, Shares and other standard pages, while retaining detail columns and dedicated player and file-viewer layouts.
+
+- Refine the saved-search sidebar with a collapsed empty state and aligned heading; prevent startup from focusing it unexpectedly.
+
 - Refine the file workspace hierarchy with larger folder previews and quieter card borders, search controls, and sidebars, while retaining selection, sorting, account and playback actions.
 
 - Refine the collapsed player bar with a clearer title, grouped playback and account details, and a more balanced timeline and narrow-window layout; retain account switching and playback controls.

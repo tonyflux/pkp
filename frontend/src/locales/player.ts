@@ -204,7 +204,6 @@ export default {
     ja: "別ウインドウで再生 · 一時停止中",
     ko: "별도 창에서 재생 · 일시정지됨",
   },
-  "正在播放 · 已暂停": { tw: "正在播放 · 已暫停", en: "Now playing · Paused", ja: "再生中 · 一時停止中", ko: "재생 중 · 일시정지됨" },
   播放进度: { tw: "播放進度", en: "Playback position", ja: "再生位置", ko: "재생 위치" },
   回到主窗口播放: { tw: "回到主視窗播放", en: "Play in main window", ja: "メインウインドウで再生", ko: "메인 창에서 재생" },
   停止播放: { tw: "停止播放", en: "Stop playback", ja: "再生を停止", ko: "재생 중지" },

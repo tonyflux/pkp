@@ -22,7 +22,11 @@ const storageError = computed(() => savedSearches.account === currentId.value ? 
 watch(currentId, (account) => {
   close();
   loadSavedSearches(account);
+  collapsed.value = !savedSearches.error && !savedSearches.items.length;
 }, { immediate: true });
+watch([() => items.value.length, storageError], ([count, error], [previousCount]) => {
+  if (error || (count > 0 && previousCount === 0)) collapsed.value = false;
+});
 watch(() => props.compact, () => close());
 watch(open, (value) => emit("popover", value));
 watch(() => savedHistory.dialog, (dialog) => { if (dialog) close(); });
@@ -138,14 +142,14 @@ onBeforeUnmount(() => {
 <template>
   <section class="saved-searches" :class="{ rail: compact }" data-saved-searches>
     <button ref="trigger" class="saved-heading" type="button" data-saved-history-heading :title="t('已保存搜索')" :aria-label="t('已保存搜索')" :aria-expanded="compact ? open : !collapsed" :aria-haspopup="compact ? 'dialog' : undefined" @click="toggle">
-      <Icon :name="compact ? 'search' : collapsed ? 'chevronRight' : 'chevronDown'" :size="compact ? 20 : 12" />
       <span v-if="!compact">{{ t("已保存搜索") }}</span>
+      <Icon :name="compact ? 'search' : collapsed ? 'chevronRight' : 'chevronDown'" :size="compact ? 20 : 12" />
     </button>
     <Teleport to="body" :disabled="!compact">
       <div v-if="!compact || open" v-show="compact || !collapsed" ref="panel" class="saved-panel" :class="{ 'saved-popover': compact, glass: compact }" :style="compact ? position : undefined" :role="compact ? 'dialog' : 'group'" :aria-label="t('已保存搜索')" :tabindex="compact ? -1 : undefined" data-saved-searches @keydown.stop>
         <div v-if="compact" class="saved-popover-head"><strong>{{ t("已保存搜索") }}</strong><button type="button" :aria-label="t('关闭')" @click="close(true)"><Icon name="close" :size="15" /></button></div>
         <p v-if="storageError" class="saved-error" role="alert">{{ t("没能读取已保存的搜索：{error}", { error: storageError }) }} <button type="button" @click="loadSavedSearches(currentId)">{{ t("重试") }}</button></p>
-        <p v-else-if="!items.length" class="saved-empty">{{ t("搜索后选择“保存搜索”，在此快速打开。") }}</p>
+        <p v-else-if="!items.length" class="saved-empty">{{ t("暂无已保存的搜索") }}</p>
         <div v-for="item in items" :key="item.id" class="saved-row">
           <button type="button" class="saved-open" :class="{ current: ui.route === 'files' && currentSavedSearch?.id === item.id }" :aria-current="ui.route === 'files' && currentSavedSearch?.id === item.id ? 'page' : undefined" :title="item.query" @click="run(item)"><Icon name="search" :size="14" /><span>{{ item.name }}</span></button>
           <button type="button" class="saved-action" data-saved-history-action :aria-label="t('管理搜索：{name}', { name: item.name })" :title="t('更多操作')" aria-haspopup="menu" :aria-expanded="menu?.id === item.id" @click="toggleMenu(item, $event)" @keydown.down.prevent.stop="toggleMenu(item, $event)"><Icon name="more" :size="15" /></button>
@@ -164,15 +168,15 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .saved-searches { margin: 14px 0 0; }
-.saved-heading { display: flex; align-items: center; gap: 7px; width: 100%; height: 30px; border: 0; padding: 0 10px; background: transparent; color: var(--fg-dim); font: inherit; font-size: 11px; text-align: left; cursor: pointer; }
-.saved-heading span { white-space: nowrap; }
+.saved-heading { display: flex; align-items: center; justify-content: flex-start; gap: 7px; width: 100%; min-height: 34px; border: 0; border-radius: 8px; padding: 0 10px; background: transparent; color: var(--fg-dim); font: inherit; font-size: 12px; font-weight: 600; text-align: left; cursor: pointer; }
+.saved-heading span { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .rail .saved-heading { justify-content: center; width: 54px; height: 38px; padding: 0; border-radius: 12px; color: var(--fg-dim); }
 .saved-panel { min-width: 0; }
 .saved-panel button { color: var(--fg-dim); background: transparent; border: 0; border-radius: 6px; font: inherit; font-size: 11px; cursor: pointer; }
 .saved-panel button:active, .saved-heading:active { transform: scale(.97); }
 .saved-panel button:hover, .saved-heading:hover { background: var(--glass-inset); color: var(--fg); }
 .saved-row { display: flex; align-items: center; min-width: 0; gap: 1px; }
-.saved-open { display: flex; align-items: center; flex: 1; min-width: 0; height: 34px; gap: 7px; padding: 0 7px; text-align: left; }
+.saved-open { display: flex; align-items: center; justify-content: flex-start; flex: 1; min-width: 0; height: 34px; gap: 7px; padding: 0 10px; text-align: left; }
 .saved-open :deep(svg) { flex-shrink: 0; }
 .saved-open span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .saved-open.current { background: var(--accent-soft); color: var(--accent); }

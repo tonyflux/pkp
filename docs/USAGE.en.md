@@ -30,6 +30,8 @@ Right-click a single file or folder, or a multi-selection, and choose “Organiz
 
 The file grid and filters adapt to the space available in the window. In short windows the workspace can scroll while the playback bar stays visible. This does not change system display scaling or reset your sidebar and information-panel choices.
 
+On wide windows, Files, AI Assistant, Transfers, Sync, Shares and other standard pages use one continuous sidebar, toolbar and content frame; detail columns retain their own scrolling. Narrow windows keep separated sections, while file previews and the player retain their dedicated interfaces.
+
 In-app file and folder selection sheets share a grid/list switch, including move/copy, cloud sync folders, cleanup scope, Cloud Add destinations, Share Import, torrent files, and archive contents/extraction destinations. The grid uses thumbnails or type icons; the list emphasizes names and paths. Switching views changes presentation only: selections, account, location, and authorization scope remain unchanged, and nothing is submitted. Native system file/folder dialogs retain the system's own views.
 
 ### Batch File Operations

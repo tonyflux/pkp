@@ -157,7 +157,7 @@ onMounted(() => {
   </div>
   <LoginView v-else-if="!signedIn" />
 
-  <div v-else class="shell" :class="{ immersive, fullscreen: immersive && ui.fullscreen, unified: ui.route === 'files' || ui.route === 'settings' }">
+  <div v-else class="shell" :class="{ immersive, fullscreen: immersive && ui.fullscreen, unified: !immersive && ui.route !== 'viewer' }">
     <FloatingNav v-if="!immersive" />
 
     <main ref="stack" class="stack">
@@ -300,9 +300,9 @@ onMounted(() => {
     border-radius: 0 var(--radius-island) 0 0;
   }
 
-  .unified .content > :deep(.files),
-  .unified .content > :deep(.settings),
-  .unified .content > :deep(.account-screen) {
+  .unified .content > :deep(.canvas:not(.viewer)),
+  .unified .content > :deep(.sync-page),
+  .unified .content > :deep(.lan-page) {
     border-left: 0;
     border-radius: 0 0 var(--radius-island) 0;
     box-shadow: none;
@@ -316,6 +316,20 @@ onMounted(() => {
   .unified .content > :deep(.panel:not(.page)) {
     border-radius: 0 0 var(--radius-island) 0;
     box-shadow: none;
+  }
+
+  .unified .content:has(> :deep(.detail:not(.page))) > :deep(.canvas:not(.viewer)) {
+    border-right: 0;
+    border-radius: 0;
+  }
+
+  .unified .content > :deep(.detail:not(.page)) {
+    border-radius: 0 0 var(--radius-island) 0;
+    box-shadow: none;
+  }
+
+  .unified .content > :deep(.lan-page) {
+    border-radius: 0 var(--radius-island) var(--radius-island) 0;
   }
 
   .unified .stack > [data-file-tasks]:not([style*="display: none"]) {
@@ -374,6 +388,12 @@ onMounted(() => {
   .stack,
   .content {
     gap: 12px;
+  }
+}
+
+@media (min-width: 960px) and (max-height: 620px) {
+  .unified :deep(.nav) {
+    border-bottom-left-radius: 0;
   }
 }
 

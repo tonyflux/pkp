@@ -67,6 +67,7 @@ function onScrimClick(event: MouseEvent) {
 
 watch(dialog, async (current, previous) => {
   if (!current) {
+    if (!previous) return;
     const from = opener;
     opener = null;
     await nextTick();
