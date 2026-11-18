@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { nextTick, ref, useId, watch } from "vue";
+import { computed, nextTick, ref, useId, watch } from "vue";
 import Icon from "./Icon.vue";
 import { useAnchoredList, useOutsideClick } from "../dom";
 import { t } from "../i18n";
@@ -13,6 +13,7 @@ const trigger = ref<HTMLButtonElement>();
 const menu = ref<HTMLElement>();
 const rows = ref<HTMLElement>();
 const { spot, place } = useAnchoredList(() => trigger.value, menu, rows, open, () => close());
+const groups = computed(() => ui.view === "all" && ui.scope === "accounts" ? FILTER_OPTIONS.filter((group) => group.group !== t("统计")) : FILTER_OPTIONS);
 useOutsideClick(`[data-search-filters="${id}"]`, () => open.value, () => close());
 watch([currentId, () => ui.route, () => ui.view, () => currentSavedSearch.value?.id], () => close());
 
@@ -97,7 +98,7 @@ function onFocusOut(event: FocusEvent) {
         @focusout="onFocusOut"
       >
         <div ref="rows" class="filter-rows">
-          <div v-for="group in FILTER_OPTIONS" :key="group.group" class="filter-group" role="group" :aria-label="group.group">
+          <div v-for="group in groups" :key="group.group" class="filter-group" role="group" :aria-label="group.group">
             <span>{{ group.group }}</span>
             <div>
               <button v-for="option in group.options" :key="option.token" type="button" role="menuitem" @click="add(option.token)">{{ option.label }}</button>

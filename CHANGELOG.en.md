@@ -2,6 +2,10 @@
 
 [简体中文](CHANGELOG.md) · English
 
+## Unreleased
+
+- Browse files across all accounts, including filtering, search, playback and downloads, while keeping drives isolated. Unready indexes and sync failures are marked as potentially incomplete.
+
 ## 0.7.1 · 2026-11-18
 
 - Improve the usage-statistics dashboard on phones: adapt date filters, cards, charts and tables to narrow screens, support touch inspection and keep chart tooltips within the page.

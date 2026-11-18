@@ -6,7 +6,7 @@ import { onMounted, ref } from "vue";
 import Icon from "./Icon.vue";
 import Thumb from "./Thumb.vue";
 import { clock } from "../format";
-import { playAt, player } from "../store";
+import { entryKey, playAt, player } from "../store";
 import { t } from "../i18n";
 
 defineProps<{ compact?: boolean }>();
@@ -20,7 +20,7 @@ onMounted(() => list.value?.querySelector(".on")?.scrollIntoView({ block: "neare
   <div ref="list" class="queue" :class="{ compact }">
     <button
       v-for="(item, i) in player.playlist"
-      :key="item.id"
+      :key="entryKey(item)"
       class="queue-item"
       :class="{ on: i === player.index }"
       @click="playAt(i)"

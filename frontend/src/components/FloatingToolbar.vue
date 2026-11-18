@@ -46,7 +46,7 @@ const search = ref<HTMLInputElement>();
 
 const backTitle = computed(() =>
   t("{name}（{note}）", {
-    name: localSearchShown.value ? t("返回文件列表") : ui.view === "all" && ui.scope === "drive" ? t("返回当前文件夹") : t("返回上一级"),
+    name: localSearchShown.value ? t("返回文件列表") : ui.view === "all" && ui.scope !== "folder" ? t("返回当前文件夹") : t("返回上一级"),
     note: shortcutText("["),
   }),
 );
@@ -123,6 +123,7 @@ const searchPlaceholder = computed(() => {
   if (ui.route === "sync") return t("搜索同步文件夹");
   if (ui.route === "shares") return t("搜索分享");
   if (ui.route === "transfers") return t("搜索传输任务");
+  if (ui.view === "all" && ui.scope === "accounts") return t("搜索所有账号的文件");
   if (ui.view === "all" && ui.scope === "drive") return t("搜索整个云盘的文件");
   return accounts.list.length > 1 ? t("搜索当前账号的文件") : t("搜索文件或文件夹");
 });
@@ -134,7 +135,7 @@ const searchPlaceholder = computed(() => {
 // Filter all files (Enter) and Ask AI. Nothing in it asks a model; Ask AI only
 // routes to the assistant, which asks before anything is sent.
 const focused = ref(false);
-const fileSearch = computed(() => !videoWorksShown.value && ui.route !== "history" && ui.route !== "shares" && ui.route !== "transfers" && ui.route !== "sync");
+const fileSearch = computed(() => !videoWorksShown.value && !(ui.view === "all" && ui.scope === "accounts") && ui.route !== "history" && ui.route !== "shares" && ui.route !== "transfers" && ui.route !== "sync");
 const dropText = computed(() => (fileSearch.value ? ui.query.trim() : ""));
 const dropDismissed = ref(false);
 const dropOpen = computed(() => focused.value && !!dropText.value && !dropDismissed.value);

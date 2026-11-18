@@ -474,6 +474,13 @@ export function List(req: $models.ListRequest): $CancellablePromise<$models.List
 }
 
 /**
+ * ListAllAccounts lists live files without switching the active account.
+ */
+export function ListAllAccounts(req: $models.ListRequest, cursor: string, query: $models.AIQuery | null): $CancellablePromise<$models.AggregatePage> {
+    return $Call.ByID(1244455596, req, cursor, query);
+}
+
+/**
  * ListFolders returns every live folder directly under parentID ("" = root),
  * sorted by name: one level of the move/copy destination picker.
  */

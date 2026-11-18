@@ -4,7 +4,7 @@
  * provide. The main window's copy is the whole application; the separate
  * player window's copy only mirrors the playback session (see inPlayerWindow).
  */
-import { computed, markRaw, nextTick, onBeforeUnmount, onMounted, reactive, watch } from "vue";
+import { computed, markRaw, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from "vue";
 import { Browser, Clipboard, Dialogs, Events, Window } from "@wailsio/runtime";
 import { applyLanguage, i18n, isLocale, N_, t, type LanguagePref } from "./i18n";
 import { enqueueFileTask, fileTasks, settleFileTask, stopFileTask, taskCounts, taskFinished, type FileTask, type FileTaskItemState } from "./filetasks";
@@ -219,8 +219,8 @@ export const inViewerWindow = new URLSearchParams(location.search).get("window")
 export type Route = "files" | "transfers" | "player" | "shares" | "settings" | "viewer" | "assistant" | "cleanup" | "sync" | "history" | "lan";
 export type LibraryView = "all" | "starred" | "trash";
 export type CategoryFilter = "all" | "video" | "image" | "document" | "audio" | "other";
-/** All Files's Browse Scope: one folder's direct children, or every file of the drive. */
-export type FilesScope = "folder" | "drive";
+/** All Files's Browse Scope: one folder, one drive, or every signed-in account. */
+export type FilesScope = "folder" | "drive" | "accounts";
 export type SortKey = "modified" | "name" | "size";
 export const sorts: { key: SortKey; label: string }[] = [
   { key: "modified", get label() { return t("按修改时间"); } },
@@ -450,6 +450,20 @@ export const drive = reactive({
   detailError: "",
 });
 
+/** Refreshes the combined listing after an explicit refresh or an index pass. */
+export const aggregateRefresh = ref(0);
+
+/** A queue item can retain its owner without changing ordinary Entry callers. */
+export type OwnedEntry = Entry & { account?: string };
+
+export function entryAccount(entry: Entry): string {
+  return (entry as OwnedEntry).account || currentId.value;
+}
+
+export function entryKey(entry: Entry): string {
+  return JSON.stringify([entryAccount(entry), entry.id]);
+}
+
 /**
  * Dialogs of the account flows, one at a
  * time, hosted by AccountDialogs. The two questions resolve a promise the
@@ -523,8 +537,7 @@ export const player = reactive({
   presentation: "off" as Presentation,
   // The route the immersive player returns to.
   returnRoute: "files" as Route,
-  // The account the session's videos belong to: the one on screen when it
-  // started. Its queue plays on in that account whatever is on screen.
+  // The owner of the file currently playing; aggregate queues may span accounts.
   owner: "",
   // The separate window's copy of the owner, sent with the session.
   ownerInfo: null as Account | null,
@@ -664,7 +677,7 @@ export function setLayout(layout: "grid" | "list") {
   localStorage.setItem("pkp.layout", layout);
 }
 
-export const videoWorksShown = computed(() => ui.view !== "trash" && ui.category === "video" && ui.videoLayout === "works" && !localSearchShown.value);
+export const videoWorksShown = computed(() => ui.view !== "trash" && !(ui.view === "all" && ui.scope === "accounts") && ui.category === "video" && ui.videoLayout === "works" && !localSearchShown.value);
 
 export function setVideoLayout(layout: "files" | "works"): void {
   if (layout === ui.videoLayout) return;
@@ -1369,7 +1382,7 @@ let pendingAnchor: FilesAnchor | null = null;
 let restoring = false;
 // Where each Browse Scope was scrolled to when the user left it: going back
 // shows the same folder at the same place.
-const scopeAnchors: Record<FilesScope, FilesAnchor | null> = { folder: null, drive: null };
+const scopeAnchors: Record<FilesScope, FilesAnchor | null> = { folder: null, drive: null, accounts: null };
 
 function snapshotPlace(): Place {
   return {
@@ -1390,7 +1403,7 @@ function restorePlace(id: string, fresh: boolean) {
   ui.query = place?.query ?? "";
   ui.category = place?.category ?? "all";
   ui.scope = place?.scope ?? "folder";
-  scopeAnchors.folder = scopeAnchors.drive = null;
+  scopeAnchors.folder = scopeAnchors.drive = scopeAnchors.accounts = null;
   ui.route = "files";
   pendingAnchor = place?.anchor ?? null;
   void nextTick(() => (restoring = false));
@@ -2049,7 +2062,7 @@ function clearSession() {
   ui.category = "all";
   ui.videoLayout = "files";
   ui.scope = "folder";
-  scopeAnchors.folder = scopeAnchors.drive = null;
+  scopeAnchors.folder = scopeAnchors.drive = scopeAnchors.accounts = null;
   ui.view = "all";
   void nextTick(() => (restoring = false));
   ui.panelTab = "overview";
@@ -2404,9 +2417,14 @@ export const wholeDrive = computed(() => ui.view === "all" && ui.scope === "driv
 export async function setScope(scope: FilesScope) {
   if (ui.scope === scope) return;
   scopeAnchors[ui.scope] = filesPlace.save();
+  listSerial++;
   ui.scope = scope;
   clearSelection();
-  await reload(true);
+  localSearch.force = false;
+  localSearch.range = null;
+  if (scope !== "accounts") await reload(true);
+  else { drive.entries = []; drive.total = -1; drive.offset = 0; drive.nextPageToken = ""; drive.listLoading = false; }
+  await nextTick();
   filesPlace.restore(scopeAnchors[scope]);
 }
 
@@ -2485,6 +2503,11 @@ export function removeEntries(ids: string[]) {
  */
 let refreshPending = false;
 export async function refresh() {
+  if (ui.view === "all" && ui.scope === "accounts") {
+    for (const account of accounts.list) if (!account.needsPassword) void DriveService.RequestSync(account.id);
+    aggregateRefresh.value++;
+    return;
+  }
   if (indexReady.value) {
     refreshPending = true;
     try {
@@ -2544,6 +2567,7 @@ function applyIndexProgress(progress: IndexProgress) {
     arrivalIndexSyncs.set(progress.account, progress.syncedAt);
     void loadInbox(progress.account);
   }
+  if (ui.view === "all" && ui.scope === "accounts" && progress.phase === "idle") aggregateRefresh.value++;
   if (progress.account !== currentId.value || !drive.status?.configured) return;
   drive.indexProgress = progress;
   const becameReady = progress.ready && !wasReady;
@@ -2555,7 +2579,7 @@ function applyIndexProgress(progress: IndexProgress) {
   if (passDone) refreshQuotaSoon();
   if (becameReady) {
     // First full walk done: swap the live page for the indexed one.
-    void reload(false);
+    if (!(ui.view === "all" && ui.scope === "accounts")) void reload(false);
   } else if (progress.phase === "idle" && refreshPending && progress.ready) {
     refreshPending = false;
     void reload(false).then(pickPending);
@@ -2604,13 +2628,13 @@ export async function goToCrumb(index: number) {
 }
 
 // Search is a view over the file list; Back leaves it before moving folders.
-export const canGoBack = computed(() => localSearchShown.value || (ui.view === "all" && (ui.scope === "drive" || drive.trail.length > 0)));
+export const canGoBack = computed(() => localSearchShown.value || (ui.view === "all" && (ui.scope !== "folder" || drive.trail.length > 0)));
 
 /** goBack is the toolbar's Back / Go Up / Return to Current Folder (⌘[). */
 export function goBack() {
   if (!canGoBack.value) return;
   if (localSearchShown.value) void openView(ui.view);
-  else if (ui.scope === "drive") void setScope("folder");
+  else if (ui.scope !== "folder") void setScope("folder");
   else void goToCrumb(drive.trail.length - 1);
 }
 
@@ -2630,7 +2654,7 @@ export const currentFolderName = computed(() =>
 // Before that the server still gets the sort (it honours order), while the
 // category and the query are applied to the fetched page by `visible`.
 watch([() => ui.category, () => ui.sortKey, () => ui.sortAsc], () => {
-  if (drive.status?.configured && !restoring) void reload(false);
+  if (drive.status?.configured && !restoring && !(ui.view === "all" && ui.scope === "accounts")) void reload(false);
 });
 
 // The sort is a preference (Settings · General), so it outlives the session.
@@ -2643,7 +2667,7 @@ watch(
 // (FilesSearch answers them from the index, see below).
 let queryTimer: number | undefined;
 watch(listQuery, () => {
-  if (!drive.status?.configured || !indexReady.value || restoring) return;
+  if (!drive.status?.configured || !indexReady.value || restoring || (ui.view === "all" && ui.scope === "accounts")) return;
   clearTimeout(queryTimer);
   queryTimer = setTimeout(() => {
     void reload(false);
@@ -2657,7 +2681,7 @@ watch(listQuery, () => {
  * Size, Time, Playback…) and the index can answer them. Everything here reads
  * this computer's index (SearchIndex): no model, nothing sent anywhere.
  */
-export const localSearchShown = computed(() => localSearch.force || !!(localSearch.range?.account === currentId.value && (localSearch.range.folderId || localSearch.range.ids)) || (searchParse.value.filtered && indexReady.value));
+export const localSearchShown = computed(() => !(ui.view === "all" && ui.scope === "accounts") && (localSearch.force || !!(localSearch.range?.account === currentId.value && (localSearch.range.folderId || localSearch.range.ids)) || (searchParse.value.filtered && indexReady.value)));
 
 export const localSearch = reactive({
   /** The box text and account the result answers. */
@@ -9107,7 +9131,7 @@ async function openFolderAt(folderId: string, selectId: string): Promise<boolean
   const switchVersion = switchSerial;
   const trail = await run(t("打开所在文件夹"), () => DriveService.FolderTrail(folderId));
   if (!trail || account !== currentId.value || switchVersion !== switchSerial || accounts.switching) return false;
-  if (ui.scope === "drive" && ui.route === "files" && ui.view === "all") scopeAnchors.drive = filesPlace.save();
+  if (ui.scope !== "folder" && ui.route === "files" && ui.view === "all") scopeAnchors[ui.scope] = filesPlace.save();
   restoring = true;
   clearTimeout(queryTimer);
   ui.view = "all";
@@ -9168,9 +9192,10 @@ export async function openCloudFolder(account: string, folderId: string) {
  * transfer, so a file moved since still opens in the right place.
  */
 export async function revealFile(item: Pick<TransferItem, "account" | "fileId">) {
-  if (!(await showAccount(item.account))) return;
+  if (!(await showAccount(item.account)) || currentId.value !== item.account || accounts.switching) return;
   const detail = await run(t("打开所在文件夹"), () => DriveService.FileDetail(item.fileId));
-  if (detail) await openFolderAt(detail.parentId, item.fileId);
+  if (!detail || currentId.value !== item.account || accounts.switching) return;
+  await openFolderAt(detail.parentId, item.fileId);
 }
 
 /**
@@ -9215,13 +9240,13 @@ let eofHandled = false;
  * page unless it is already up there or in the separate window; the page
  * underneath is left exactly as it is — route, folder, filter, scroll,
  * selection — for Collapse and Continue Playing to return to. Only an explicit play changes
- * the queue; previewing or selecting other files never does. The session
- * belongs to the account on screen; replacing another account's video asks
- * first.
+ * the queue; previewing or selecting other files never does. Each item keeps
+ * its own account; replacing another account's video asks first.
  */
 export async function play(entry: Entry, queue?: Entry[], startAt = 0): Promise<OpenOutcome> {
-  const account = currentId.value;
-  if (playingElsewhere.value) {
+  const account = entryAccount(entry);
+  const screen = currentId.value;
+  if (player.presentation !== "off" && player.owner && player.owner !== account) {
     const owner = player.owner;
     if (!(await askReplace(owner))) return "cancelled";
     // Opening this video writes where the other one was left; asking first
@@ -9229,27 +9254,33 @@ export async function play(entry: Entry, queue?: Entry[], startAt = 0): Promise<
     const saved = await DriveService.SavePlayback().catch(() => null);
     if (saved === null) notify(t("没能保存「{name}」的播放进度", { name: accountName(owner) }), "error");
   }
-  if (!account || currentId.value !== account || accounts.switching) return "cancelled";
+  if (!account || currentId.value !== screen || accounts.switching || !accountById(account) || accountById(account)?.needsPassword) return "cancelled";
   // A queue is of one kind: music plays on into music
   // in the same folder, a video into the videos beside it.
   const audio = entry.category === "audio";
-  const list = (queue ?? visibleFiles.value).filter((e) => e.playable && (e.category === "audio") === audio);
-  player.owner = account;
-  player.playlist = list.length ? list : [entry];
-  player.index = Math.max(0, player.playlist.findIndex((e) => e.id === entry.id));
+  const list = (queue ?? visibleFiles.value).filter((e) => e.playable && (e.category === "audio") === audio).map((e) => ({ ...e, account: entryAccount(e) }));
+  const previous = { owner: player.owner, playlist: player.playlist, index: player.index, source: player.source };
+  const previousView = { presentation: player.presentation, route: ui.route, returnRoute: player.returnRoute };
+  player.playlist = list.length ? list : [{ ...entry, account }];
+  player.index = Math.max(0, player.playlist.findIndex((e) => entryKey(e) === entryKey(entry)));
   player.source = playSource(entry);
   if (player.presentation === "off" || player.presentation === "bar") showImmersive();
   // The host reports the stage rectangle on mount, and the native surface
   // has to exist before mpv initialises its video output.
   await nextTick();
-  if (currentId.value !== account || accounts.switching) return "cancelled";
+  if (currentId.value !== screen || accounts.switching) {
+    Object.assign(player, previous);
+    return "cancelled";
+  }
   if (player.presentation === "window") {
     const opened = await run(t("独立窗口播放"), async () => {
       await PlayerService.OpenWindow(audio);
       return true;
     });
-    if (!opened) return "failed";
-    if (currentId.value !== account || accounts.switching) return "cancelled";
+    if (!opened || currentId.value !== screen || accounts.switching) {
+      Object.assign(player, previous);
+      return opened ? "cancelled" : "failed";
+    }
   }
 
   const opened = await run(t("播放"), async () => {
@@ -9257,8 +9288,13 @@ export async function play(entry: Entry, queue?: Entry[], startAt = 0): Promise<
     else await DriveService.PlayFile(account, entry.id);
     return true;
   });
-  if (!opened) return "failed";
-  if (currentId.value !== account || accounts.switching) return "cancelled";
+  if (!opened) {
+    Object.assign(player, previous, { presentation: previousView.presentation, returnRoute: previousView.returnRoute });
+    ui.route = previousView.route;
+    return "failed";
+  }
+  player.owner = account;
+  if (currentId.value !== screen || accounts.switching) return "cancelled";
   await applyRememberedVolume();
   return "opened";
 }
@@ -9426,9 +9462,15 @@ export async function playAt(index: number) {
   if (inPlayerWindow) return sendPlayerCommand({ name: "playAt", index });
   const entry = player.playlist[index];
   if (!entry) return;
+  const owner = (entry as OwnedEntry).account || player.owner;
+  if (!owner || !accountById(owner) || accountById(owner)?.needsPassword) {
+    notify(t("需要重新登录"), "error");
+    return;
+  }
+  const opened = await run(t("播放"), () => DriveService.PlayFile(owner, entry.id));
+  if (opened === undefined) return;
   player.index = index;
-  // The queue plays on in the account it was started in.
-  await run(t("播放"), () => DriveService.PlayFile(player.owner, entry.id));
+  player.owner = owner;
   await applyRememberedVolume();
 }
 

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import AccountIdentity from "./AccountIdentity.vue";
+import AggregateFiles from "./AggregateFiles.vue";
 import ConfirmInline from "./ConfirmInline.vue";
 import FilesSearch from "./FilesSearch.vue";
 import SaveSearch from "./SaveSearch.vue";
@@ -83,8 +84,8 @@ import {
   type FilesAnchor,
 } from "../store";
 import type { Entry } from "../../bindings/github.com/tonyflux/pkp/internal/services";
-
 const multiAccount = computed(() => accounts.list.length > 1);
+const aggregate = computed(() => ui.view === "all" && ui.scope === "accounts");
 
 const selected = computed(() => drive.entries.find((e) => e.id === drive.selectedId) ?? null);
 // Two or more picked: checkboxes stay up and the batch bar floats over the list.
@@ -105,13 +106,15 @@ const chips: { key: CategoryFilter; label: string }[] = [
 ];
 
 // Browse scope: first where to look, then the kind of file.
-const scopes: { key: FilesScope; label: string }[] = [
-  { key: "folder", get label() { return t("当前文件夹"); } },
-  { key: "drive", get label() { return t("整个云盘"); } },
-];
-// Only All files has one; a search across the drive replaces both.
-const scopeShown = computed(() => ui.view === "all" && !(ui.query.trim() && indexReady.value));
+const scopes = computed<{ key: FilesScope; label: string }[]>(() => [
+  { key: "folder", label: t("当前文件夹") },
+  { key: "drive", label: t("整个云盘") },
+  ...(multiAccount.value ? [{ key: "accounts" as const, label: t("所有账号") }] : []),
+]);
+// Keep the range visible during aggregate searches so it can always be changed.
+const scopeShown = computed(() => ui.view === "all" && (aggregate.value || !(ui.query.trim() && indexReady.value)));
 const scopeHint = computed(() => {
+  if (aggregate.value) return t("汇集各账号的文件，云盘仍分别管理");
   if (ui.scope === "folder") return videoWorksShown.value ? t("按作品聚合当前目录及子目录的视频") : t("只显示当前文件夹的直接子项");
   // Before the first full walk the tree comes from the server page by
   // page: what is drawn is never the whole drive yet.
@@ -122,6 +125,7 @@ const sortLabel = computed(() => sorts.find((s) => s.key === ui.sortKey)?.label 
 
 const heading = computed(() => {
   const query = ui.query.trim();
+  if (aggregate.value) return { title: query ? t("搜索结果") : t("全部文件"), sub: t("所有账号") };
   if (query && indexReady.value) return { title: t("搜索结果"), sub: t("“{query}” · 全盘", { query }) };
   if (ui.view === "starred") return { title: t("星标"), sub: t("你标记过的文件与文件夹") };
   if (ui.view === "trash") return { title: t("回收站"), sub: t("删除的内容会保留一段时间") };
@@ -628,7 +632,7 @@ function onKeydown(ev: KeyboardEvent) {
   // Selection keys belong to the page only while it is in front and no
   // sheet is up; the page also sits, hidden, under the viewer.
   const sheetUp = !!relocate.mode || !!shares.targets.length || ui.cloudAddOpen || ui.newFolderOpen || renameSheet.entries.length > 0;
-  const pageKeys = ui.route === "files" && !sheetUp && !localSearchShown.value && !videoWorksShown.value;
+  const pageKeys = ui.route === "files" && !sheetUp && !localSearchShown.value && !videoWorksShown.value && !aggregate.value;
   const mod = (ev.metaKey || ev.ctrlKey) && !ev.altKey && !ev.shiftKey;
   const key = ev.key.length === 1 ? ev.key.toLowerCase() : ev.key;
   if (pageKeys && mod && key === "a") {
@@ -725,7 +729,7 @@ function onKeydown(ev: KeyboardEvent) {
   }
 
   // Space and Enter open what the list has picked: only while it is in front.
-  if (ui.route !== "files") return;
+  if (ui.route !== "files" || aggregate.value) return;
   if (ev.key !== " " && ev.key !== "Enter") return;
   if (ev.metaKey || ev.ctrlKey || ev.altKey || localSearchShown.value || videoWorksShown.value) return;
   if (document.activeElement?.closest("[data-playback]")) return;
@@ -866,11 +870,12 @@ async function revealEntry(id: string) {
   cardOf(id)?.scrollIntoView({ block: "nearest" });
 }
 
-onMounted(() => {
+watch(aggregate, (combined) => {
+  if (combined) return;
   filesPlace.save = savePlace;
   filesPlace.restore = (place) => void restorePlace(place);
   filesPlace.reveal = (id) => void revealEntry(id);
-});
+}, { immediate: true, flush: "sync" });
 onBeforeUnmount(() => {
   filesPlace.save = () => null;
   filesPlace.restore = () => {};
@@ -902,12 +907,12 @@ watch(
          on a page of its own; plain words keep the list as it always was. -->
     <FilesSearch v-if="localSearchShown" />
     <template v-else>
-    <header class="head" :class="{ 'with-account': multiAccount && currentAccount }">
-      <span v-if="multiAccount && currentAccount" class="account" :title="t('当前账号')">
+    <header class="head" :class="{ 'with-account': multiAccount && currentAccount && !aggregate }">
+      <span v-if="multiAccount && currentAccount && !aggregate" class="account" :title="t('当前账号')">
         <AccountIdentity :account="currentAccount" :size="24" dense />
       </span>
       <h1 class="title" :title="heading.title">{{ heading.title }}</h1>
-      <nav v-if="drive.trail.length && !wholeDrive" class="crumbs">
+      <nav v-if="drive.trail.length && !wholeDrive && !aggregate" class="crumbs">
         <button class="quiet" @click="goToCrumb(0)">{{ t("全部文件") }}</button>
         <template v-for="(crumb, i) in drive.trail" :key="crumb.id">
           <Icon name="chevronRight" :size="14" />
@@ -932,6 +937,8 @@ watch(
       <span class="scope-hint" :class="{ warn: ui.scope === 'drive' && !indexReady }" :title="scopeHint">{{ scopeHint }}</span>
     </div>
 
+    <AggregateFiles v-if="aggregate" />
+    <template v-else>
     <div class="controls" :class="{ 'after-scope': scopeShown }">
       <!-- One continuous well cut into the canvas, not five separate pills. -->
       <div v-slide class="segments kinds glass-well" role="tablist" :aria-label="t('分类')">
@@ -1353,6 +1360,7 @@ watch(
         <span v-else>{{ t("未选择文件") }}</span>
       </span>
     </footer>
+    </template>
     </template>
     </template>
 

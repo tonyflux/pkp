@@ -52,6 +52,7 @@ const currentLabel = computed(() => accountLabel(currentAccount.value));
 const caption = computed(() => {
   if (ui.panelTab === "overview") return t("云盘概览 · {name}", { name: multi.value ? currentLabel.value : t("当前账号") });
   if (ui.route === "viewer" && viewer.entry) return t("当前查看 · 文件信息");
+  if (ui.view === "all" && ui.scope === "accounts") return t("所有账号");
   return drive.picked.length ? t("所选文件 · 详情") : t("当前文件夹 · 属性");
 });
 
@@ -107,6 +108,7 @@ function collapse() {
         role="tabpanel"
         aria-labelledby="panel-tab-overview"
       />
+      <p v-else-if="ui.route === 'files' && ui.view === 'all' && ui.scope === 'accounts'" class="view">{{ t("汇集各账号的文件，云盘仍分别管理") }}</p>
       <PanelDetails v-else id="panel-details" key="details" class="view" role="tabpanel" aria-labelledby="panel-tab-details" />
     </div>
 

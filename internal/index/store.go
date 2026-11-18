@@ -6,6 +6,7 @@ package index
 
 import (
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -745,10 +746,13 @@ type Search struct {
 	IDs []string
 	// Under, when non-empty, keeps only rows somewhere below one of these
 	// folders; the folders themselves are not matches.
-	Under []string
-	Sort  string // "" (= modified) | "modified" | "created" | "size" | "name"
-	Asc   bool
-	Limit int // clamped to maxLimit; <= 0 means maxLimit
+	Under  []string
+	Sort   string // "" (= modified) | "modified" | "created" | "size" | "name"
+	Asc    bool
+	Limit  int // clamped to maxLimit; <= 0 means maxLimit
+	Offset int // number of matching rows to skip
+	// OrderIDs, when non-nil, orders a played-file selection by these IDs.
+	OrderIDs []string
 }
 
 // Group is one row of Aggregate: the files of one key, their bytes and
@@ -805,10 +809,12 @@ func (q Search) filter() (with, cond string, args []any, err error) {
 		if len(q.IDs) == 0 {
 			where = append(where, "0")
 		} else {
-			where = append(where, "id IN ("+placeholders(len(q.IDs))+")")
-			for _, id := range q.IDs {
-				args = append(args, id)
+			encoded, err := json.Marshal(q.IDs)
+			if err != nil {
+				return "", "", nil, err
 			}
+			where = append(where, "id IN (SELECT value FROM json_each(?))")
+			args = append(args, string(encoded))
 		}
 	}
 	var likes []string
@@ -918,8 +924,18 @@ func (s *Store) Search(q Search) ([]Row, int, error) {
 	if limit <= 0 || limit > maxLimit {
 		limit = maxLimit
 	}
+	order := key + " " + dir + ", id"
+	orderArgs := args
+	if q.OrderIDs != nil {
+		encoded, err := json.Marshal(q.OrderIDs)
+		if err != nil {
+			return nil, 0, err
+		}
+		order = "CAST((SELECT key FROM json_each(?) WHERE value = files.id) AS INTEGER), id"
+		orderArgs = append(orderArgs, string(encoded))
+	}
 	rows, err := s.db.Query(with+"SELECT "+selectColumns+" FROM files WHERE "+cond+
-		" ORDER BY "+key+" "+dir+", id LIMIT ?", append(args, limit)...)
+		" ORDER BY "+order+" LIMIT ? OFFSET ?", append(orderArgs, limit, q.Offset)...)
 	if err != nil {
 		return nil, 0, fmt.Errorf("index: search: %w", err)
 	}
