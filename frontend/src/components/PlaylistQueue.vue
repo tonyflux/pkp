@@ -44,10 +44,10 @@ onMounted(() => list.value?.querySelector(".on")?.scrollIntoView({ block: "neare
 .queue {
   flex: 1;
   overflow-y: auto;
-  padding: 4px 12px 12px;
+  padding: 4px 10px 12px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 4px;
 }
 
 /* flex: none — in a list that scrolls, shrinking items squeezed two-line
@@ -55,10 +55,10 @@ onMounted(() => list.value?.querySelector(".on")?.scrollIntoView({ block: "neare
 .queue-item {
   flex: none;
   justify-content: flex-start;
-  gap: 16px;
-  padding: 10px;
-  min-height: 100px;
-  border-radius: 18px;
+  gap: 12px;
+  padding: 8px;
+  min-height: 76px;
+  border-radius: 10px;
   border: 1px solid transparent;
   background: transparent;
   text-align: left;
@@ -69,17 +69,17 @@ onMounted(() => list.value?.querySelector(".on")?.scrollIntoView({ block: "neare
 }
 
 .queue-item.on {
-  border-color: var(--accent);
+  border-color: transparent;
   background: var(--accent-soft);
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 35%, transparent);
+  box-shadow: none;
 }
 
 .queue-thumb {
   position: relative;
-  width: 124px;
-  height: 78px;
+  width: 96px;
+  height: 60px;
   flex: none;
-  border-radius: 10px;
+  border-radius: 7px;
   overflow: hidden;
   background: color-mix(in srgb, var(--fg) 12%, transparent);
   display: grid;
@@ -104,7 +104,7 @@ onMounted(() => list.value?.querySelector(".on")?.scrollIntoView({ block: "neare
 }
 
 .queue-name {
-  font-size: 17px;
+  font-size: 14px;
   font-weight: 600;
   line-height: 1.3;
   /* Buttons do not wrap; a name takes up to two lines. */
@@ -117,7 +117,7 @@ onMounted(() => list.value?.querySelector(".on")?.scrollIntoView({ block: "neare
 }
 
 .queue-text small {
-  font-size: 14px;
+  font-size: 12px;
   font-variant-numeric: tabular-nums;
   color: var(--fg-dim);
 }
@@ -139,7 +139,7 @@ onMounted(() => list.value?.querySelector(".on")?.scrollIntoView({ block: "neare
   gap: 12px;
   padding: 7px 12px 7px 7px;
   min-height: 66px;
-  border-radius: 14px;
+  border-radius: 9px;
 }
 
 .compact .queue-thumb {

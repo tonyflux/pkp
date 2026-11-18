@@ -104,11 +104,9 @@
 /* The player picture gives backdrop-filter nothing to sample, so DockMenu
    popovers use opaque dark glass instead. */
 .select-list.dark {
-  border-color: rgba(201, 238, 255, 0.72);
-  background: linear-gradient(145deg, rgba(53, 87, 134, 0.96), rgba(16, 31, 61, 0.98));
-  box-shadow:
-    inset 0 1px rgba(255, 255, 255, 0.54),
-    0 18px 34px rgba(2, 14, 38, 0.46);
+  border-color: rgba(255, 255, 255, 0.16);
+  background: rgba(31, 34, 40, 0.98);
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.35);
 }
 
 .select-list.dark button {

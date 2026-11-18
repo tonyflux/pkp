@@ -557,19 +557,17 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
-/* Always the silver-blue dark of the design, whatever the theme: content
-   reads against it the way a picture or a page reads in a dark room. */
+/* Keep the viewer dark so images and pages remain the focus. */
 .viewer {
-  --fg: #edf4fa;
-  --fg-dim: #a7bdcc;
-  --fg-faint: #7f98ab;
-  --line: rgba(207, 230, 245, 0.17);
-  --line-soft: rgba(196, 228, 246, 0.1);
-  --ctl: rgba(196, 228, 249, 0.09);
-  --ctl-hover: rgba(196, 228, 249, 0.19);
-  --pick: #a0d4ef;
-  --on-pick: #15364d;
-  --accent: #a9dfff;
+  --fg: #eeeeef;
+  --fg-dim: #b4b4b8;
+  --fg-faint: #929298;
+  --line: rgba(255, 255, 255, 0.14);
+  --line-soft: rgba(255, 255, 255, 0.09);
+  --ctl: rgba(255, 255, 255, 0.07);
+  --ctl-hover: rgba(255, 255, 255, 0.14);
+  --pick: color-mix(in srgb, var(--accent) 22%, #303034);
+  --on-pick: #ffffff;
   container: viewer / inline-size;
   flex: 1;
   min-width: 0;
@@ -577,15 +575,12 @@ onBeforeUnmount(() => {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  border-radius: 24px;
-  border: 1px solid rgba(190, 221, 245, 0.14);
+  border-radius: 14px;
+  border: 1px solid var(--line);
   color: var(--fg);
   color-scheme: dark;
-  background:
-    radial-gradient(ellipse 750px 500px at 22% 36%, #26425d 0%, transparent 85%),
-    radial-gradient(ellipse 600px 530px at 80% 20%, #1e374e, transparent 86%),
-    #0b192b;
-  box-shadow: 0 24px 60px rgba(2, 10, 24, 0.4);
+  background: #202022;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.18);
 }
 
 .stage.rich { padding: 0; overflow: hidden; display: flex; flex-direction: column; }
@@ -622,14 +617,14 @@ i {
   height: 40px;
   min-height: 40px;
   padding: 0;
-  border-radius: 50%;
-  border: 1px solid rgba(207, 233, 250, 0.24);
+  border-radius: 10px;
+  border: 1px solid var(--line);
   background: transparent;
 }
 
 .back:hover:not(:disabled) {
   background: var(--ctl-hover);
-  border-color: rgba(207, 233, 250, 0.36);
+  border-color: var(--line);
 }
 
 .title {
@@ -641,7 +636,7 @@ i {
   display: block;
   font-size: 11px;
   letter-spacing: 0.045em;
-  color: #99aec1;
+  color: var(--fg-dim);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -649,7 +644,7 @@ i {
 
 .crumb i {
   padding: 0 7px;
-  color: #6e869c;
+  color: var(--fg-faint);
 }
 
 h1 {
@@ -700,10 +695,9 @@ h1 {
   --card-x: 16px;
   margin: 0 var(--card-x) var(--card-x);
   border: 1px solid var(--line);
-  border-radius: 20px;
+  border-radius: 12px;
   overflow: hidden;
-  background: #122237;
-  box-shadow: inset 0 1px rgba(233, 246, 255, 0.1), 0 20px 60px rgba(3, 12, 24, 0.24);
+  background: #19191b;
 }
 
 .body {
@@ -729,7 +723,7 @@ h1 {
   display: flex;
   flex-direction: column;
   border-right: 1px solid var(--line);
-  background: #122237;
+  background: #242426;
   overflow: hidden;
 }
 .navigation-head {
@@ -801,21 +795,15 @@ h1 {
   min-width: 0;
   overflow: auto;
   outline: none;
-  scrollbar-color: #5e788d transparent;
+  scrollbar-color: #77777b transparent;
 }
 
 .kind-image .stage,
-.kind-unsupported .stage {
-  background: radial-gradient(ellipse at 49% 52%, #29465b, #0f1e30 74%);
-}
-
+.kind-unsupported .stage,
 .kind-pdf .stage,
-.kind-markdown .stage {
-  background: radial-gradient(ellipse at 50% 20%, #344d60, #192c41 75%);
-}
-
+.kind-markdown .stage,
 .kind-text .stage {
-  background: radial-gradient(ellipse at 50% 30%, #23405a, #112136 72%);
+  background: #19191b;
 }
 
 .kind-pdf .stage {
@@ -847,7 +835,7 @@ h1 {
   border-radius: 999px;
   font-size: 13px;
   color: var(--fg-dim);
-  background: rgba(11, 26, 42, 0.86);
+  background: rgba(32, 32, 34, 0.94);
   border: 1px solid var(--line);
   pointer-events: none;
 }
@@ -867,11 +855,10 @@ h1 {
   place-items: center;
   width: 92px;
   height: 92px;
-  border: 1px solid rgba(180, 219, 241, 0.3);
-  border-radius: 25px;
-  background: rgba(164, 206, 234, 0.1);
-  color: #a7d1e9;
-  box-shadow: inset 0 1px rgba(255, 255, 255, 0.15);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--ctl);
+  color: var(--fg-dim);
 }
 
 .fault[role="alert"] .mark {
@@ -884,7 +871,7 @@ h1 {
   margin-top: 37px;
   font-size: 11px;
   letter-spacing: 0.18em;
-  color: #a0c7db;
+  color: var(--fg-dim);
 }
 
 .fault h2 {
@@ -904,7 +891,7 @@ h1 {
   margin: 0;
   font-size: 14px;
   line-height: 1.8;
-  color: #adbfcb;
+  color: var(--fg-dim);
   overflow-wrap: anywhere;
   text-wrap: pretty;
 }
@@ -925,9 +912,9 @@ h1 {
   max-width: min(100%, 520px);
   margin-top: 32px;
   padding-top: 20px;
-  border-top: 1px solid rgba(210, 234, 249, 0.18);
+  border-top: 1px solid var(--line);
   font-size: 12px;
-  color: #91aabd;
+  color: var(--fg-dim);
 }
 
 .meta span:first-child {
@@ -967,9 +954,9 @@ h1 {
 .picture img {
   display: block;
   max-width: none;
-  border: 1px solid rgba(240, 249, 255, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 5px;
-  box-shadow: 0 32px 75px rgba(0, 9, 20, 0.5), 0 0 0 8px rgba(221, 237, 248, 0.025);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.24);
   user-select: none;
   -webkit-user-select: none;
   /* Shown whole once decoded: a progressive JPEG's banding is not
@@ -1002,7 +989,7 @@ h1 {
 figcaption {
   font-size: 11px;
   letter-spacing: 0.08em;
-  color: #c0d4e0;
+  color: var(--fg-dim);
   max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1011,7 +998,7 @@ figcaption {
 
 figcaption i {
   margin: 0 10px;
-  color: #728da1;
+  color: var(--fg-faint);
 }
 
 /* ---------- PDF ---------- */
@@ -1232,7 +1219,7 @@ iframe {
   overflow-y: auto;
   padding: 18px 10px;
   border-right: 1px solid var(--line-soft);
-  background: rgba(11, 26, 42, 0.6);
+  background: #242426;
 }
 
 .toc button {
@@ -1278,9 +1265,9 @@ iframe {
   width: min(100%, 900px);
   margin: 0 auto;
   border-radius: 13px;
-  border: 1px solid rgba(205, 231, 247, 0.2);
-  background: #122335;
-  box-shadow: 0 18px 43px rgba(4, 12, 23, 0.3);
+  border: 1px solid var(--line);
+  background: #202022;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.18);
   overflow: hidden;
 }
 
@@ -1305,8 +1292,8 @@ iframe {
   justify-content: space-between;
   gap: 16px;
   padding: 18px 26px;
-  background: #17293c;
-  border-bottom: 1px solid rgba(206, 232, 249, 0.12);
+  background: #28282a;
+  border-bottom: 1px solid var(--line-soft);
   font-size: 12px;
 }
 
@@ -1321,13 +1308,13 @@ iframe {
 
 .code-head span {
   flex: none;
-  color: #8da8bb;
+  color: var(--fg-dim);
 }
 
 .code ol {
   margin: 20px 24px 28px;
   padding: 0 0 0 calc(var(--digits) * 1ch + 18px);
-  color: #cfe2ed;
+  color: var(--fg);
   font: 13px/24px ui-monospace, "SF Mono", Menlo, monospace;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
@@ -1343,19 +1330,19 @@ iframe {
 .code li {
   min-height: 24px;
   padding-left: 16px;
-  border-left: 1px solid rgba(169, 204, 227, 0.14);
+  border-left: 1px solid var(--line-soft);
 }
 
 .code li::marker {
-  color: #6f8da2;
+  color: var(--fg-faint);
   font-variant-numeric: tabular-nums;
 }
 
 .code .cut {
   margin: 0;
   padding: 14px 26px 18px;
-  border-top: 1px solid rgba(206, 232, 249, 0.12);
-  color: #8da8bb;
+  border-top: 1px solid var(--line-soft);
+  color: var(--fg-dim);
 }
 
 /* ---------- the bar ---------- */
@@ -1368,8 +1355,8 @@ iframe {
   gap: 18px;
   min-height: 64px;
   padding: 11px 22px;
-  background: rgba(11, 26, 42, 0.85);
-  border-top: 1px solid rgba(209, 234, 249, 0.17);
+  background: #242426;
+  border-top: 1px solid var(--line);
 }
 
 .bar-left,
@@ -1396,12 +1383,12 @@ iframe {
 .badge {
   flex: none;
   padding: 6px 10px;
-  border: 1px solid rgba(163, 213, 242, 0.24);
+  border: 1px solid var(--line);
   border-radius: 8px;
   font-size: 11px;
   font-weight: 650;
   letter-spacing: 0.05em;
-  color: #a9d9f3;
+  color: var(--fg-dim);
 }
 
 .caption {
@@ -1415,7 +1402,7 @@ iframe {
 
 .note {
   font-size: 12px;
-  color: #cbdae4;
+  color: var(--fg-dim);
   white-space: nowrap;
 }
 
@@ -1427,7 +1414,7 @@ iframe {
   border: 0;
   border-radius: 9px;
   background: var(--ctl);
-  color: #d8eaf5;
+  color: var(--fg);
   font-size: 12px;
 }
 
@@ -1475,7 +1462,7 @@ iframe {
 
   .card {
     --card-x: 10px;
-    border-radius: 16px;
+    border-radius: 10px;
   }
 
   .caption,
@@ -1639,7 +1626,7 @@ iframe {
 .windowed.kind-text .stage {
   container-type: inline-size;
   --wrap-x: 0px;
-  background: #122335;
+  background: #202022;
 }
 
 .windowed .code-wrap {

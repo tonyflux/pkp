@@ -106,7 +106,7 @@ onMounted(async () => {
   padding: 8px 16px;
   border-radius: var(--radius-pill);
   border: 1px solid rgba(255, 155, 172, 0.4);
-  background: rgba(14, 28, 52, 0.82);
+  background: rgba(28, 28, 30, 0.94);
   color: var(--danger);
   font-size: 13px;
   white-space: nowrap;

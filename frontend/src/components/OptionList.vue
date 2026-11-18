@@ -161,7 +161,7 @@ defineExpose({ focusCurrent });
   height: 38px;
   padding: 0 9px;
   border: 1px solid transparent;
-  border-radius: 11px;
+  border-radius: 8px;
   cursor: pointer;
   outline: none;
   transition:
@@ -171,8 +171,8 @@ defineExpose({ focusCurrent });
 
 .option:hover,
 .option.selected {
-  border-color: rgba(165, 224, 255, 0.48);
-  background: rgba(112, 187, 255, 0.2);
+  border-color: transparent;
+  background: rgba(143, 188, 230, 0.16);
 }
 
 /* Visible on the bright snow and the dark water alike: the menu is opaque. */
@@ -195,8 +195,7 @@ defineExpose({ focusCurrent });
   width: 5px;
   height: 5px;
   border-radius: 50%;
-  background: #8de7ff;
-  box-shadow: 0 0 8px #8de7ff;
+  background: #a5d2f6;
 }
 
 .option span {

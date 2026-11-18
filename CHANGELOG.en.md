@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+- Align the video player, music player and file viewer chrome, queues and control menus while retaining the native video surface, separate windows and existing playback and reading actions.
+
 - Add panel background opacity (0–100%) under Settings → General, preserving the existing appearance by default and honoring reduce-transparency overrides.
 
 - Refine the desktop workspace with thumbnail-focused image and video grids, compact cards for other files, and clearer filters, navigation and privacy settings. List view, file actions, light and dark modes, accent colors and custom wallpapers remain available.
