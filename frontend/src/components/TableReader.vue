@@ -49,7 +49,7 @@ const errorText = computed(() => {
   const error = failure.value;
   if (!(error instanceof TableReadError)) return error ? errorMessage(error) : "";
   const reason: TableFailure = error.reason;
-  if (reason === "limit") return t("表格超过安全读取上限：文本 16 MiB、工作簿 20 MiB、展开 32 MiB、10 万行、512 列或 100 万个网格单元；未截断显示。请用电子表格应用打开。");
+  if (reason === "limit") return t("表格太大，超出了预览限制（文本 16 MiB、表格文件 20 MiB／展开 32 MiB、10 万行、512 列或 100 万单元格）；这里不截断显示，请用电子表格应用打开。");
   if (reason === "encoding") return t("无法按所选编码解码，请切换字符编码后重试。");
   if (reason === "csv") return t("分隔文本的引号格式不正确，请检查分隔符及成对引号。");
   return t("无法读取此工作簿，文件可能损坏、加密或包含不支持的结构。");

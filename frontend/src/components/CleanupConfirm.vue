@@ -29,7 +29,7 @@ const title = computed(() => {
   return danger.value ? t("彻底删除 {n} 项？", { n }) : t("把 {n} 项移到回收站？", { n });
 });
 const line = computed(() => {
-  if (empty.value) return t("里面套着的 {n} 个空文件夹会一起进去，可以在回收站还原。", { n: nested.value });
+  if (empty.value) return t("里面嵌套的 {n} 个空文件夹也会一起移进去，之后还能在回收站找回。", { n: nested.value });
   return danger.value ? t("无法撤销，立即释放 {size}。", { size: space.value }) : t("可以在回收站还原。空间要等彻底删除后才释放。");
 });
 

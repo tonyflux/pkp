@@ -27,7 +27,7 @@ const menuRows = ref<HTMLElement>();
 const menuOpen = ref(false);
 const range = computed(() => localSearch.range?.account === currentId.value ? localSearch.range : null);
 const selectedRange = computed(() => range.value?.ids !== undefined);
-const reason = computed(() => selectedRange.value ? t("所选项目范围不能保存为动态搜索，请先移除所选项范围") : "");
+const reason = computed(() => selectedRange.value ? t("按勾选项目筛选的条件没法保存成动态搜索，先去掉范围限制再保存。") : "");
 const canSave = computed(() => !!currentId.value && savedHistoryCanSave.value);
 const { spot, place } = useAnchoredList(() => more.value, menu, menuRows, menuOpen, () => closeMenu());
 
@@ -137,7 +137,7 @@ onBeforeUnmount(() => window.removeEventListener("resize", onResize));
       type="button"
       class="save-search-trigger"
       :disabled="!canSave"
-      :title="reason || t('已保存历史')"
+      :title="reason || t('已保存搜索')"
       @click="begin('save')"
     ><Icon name="plus" :size="14" />{{ t("保存搜索") }}</button>
     <form v-if="editing" class="save-search-form" @submit.prevent="saveAs">

@@ -51,7 +51,7 @@ const receiptLine = computed(() => {
   const r = receipt.value;
   if (!r) return "";
   if (!dup.value) return t("在回收站还原顶层文件夹时，里面的空文件夹也会回来。");
-  if (r.permanent) return t("已核对删除结果，释放 {size}，容量会随后刷新。", { size: bytes(r.bytes, "0 B") });
+  if (r.permanent) return t("已删掉，释放了 {size}，剩余空间马上会更新。", { size: bytes(r.bytes, "0 B") });
   return t("{size} 可以从回收站还原；彻底删除后空间才会释放。", { size: bytes(r.bytes, "0 B") });
 });
 
@@ -65,13 +65,13 @@ function scan() {
     <template v-if="state.stage === 'scanning'">
       <span class="mark"><Orbit :size="24" :label="t('扫描中')" /></span>
       <h2>{{ t("正在读取本地索引") }}</h2>
-      <p>{{ t("只在这台电脑上计算结果，不会修改文件。范围：{scope}", { scope: cleanupScopeLabel }) }}</p>
+      <p>{{ t("只在本地算一下，不会动你的文件。范围：{scope}", { scope: cleanupScopeLabel }) }}</p>
     </template>
 
     <template v-else-if="state.stage === 'running'">
       <span class="mark"><Icon name="transfer" :size="26" /></span>
       <h2>{{ runTitle }}</h2>
-      <p>{{ t("每批处理 100 项；停止只影响还没发出的批次。") }}</p>
+      <p>{{ t("每 100 项一批处理；点停止的话，还没发出的就不会继续。") }}</p>
       <div
         class="track"
         role="progressbar"
@@ -96,7 +96,7 @@ function scan() {
         <span><strong class="ok tnum">{{ num(receipt.removed) }}</strong> {{ t("项成功") }}</span>
         <span><strong class="warn tnum">{{ num(receipt.failed.length) }}</strong> {{ t("项未处理") }}</span>
       </div>
-      <p v-if="receipt.stopped" class="note">{{ t("已停止：还没发出的批次没有处理，也不算失败。") }}</p>
+      <p v-if="receipt.stopped" class="note">{{ t("已停止：还没发出的项目没有动过，也不算失败。") }}</p>
       <ul v-if="receipt.failed.length" class="failed" :aria-label="t('未处理的项')">
         <li v-for="f in receipt.failed" :key="f.id">
           <strong :title="f.name">{{ f.name || f.id }}</strong>
@@ -118,8 +118,8 @@ function scan() {
       <p>
         {{
           dup
-            ? t("扫描{scope}的内容重复文件；无需 AI，也不会下载文件或请求云端。", { scope: cleanupScopeLabel })
-            : t("扫描{scope}的空文件夹；无需 AI，也不会下载文件或请求云端。", { scope: cleanupScopeLabel })
+            ? t("在{scope}里查找内容重复的文件；纯本地比对，不用 AI 也不会下载文件。", { scope: cleanupScopeLabel })
+            : t("在{scope}里查找空文件夹；纯本地扫描，不用 AI 也不会下载文件。", { scope: cleanupScopeLabel })
         }}
       </p>
       <p v-if="state.error" class="error" role="alert">{{ t("没能扫描：{error}", { error: state.error }) }}</p>

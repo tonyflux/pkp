@@ -26,10 +26,10 @@ var (
 	ErrChanged  = i18n.New("云端文件与开始下载时不一致，请重新下载")
 	errMismatch = i18n.New("服务器返回的数据范围与请求不符")
 	errNoSpace  = i18n.New("磁盘空间不足")
-	errBusy     = i18n.New("这个账号同时下载的连接已满（PikPak 限制），请稍后点「继续」")
+	errBusy     = i18n.New("下载并发数到了 PikPak 上限，等一会儿再点「继续」")
 	errStalled  = i18n.New("连接 30 秒没有收到数据")
 	errDropped  = i18n.New("服务器提前断开了连接")
-	errArchived = i18n.New("云端文件处于归档存储，暂时取不出数据")
+	errArchived = i18n.New("这个文件在云端归档（冷）存储里，暂时取不出来")
 )
 
 // linkError is the CDN turning the link down: it expired or was revoked,
@@ -230,7 +230,7 @@ func fileLink(f *drive.File, err error) (string, time.Time, int64, error) {
 	}
 	link := f.ContentLink()
 	if link == "" {
-		return "", time.Time{}, 0, i18n.New("云端还没有可下载的链接，文件可能尚未保存完成")
+		return "", time.Time{}, 0, i18n.New("云端还没有下载地址，可能文件还没保存完")
 	}
 	expire, _ := time.Parse(time.RFC3339, f.Links["application/octet-stream"].Expire)
 	return link, expire, int64(f.Size), nil

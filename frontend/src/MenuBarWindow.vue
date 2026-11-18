@@ -213,7 +213,7 @@ onBeforeUnmount(() => {
 
       <section v-if="inbox && !locked" class="inbox" aria-labelledby="menubar-inbox">
         <div class="section-heading">
-          <h2 id="menubar-inbox">{{ t("新入库") }}</h2>
+          <h2 id="menubar-inbox">{{ t("新文件") }}</h2>
           <span>{{ inbox.extra }}</span>
         </div>
         <div class="card arrival" role="status">

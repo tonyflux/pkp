@@ -70,7 +70,7 @@ const groups = computed<{ title: string; items: NavItem[] }[]>(() => [
         label: t("同步与备份"),
         icon: "repeat",
         badge: syncAttention.value,
-        badgeLabel: t("同步与备份，{n} 个同步对需要处理", { n: syncAttention.value }),
+        badgeLabel: t("同步与备份，{n} 项需要处理", { n: syncAttention.value }),
       },
       { key: "shares", label: t("我的分享"), icon: "shares" },
       { key: "lan", label: t("局域网共享"), icon: "globe" },
@@ -97,7 +97,7 @@ const activeKey = computed(() => {
 });
 
 const taskLabel = computed(() => {
-  if (fileTaskUnseen.value.length) return t("filetask|文件任务，{n} 条回执待查看", { n: fileTaskUnseen.value.length });
+  if (fileTaskUnseen.value.length) return t("filetask|文件任务，{n} 条结果待查看", { n: fileTaskUnseen.value.length });
   if (fileTaskActiveCount.value) return t("filetask|文件任务，{n} 项进行中", { n: fileTaskActiveCount.value });
   return t("filetask|文件任务");
 });

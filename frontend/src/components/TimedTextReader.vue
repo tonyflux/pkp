@@ -38,7 +38,7 @@ function parse() {
     error.value = "";
   } catch (cause) {
     cues.value = [];
-    error.value = cause instanceof RangeError ? t("timed|字幕条目超过安全上限") : errorMessage(cause);
+    error.value = cause instanceof RangeError ? t("timed|字幕条数太多，超出了预览上限") : errorMessage(cause);
   }
 }
 async function load() {

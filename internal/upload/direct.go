@@ -15,12 +15,12 @@ import (
 // ErrUnknown means slot creation may have succeeded without a usable response.
 // Reconcile the cloud operation before supplying a recovered Slot; never retry
 // the operation under a new ID merely because Send returned this error.
-var ErrUnknown = i18n.New("上传创建结果待确认，请先核实云端状态")
+var ErrUnknown = i18n.New("还不确定云端建好没有，先核对下云端状态")
 
 var (
-	errDirectCheckpoint = i18n.New("传输检查点与当前操作不一致")
+	errDirectCheckpoint = i18n.New("断点续传记录对不上当前操作")
 	errDirectActive     = i18n.New("传输操作正在进行")
-	errDirectExpired    = i18n.New("上传授权已失效，请先核实云端状态")
+	errDirectExpired    = i18n.New("上传授权过期了，先核对下云端状态")
 )
 
 // DirectRequest sends an immutable caller-owned regular file. ID and Checkpoint

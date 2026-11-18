@@ -85,7 +85,7 @@ const percent = computed(() => {
       <strong v-for="path in leafFolders.slice(0, 3)" :key="path">{{ path }}</strong>
       <small v-if="leafFolders.length > 3">{{ t("另有 {n} 处", { n: leafFolders.length - 3 }) }}</small>
     </div>
-    <p class="sheet-small">{{ t("执行前还会核对云盘最新状态；期间被改名、移走或删除的项会跳过，并在回执中说明。") }}</p>
+    <p class="sheet-small">{{ t("动手前还会再对一遍云盘最新状态；期间改过名、移走或删掉的文件会跳过，并在结果里写清楚。") }}</p>
     <fieldset v-if="planUndecided.length && !running" class="decision-options" :disabled="busy">
       <legend>{{ t("请选择如何处理未决定的项") }}</legend>
       <label><input v-model="choice" type="radio" name="plan-undecided" value="keep" /> <span>{{ t("保留并结束提醒") }}</span></label>

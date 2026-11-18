@@ -137,23 +137,23 @@ onBeforeUnmount(() => {
 
 <template>
   <section class="saved-searches" :class="{ rail: compact }" data-saved-searches>
-    <button ref="trigger" class="saved-heading" type="button" data-saved-history-heading :title="t('已保存历史')" :aria-label="t('已保存历史')" :aria-expanded="compact ? open : !collapsed" :aria-haspopup="compact ? 'dialog' : undefined" @click="toggle">
+    <button ref="trigger" class="saved-heading" type="button" data-saved-history-heading :title="t('已保存搜索')" :aria-label="t('已保存搜索')" :aria-expanded="compact ? open : !collapsed" :aria-haspopup="compact ? 'dialog' : undefined" @click="toggle">
       <Icon :name="compact ? 'search' : collapsed ? 'chevronRight' : 'chevronDown'" :size="compact ? 20 : 12" />
-      <span v-if="!compact">{{ t("已保存历史") }}</span>
+      <span v-if="!compact">{{ t("已保存搜索") }}</span>
     </button>
     <Teleport to="body" :disabled="!compact">
-      <div v-if="!compact || open" v-show="compact || !collapsed" ref="panel" class="saved-panel" :class="{ 'saved-popover': compact, glass: compact }" :style="compact ? position : undefined" :role="compact ? 'dialog' : 'group'" :aria-label="t('已保存历史')" :tabindex="compact ? -1 : undefined" data-saved-searches @keydown.stop>
-        <div v-if="compact" class="saved-popover-head"><strong>{{ t("已保存历史") }}</strong><button type="button" :aria-label="t('关闭')" @click="close(true)"><Icon name="close" :size="15" /></button></div>
-        <p v-if="storageError" class="saved-error" role="alert">{{ t("读取已保存历史失败：{error}", { error: storageError }) }} <button type="button" @click="loadSavedSearches(currentId)">{{ t("重试") }}</button></p>
+      <div v-if="!compact || open" v-show="compact || !collapsed" ref="panel" class="saved-panel" :class="{ 'saved-popover': compact, glass: compact }" :style="compact ? position : undefined" :role="compact ? 'dialog' : 'group'" :aria-label="t('已保存搜索')" :tabindex="compact ? -1 : undefined" data-saved-searches @keydown.stop>
+        <div v-if="compact" class="saved-popover-head"><strong>{{ t("已保存搜索") }}</strong><button type="button" :aria-label="t('关闭')" @click="close(true)"><Icon name="close" :size="15" /></button></div>
+        <p v-if="storageError" class="saved-error" role="alert">{{ t("没能读取已保存的搜索：{error}", { error: storageError }) }} <button type="button" @click="loadSavedSearches(currentId)">{{ t("重试") }}</button></p>
         <p v-else-if="!items.length" class="saved-empty">{{ t("搜索后选择“保存搜索”，在此快速打开。") }}</p>
         <div v-for="item in items" :key="item.id" class="saved-row">
           <button type="button" class="saved-open" :class="{ current: ui.route === 'files' && currentSavedSearch?.id === item.id }" :aria-current="ui.route === 'files' && currentSavedSearch?.id === item.id ? 'page' : undefined" :title="item.query" @click="run(item)"><Icon name="search" :size="14" /><span>{{ item.name }}</span></button>
-          <button type="button" class="saved-action" data-saved-history-action :aria-label="t('管理已保存历史：{name}', { name: item.name })" :title="t('更多操作')" aria-haspopup="menu" :aria-expanded="menu?.id === item.id" @click="toggleMenu(item, $event)" @keydown.down.prevent.stop="toggleMenu(item, $event)"><Icon name="more" :size="15" /></button>
+          <button type="button" class="saved-action" data-saved-history-action :aria-label="t('管理搜索：{name}', { name: item.name })" :title="t('更多操作')" aria-haspopup="menu" :aria-expanded="menu?.id === item.id" @click="toggleMenu(item, $event)" @keydown.down.prevent.stop="toggleMenu(item, $event)"><Icon name="more" :size="15" /></button>
         </div>
       </div>
     </Teleport>
     <Teleport to="body">
-      <div v-if="menu" ref="menuPanel" class="menu glass saved-history-menu" role="menu" :aria-label="t('管理已保存历史：{name}', { name: menu.name })" :style="menuPosition" data-saved-searches data-saved-history-menu @keydown.stop="onMenuKey">
+      <div v-if="menu" ref="menuPanel" class="menu glass saved-history-menu" role="menu" :aria-label="t('管理搜索：{name}', { name: menu.name })" :style="menuPosition" data-saved-searches data-saved-history-menu @keydown.stop="onMenuKey">
         <button type="button" role="menuitem" @click="act('edit')"><Icon name="search" :size="15" />{{ t("编辑条件") }}</button>
         <button type="button" role="menuitem" @click="act('rename')"><Icon name="font" :size="15" />{{ t("重命名") }}</button>
         <button type="button" role="menuitem" class="danger" @click="act('delete')"><Icon name="trash" :size="15" />{{ t("删除") }}</button>

@@ -35,11 +35,11 @@ export default {
   已创建: { tw: "已建立", en: "Created", ja: "作成済み", ko: "생성됨" },
   已失效: { tw: "已失效", en: "Expired", ja: "無効", ko: "만료됨" },
   复制链接: { tw: "複製連結", en: "Copy link", ja: "リンクをコピー", ko: "링크 복사" },
-  "这个分享已不可访问；复制的是旧链接，打开后会提示失效。取消分享不会恢复它。": {
-    tw: "這個分享已無法存取；複製的是舊連結，開啟後會提示失效。取消分享不會還原它。",
-    en: "This share is no longer accessible. The copied link is the old one and will show as expired. Canceling the share won't restore it.",
-    ja: "この共有にはアクセスできなくなりました。コピーされるのは古いリンクで、開くと無効と表示されます。共有を解除しても復元されません。",
-    ko: "이 공유는 더 이상 접근할 수 없습니다. 복사되는 것은 이전 링크이며 열면 만료되었다고 표시됩니다. 공유를 취소해도 복원되지 않습니다.",
+  "这个分享已经失效，复制的链接别人打不开，取消分享也无法恢复。": {
+    tw: "這個分享已經失效，複製的連結別人打不開，取消分享也無法復原。",
+    en: "This share has expired — the link won't open for others, and stopping the share won't restore it.",
+    ja: "この共有はすでに無効です。リンクを開いても閲覧できず、共有を解除しても元には戻りません。",
+    ko: "이 공유는 이미 만료되어 링크가 열리지 않으며 공유를 취소해도 복원되지 않습니다.",
   },
   "取消「{name}」的分享？外部链接会立即失效，无法撤销。": {
     tw: "取消「{name}」的分享？外部連結會立即失效，無法復原。",
@@ -118,11 +118,11 @@ export default {
     ja: "Claude、Cursor、Cherry Studio などの AI ツールの MCP 設定に追加します。",
     ko: "Claude, Cursor, Cherry Studio 등 AI 도구의 MCP 설정에 추가합니다.",
   },
-  "工具会打开浏览器跳转到 PikPak 授权页面，点 Authorize 允许访问。": {
-    tw: "工具會開啟瀏覽器前往 PikPak 授權頁面，點 Authorize 允許存取。",
-    en: "The tool opens the PikPak authorization page in your browser; click Authorize to allow access.",
-    ja: "ツールがブラウザで PikPak の認可ページを開くので、Authorize をクリックしてアクセスを許可します。",
-    ko: "도구가 브라우저에서 PikPak 인증 페이지를 엽니다. Authorize를 눌러 접근을 허용합니다.",
+  "工具会自动打开浏览器跳到 PikPak 授权页，点 Authorize 同意就行。": {
+    tw: "工具會自動開啟瀏覽器跳轉到 PikPak 授權頁，點 Authorize 同意就好。",
+    en: "The tool opens PikPak's authorization page in your browser — click Authorize to allow access.",
+    ja: "ツールがブラウザで PikPak の認可ページを開きます。Authorize をクリックして許可してください。",
+    ko: "도구가 브라우저에서 PikPak 인증 페이지를 엽니다. Authorize를 눌러 허용하면 됩니다.",
   },
   "工具不支持浏览器授权？改用个人访问令牌": {
     tw: "工具不支援瀏覽器授權？改用個人存取權杖",
@@ -177,21 +177,21 @@ export default {
   从未: { tw: "從未", en: "never", ja: "なし", ko: "없음" },
   "本月 {usage}": { tw: "本月 {usage}", en: "This month: {usage}", ja: "今月 {usage}", ko: "이번 달 {usage}" },
   未产生流量: { tw: "未產生流量", en: "no traffic", ja: "通信なし", ko: "트래픽 없음" },
-  "移除后「{name}」立即无法访问你的 PikPak，要再用需在应用里重新连接。": {
-    tw: "移除後「{name}」會立即無法存取你的 PikPak，要再使用需在應用程式裡重新連線。",
-    en: "\"{name}\" will lose access to your PikPak immediately. To use it again, reconnect in the app.",
-    ja: "削除すると「{name}」はすぐに PikPak にアクセスできなくなります。再び使うにはアプリで再接続してください。",
-    ko: "제거하면 “{name}”은(는) 즉시 PikPak에 접근할 수 없습니다. 다시 사용하려면 앱에서 다시 연결해야 합니다.",
+  "移除后「{name}」立刻就不能再访问你的 PikPak 了，想再用得去对应应用里重新连接。": {
+    tw: "移除後「{name}」立刻就無法再存取你的 PikPak 了，想再用得到對應應用程式裡重新連線。",
+    en: "\"{name}\" loses access to your PikPak right away. Reconnect in that app if you need it again.",
+    ja: "削除すると「{name}」はすぐ PikPak にアクセスできなくなります。もう一度使うときはそのアプリから再接続してください。",
+    ko: "제거하면 “{name}”은(는) 즉시 PikPak에 접근할 수 없게 됩니다. 다시 쓰려면 해당 앱에서 연결해야 합니다.",
   },
   移除连接: { tw: "移除連線", en: "Remove connection", ja: "接続を削除", ko: "연결 제거" },
   "管理 WebDAV 凭证": { tw: "管理 WebDAV 憑證", en: "Manage WebDAV credentials", ja: "WebDAV 認証情報を管理", ko: "WebDAV 자격 증명 관리" },
   重新生成: { tw: "重新產生", en: "Regenerate", ja: "再生成", ko: "다시 생성" },
   "创建于 {date}": { tw: "建立於 {date}", en: "Created {date}", ja: "作成 {date}", ko: "생성 {date}" },
-  "移除后「{name}」立即无法访问你的 PikPak，要再用需重新连接。": {
-    tw: "移除後「{name}」會立即無法存取你的 PikPak，要再使用需重新連線。",
-    en: "\"{name}\" will lose access to your PikPak immediately. To use it again, reconnect.",
-    ja: "削除すると「{name}」はすぐに PikPak にアクセスできなくなります。再び使うには再接続が必要です。",
-    ko: "제거하면 “{name}”은(는) 즉시 PikPak에 접근할 수 없습니다. 다시 사용하려면 다시 연결해야 합니다.",
+  "移除后「{name}」立刻就不能再访问你的 PikPak 了，想再用需要重新连接。": {
+    tw: "移除後「{name}」立刻就無法再存取你的 PikPak 了，想再用需要重新連線。",
+    en: "\"{name}\" loses access to your PikPak right away. Reconnect if you want to use it again.",
+    ja: "削除すると「{name}」はすぐ PikPak にアクセスできなくなります。再び使うには再接続が必要です。",
+    ko: "제거하면 “{name}”은(는) 즉시 PikPak에 접근할 수 없게 됩니다. 다시 쓰려면 재연결해야 합니다.",
   },
   "旧令牌会立即失效，用到它的地方都要换成新令牌。": {
     tw: "舊權杖會立即失效，用到它的地方都要換成新權杖。",
@@ -328,7 +328,7 @@ export default {
   },
   "{title} 进度": { tw: "{title} 進度", en: "{title} progress", ja: "{title} の進行状況", ko: "{title} 진행률" },
   打开传输中心: { tw: "開啟傳輸中心", en: "Open Transfers", ja: "転送を開く", ko: "전송 열기" },
-  新入库: { tw: "新入庫", en: "New arrivals", ja: "新着", ko: "새로 들어온 항목" },
+  新文件: { tw: "新檔案", en: "New files", ja: "新着", ko: "새 파일" },
   快捷操作: { tw: "快捷操作", en: "Quick actions", ja: "クイック操作", ko: "빠른 작업" },
   登录后可用: { tw: "登入後可用", en: "Sign in to use", ja: "ログイン後に使用できます", ko: "로그인 후 사용 가능" },
   打开文件: { tw: "開啟檔案", en: "Open files", ja: "ファイルを開く", ko: "파일 열기" },
@@ -380,11 +380,11 @@ export default {
   "「{name}」已存入云盘": { tw: "「{name}」已存入雲端硬碟", en: "\"{name}\" saved to your drive", ja: "「{name}」をクラウドドライブに保存しました", ko: "“{name}”을(를) 클라우드 드라이브에 저장했습니다" },
   新任务: { tw: "新任務", en: "New task", ja: "新しいタスク", ko: "새 작업" },
   待整理: { tw: "待整理", en: "To organize", ja: "未整理", ko: "정리 대기" },
-  "另有 {n} 项新入库待整理": {
-    tw: "另有 {n} 項新入庫待整理",
-    en: plural("1 more new arrival to organize", "{n} more new arrivals to organize"),
+  "另有 {n} 个新文件待整理": {
+    tw: "另有 {n} 個新檔案待整理",
+    en: plural("1 more new file to organize", "{n} more new files to organize"),
     ja: "ほかに {n} 件の新着が未整理です",
-    ko: "그 외 새 항목 {n}개 정리 대기",
+    ko: "그 외 새 파일 {n}개 정리 대기",
   },
   "窗口已打开 · 仍在运行": { tw: "視窗已開啟 · 仍在執行", en: "Window open · still running", ja: "ウインドウ表示中 · 実行中", ko: "창 열림 · 계속 실행 중" },
   "窗口已关闭 · 仍在运行": { tw: "視窗已關閉 · 仍在執行", en: "Window closed · still running", ja: "ウインドウは閉じています · 実行中", ko: "창 닫힘 · 계속 실행 중" },

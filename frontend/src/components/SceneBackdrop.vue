@@ -7,7 +7,7 @@ import { t } from "../i18n";
 function lost() {
   if (!ui.wallpaper) return;
   forgetWallpaper();
-  notify(t("自定义壁纸读不出来，已恢复默认背景"), "error");
+  notify(t("壁纸加载失败，已切回默认壁纸"), "error");
 }
 
 const clip = computed(() => {

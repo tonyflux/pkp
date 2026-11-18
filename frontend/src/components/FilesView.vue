@@ -116,7 +116,7 @@ const scopeHint = computed(() => {
   if (ui.scope === "folder") return videoWorksShown.value ? t("按作品聚合当前目录及子目录的视频") : t("只显示当前文件夹的直接子项");
   // Before the first full walk the tree comes from the server page by
   // page: what is drawn is never the whole drive yet.
-  return indexReady.value ? t("来自不同文件夹的文件，在这里汇合") : t("本地索引建立中，结果可能不完整");
+  return indexReady.value ? t("所有文件夹里的文件都列在这里") : t("本地索引建立中，结果可能不完整");
 });
 
 const sortLabel = computed(() => sorts.find((s) => s.key === ui.sortKey)?.label ?? sorts[0].label);

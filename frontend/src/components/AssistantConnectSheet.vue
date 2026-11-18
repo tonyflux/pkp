@@ -87,7 +87,7 @@ function openKeyPage() {
     <span class="sheet-eyebrow">{{ t("需要模型时再连接") }}</span>
     <h2 id="ai-connect-title">{{ sheet.hasLocal ? t("本地建议已经准备好。") : t("这一步需要连接模型。") }}</h2>
     <p class="sheet-lede">
-      {{ sheet.hasLocal ? t("尚未连接你的模型。整理计划和本地搜索仍可用；若要继续问 AI，可以在这里配置。") : t("尚未连接你的模型。本地搜索与规则整理不需要模型；若要继续问 AI，可以在这里配置。") }}
+      {{ sheet.hasLocal ? t("还没接上你的模型。整理方案和本地搜索都能直接用；想继续问 AI，在这里填上就行。") : t("还没接上你的模型。本地搜索和规则整理不用模型就能跑；想接着问 AI，在这里填上就行。") }}
     </p>
     <div class="steps">
       <span v-if="sheet.found !== null"><Icon name="check" :size="14" /> {{ t("本地索引：{n} 项已找到", { n: sheet.found }) }}</span>

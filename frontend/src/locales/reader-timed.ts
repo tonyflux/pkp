@@ -10,5 +10,5 @@ export default {
   "timed|只读时间轴，不控制播放器": { tw: "唯讀時間軸，不控制播放器", en: "Read-only timeline; does not control playback", ja: "読み取り専用のタイムラインです。プレーヤーは操作しません", ko: "읽기 전용 타임라인이며 플레이어를 제어하지 않습니다" },
   "timed|没有匹配的字幕": { tw: "沒有符合的字幕", en: "No matching cues", ja: "一致する字幕がありません", ko: "일치하는 자막이 없습니다" },
   "timed|未找到有效的时间条目": { tw: "未找到有效的時間項目", en: "No valid timed cues found", ja: "有効なタイムスタンプ付きの項目が見つかりません", ko: "유효한 시간 항목을 찾을 수 없습니다" },
-  "timed|字幕条目超过安全上限": { tw: "字幕項目超過安全上限", en: "The cue count exceeds the safety limit", ja: "字幕の件数が安全上限を超えています", ko: "자막 항목 수가 안전 한도를 초과했습니다" },
+  "timed|字幕条数太多，超出了预览上限": { tw: "字幕筆數太多，超出了預覽上限", en: "Too many subtitle cues to preview", ja: "字幕の件数が多すぎてプレビューできません", ko: "자막 항목이 너무 많아 미리 볼 수 없습니다" },
 } satisfies Messages;

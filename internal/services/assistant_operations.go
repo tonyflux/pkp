@@ -54,14 +54,14 @@ type AssistantOperationResult struct {
 }
 
 var (
-	errAssistantRequest      = i18n.New("助手操作参数无效，未处理")
-	errAssistantAction       = i18n.New("助手不支持此操作，未处理")
-	errAssistantTarget       = i18n.New("目标已失效或不属于此类操作，未处理")
-	errAssistantState        = i18n.New("目标状态已改变，不适用此操作，未处理")
+	errAssistantRequest      = i18n.New("操作参数有误，没有执行")
+	errAssistantAction       = i18n.New("暂时不支持这个操作")
+	errAssistantTarget       = i18n.New("找不到对应文件，或者没法做这个操作")
+	errAssistantState        = i18n.New("文件状态变了，现在没法做这个操作")
 	errAssistantRecursive    = i18n.New("不能把文件夹复制到自身或其子文件夹")
 	errAssistantRetryHash    = i18n.New("此云端任务没有可用的种子哈希，不能重试")
-	errAssistantFailure      = i18n.New("操作未能完成，敏感错误详情已隐藏")
-	errAssistantPageTooLarge = i18n.New("云盘返回的结果页过大，无法安全分页，未返回不完整结果")
+	errAssistantFailure      = i18n.New("操作没能完成（已隐藏敏感错误详情）")
+	errAssistantPageTooLarge = i18n.New("云盘这一页返回的数据太大，没法继续读取")
 	assistantPrivateMetadata = regexp.MustCompile(`(?i)(?:[a-z][a-z0-9+.-]*://|magnet:\?)[^\s]+|(?:[a-z]:[\\/]|~[\\/]|/)[^\s]+|authorization\s*[:=]\s*[^\r\n]+|(?:password|pass_code|access_token|refresh_token|access_key_secret)\s*[:=]\s*[^\s]+|[a-f0-9]{40}`)
 )
 
@@ -82,7 +82,7 @@ func assistantFailure(err error) error {
 	}
 	var api *drive.APIError
 	if errors.As(err, &api) {
-		return i18n.Errorf("云盘拒绝了操作（状态码 %d），敏感错误详情已隐藏", api.Status)
+		return i18n.Errorf("云盘拒绝了这个操作（状态码 %d，已隐藏敏感详情）", api.Status)
 	}
 	return errAssistantFailure
 }

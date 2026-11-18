@@ -27,7 +27,7 @@ export const syncModes: { value: SyncMode; title: string; note: string }[] = [
 ];
 export function syncModeName(mode: string): string { return t(syncModes.find((m) => m.value === mode)?.title ?? N_("未知")); }
 const stateWords: Record<string, string> = {
-  idle: N_("已同步"), scanning: N_("正在核对内容"), syncing: N_("正在同步"), paused: N_("已暂停"), pausing: N_("正在安全暂停"), offline: N_("等待网络"), disk: N_("等待磁盘"), auth: N_("需要重新登录"), permission: N_("无访问权限"), "delete-guard": N_("删除保护 · 等待确认"), repair: N_("需要重新配对"), failed: N_("失败"), unknown: N_("状态待确认"),
+  idle: N_("已同步"), scanning: N_("正在核对内容"), syncing: N_("正在同步"), paused: N_("已暂停"), pausing: N_("正在暂停"), offline: N_("等待网络"), disk: N_("等待磁盘"), auth: N_("需要重新登录"), permission: N_("无访问权限"), "delete-guard": N_("删除保护 · 等待确认"), repair: N_("需要重新连接"), failed: N_("失败"), unknown: N_("状态待确认"),
 };
 export function syncStateName(pair: SyncPair): string {
   if (pair.state === "idle" && !pair.lastSuccess) return t("等待首次核对");
@@ -182,7 +182,7 @@ export async function startSyncDraft(): Promise<void> {
     if (generation !== draftGeneration) return;
     if (result.preview) { syncDraft.preview = { ...result.preview, changes: result.preview.changes ?? [] }; syncDraft.changed = true; syncDraft.acknowledged = false; }
     else if (result.pair) { sync.selected = result.pair.id; sync.detail = true; sync.draftOpen = false; syncDraft.config = null; syncDraft.preview = null; await loadSync(); }
-    else syncDraft.error = t("服务未返回同步关系或新预览，请重新检查。");
+    else syncDraft.error = t("没有收到最新的同步设置或预览，请重新检查一下。");
   } catch (error) { if (generation === draftGeneration) syncDraft.error = errorText(error); }
   finally { if (generation === draftGeneration) syncDraft.starting = false; }
 }

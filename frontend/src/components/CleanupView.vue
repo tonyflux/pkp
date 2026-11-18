@@ -48,9 +48,9 @@ watch([currentId, indexReady], () => enterCleanupTab(cleanup.tab), { immediate: 
     <div class="shell">
       <header class="head">
         <div>
-          <p class="eyebrow">SPACE, BACK IN YOUR HANDS · PKP</p>
+          <p class="eyebrow">DRIVE CLEANUP · PKP</p>
           <h1>{{ t("清理") }}</h1>
-          <p class="lede">{{ t("找回被重复副本占用的空间，再整理留下的空文件夹。") }}</p>
+          <p class="lede">{{ t("找出占地方的重复文件，顺手把空文件夹也清一清。") }}</p>
         </div>
         <span class="mark" aria-hidden="true"><Icon name="layers" :size="26" /></span>
       </header>
@@ -78,7 +78,7 @@ watch([currentId, indexReady], () => enterCleanupTab(cleanup.tab), { immediate: 
         <div v-if="!indexReady" class="gate">
           <span class="gate-mark"><Orbit :size="22" /></span>
           <h2>{{ t("建完索引才能扫描") }}</h2>
-          <p>{{ t("清理只读这台电脑上的本地索引，不请求云端。") }}</p>
+          <p>{{ t("只读本地索引，不额外请求云端。") }}</p>
           <small>{{ t("本地索引 · {state}", { state: indexText(drive.indexProgress) }) }}</small>
         </div>
         <CleanupDuplicates v-else-if="cleanup.tab === 'dup' && cleanup.dup.stage === 'result'" />

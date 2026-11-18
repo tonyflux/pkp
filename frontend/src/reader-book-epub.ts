@@ -13,7 +13,7 @@ const DROP_TAGS: Record<string, true> = { script:true, style:true, link:true, me
 const SAFE_ATTRIBUTES: Record<string, true> = { id:true, title:true, lang:true, dir:true, colspan:true, rowspan:true, start:true, value:true, scope:true, alt:true };
 
 export function epubXml(source: string): Document {
-  if (/<!ENTITY|<!DOCTYPE[^>]*\[/i.test(source)) throw new Error(t("电子书包含不安全的 XML 声明"));
+  if (/<!ENTITY|<!DOCTYPE[^>]*\[/i.test(source)) throw new Error(t("电子书文件格式异常，打不开"));
   checkXmlComplexity(source, 120000);
   // A declaration is never needed for rendering. Strip ordinary XHTML doctypes
   // rather than allowing the parser to resolve any external DTD.
@@ -94,7 +94,7 @@ export function sanitizeEpubChapter(source: string, path: string, images: Set<st
   const output = document.createDocumentFragment();
   let nodes = 0;
   function copy(node: Node, parent: Node, depth: number) {
-    if (++nodes > 120000 || depth > 100) throw new Error(t("电子书章节超过安全排版上限"));
+    if (++nodes > 120000 || depth > 100) throw new Error(t("这一章内容太多，暂时排版不了"));
     if (node.nodeType === 3) { parent.appendChild(document.createTextNode(node.textContent ?? "")); return; }
     if (node.nodeType !== 1) return;
     const sourceElement = node as Element, tag = sourceElement.localName.toLowerCase();

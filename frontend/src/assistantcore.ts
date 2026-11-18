@@ -96,7 +96,7 @@ export function readConversation(body: string, id: string): ConversationView | n
   for (const turn of turns) for (const card of turn.cards) {
     if (["operation", "offline", "download", "share"].includes(card.kind) && card.state === "running") {
       card.state = "failed";
-      card.note = t("上次操作中断，未自动重试；请重新查询实际状态。");
+      card.note = t("刚才的操作中断了（没有自动重试），建议先查一下现在的状态。");
     }
   }
   return {
@@ -155,11 +155,11 @@ export function originOf(identities: readonly Identity[]): PlanOrigin {
 }
 
 const BASIS: Record<PlanOrigin, string> = {
-  rules: N_("本地文件名规则生成的建议，没有使用模型。"),
-  tmdb: N_("本地规则与 TMDB 精确匹配生成的建议；模型没有直接写入云盘。"),
-  model: N_("本地规则与模型识别生成的建议；模型没有直接写入云盘。"),
-  agent: N_("AI 在对话中提出的改动；模型没有直接写入云盘，执行前由你逐项确认。"),
-  rename: N_("按你设定的改名规则生成，没有使用模型。"),
+  rules: N_("只按本地文件名规则生成的，没用 AI 模型。"),
+  tmdb: N_("按本地规则和 TMDB 匹配生成的，需要你确认才会动云盘。"),
+  model: N_("结合本地规则和 AI 识别生成的，需要你确认才会动云盘。"),
+  agent: N_("AI 在对话里建议的改动，经你逐项确认后才会动云盘。"),
+  rename: N_("按你设定的改名规则生成，没用 AI 模型。"),
 };
 
 export function basisOf(origin: PlanOrigin): string {

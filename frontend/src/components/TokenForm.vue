@@ -66,7 +66,7 @@ onMounted(() => labelInput.value?.focus());
 <template>
   <form class="form" @submit.prevent="submit" @keydown.esc.prevent="emit('cancel')">
     <h3>{{ t("创建个人访问令牌") }}</h3>
-    <p v-if="full" class="warn">{{ t("你已有 {n} 个有效令牌。先移除一个不再使用的，再创建新的。", { n: MAX_TOKENS }) }}</p>
+    <p v-if="full" class="warn">{{ t("已经有 {n} 个有效令牌了，先删一个不用的再建新的。", { n: MAX_TOKENS }) }}</p>
 
     <label class="field">
       <span>{{ t("标签") }} <em>*</em></span>
@@ -134,7 +134,7 @@ onMounted(() => labelInput.value?.focus());
       </div>
     </div>
 
-    <p class="note">{{ t("需要永久删除或邀请？请改用通过浏览器授权的应用。") }}</p>
+    <p class="note">{{ t("想做永久删除或发邀请？请换用浏览器授权过的应用。") }}</p>
 
     <div class="actions">
       <button type="button" class="quiet" @click="emit('cancel')">{{ t("取消") }}</button>

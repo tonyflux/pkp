@@ -32,13 +32,13 @@ const consequence = computed(() => {
     case "restart_download": return t("将重新开始下载；已有下载进度可能被丢弃。");
     case "cancel_upload": return t("取消上传会丢弃未完成的上传进度。");
     case "remove_cloud_task": return t("仅移除云添加任务，保留已保存的云端文件。");
-    case "remove_download": return t("移除下载记录会停止未完成的下载，并丢弃本地分片和续传进度；已完成的本地文件及云端文件保留。");
-    case "remove_upload": return t("移除上传记录会停止未完成的上传，并丢弃云端未完成的数据和续传进度；本地源文件及已上传完成的云端文件保留。");
+    case "remove_download": return t("删掉下载记录会停掉还没下完的任务并删掉临时分片；下好的文件和云端文件都会留着。");
+    case "remove_upload": return t("删掉上传记录会停掉还没传完的任务并清除续传进度；电脑原文件和传好的云端文件都会留着。");
     case "cancel_share": return t("取消分享后，对应的外部分享链接将失效。");
     case "upload_files":
-    case "upload_folder": return t("确认后打开本地选择器，只上传你明确选择的文件或文件夹。");
-    case "upload_torrent": return t("确认后打开种子添加设置，选择和提交仍需你完成；打开设置不代表添加成功。");
-    case "extract_archive": return t("确认后打开解压设置，密码和文件选择仅在该设置中填写；打开设置不代表解压完成。");
+    case "upload_folder": return t("确认后会打开文件选择器，只上传你亲手选中的文件或文件夹。");
+    case "upload_torrent": return t("确认后会打开种子添加窗口；具体挑哪个文件、点提交还要你自己确认。");
+    case "extract_archive": return t("确认后会打开解压窗口，密码和要解哪些文件都在里面选，不会直接自动解压。");
     case "pause_download": return t("暂停所选下载，可稍后继续。");
     case "resume_download": return t("继续所选下载。");
     case "retry_upload": return t("重新提交所选上传任务。");
@@ -117,7 +117,7 @@ watch([locked, () => props.card.id, () => props.card.state], () => { confirming.
     </ul>
     <p v-else-if="card.kind === 'resources'" class="line">{{ t("本页没有项目") }}</p>
     <button v-if="card.rows.length > 6" class="quiet more" type="button" :aria-expanded="expanded" @click="expanded = !expanded">{{ expanded ? t("收起 ↑") : t("查看其余 {n} 项 ↓", { n: card.rows.length - 6 }) }}</button>
-    <p v-if="card.kind === 'resources' && card.nextPageToken" class="line">{{ t("还有更多结果，可让助手继续读取下一页；以上不是全部项目。") }}</p>
+    <p v-if="card.kind === 'resources' && card.nextPageToken" class="line">{{ t("下面还有更多结果，可以让 AI 接着查下一页。") }}</p>
 
     <template v-if="card.kind === 'operation'">
       <p v-if="consequence" class="line consequence">{{ consequence }}</p>
@@ -125,7 +125,7 @@ watch([locked, () => props.card.id, () => props.card.state], () => { confirming.
         <span>{{ t("已处理 {done} / {total} 项", { done: card.progress.done, total: card.progress.total }) }}</span>
         <progress :value="card.progress.done" :max="Math.max(1, card.progress.total)" :aria-label="t('操作进度')" />
       </div>
-      <p v-if="card.stopped && !card.note" class="line">{{ t("已停止提交剩余项目；已经提交的操作不会回滚，仍可能完成。") }}</p>
+      <p v-if="card.stopped && !card.note" class="line">{{ t("剩下的已经停下了；不过前面发出去的操作撤不回，可能还会陆续完成。") }}</p>
       <div v-if="card.results.length" class="results">
         <h4>{{ t("逐项结果") }}</h4>
         <ul class="rows">
@@ -139,7 +139,7 @@ watch([locked, () => props.card.id, () => props.card.state], () => { confirming.
     <p v-if="card.note" class="line note">{{ card.note }}</p>
     <template v-if="card.kind === 'operation'">
       <div v-if="card.state === 'draft'" class="actions">
-        <ConfirmInline v-if="confirming && !locked" :message="t('请再次核对以上所有目标和操作后果，确认后才会执行。')" :confirm-label="confirmLabel" :danger="destructive" @confirm="execute" @cancel="confirming = false" />
+        <ConfirmInline v-if="confirming && !locked" :message="t('确认没问题再点下面执行，避免误操作。')" :confirm-label="confirmLabel" :danger="destructive" @confirm="execute" @cancel="confirming = false" />
         <template v-else>
           <button class="quiet" type="button" :disabled="locked" @click="discardCard(turnId, card.id)">{{ t("放弃") }}</button>
           <button class="primary" type="button" :disabled="locked" @click="requestExecution">{{ confirmLabel }}</button>

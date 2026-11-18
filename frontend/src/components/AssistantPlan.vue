@@ -425,14 +425,14 @@ async function keepAllAndConfirm() {
           <div class="plan-heading">
             <div class="heading-text">
               <span class="eyebrow">{{ cleanup ? t("清理计划 · {account}", { account }) : t("整理计划 · {account}", { account }) }} <span class="slash">/</span> {{ scopeLabel }}</span>
-              <h1>{{ cleanup ? t("先确认要清理的文件，再移到回收站。") : t("先看清去向，再决定执行。") }}</h1>
+              <h1>{{ cleanup ? t("先确认要清理的文件，再移到回收站。") : t("先核对清楚去哪儿，再决定改不改") }}</h1>
               <p>{{ plan.basis }}</p>
               <p v-if="hasTrashFolders">{{ t("文件夹移到回收站时会包含其中的全部内容。") }}</p>
             </div>
             <span class="plan-count"><strong class="tnum">{{ num(summary.selected) }}</strong> {{ t("项可执行") }}</span>
           </div>
 
-          <section v-if="(media && plan.groups.length) || (!cleanup && planCleanupEntries.length)" class="plan-actions" :aria-label="t('计划预览')">
+          <section v-if="(media && plan.groups.length) || (!cleanup && planCleanupEntries.length)" class="plan-actions" :aria-label="t('整理方案')">
             <div class="action-buttons">
               <button v-if="media && plan.groups.length" class="review-plan" type="button" :disabled="busy" @click="reviewPlan()">
                 {{ t("AI 复核整份计划") }}
@@ -596,7 +596,7 @@ async function keepAllAndConfirm() {
 
           <div class="plan-caution">
             <Icon name="shield" :size="17" />
-            <p>{{ t("这次不会永久删除任何文件。执行前还会重新读取云盘状态；重名或位置变化的项将跳过并在回执中说明。") }}</p>
+            <p>{{ t("这次不会永久删除任何文件；动手前还会再检查一遍状态，重名或挪过位置的文件会自动跳过，并在结果里写清楚。") }}</p>
           </div>
         </template>
       </div>

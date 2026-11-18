@@ -546,7 +546,7 @@ onBeforeUnmount(() => {
         </button>
       </div>
       <p v-if="detail.status !== 'active'" class="note">
-        {{ t("这个分享已不可访问；复制的是旧链接，打开后会提示失效。取消分享不会恢复它。") }}
+        {{ t("这个分享已经失效，复制的链接别人打不开，取消分享也无法恢复。") }}
       </p>
     </div>
 

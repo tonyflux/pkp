@@ -74,7 +74,7 @@ var (
 	errAITokenLimit    = i18n.New("单个对话上限需在 1,000 到 2,000,000 tokens 之间，或选择不限制")
 	errAINaming        = i18n.New("请选择 Plex 风格、中文风格或自定义命名")
 	errAICancelled     = i18n.New("已取消")
-	errAICallInFlight  = i18n.New("这次请求已经在进行")
+	errAICallInFlight  = i18n.New("上一个请求还没结束")
 	// errAINoTools is matched on by the webview, which then carries the
 	// conversation on without tools: keep the words exactly.
 	errAINoTools      = i18n.New("这个模型不支持工具调用")

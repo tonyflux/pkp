@@ -108,15 +108,15 @@ func makePlan(c Config, id syncfs.Identity, s *snapshot, base map[string]baselin
 				break
 			}
 			if n.Phase != "" && n.Phase != "PHASE_TYPE_COMPLETE" && n.Phase != "COMPLETE" {
-				issue(rel, "blocked", i18n.T("云端文件尚未完成，暂不参与同步"), nodeAt(s.Local, rel), nodeAt(s.Cloud, rel))
+				issue(rel, "blocked", i18n.T("云端文件还没处理完，先不同步它"), nodeAt(s.Local, rel), nodeAt(s.Cloud, rel))
 				break
 			}
 		}
 		key := collisionPath(rel, id)
 		if old, ok := keys[key]; ok && old != rel {
 			if !caseRenameProof(old, rel, s, base) && !caseRenameProof(rel, old, s, base) {
-				issue(old, "name", i18n.T("文件名在目标磁盘上发生大小写或 Unicode 冲突"), nodeAt(s.Local, old), nodeAt(s.Cloud, old))
-				issue(rel, "name", i18n.T("文件名在目标磁盘上发生大小写或 Unicode 冲突"), nodeAt(s.Local, rel), nodeAt(s.Cloud, rel))
+				issue(old, "name", i18n.T("目标磁盘不区分大小写或字符编码重名，有文件名冲突"), nodeAt(s.Local, old), nodeAt(s.Cloud, old))
+				issue(rel, "name", i18n.T("目标磁盘不区分大小写或字符编码重名，有文件名冲突"), nodeAt(s.Local, rel), nodeAt(s.Cloud, rel))
 			}
 		} else {
 			keys[key] = rel
@@ -250,7 +250,7 @@ func makePlan(c Config, id syncfs.Identity, s *snapshot, base map[string]baselin
 				}
 				add(rel, a, "download", "", l, r)
 			} else {
-				p.preview.Changes = append(p.preview.Changes, Change{Path: rel, Action: "keep", Reason: i18n.T("保留单向同步目标端的额外项目")})
+				p.preview.Changes = append(p.preview.Changes, Change{Path: rel, Action: "keep", Reason: i18n.T("保留仅存在于目标端的文件")})
 			}
 			continue
 		}
@@ -258,7 +258,7 @@ func makePlan(c Config, id syncfs.Identity, s *snapshot, base map[string]baselin
 			if b.Preserved == "local" && l == nil || b.Preserved == "cloud" && r == nil {
 				changed := b.Preserved == "local" && !same(r, b.Cloud) || b.Preserved == "cloud" && !same(l, b.Local)
 				if changed {
-					issue(rel, "conflict", i18n.T("删除后保留的另一端又有编辑，请确认保留结果"), l, r)
+					issue(rel, "conflict", i18n.T("这边删了，但另一端后来又改过，先确认下留哪边"), l, r)
 				} else {
 					p.observed[rel] = baseline{Local: b.Local, Cloud: b.Cloud, Preserved: b.Preserved}
 				}
@@ -266,7 +266,7 @@ func makePlan(c Config, id syncfs.Identity, s *snapshot, base map[string]baselin
 			}
 			// A restored/new entry is a new event; never reuse old deletion approval.
 			if l != nil && r != nil {
-				issue(rel, "conflict", i18n.T("删除后重新出现的项目需要核对双方内容"), l, r)
+				issue(rel, "conflict", i18n.T("删过的文件又出现了，先核对下两边内容"), l, r)
 				continue
 			}
 		}
@@ -278,7 +278,7 @@ func makePlan(c Config, id syncfs.Identity, s *snapshot, base map[string]baselin
 			lc = !versionSame(l, b.Local)
 		}
 		if c.Mode == Backup && !lc || c.Mode == Download && !rc {
-			issue(rel, "target-edited", i18n.T("目标端已被修改，保留目标且不写回源端"), l, r)
+			issue(rel, "target-edited", i18n.T("目标文件改过了，先保留目标端，不覆盖回源端"), l, r)
 			continue
 		}
 		if lc && rc {
@@ -307,7 +307,7 @@ func makePlan(c Config, id syncfs.Identity, s *snapshot, base map[string]baselin
 					preserved = "cloud"
 				}
 				p.observed[rel] = baseline{Local: b.Local, Cloud: b.Cloud, Preserved: preserved}
-				p.preview.Changes = append(p.preview.Changes, Change{Path: rel, Action: "keep", Direction: direction, Reason: i18n.T("已记录删除并保留另一端，不自动恢复源端")})
+				p.preview.Changes = append(p.preview.Changes, Change{Path: rel, Action: "keep", Direction: direction, Reason: i18n.T("已记住这次删除并保留了另一端，不会自动恢复源端")})
 			}
 		} else if target == nil || !source.Directory {
 			a := direction
@@ -431,7 +431,7 @@ func makePlan(c Config, id syncfs.Identity, s *snapshot, base map[string]baselin
 	}
 	if deleteGuard(len(deleted), p.preview.Tracked, rootEmpty) {
 		p.preview.Blocked = true
-		p.preview.Error = i18n.T("本批删除触发保护，请审阅并确认当前版本")
+		p.preview.Error = i18n.T("这批要删的内容比较多，触发了防误删保护，请确认后再继续")
 	}
 	p.fingerprint = digest(struct {
 		Config       Config

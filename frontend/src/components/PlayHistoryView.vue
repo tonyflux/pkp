@@ -67,7 +67,7 @@ watch([currentId, () => ui.route], async ([id, route], previous) => {
     <header class="head">
       <div>
         <h1>{{ t("播放历史") }}</h1>
-        <p>{{ t("继续未完的观看，或重温看过的视频。") }}</p>
+        <p>{{ t("接着看没看完的视频，或重温看过的那几部。") }}</p>
       </div>
       <div class="head-actions">
         <button :disabled="playHistory.loading || playHistory.clearing" @click="loadPlayHistory()">
@@ -85,7 +85,7 @@ watch([currentId, () => ui.route], async ([id, route], previous) => {
 
     <fieldset v-if="confirming" class="clear-confirm" :disabled="playHistory.clearing">
       <ConfirmInline
-        :message="t('仅在这台电脑上隐藏当前账号的已有播放记录，不删除文件，也不删除云端播放记录。')"
+        :message="t('只清掉这台电脑上的播放记录，不删云盘文件，也不删云端记录。')"
         :confirm-label="playHistory.clearing ? t('正在清除播放记录') : t('清除播放记录')"
         danger
         @confirm="clear"
