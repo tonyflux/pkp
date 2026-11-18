@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
-import AccountIdentity from "./AccountIdentity.vue";
 import ConfirmInline from "./ConfirmInline.vue";
 import FilesSearch from "./FilesSearch.vue";
 import SaveSearch from "./SaveSearch.vue";
@@ -15,13 +14,11 @@ import { t } from "../i18n";
 import { WORKSPACE_QUERY, isTyping, modKey, onMac, useMedia, useOutsideClick } from "../dom";
 import { vSlide } from "../slide";
 import {
-  accounts,
   canPasteHere,
   clearSelection,
   clipboard,
   copyDownloadLink,
   copyToClipboard,
-  currentAccount,
   currentFolderId,
   currentId,
   deleteForever,
@@ -84,8 +81,6 @@ import {
 } from "../store";
 import type { Entry } from "../../bindings/github.com/tonyflux/pkp/internal/services";
 
-const multiAccount = computed(() => accounts.list.length > 1);
-
 const selected = computed(() => drive.entries.find((e) => e.id === drive.selectedId) ?? null);
 // Two or more picked: checkboxes stay up and the batch bar floats over the list.
 const multi = computed(() => pickedEntries.value.length > 1);
@@ -125,6 +120,8 @@ const heading = computed(() => {
   const crumb = drive.trail.at(-1);
   return crumb ? { title: crumb.name, sub: "" } : { title: t("全部文件"), sub: "" };
 });
+
+const folderPath = computed(() => ui.view === "all" && drive.trail.length > 0 && !wholeDrive.value && !(ui.query.trim() && indexReady.value));
 
 // Rows that carry where they live (search, the whole drive from the
 // index) show it in place of the date.
@@ -894,16 +891,25 @@ watch(
     <template v-else>
     <header class="head">
       <div class="heading-location">
-        <h1 class="title" :title="heading.title">{{ heading.title }}</h1>
-        <nav v-if="drive.trail.length && !wholeDrive && !(ui.query.trim() && indexReady)" class="crumbs">
-          <button class="quiet" @click="goToCrumb(0)">{{ t("全部文件") }}</button>
-          <template v-for="(crumb, i) in drive.trail.slice(0, -1)" :key="crumb.id">
-            <Icon name="chevronRight" :size="14" />
-            <button class="quiet" :title="crumb.name" @click="goToCrumb(i + 1)">{{ crumb.name }}</button>
-          </template>
-        </nav>
-        <p v-else-if="heading.sub" class="sub">{{ heading.sub }}</p>
+        <template v-if="folderPath">
+          <nav class="crumbs" :aria-label="t('文件夹位置')" tabindex="0" @keydown.stop>
+            <button class="quiet" @click="goToCrumb(0)">{{ t("全部文件") }}</button>
+            <template v-for="(crumb, i) in drive.trail.slice(0, -1)" :key="crumb.id">
+              <Icon name="chevronRight" :size="14" />
+              <button class="quiet" :title="crumb.name" @click="goToCrumb(i + 1)">{{ crumb.name }}</button>
+            </template>
+          </nav>
+          <Icon class="path-separator" name="chevronRight" :size="16" />
+          <h1 class="title" :title="heading.title">{{ heading.title }}</h1>
+        </template>
+        <template v-else>
+          <h1 class="title" :title="heading.title">{{ heading.title }}</h1>
+          <p v-if="heading.sub" class="sub">{{ heading.sub }}</p>
+        </template>
       </div>
+    </header>
+
+    <div class="controls">
       <div v-if="scopeShown" class="scope-row">
         <div v-slide class="segments scope glass-well" role="group" :aria-label="t('浏览范围')">
           <button
@@ -918,12 +924,6 @@ watch(
         </div>
         <span v-if="scopeWarning" class="scope-hint" role="status">{{ t("本地索引建立中，结果可能不完整") }}</span>
       </div>
-      <span v-if="multiAccount && currentAccount" class="account" :title="t('当前账号')">
-        <AccountIdentity :account="currentAccount" :size="24" dense />
-      </span>
-    </header>
-
-    <div class="controls">
       <!-- Category filters share a compact control. -->
       <div v-slide class="segments kinds glass-well" role="tablist" :aria-label="t('分类')">
         <button
@@ -945,30 +945,32 @@ watch(
       <span class="spacer" />
       <SaveSearch v-if="ui.query.trim() && indexReady && ui.view !== 'trash'" />
 
-      <div v-if="!videoWorksShown" v-slide class="segments compact glass-well">
-        <button :class="{ on: ui.layout === 'grid' }" :title="t('网格')" :aria-pressed="ui.layout === 'grid'" @click="setLayout('grid')">
-          <Icon name="grid" :size="18" />
-        </button>
-        <button :class="{ on: ui.layout === 'list' }" :title="t('列表')" :aria-pressed="ui.layout === 'list'" @click="setLayout('list')">
-          <Icon name="list" :size="18" />
-        </button>
-      </div>
+      <div v-if="!videoWorksShown" class="view-options">
+        <div v-slide class="segments compact glass-well">
+          <button :class="{ on: ui.layout === 'grid' }" :title="t('网格')" :aria-pressed="ui.layout === 'grid'" @click="setLayout('grid')">
+            <Icon name="grid" :size="18" />
+          </button>
+          <button :class="{ on: ui.layout === 'list' }" :title="t('列表')" :aria-pressed="ui.layout === 'list'" @click="setLayout('list')">
+            <Icon name="list" :size="18" />
+          </button>
+        </div>
 
-      <div v-if="!videoWorksShown" class="sort glass-well">
-        <SelectMenu
-          v-model="ui.sortKey"
-          class="picker"
-          :title="t('排序方式')"
-          :label="t('排序方式')"
-          :options="sorts.map((s) => ({ value: s.key, label: s.label }))"
-        >
-          <span>{{ sortLabel }}</span>
-          <Icon name="chevronDown" :size="16" />
-        </SelectMenu>
-        <span class="divider" aria-hidden="true" />
-        <button class="quiet icon dir" :class="{ asc: ui.sortAsc }" :title="ui.sortAsc ? t('升序') : t('降序')" @click="ui.sortAsc = !ui.sortAsc">
-          <Icon name="sort" :size="18" />
-        </button>
+        <div class="sort glass-well">
+          <SelectMenu
+            v-model="ui.sortKey"
+            class="picker"
+            :title="t('排序方式')"
+            :label="t('排序方式')"
+            :options="sorts.map((s) => ({ value: s.key, label: s.label }))"
+          >
+            <span>{{ sortLabel }}</span>
+            <Icon name="chevronDown" :size="16" />
+          </SelectMenu>
+          <span class="divider" aria-hidden="true" />
+          <button class="quiet icon dir" :class="{ asc: ui.sortAsc }" :title="ui.sortAsc ? t('升序') : t('降序')" @click="ui.sortAsc = !ui.sortAsc">
+            <Icon name="sort" :size="18" />
+          </button>
+        </div>
       </div>
 
       <!-- Trash's one page-wide action ends the control row at the wells'
@@ -1556,31 +1558,17 @@ watch(
 
 .head {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  gap: 8px 16px;
+  gap: 12px;
   min-width: 0;
 }
 
 .heading-location {
   display: flex;
   align-items: center;
-  flex: 1 1 18rem;
+  flex: 1;
   min-width: 0;
-  gap: 8px 16px;
-}
-
-.head .account {
-  flex: 0 1 220px;
-  min-width: 0;
-  display: flex;
-}
-
-/* The toolbar names the account on narrow windows. */
-@media (max-width: 959px) {
-  .head .account {
-    display: none;
-  }
+  gap: 6px;
 }
 
 .title {
@@ -1609,43 +1597,49 @@ watch(
 }
 
 .crumbs {
+  flex: 0 1 auto;
   display: flex;
   align-items: center;
   gap: 2px;
-  /* Room for the first crumb's hover fill, which reaches 2px past the text
-     column (the buttons' negative margin); the clip would cut it. */
-  flex: 1 1 auto;
-  min-width: min(9rem, 100%);
-  max-width: 100%;
-  margin: 0 -2px;
-  min-height: 28px;
-  padding: 0 2px;
+  min-width: 0;
+  max-width: 45%;
+  min-height: 36px;
   color: var(--fg-dim);
   overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.crumbs:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
 }
 
 .crumbs button {
-  /* Buttons are flex boxes globally; text-overflow needs inline content. */
   display: block;
   flex: 0 0 auto;
-  min-width: 0;
   max-width: 244px;
-  min-height: 28px;
-  margin: 0 -2px;
-  padding: 0 10px;
+  min-height: 36px;
+  padding: 0 8px;
   font-size: 13px;
   text-align: left;
-  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.crumbs button:last-child {
-  color: var(--fg);
+.crumbs svg,
+.path-separator {
+  flex: none;
+  color: var(--fg-dim);
 }
 
-.crumbs svg {
-  flex: none;
+.heading-location:has(.crumbs) .title {
+  flex: 1 1 0;
+}
+
+@container files (max-width: 500px) {
+  .crumbs {
+    max-width: 35%;
+  }
 }
 
 /* ---------- Browse scope ---------- */
@@ -1657,6 +1651,7 @@ watch(
   gap: 8px;
   min-width: 0;
   max-width: 100%;
+  flex: 0 1 auto;
 }
 
 .segments.scope {
@@ -1697,13 +1692,30 @@ watch(
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
-  margin: 10px 0 10px;
+  gap: 8px 12px;
+  margin: 12px 0 16px;
   transition: padding-right var(--dur) var(--ease);
 }
 
 .spacer {
   flex: 1;
+}
+
+.view-options {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: 100%;
+}
+
+@container files (max-width: 739px) {
+  .controls > .spacer {
+    display: none;
+  }
+
+  .view-options {
+    margin-left: auto;
+  }
 }
 
 .segments,
@@ -1712,9 +1724,9 @@ watch(
   align-items: center;
   height: 36px;
   padding: 3px;
-  border: 1px solid var(--line);
+  border: 1px solid transparent;
   border-radius: 8px;
-  background: var(--surface);
+  background: color-mix(in srgb, var(--fg) 4%, transparent);
   box-shadow: none;
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
@@ -1750,6 +1762,7 @@ watch(
 }
 
 .segments.kinds {
+  flex: 0 1 auto;
   gap: 2px;
   min-width: 0;
   max-width: 100%;
@@ -2063,7 +2076,7 @@ watch(
 /* ---------- sections ---------- */
 
 h2 {
-  margin: 4px 0 10px;
+  margin: 4px 0 12px;
   font-size: 14px;
   line-height: 20px;
   font-weight: 600;
@@ -2087,7 +2100,7 @@ h2 + .folders + h2,
 .folders {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 216px), 1fr));
-  gap: 8px;
+  gap: 12px;
   align-items: start;
 }
 
@@ -2099,10 +2112,10 @@ h2 + .folders + h2,
   justify-content: flex-start;
   gap: 0;
   min-width: 0;
-  padding: 10px 12px;
-  border-radius: 10px;
-  border: 1px solid var(--line);
-  background: color-mix(in srgb, var(--fg) 2%, var(--canvas));
+  padding: 8px;
+  border-radius: 11px;
+  border: 1px solid transparent;
+  background: color-mix(in srgb, var(--fg) 3%, transparent);
   box-shadow: none;
   text-align: left;
   transition: background var(--dur) var(--ease), border-color var(--dur) var(--ease);
@@ -2134,10 +2147,10 @@ h2 + .folders + h2,
 }
 
 .folders {
-  --cover-bg: color-mix(in srgb, var(--canvas-flat) 90%, var(--fg) 10%);
+  --cover-bg: color-mix(in srgb, var(--canvas-flat) 94%, var(--fg) 6%);
   --cover-line: var(--line);
   --cover-empty: var(--surface);
-  --tile-photo: color-mix(in srgb, var(--canvas-flat) 86%, var(--fg) 14%);
+  --tile-photo: color-mix(in srgb, var(--canvas-flat) 92%, var(--fg) 8%);
   --tile-glyph: var(--tile-photo);
   --tile-document: var(--tile-photo);
   --tile-audio: var(--tile-photo);
@@ -2150,13 +2163,14 @@ h2 + .folders + h2,
   display: grid;
   grid-template-columns: minmax(0, 1.68fr) minmax(0, 1fr);
   grid-template-rows: repeat(2, minmax(0, 1fr));
-  gap: 4px;
+  gap: 2px;
   flex: none;
-  height: 86px;
+  height: 96px;
   margin-top: 0;
-  padding: 2px;
+  padding: 0;
+  overflow: hidden;
   border: 0;
-  border-radius: 6px;
+  border-radius: 7px;
   background: var(--cover-bg);
 }
 
@@ -2176,7 +2190,7 @@ h2 + .folders + h2,
   min-width: 0;
   min-height: 0;
   overflow: hidden;
-  border-radius: 5px;
+  border-radius: 0;
   background: var(--tile-photo);
 }
 
@@ -2185,7 +2199,7 @@ h2 + .folders + h2,
 }
 
 .cover-tile :deep(img) {
-  filter: saturate(0.84) contrast(1.04);
+  filter: saturate(0.9) contrast(1.02);
 }
 
 .cover-tile.glyph-folder {
@@ -2245,11 +2259,11 @@ h2 + .folders + h2,
   flex: none;
   display: grid;
   place-items: center;
-  width: 52px;
-  height: 52px;
-  border-radius: 8px;
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
   color: var(--accent);
-  background: color-mix(in srgb, var(--accent) 9%, var(--canvas-flat));
+  background: var(--accent-soft);
 }
 
 .mini-folder::before {
@@ -2382,14 +2396,19 @@ h2 + .folders + h2,
   padding-top: 0;
 }
 
+.folder:not(.has-cover) .folder-mark {
+  width: 44px;
+  height: 44px;
+}
+
 
 .folder-meta {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
   min-width: 0;
   width: 100%;
-  padding: 10px 0 0;
+  padding: 10px 4px 3px;
 }
 
 /* The star mark identifies favorites without changing the card surface. */
@@ -2438,8 +2457,8 @@ h2 + .folders + h2,
 }
 
 .folder-text strong {
-  font-size: 15px;
-  line-height: 21px;
+  font-size: 14px;
+  line-height: 20px;
   font-weight: 600;
 }
 
@@ -2455,7 +2474,7 @@ h2 + .folders + h2,
 .grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 216px), 1fr));
-  gap: 8px;
+  gap: 12px;
 }
 
 .media-grid {
@@ -2544,9 +2563,9 @@ h2 + .folders + h2,
   min-width: 0;
   min-height: 70px;
   padding: 9px 10px;
-  border: 1px solid var(--line);
+  border: 1px solid transparent;
   border-radius: 10px;
-  background: color-mix(in srgb, var(--fg) 2%, var(--canvas));
+  background: color-mix(in srgb, var(--fg) 3%, transparent);
   cursor: pointer;
   transition: background var(--dur) var(--ease), border-color var(--dur) var(--ease);
 }

@@ -179,6 +179,25 @@ function leave() {
   }
 }
 
+/* At narrow widths the playback timeline moves to its own row. */
+@media (max-width: 800px) {
+  .pill.above-bar {
+    --foot: 106px;
+  }
+
+  .pill.above-bar.above-tasks {
+    --foot: 162px;
+  }
+}
+
+/* Wrapped task strips have no fixed height; keep notices above their controls. */
+@media (max-width: 680px) {
+  .pill.above-tasks {
+    top: 112px;
+    bottom: auto;
+  }
+}
+
 .text {
   overflow: hidden;
   text-overflow: ellipsis;

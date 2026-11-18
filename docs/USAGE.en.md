@@ -24,6 +24,8 @@ Use the account entry in the lower-left corner to add, switch, and manage accoun
 
 The Files page supports folder browsing, filtering by type, searching, starring, sharing, and previews, along with right-click context menus (for single items, multi-selection, and the folder canvas) and desktop keyboard shortcuts (`F2` to rename, arrow keys to move or `Shift` to extend selection, in-drive copy/cut/paste, and more; see “Settings → Shortcuts” for the full list). Building the initial local index may take some time. After you create a share, anyone who obtains the link or access code may be able to access the shared content. Configure sharing according to your actual needs and revoke shares promptly when they are no longer needed.
 
+The Files header shows the path from All Files through parent folders to the current folder. Click an ancestor to return; scroll horizontally for long paths. Browsing scope sits with the category filters, and an incomplete index remains clearly indicated.
+
 Right-click a single file or folder, or a multi-selection, and choose “Organize” to open the AI Assistant's media organization plan. One folder is planned with its subfolders; a selection is limited to the selected items. Local rules build the plan first; review and confirm it before execution. Opening the plan does not automatically call a model.
 
 The file grid and filters adapt to the space available in the window. In short windows the workspace can scroll while the playback bar stays visible. This does not change system display scaling or reset your sidebar and information-panel choices.

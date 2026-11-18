@@ -112,8 +112,8 @@ function onFocusOut(event: FocusEvent) {
 <style scoped>
 .search-filters { display: flex; flex: none; }
 .filter-trigger { min-height: 32px; padding: 0 10px; border: 0; border-radius: 9px; background: transparent; color: var(--accent); font-size: 12px; font-weight: 600; }
-.filter-trigger:hover:not(:disabled) { background: var(--accent-soft); }
-.filter-trigger.icon-only { width: 52px; height: 44px; min-height: 44px; padding: 0; border: 1px solid var(--line); border-radius: 18px; background: var(--glass-control); color: var(--fg); }
+.filter-trigger:hover:not(:disabled), .filter-trigger.icon-only:hover:not(:disabled) { background: var(--accent-soft); color: var(--accent); }
+.filter-trigger.icon-only { width: 40px; height: 40px; min-height: 40px; padding: 0; border: 1px solid transparent; border-radius: 10px; background: transparent; color: var(--fg-dim); }
 .filter-trigger.active { background: var(--accent-soft); border-color: color-mix(in srgb, var(--accent) 35%, transparent); color: var(--accent); }
 .filter-menu { position: fixed; z-index: 310; width: 340px; max-width: calc(100vw - 16px); border-radius: 14px; overflow: hidden; }
 .filter-rows { max-height: inherit; overflow-y: auto; padding: 10px; }

@@ -59,102 +59,113 @@ const ownerTitle = computed(() =>
     </button>
 
     <button class="restore" :title="popped ? t('显示播放窗口') : expandLabel" @click="popped ? popOut() : expandPlayer()">
-      <span class="label">
-        <small>{{ popped ? (state.paused ? t("在独立窗口播放 · 已暂停") : t("在独立窗口播放")) : state.paused ? t("正在播放 · 已暂停") : t("正在播放") }}</small>
-        <strong :title="nowPlaying?.name">{{ nowPlaying?.name ?? "—" }}</strong>
+      <strong :title="nowPlaying?.name">{{ nowPlaying?.name ?? "—" }}</strong>
+      <span class="meta">
+        <span class="status" :title="popped ? (state.paused ? t('在独立窗口播放 · 已暂停') : t('在独立窗口播放')) : undefined">{{ state.paused ? t("已暂停") : t("正在播放") }}</span>
+        <span v-if="showOwner" class="owner" :title="ownerTitle">
+          <span class="badge">{{ t("所属账号") }} · {{ ownerLabel }}</span>
+          <span v-if="ownerMasked" class="masked">{{ ownerMasked }}</span>
+        </span>
       </span>
     </button>
 
-    <div
-      ref="scrubEl"
-      class="scrub"
-      :class="{ scrubbing: scrub.scrubbing.value }"
-      role="slider"
-      tabindex="0"
-      :aria-label="t('播放进度')"
-      :aria-valuemin="0"
-      :aria-valuemax="Math.round(state.duration)"
-      :aria-valuenow="Math.round(position)"
-      :aria-valuetext="clock(position)"
-      :aria-disabled="state.duration <= 0"
-      @pointerdown="scrub.onPointerDown"
-      @pointermove="onScrubMove"
-      @pointerup="scrub.onPointerUp"
-      @pointercancel="scrub.onPointerUp"
-      @pointerleave="hoverTime = null"
-      @keydown="scrub.onKeyDown"
-    >
-      <div class="track"><i :style="{ width: progress + '%' }" /></div>
-      <i class="knob" :style="{ left: progress + '%' }" />
-      <span v-if="hoverTime !== null" class="hover mono" :style="{ left: percent(hoverTime) + '%' }">{{ clock(hoverTime) }}</span>
+    <div class="timeline">
+      <div
+        ref="scrubEl"
+        class="scrub"
+        :class="{ scrubbing: scrub.scrubbing.value }"
+        role="slider"
+        tabindex="0"
+        :aria-label="t('播放进度')"
+        :aria-valuemin="0"
+        :aria-valuemax="Math.round(state.duration)"
+        :aria-valuenow="Math.round(position)"
+        :aria-valuetext="clock(position)"
+        :aria-disabled="state.duration <= 0"
+        @pointerdown="scrub.onPointerDown"
+        @pointermove="onScrubMove"
+        @pointerup="scrub.onPointerUp"
+        @pointercancel="scrub.onPointerUp"
+        @pointerleave="hoverTime = null"
+        @keydown="scrub.onKeyDown"
+      >
+        <div class="track"><i :style="{ width: progress + '%' }" /></div>
+        <i class="knob" :style="{ left: progress + '%' }" />
+        <span v-if="hoverTime !== null" class="hover mono" :style="{ left: percent(hoverTime) + '%' }">{{ clock(hoverTime) }}</span>
+      </div>
+      <span class="time mono">{{ clock(position) }} / {{ clock(state.duration) }}</span>
     </div>
-    <span class="time mono">{{ clock(position) }} / {{ clock(state.duration) }}</span>
 
-    <!-- Beside Switch to this account the chip is the account itself: the button says what it is for. -->
-    <div v-if="showOwner" class="owner" :title="ownerTitle">
-      <span class="badge"><span v-if="!playingElsewhere" class="long">{{ t("所属账号") }} · </span>{{ ownerLabel }}</span>
-      <small v-if="ownerMasked" class="masked">{{ ownerMasked }}</small>
-    </div>
     <button v-if="showOwner && playingElsewhere" class="quiet back" :title="backLabel" @click="returnToOwner">
       {{ t("bar|切回该账号") }}
     </button>
 
-    <template v-if="popped">
-      <button class="quiet icon" :title="t('显示播放窗口')" @click="popOut">
-        <Icon name="popout" :size="17" />
+    <div class="actions">
+      <template v-if="popped">
+        <button class="quiet icon" :title="t('显示播放窗口')" :aria-label="t('显示播放窗口')" @click="popOut">
+          <Icon name="popout" :size="17" />
+        </button>
+        <button class="quiet icon" :title="t('回到主窗口播放')" :aria-label="t('回到主窗口播放')" @click="returnToMain">
+          <Icon name="popin" :size="17" />
+        </button>
+      </template>
+      <template v-else>
+        <button class="quiet icon" :title="expandLabel" :aria-label="expandLabel" @click="expandPlayer">
+          <Icon name="expand" :size="17" />
+        </button>
+        <button class="quiet icon" :title="t('独立窗口播放')" :aria-label="t('独立窗口播放')" @click="popOut">
+          <Icon name="popout" :size="17" />
+        </button>
+      </template>
+      <button class="quiet icon stop" :title="t('停止播放')" :aria-label="t('停止播放')" @click="stopPlayback">
+        <Icon name="stop" :size="17" />
       </button>
-      <button class="quiet icon" :title="t('回到主窗口播放')" @click="returnToMain">
-        <Icon name="popin" :size="17" />
-      </button>
-    </template>
-    <template v-else>
-      <button class="quiet icon" :title="expandLabel" @click="expandPlayer">
-        <Icon name="expand" :size="17" />
-      </button>
-      <button class="quiet icon" :title="t('独立窗口播放')" :aria-label="t('独立窗口播放')" @click="popOut">
-        <Icon name="popout" :size="17" />
-      </button>
-    </template>
-    <button class="quiet icon stop" :title="t('停止播放')" @click="stopPlayback">
-      <Icon name="stop" :size="17" />
-    </button>
+    </div>
   </div>
 </template>
 
 <style scoped>
 .bar {
   flex: none;
+  min-width: 0;
   height: 64px;
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 0 12px 0 10px;
-  border-radius: 14px;
+  padding: 0 14px;
+  border-radius: 12px;
+  border-color: transparent;
 }
 
-/* Hover keeps the fill and rim (the plain button:hover outranks this rule);
-   border-box: see button.primary in style.css. */
-.main,
-.main:hover:not(:disabled) {
-  width: 44px;
-  height: 44px;
-  min-height: 44px;
+.main {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  min-height: 40px;
   padding: 0;
   border-radius: 50%;
-  border: 1px solid var(--line);
-  color: var(--fg);
-  background: var(--glass-control);
+  border: 1px solid transparent;
+  color: var(--accent);
+  background: var(--accent-soft);
 }
 
-/* A bounded title slot leaves room for the timeline and playback actions. */
+.main:hover:not(:disabled) {
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 22%, transparent);
+}
+
 .restore {
-  flex: 0 1 300px;
-  min-width: 132px;
-  height: 46px;
-  justify-content: flex-start;
-  padding: 6px 10px;
+  flex: 1 1 360px;
+  min-width: 100px;
+  height: 48px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: center;
+  gap: 2px;
+  padding: 4px 6px;
   border: 0;
-  border-radius: 10px;
+  border-radius: 9px;
   background: transparent;
   text-align: left;
 }
@@ -163,28 +174,58 @@ const ownerTitle = computed(() =>
   background: color-mix(in srgb, var(--fg) 6%, transparent);
 }
 
-.label {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-  line-height: 1.25;
-}
-
-.label small {
-  font-size: 12px;
-  color: var(--fg-dim);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.label strong {
-  font-size: 15px;
+.restore strong {
+  font-size: 14px;
   font-weight: 600;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  color: var(--fg-dim);
+  font-size: 12px;
+  line-height: 1.3;
+}
+
+.status,
+.badge,
+.masked {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.badge {
+  flex-shrink: 0;
+  max-width: 100%;
+}
+
+.owner {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  max-width: 70%;
+}
+
+.owner::before {
+  content: "·";
+  flex: none;
+}
+
+.timeline {
+  flex: 0 1 370px;
+  min-width: 200px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
 /* The player's scrub bar at the bar's scale: a 28px hit row around a 4px
@@ -192,7 +233,7 @@ const ownerTitle = computed(() =>
 .scrub {
   position: relative;
   flex: 1;
-  min-width: 90px;
+  min-width: 0;
   height: 28px;
   display: flex;
   align-items: center;
@@ -289,49 +330,16 @@ const ownerTitle = computed(() =>
   white-space: nowrap;
 }
 
-/* The file name gives way, not the account (200px at most, then ellipsis). */
-.owner {
-  flex: none;
-  min-width: 0;
-  max-width: 200px;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 2px;
-  line-height: 1.25;
-}
-
-.badge {
-  max-width: 100%;
-  padding: 2px 8px;
-  border-radius: 999px;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--accent);
-  background: var(--accent-soft);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.masked {
-  max-width: 100%;
-  font-size: 12px;
-  color: var(--fg-dim);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 .back {
   flex: none;
   white-space: nowrap;
 }
 
-.main,
-.stop,
-.bar > .icon {
+.actions {
   flex: none;
+  display: flex;
+  align-items: center;
+  gap: 0;
 }
 
 @media (max-width: 900px) {
@@ -340,13 +348,38 @@ const ownerTitle = computed(() =>
   }
 }
 
-@media (max-width: 720px) {
-  .badge .long {
-    display: none;
+@media (max-width: 800px) {
+  .bar {
+    height: auto;
+    min-height: 64px;
+    flex-wrap: wrap;
+    gap: 0 8px;
+    padding: 8px 10px;
   }
 
-  .owner {
-    max-width: 110px;
+  .bar::before {
+    content: "";
+    order: 2;
+    flex-basis: 100%;
+  }
+
+  .restore {
+    flex-basis: 120px;
+  }
+
+  .actions {
+    order: 1;
+  }
+
+  .timeline {
+    order: 3;
+    flex: 1 1 160px;
+    min-width: 140px;
+    margin-left: 48px;
+  }
+
+  .back {
+    order: 3;
   }
 }
 

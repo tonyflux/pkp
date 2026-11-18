@@ -515,9 +515,10 @@ onUnmounted(() => window.removeEventListener("keydown", onKey));
   gap: 10px;
   padding: 0 10px 0 14px;
   height: 40px;
-  border-radius: 10px;
+  border-radius: 9px;
   color: var(--fg-dim);
-  background: color-mix(in srgb, var(--fg) 5%, transparent);
+  background: color-mix(in srgb, var(--fg) 4%, transparent);
+  border-color: transparent;
   transition: background var(--dur) var(--ease), border-color var(--dur) var(--ease);
 }
 
@@ -689,6 +690,8 @@ kbd {
   padding: 0;
   border-radius: 10px;
   color: var(--fg);
+  border-color: transparent;
+  background: transparent;
 }
 
 .panel-toggle.on {
@@ -699,10 +702,10 @@ kbd {
 
 .cloud {
   flex: none;
-  min-width: 120px;
+  min-width: 108px;
   height: 40px;
   min-height: 40px;
-  padding: 0 16px;
+  padding: 0 14px;
   gap: 8px;
   font-size: 14px;
 }

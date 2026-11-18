@@ -317,6 +317,14 @@ onMounted(() => {
     border-radius: 0 0 var(--radius-island) 0;
     box-shadow: none;
   }
+
+  .unified .stack > [data-file-tasks]:not([style*="display: none"]) {
+    margin-top: 10px;
+  }
+
+  .unified .stack > [data-playback] {
+    margin-top: 10px;
+  }
 }
 
 @media (max-width: 1279px) {

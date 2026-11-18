@@ -480,8 +480,8 @@ onBeforeUnmount(() => {
 button.new.primary,
 button.new.primary:hover:not(:disabled) {
   color: var(--fg);
-  background: color-mix(in srgb, var(--glass-control) 55%, transparent);
-  border-color: var(--line);
+  background: color-mix(in srgb, var(--fg) 4%, transparent);
+  border-color: transparent;
   box-shadow: none;
   filter: none;
 }
@@ -544,7 +544,7 @@ button.new.primary:hover:not(:disabled) {
 .groups section {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 3px;
 }
 
 /* In the rail the heading fades but keeps its line: the empty line is the
@@ -561,14 +561,14 @@ button.new.primary:hover:not(:disabled) {
 .item {
   position: relative;
   width: 100%;
-  min-height: 42px;
+  min-height: 40px;
   justify-content: flex-start;
   gap: 12px;
   padding: 0 16px 0 20px;
   border: 1px solid transparent;
   border-radius: 10px;
   background: transparent;
-  color: var(--fg);
+  color: var(--fg-dim);
   font-size: 14px;
   font-weight: 500;
   overflow: hidden;
@@ -596,6 +596,7 @@ button.new.primary:hover:not(:disabled) {
 }
 
 .item.active {
+  color: var(--fg);
   font-weight: 600;
   background: var(--accent-soft);
   border-color: transparent;
@@ -606,9 +607,9 @@ button.new.primary:hover:not(:disabled) {
   content: "";
   position: absolute;
   left: 0;
-  top: 11px;
-  bottom: 11px;
-  width: 3px;
+  top: 12px;
+  bottom: 12px;
+  width: 2px;
   border-radius: 3px;
   background: var(--accent);
 }

@@ -4,7 +4,11 @@
 
 ## Unreleased
 
-- Compact the file header and place the browsing scope beside the current location; keep incomplete-index warnings and scrollable long paths.
+- Refine the file workspace hierarchy with larger folder previews and quieter card borders, search controls, and sidebars, while retaining selection, sorting, account and playback actions.
+
+- Refine the collapsed player bar with a clearer title, grouped playback and account details, and a more balanced timeline and narrow-window layout; retain account switching and playback controls.
+
+- Show the file path in hierarchical order with horizontally scrollable ancestors, and place browsing scope beside category filters while retaining incomplete-index warnings.
 - Keep App Lock engaged when system authentication is temporarily unavailable or a session changes. Retry authentication after recovery; clearing local account data requires explicit confirmation.
 - Fix a potential deadlock when video surfaces move between windows during shutdown. Return the surface before its window closes and preserve initialization errors.
 - Fix Linux update packages disappearing on exit, HTTPS system-proxy settings being overwritten, premature desktop-portal request closure, and system reduce-transparency preferences being ignored. RPM/AppImage bundle CJK fonts and can read host fonts.

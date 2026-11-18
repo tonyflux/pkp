@@ -160,12 +160,11 @@ function collapse() {
   min-width: 0;
   max-width: 96px;
   margin-right: auto;
-  padding: 2px 8px;
-  border-radius: 999px;
+  padding: 2px 4px;
   font-size: 12px;
-  font-weight: 600;
-  color: var(--accent);
-  background: var(--accent-soft);
+  font-weight: 500;
+  color: var(--fg-dim);
+  background: transparent;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
