@@ -195,8 +195,10 @@ jobs:
           docker run --rm -e PKP_RELEASE_BUILD=1 -v "$PWD:/src" pkp-linux-builder sh -c 'cd frontend && npm ci && cd .. && make linux-package'
       - name: Test media and GTK rendering on X11 and Wayland
         run: |
-          # These permissions apply only to this disposable CI container. The
-          # application and its WebKit web processes still use their sandbox.
+          # Only the disposable runner and test container are unconfined; WebKit
+          # still creates its own sandbox and its renderer is checked below.
+          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+          sudo sysctl -w kernel.apparmor_restrict_unprivileged_unconfined=0
           docker run --rm --tmpfs /tmp:rw,exec,mode=1777 --security-opt seccomp=unconfined --security-opt apparmor=unconfined \
             -v "$PWD:/src" pkp-linux-builder sh -c '
               chmod -R a+rwX /src/bin /src/frontend/dist
