@@ -1,31 +1,31 @@
-# PKP 0.7.1
+# PKP 1.0.0
 
 ## English
 
-This patch improves crash diagnostics and fixes native player-window lifetime risks on macOS.
+PKP 1.0.0 brings a refined workspace and Linux desktop builds, alongside playback, account browsing and reliability improvements since 0.7.1.
 
-- Unhandled Go panics, runtime fatal errors and recorded startup/Wails fatal errors produce a local `PKP-Crash-*.log` on the desktop, or in the system cache if the desktop is unavailable. Normal exits do not produce reports; forced termination, some native-library failures and very early startup failures may not produce one either.
-- On the next launch, you can review and edit an available report before choosing whether to send it. Nothing is uploaded unless you select **Send report**. Don't send or closing keeps the local file and stops reminders for that report; sending failures can be retried manually. Feedback is independent of the anonymous usage-statistics setting.
-- Reports may contain filenames, paths, links, account details or tokens. Remove sensitive information before sending. The report is processed by Cloudflare and accessible to the developer; a daily cleanup is configured for reports older than 29 days, though failures can delay deletion. Sent reports cannot be automatically recalled.
-- Fix a macOS native-window lifetime race when reshaping the separate player during close or shutdown, and an error-message lifetime issue in the video surface. These are confirmed code risks; the cause of an individual reported crash still requires its diagnostics.
-- The crash-report and usage-statistics dashboards now adapt to mobile screens, including report review, pagination and touch inspection of statistics charts.
+- A softer theme-adaptive mist backdrop, refined light and dark workspaces, clearer file cards, navigation, refresh icon and playback controls. Custom wallpapers, panel opacity and reduced-transparency settings remain available.
+- Browse locally indexed files across signed-in accounts, with account ownership and incomplete-index warnings; drives and playback progress remain separate.
+- Refined video and music playback, file previews, queues and collapsed playback controls, including previous/next video actions and retained subtitle membership and quota notices.
+- Linux x86_64 and ARM64 builds provide deb, rpm and AppImage packages, native playback, safe synchronization and LAN sharing. Linux updates are verified before manual installation or replacement.
+- Fix app-lock authentication bypass risks, video-surface shutdown deadlocks, Linux proxy and portal issues, and other platform reliability problems. Sign-in no longer submits developer referral attribution; previously established relationships are unchanged.
 
-The release contains eight assets: macOS Universal and Windows x64/ARM64 installers, signed update manifest and signature, `PKP-0.7.1-source.tar.gz`, `libmpv-sources.tar.gz`, `LICENSE` and `SHA256SUMS`. macOS is ad hoc signed and not Apple-notarized; Windows lacks Authenticode signing and remains preview support. Native installation and upgrade, real-device matrix and production-cloud acceptance have not been completed. No Linux packages are provided.
+This draft is for validation before publication. The planned 16 assets include macOS Universal and Windows x64/ARM64 installers, signed update manifest and signature, source and media-source archives, license, checksums, and Linux deb/rpm/AppImage and runtime sources for both architectures. macOS is ad hoc signed and not Apple-notarized; Windows lacks Authenticode signing and remains preview support. Linux needs a compatible desktop, keyring and authentication agent; standalone AppImage does not install system polkit policy and cannot guarantee screenshot protection. Installation, upgrade and real-device acceptance remain to be verified.
 
-[Installation](https://github.com/tonyflux/pkp/blob/v0.7.1/docs/INSTALL.en.md) · [Usage guide](https://github.com/tonyflux/pkp/blob/v0.7.1/docs/USAGE.en.md#settings-and-quitting) · [Privacy](https://github.com/tonyflux/pkp/blob/v0.7.1/PRIVACY.en.md#signing-out-deletion-and-issue-reporting) · [Full changelog](https://github.com/tonyflux/pkp/compare/v0.7.0...v0.7.1)
+[Installation](https://github.com/tonyflux/pkp/blob/v1.0.0/docs/INSTALL.en.md) · [Usage](https://github.com/tonyflux/pkp/blob/v1.0.0/docs/USAGE.en.md) · [Privacy](https://github.com/tonyflux/pkp/blob/v1.0.0/PRIVACY.en.md) · [Changes since 0.7.1](https://github.com/tonyflux/pkp/compare/v0.7.1...v1.0.0)
 
 ---
 
 ## 简体中文
 
-本补丁改进崩溃诊断，并修复 macOS 独立播放窗口的原生对象生命周期风险。
+PKP 1.0.0 在 0.7.1 基础上更新桌面工作区，增加 Linux 桌面构建，并改进播放、跨账号浏览及稳定性。
 
-- 未处理的 Go panic、运行时致命错误和已记录的启动／Wails 致命错误，会在桌面生成 `PKP-Crash-*.log`；桌面不可写时使用系统缓存。正常退出不生成报告；强制结束、部分原生库故障或启动早期失败也可能无法生成。
-- 下次启动时可审阅、编辑可用的报告，并选择是否发送。只有点击「发送报告」才会上传；选择「不发送」或关闭会保留本机文件且不再提醒该报告，发送失败可手动重试。崩溃反馈与匿名使用统计开关相互独立。
-- 报告可能包含文件名、路径、链接、账号信息或令牌，请先删除敏感内容。发送后由 Cloudflare 处理，开发者可查看；服务端配置每日清理超过 29 天的报告，任务故障可能延迟删除。发送后无法自动撤回。
-- 修复 macOS 独立播放窗口调整与关闭／退出并发时的原生窗口生命周期问题，以及视频表面错误信息的生命周期问题。这些是源码中确认的风险；单次闪退的具体原因仍需结合对应报告判断。
-- 崩溃报告和使用统计后台适配手机屏幕，支持报告查看、翻页和统计图表触控查看。
+- 新增随主题变化的柔和雾面背景，精修浅色和深色工作区、文件卡片、导航、刷新图标与播放控件；保留自定义壁纸、面板不透明度和降低透明度设置。
+- 支持汇集已登录账号的本地文件索引进行浏览，标明文件所属账号并提示索引可能不完整；云盘和播放进度仍分别管理。
+- 优化视频、音乐播放、文件预览、播放队列及收起播放器，新增上一个／下一个视频控制，保留字幕会员及额度提示。
+- 新增 Linux x86_64／ARM64 的 deb、rpm、AppImage 构建，提供原生播放、安全同步和局域网共享；更新先验证签名与哈希，再由用户手动安装或替换。
+- 修复应用锁认证异常时可能跳过锁定、视频画面关闭时可能死锁，以及 Linux 代理和桌面门户等问题。登录不再提交开发者推广归因；此前已建立的关系不自动撤销。
 
-本版本包含八件附件：macOS Universal 和 Windows x64／ARM64 安装包、更新清单及签名、`PKP-0.7.1-source.tar.gz`、`libmpv-sources.tar.gz`、`LICENSE` 和 `SHA256SUMS`。macOS 为 ad hoc 签名，未通过 Apple 公证；Windows 无 Authenticode 签名，仍为预览支持。原生安装与升级、真实设备矩阵和生产云端验收尚未完成。不提供 Linux 安装包。
+本草稿供验证，尚未正式发布。计划提供 16 件附件：macOS Universal 与 Windows x64／ARM64 安装包、签名更新清单及签名、源码和媒体源码包、许可证、校验文件，以及两种架构的 Linux deb／rpm／AppImage 与运行库源码。macOS 为 ad hoc 签名、未通过 Apple 公证；Windows 无 Authenticode 签名，仍为预览支持。Linux 需要兼容的桌面、密码库和认证代理；独立 AppImage 不自动安装系统 polkit 策略，也无法保证截图保护。安装、升级和真实设备验收仍待验证。
 
-[安装指南](https://github.com/tonyflux/pkp/blob/v0.7.1/docs/INSTALL.md) · [使用说明](https://github.com/tonyflux/pkp/blob/v0.7.1/docs/USAGE.md#设置与退出) · [隐私说明](https://github.com/tonyflux/pkp/blob/v0.7.1/PRIVACY.md#退出删除与问题反馈) · [完整变更](https://github.com/tonyflux/pkp/compare/v0.7.0...v0.7.1)
+[安装指南](https://github.com/tonyflux/pkp/blob/v1.0.0/docs/INSTALL.md) · [使用说明](https://github.com/tonyflux/pkp/blob/v1.0.0/docs/USAGE.md) · [隐私说明](https://github.com/tonyflux/pkp/blob/v1.0.0/PRIVACY.md) · [0.7.1 以来的变更](https://github.com/tonyflux/pkp/compare/v0.7.1...v1.0.0)
