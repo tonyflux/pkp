@@ -79,14 +79,28 @@ func (p *PlayerService) OpenWindow(audio bool) error {
 	p.popoutMu.Lock()
 	if p.popout != nil {
 		popout := p.popout
-		changed := p.popoutAudio != audio
-		p.popoutAudio = audio
 		p.popoutMu.Unlock()
-		if changed {
-			p.configurePopout(popout, audio)
+		live := false
+		p.onSurfaceThread(func() {
+			if p.windowClosing || !p.liveSurfaceWindow(popout) {
+				return
+			}
+			live = true
+			p.popoutMu.Lock()
+			changed := p.popoutAudio != audio
+			p.popoutAudio = audio
+			p.popoutMu.Unlock()
+			if application.Get() != nil {
+				if changed {
+					p.configurePopoutOnSurface(popout, audio)
+				}
+				popout.Show()
+				popout.Focus()
+			}
+		})
+		if !live {
+			return i18n.New("无法打开播放窗口")
 		}
-		popout.Show()
-		popout.Focus()
 		return nil
 	}
 	app := application.Get()
@@ -169,25 +183,23 @@ func (p *PlayerService) OpenWindow(audio bool) error {
 		p.buttons = true
 		opened = true
 		p.popoutMu.Unlock()
+		popout.Show()
+		p.shapePopout(true)
 	})
 	if !opened {
 		popout.Close()
 		return i18n.New("无法打开播放窗口")
 	}
 
-	p.shapePopout(true)
-	popout.Show()
 	return nil
 }
 
-func (p *PlayerService) configurePopout(window *application.WebviewWindow, audio bool) {
+func (p *PlayerService) configurePopoutOnSurface(window *application.WebviewWindow, audio bool) {
 	if audio {
-		p.onSurfaceThread(func() {
-			if p.liveSurfaceWindow(window) {
-				videowin.FreeAspect(window.NativeWindow())
-				videowin.ShowButtons(window.NativeWindow(), true)
-			}
-		})
+		if p.liveSurfaceWindow(window) {
+			videowin.FreeAspect(window.NativeWindow())
+			videowin.ShowButtons(window.NativeWindow(), true)
+		}
 		window.SetMinSize(480, 420)
 		window.SetSize(560, 700)
 	} else {
@@ -210,6 +222,9 @@ func (p *PlayerService) configurePopout(window *application.WebviewWindow, audio
 func (p *PlayerService) ShowWindowButtons(ctx context.Context, show bool) error {
 	caller := callerWindow(ctx)
 	p.onSurfaceThread(func() {
+		if p.windowClosing {
+			return
+		}
 		p.popoutMu.Lock()
 		popout := p.popout
 		if popout == nil || caller == nil || caller.ID() != popout.ID() {
@@ -259,6 +274,9 @@ func (p *PlayerService) shapePopout(force bool) {
 		}
 		p.shaped = ratio
 		p.popoutMu.Unlock()
+		if !p.liveSurfaceWindow(popout) {
+			return
+		}
 		videowin.Fit(popout.NativeWindow(), w, h)
 	})
 }
@@ -288,6 +306,8 @@ func (p *PlayerService) HostVideo(ctx context.Context) error {
 // CloseWindow puts the video back in the main window and closes the separate
 // one.
 func (p *PlayerService) CloseWindow() error {
+	p.openWindowMu.Lock()
+	defer p.openWindowMu.Unlock()
 	var popout *application.WebviewWindow
 	var err error
 	p.onSurfaceThread(func() { popout, err = p.returnHome(nil) })

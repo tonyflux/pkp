@@ -91,8 +91,14 @@ static void showButtons(NSWindow *window, BOOL show) {
 
 void pkp_videowin_show_buttons(void *nsWindow, int show) {
 	NSWindow *window = (__bridge NSWindow *)nsWindow;
+	if ([NSThread isMainThread]) {
+		showButtons(window, show != 0);
+		return;
+	}
+	[window retain];
 	dispatch_async(dispatch_get_main_queue(), ^{
 		showButtons(window, show != 0);
+		[window release];
 	});
 }
 

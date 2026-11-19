@@ -130,10 +130,14 @@ static gboolean draw(GtkGLArea *widget, GdkGLContext *context, gpointer unused);
 static gboolean queue_draw(gpointer unused) {
     (void)unused;
     g_atomic_int_set(&update_pending, 0);
-    if (area && render && visible && gtk_widget_get_mapped(area)) {
+    if (area && render && visible && gtk_widget_get_mapped(area) &&
+        gtk_gl_area_get_error(GTK_GL_AREA(area)) == NULL) {
         // The transparent WebKit overlay can occlude GtkGLArea's snapshot;
         // rendering must not depend on GTK choosing to snapshot the lower widget.
         gtk_gl_area_make_current(GTK_GL_AREA(area));
+        if (gtk_gl_area_get_error(GTK_GL_AREA(area)) != NULL) {
+            return G_SOURCE_REMOVE;
+        }
         gtk_gl_area_attach_buffers(GTK_GL_AREA(area));
         draw(GTK_GL_AREA(area), gl_context, NULL);
         gtk_widget_queue_draw(area);
@@ -269,6 +273,8 @@ static gboolean draw(GtkGLArea *widget, GdkGLContext *context, gpointer unused) 
     memcpy(bottom_pixel, bottom, 4);
     if (capture_pending) {
         // glReadPixels is intentionally limited to explicit captures, not every frame.
+        free(capture_pixels);
+        capture_pixels = NULL;
         size_t bytes = (size_t)w * h * 4;
         unsigned char *pixels = malloc(bytes);
         if (pixels) {
@@ -443,7 +449,14 @@ static void detach_main(void *unused) {
     core = NULL;
     g_clear_pointer(&render_error, g_free);
     g_atomic_int_set(&surface_present, 0);
-    fail_capture(-1);
+    g_mutex_lock(&observations);
+    attached = 0;
+    free(capture_pixels);
+    capture_pixels = NULL;
+    capture_pending = 0;
+    capture_status = -1;
+    g_cond_broadcast(&captured);
+    g_mutex_unlock(&observations);
 }
 static void detach_owned(void *data) {
     if (surface_owner == data) detach_main(NULL);
@@ -465,8 +478,11 @@ static void move_active(void *data) {
         gtk_fixed_put(GTK_FIXED(fixed), area, 0, 0);
         gtk_widget_realize(area);
     }
-    if (!render) {
-        *args->err = g_strdup(render_error ? render_error : "GTK could not re-realize the GL surface");
+    GError *error = gtk_gl_area_get_error(GTK_GL_AREA(area));
+    if (!render || render_error != NULL || error != NULL) {
+        const char *message = render_error ? render_error
+                            : (error && error->message ? error->message : "GTK could not re-realize the GL surface");
+        *args->err = g_strdup(message);
         return;
     }
     args->status = 0;
@@ -537,17 +553,21 @@ int pkp_surface_capture(int timeout_ms, unsigned char **rgba, int *width, int *h
     // Serialize captures, without allowing one caller to steal another's buffer.
     while (capture_busy) {
         if (!g_cond_wait_until(&captured, &observations, until)) {
+            if (!capture_busy) break;
             g_mutex_unlock(&observations);
             return -2;
         }
     }
     if (!attached) { g_mutex_unlock(&observations); return -1; }
+    free(capture_pixels);
+    capture_pixels = NULL;
     capture_busy = 1;
     capture_pending = 1;
     capture_status = -2;
     request_draw(NULL);
     while (capture_pending) {
         if (!g_cond_wait_until(&captured, &observations, until)) {
+            if (!capture_pending) break;
             capture_pending = 0;
             capture_busy = 0;
             g_cond_broadcast(&captured);
@@ -556,6 +576,9 @@ int pkp_surface_capture(int timeout_ms, unsigned char **rgba, int *width, int *h
         }
     }
     int result = capture_status;
+    if (!result && !capture_pixels) {
+        result = -1;
+    }
     if (!result) {
         *rgba = capture_pixels;
         *width = capture_width;

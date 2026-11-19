@@ -249,6 +249,7 @@ type PlayerService struct {
 	// checking a window and using its native handle is one transaction.
 	host            uint
 	windowClosing   bool
+	surfaceMu       sync.Mutex
 	surfaceDispatch func(func())
 	seeThrough      map[uint]bool
 	openWindowMu    sync.Mutex
@@ -362,6 +363,8 @@ func (p *PlayerService) onSurfaceThread(fn func()) {
 	if p.surfaceDispatch != nil {
 		p.surfaceDispatch(fn)
 	} else if application.Get() == nil {
+		p.surfaceMu.Lock()
+		defer p.surfaceMu.Unlock()
 		fn()
 	} else {
 		application.InvokeSync(fn)

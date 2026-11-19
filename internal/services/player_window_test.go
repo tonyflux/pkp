@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"sync"
 	"testing"
 	"time"
 
@@ -139,5 +140,103 @@ func TestOldClosingHookDoesNotCloseNewPopout(t *testing.T) {
 	ctx := context.WithValue(context.Background(), application.WindowKey, old)
 	if err := svc.HostVideo(ctx); err == nil {
 		t.Fatal("closed window reclaimed the surface")
+	}
+}
+
+func TestPlayerOpenWindowConcurrentClose(t *testing.T) {
+	svc := NewPlayerService(PlayerOptions{Headless: true, Logger: quiet()})
+	main := application.NewWindow(application.WebviewWindowOptions{Name: "main"})
+	popout := application.NewWindow(application.WebviewWindowOptions{Name: "player"})
+	svc.AttachWindow(main)
+	svc.popout = popout
+	svc.host = popout.ID()
+
+	queued := make(chan func(), 1)
+	svc.surfaceDispatch = func(fn func()) {
+		done := make(chan struct{})
+		queued <- func() { defer close(done); fn() }
+		<-done
+	}
+
+	openErr := make(chan error, 1)
+	go func() { openErr <- svc.OpenWindow(true) }()
+
+	var openStep func()
+	select {
+	case openStep = <-queued:
+	case <-time.After(time.Second):
+		t.Fatal("OpenWindow did not dispatch onto surface thread")
+	}
+
+	closeErr := make(chan error, 1)
+	go func() { closeErr <- svc.closePopout(popout) }()
+	select {
+	case err := <-closeErr:
+		if err != nil {
+			t.Fatal(err)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("closePopout blocked behind OpenWindow")
+	}
+
+	openStep()
+	select {
+	case err := <-openErr:
+		if err == nil {
+			t.Fatal("OpenWindow succeeded after popout closed")
+		}
+	case <-time.After(time.Second):
+		t.Fatal("OpenWindow did not finish")
+	}
+
+	if svc.popout != nil || svc.host != main.ID() || svc.popoutAudio {
+		t.Fatalf("unexpected state after concurrent close: popout=%v host=%d audio=%v", svc.popout, svc.host, svc.popoutAudio)
+	}
+}
+
+func TestPlayerSurfaceThreadConcurrentAccess(t *testing.T) {
+	svc := NewPlayerService(PlayerOptions{Headless: true, Logger: quiet()})
+	main := application.NewWindow(application.WebviewWindowOptions{Name: "main"})
+	popout := application.NewWindow(application.WebviewWindowOptions{Name: "player"})
+	svc.AttachWindow(main)
+	svc.popout = popout
+	svc.host = popout.ID()
+
+	fromPopout := context.WithValue(context.Background(), application.WindowKey, popout)
+	fromMain := context.WithValue(context.Background(), application.WindowKey, main)
+
+	var wg sync.WaitGroup
+	for i := range 20 {
+		wg.Add(4)
+		go func(i int) {
+			defer wg.Done()
+			_ = svc.SetStage(fromPopout, mpv.Rect{Width: float64(400 + i), Height: 300, Visible: true})
+		}(i)
+		go func(i int) {
+			defer wg.Done()
+			_ = svc.SetStage(fromMain, mpv.Rect{Width: float64(300 + i), Height: 200, Visible: true})
+		}(i)
+		go func(i int) {
+			defer wg.Done()
+			_ = svc.ShowWindowButtons(fromPopout, i%2 == 0)
+		}(i)
+		go func(i int) {
+			defer wg.Done()
+			if i == 10 {
+				_ = svc.CloseWindow()
+			} else {
+				_ = svc.OpenWindow(i%2 == 0)
+			}
+		}(i)
+	}
+	wg.Wait()
+
+	if err := svc.CloseWindow(); err != nil {
+		t.Fatal(err)
+	}
+	svc.windowClosing = true
+	svc.popout = popout
+	if err := svc.OpenWindow(false); err == nil {
+		t.Fatal("OpenWindow succeeded while windowClosing was true")
 	}
 }

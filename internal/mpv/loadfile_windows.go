@@ -38,6 +38,8 @@ func (c *Client) LoadFile(_ context.Context, url string, start float64) error {
 	runtime.KeepAlive(values)
 	runtime.KeepAlive(options)
 	runtime.KeepAlive(optionValue)
+	runtime.KeepAlive(arguments)
+	runtime.KeepAlive(command)
 	if status := int32(r); status < 0 {
 		return fmt.Errorf("mpv: loadfile: %s", l.errorText(status))
 	}

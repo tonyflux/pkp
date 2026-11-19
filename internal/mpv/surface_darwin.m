@@ -247,6 +247,8 @@ static NSView *pkp_find_webview(NSView *content) {
 
 @end
 
+static void pkp_surface_detach_main(pkp_surface_lifetime *lifetime);
+
 int pkp_surface_attach(void *nsWindow, mpv_handle *mpv, pkp_surface_lifetime *lifetime, char **err) {
 	__block int rc = 0;
 	__block char *message = NULL;
@@ -256,8 +258,16 @@ int pkp_surface_attach(void *nsWindow, mpv_handle *mpv, pkp_surface_lifetime *li
       if (!pkp_surface_lifetime_enter(lifetime)) { rc = -1; return; }
       @try {
 	  if (gLayer != nil) {
-		  if (gOwner != lifetime) { rc = -1; message = strdup("video surface belongs to another client"); }
-		  return;
+		  if (gOwner != lifetime) {
+			  rc = -1;
+			  message = strdup("video surface belongs to another client");
+			  return;
+		  }
+		  if (atomic_load(&gCreateState) != 1) {
+			  pkp_surface_detach_main(lifetime);
+		  } else {
+			  return;
+		  }
 	  }
 	  NSWindow *window = (NSWindow *)nsWindow;
 	  NSView *content = [window contentView];
@@ -292,6 +302,7 @@ int pkp_surface_attach(void *nsWindow, mpv_handle *mpv, pkp_surface_lifetime *li
 	  atomic_store(&gVisible, 1);
 	  atomic_store(&gRedraw, 0);
 	  atomic_store(&gCreateState, 0);
+	  gCreateError[0] = '\0';
 	  pthread_mutex_unlock(&gLock);
 
 	  gLayer.opaque = YES;
@@ -344,11 +355,15 @@ int pkp_surface_wait_ready(pkp_surface_lifetime *lifetime, char **err) {
 	}
     pthread_mutex_lock(&gLock);
     int state = atomic_load(&gCreateState);
-    if (!pkp_surface_lifetime_active(lifetime) || state != 1) {
+    int active = pkp_surface_lifetime_active(lifetime);
+    if (!active || state != 1) {
         if (err != NULL) {
             *err = strdup(state == -1 ? gCreateError : "the video layer never drew a frame");
         }
         pthread_mutex_unlock(&gLock);
+        if (![NSThread isMainThread] && active && state != 1) {
+            pkp_surface_detach(lifetime);
+        }
         return -1;
     }
     pthread_mutex_unlock(&gLock);
@@ -417,6 +432,9 @@ int pkp_surface_move(void *nsWindow, pkp_surface_lifetime *lifetime, char **err)
 }
 
 void pkp_surface_set_rect(pkp_surface_lifetime *lifetime, double x, double y, double w, double h, int visible) {
+	if (!atomic_load(&gSurfacePresent)) {
+		return;
+	}
 	pkp_main_sync(^{
 	  if (!pkp_surface_lifetime_enter(lifetime)) return;
       @try {
@@ -447,9 +465,7 @@ void pkp_surface_set_rect(pkp_surface_lifetime *lifetime, double x, double y, do
 	});
 }
 
-void pkp_surface_detach(pkp_surface_lifetime *lifetime) {
-    if (!atomic_load(&gSurfacePresent)) return;
-    pkp_main_sync(^{
+static void pkp_surface_detach_main(pkp_surface_lifetime *lifetime) {
       if (gOwner != lifetime) return;
       if (gLayer != nil) gLayer.asynchronous = NO;
       pthread_mutex_lock(&gLock);
@@ -478,6 +494,12 @@ void pkp_surface_detach(pkp_surface_lifetime *lifetime) {
       [layer release];
       gOwner = NULL;
       atomic_store(&gSurfacePresent, 0);
+}
+
+void pkp_surface_detach(pkp_surface_lifetime *lifetime) {
+    if (!atomic_load(&gSurfacePresent)) return;
+    pkp_main_sync(^{
+      pkp_surface_detach_main(lifetime);
     });
 }
 
