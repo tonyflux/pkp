@@ -64,12 +64,12 @@ su tester -c "xvfb-run -a dbus-run-session -- env APPIMAGE_EXTRACT_AND_RUN=1 GDK
 su tester -c "xvfb-run -a dbus-run-session -- env GDK_BACKEND=x11 LIBGL_ALWAYS_SOFTWARE=1 bash '$PWD/build/linux/appimage/smoke-launch.sh' '$image/AppRun'"
 triplet=$(cat "$image/.triplet")
 loader=$(cat "$image/.loader")
-"$image$loader" --library-path "$image/usr/lib/$triplet" "$image/usr/bin/bwrap" \
-  --bind / / --dev-bind /dev /dev --ro-bind "$image/usr" /usr --setenv LD_LIBRARY_PATH "/usr/lib/$triplet" \
-  -- /usr/lib/pkp/Helpers/ffmpeg -v error -filter_complex sine=duration=0.01 -f null -
-"$image$loader" --library-path "$image/usr/lib/$triplet" "$image/usr/bin/bwrap" \
-  --bind / / --dev-bind /dev /dev --ro-bind "$image/usr" /usr --setenv LD_LIBRARY_PATH "/usr/lib/$triplet" \
-  -- /usr/lib/pkp/Helpers/ffprobe -version
+su tester -c "'$image$loader' --library-path '$image/usr/lib/$triplet' '$image/usr/bin/bwrap' --unshare-user \
+  --bind / / --dev-bind /dev /dev --ro-bind '$image/usr' /usr --setenv LD_LIBRARY_PATH '/usr/lib/$triplet' \
+  -- /usr/lib/pkp/Helpers/ffmpeg -v error -filter_complex sine=duration=0.01 -f null -"
+su tester -c "'$image$loader' --library-path '$image/usr/lib/$triplet' '$image/usr/bin/bwrap' --unshare-user \
+  --bind / / --dev-bind /dev /dev --ro-bind '$image/usr' /usr --setenv LD_LIBRARY_PATH '/usr/lib/$triplet' \
+  -- /usr/lib/pkp/Helpers/ffprobe -version"
 rpmroot="$tmp/rpm-root"
 mkdir -p "$rpmroot"
 rpm --root "$rpmroot" -i --nodeps --noscripts "$prefix.rpm"
