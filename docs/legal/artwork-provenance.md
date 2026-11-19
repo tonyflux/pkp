@@ -4,6 +4,12 @@ This records evidence available for the v0.2.0 source preparation. It is not an 
 
 ## Default wallpapers / 默认壁纸
 
+The current defaults, `frontend/src/assets/mist-dark.svg` and `mist-light.svg`, are original procedural radial-gradient artwork created for the interface; they do not use the snowy-fjord images below.
+
+当前默认背景 `frontend/src/assets/mist-dark.svg` 与 `mist-light.svg` 是为界面绘制的径向渐变图案，未使用下述雪山峡湾图片。
+
+### Earlier snowy-fjord wallpapers / 早期雪山峡湾壁纸
+
 The design package retains image-generation prompts for the snowy-fjord player concept, including its refined version. Implementation history records extraction of the wallpaper from that concept and the later removal of its blurred playback-control strip. The light wallpaper is a morning-color treatment of the same scene. This supports AI-concept origin rather than a licensed photograph; no particular model identity or generation-service rights are inferred from appearance.
 
 设计包保留了雪山峡湾播放器概念图及精修版的图像生成提示词。实施历史记录从该概念图取出壁纸，再裁掉底部播放控件的模糊区域；浅色版为同一场景的晨雾调色。因此有 AI 概念图来源的记录，不应把它描述成获授权的实拍照片；不根据外观推断具体模型或生成服务的权利条款。

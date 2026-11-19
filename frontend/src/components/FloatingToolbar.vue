@@ -339,7 +339,7 @@ onUnmounted(() => window.removeEventListener("keydown", onKey));
         </button>
         <button class="quiet icon" :title="t('{name}（{note}）', { name: t('刷新'), note: shortcutText('R') })" @click="refresh()">
           <Orbit v-if="drive.listLoading" :label="t('刷新中')" />
-          <Icon v-else name="restore" :size="20" />
+          <Icon v-else name="refresh" :size="20" />
         </button>
       </div>
 

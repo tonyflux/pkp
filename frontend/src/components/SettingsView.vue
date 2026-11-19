@@ -696,10 +696,10 @@ onBeforeUnmount(() => {
             <div class="card-text">
               <strong>{{ t("壁纸") }}</strong>
               <span v-if="ui.wallpaper">{{ t("正在使用您选择的图片；恢复默认将同时重置面板不透明度。") }}</span>
-              <span v-else>{{ t("默认使用随浅色、深色变化的纯色背景；恢复默认也会重置面板不透明度。") }}</span>
+              <span v-else>{{ t("默认使用随浅色、深色变化的柔和背景；恢复默认也会重置面板不透明度。") }}</span>
             </div>
             <div class="actions">
-              <span class="wall-preview" role="img" :aria-label="t('当前背景')"><img v-if="ui.wallpaper" :src="wallpaperSrc" alt="" /></span>
+              <span class="wall-preview" :class="{ custom: Boolean(ui.wallpaper) }" role="img" :aria-label="t('当前背景')"><img v-if="ui.wallpaper" :src="wallpaperSrc" alt="" /></span>
               <button v-if="ui.wallpaper || ui.contentOpacity !== 80" class="pill" @click="clearWallpaper">{{ t("恢复默认") }}</button>
               <button class="pill" @click="pickWallpaper">{{ t("选择图片…") }}</button>
             </div>
@@ -2035,7 +2035,11 @@ onBeforeUnmount(() => {
   border-radius: 10px;
   border: 1px solid var(--line-strong);
   overflow: hidden;
-  background: var(--scene-background);
+  background: var(--scene-background) var(--scene-image) center / cover no-repeat;
+}
+
+.wall-preview.custom {
+  background-image: none;
 }
 
 .wall-preview img {

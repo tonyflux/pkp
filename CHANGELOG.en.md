@@ -4,6 +4,12 @@
 
 ## Unreleased
 
+- Refine the light workspace with a warm-white content surface, blue-gray sidebar and lighter folder placeholders while retaining thumbnails, selection states and transparency settings.
+
+- Add a soft mist backdrop for light and dark themes to give translucent panels more depth while retaining custom wallpaper, opacity and reduced-transparency settings.
+
+- Refine refresh icons in the file toolbar and context menu while retaining refresh behavior and loading feedback.
+
 - Align primary, neutral and destructive button colors and hover states. Reversible actions retain restrained red cues; final confirmation of permanent file deletion and local-data clearing is more prominent, without changing confirmation flows.
 
 - Fix spurious scrollbars in the separate music window when cover art is present; expose long track and artist text on hover while retaining queue and error scrolling.

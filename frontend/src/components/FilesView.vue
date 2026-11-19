@@ -1377,7 +1377,7 @@ watch(
             </button>
           </template>
           <button class="quiet" role="menuitem" @click="canvasMenuAction(() => refresh())">
-            <Icon name="restore" :size="17" /> {{ t("刷新") }}
+            <Icon name="refresh" :size="17" /> {{ t("刷新") }}
           </button>
           <button class="quiet" role="menuitem" @click="canvasMenuAction(() => setLayout(ui.layout === 'grid' ? 'list' : 'grid'))">
             <Icon :name="ui.layout === 'grid' ? 'list' : 'grid'" :size="17" /> {{ ui.layout === "grid" ? t("列表") : t("网格") }}
@@ -1508,7 +1508,7 @@ watch(
 }
 
 :root[data-theme="light"] .files {
-  --card-fill: color-mix(in srgb, var(--fg) 5%, transparent);
+  --card-fill: color-mix(in srgb, var(--fg) 2.5%, transparent);
 }
 
 /* The canvas foot: counts on the left, the selection on the right. */
@@ -2135,6 +2135,10 @@ h2 + .folders + h2,
   --cover-bg: color-mix(in srgb, var(--canvas-flat) 94%, var(--fg) 6%);
 }
 
+:root[data-theme="light"] .folders {
+  --cover-bg: color-mix(in srgb, var(--accent) 3%, var(--canvas-flat));
+}
+
 
 .folder-cover {
   position: relative;
@@ -2152,6 +2156,10 @@ h2 + .folders + h2,
   background: var(--cover-bg);
 }
 
+:root[data-theme="light"] .folder-cover:not(:has(:deep(.thumb-img.loaded), :deep(.thumb-img.skel))) {
+  background: transparent;
+}
+
 
 .folder-placeholder {
   position: absolute;
@@ -2159,6 +2167,10 @@ h2 + .folders + h2,
   left: 50%;
   transform: translate(-50%, -50%);
   color: var(--accent);
+}
+
+:root[data-theme="light"] .folder-placeholder {
+  color: var(--fg-dim);
 }
 
 .folder-cover:not(:has(:deep(.thumb-img.loaded), :deep(.thumb-img.skel))) .folder-placeholder {

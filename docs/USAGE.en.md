@@ -6,7 +6,7 @@ This document describes current product behavior and does not imply that a publi
 
 ## Appearance
 
-The default backdrop is a theme-adaptive solid neutral color rather than an image; you can also choose a custom wallpaper. “Restore default” removes the custom image, restores the solid background, and resets panel background opacity to 80%. It does not change “Reduce transparency.”
+The default backdrop is a soft mist pattern adapted to light and dark themes; you can also choose a custom wallpaper. “Reset” removes the custom image, restores the default background, and resets panel background opacity to 80%. It does not change “Reduce transparency.”
 
 Under “Settings → General,” set panel background opacity from 0–100%. When no value has been saved, the default is 80%; saved percentages remain unchanged. This affects background panels only: dialogs, menus, and playback surfaces remain protected rather than becoming transparent. Low opacity or a busy custom wallpaper may make text difficult to read; increase opacity or enable “Reduce transparency” if needed.
 

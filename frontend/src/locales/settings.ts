@@ -476,11 +476,11 @@ export default {
     ja: "選択した画像を使用中です。既定に戻すとパネルの不透明度もリセットされます。",
     ko: "선택한 이미지를 사용 중입니다. 기본값을 복원하면 패널 불투명도도 초기화됩니다.",
   },
-  "默认使用随浅色、深色变化的纯色背景；恢复默认也会重置面板不透明度。": {
-    tw: "預設使用隨淺色、深色變化的純色背景；恢復預設也會重設面板不透明度。",
-    en: "The default solid background follows light or dark mode; restoring the default also resets panel opacity.",
-    ja: "既定の単色背景はライト・ダークに合わせて変わります。既定に戻すとパネルの不透明度もリセットされます。",
-    ko: "기본 단색 배경은 라이트와 다크 모드에 따라 바뀝니다. 기본값을 복원하면 패널 불투명도도 초기화됩니다.",
+  "默认使用随浅色、深色变化的柔和背景；恢复默认也会重置面板不透明度。": {
+    tw: "預設使用隨淺色、深色變化的柔和背景；恢復預設也會重設面板不透明度。",
+    en: "The soft default background follows light or dark mode; restoring the default also resets panel opacity.",
+    ja: "既定の柔らかな背景はライト・ダークに合わせて変わります。既定に戻すとパネルの不透明度もリセットされます。",
+    ko: "기본 부드러운 배경은 라이트와 다크 모드에 따라 바뀝니다. 기본값을 복원하면 패널 불투명도도 초기화됩니다.",
   },
   当前背景: { tw: "目前背景", en: "Current background", ja: "現在の背景", ko: "현재 배경" },
   "选择图片…": { tw: "選擇圖片…", en: "Choose image…", ja: "画像を選択…", ko: "이미지 선택…" },

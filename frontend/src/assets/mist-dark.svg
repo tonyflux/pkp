@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1000" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <radialGradient id="blue" cx="0" cy="0" r="1" gradientTransform="translate(360 270) rotate(22) scale(920 660)" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#526987" stop-opacity=".88"/>
+      <stop offset="1" stop-color="#526987" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="violet" cx="0" cy="0" r="1" gradientTransform="translate(1250 170) rotate(115) scale(720 750)" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#5b526d" stop-opacity=".7"/>
+      <stop offset="1" stop-color="#5b526d" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="teal" cx="0" cy="0" r="1" gradientTransform="translate(1030 950) rotate(-23) scale(860 560)" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#3d626a" stop-opacity=".65"/>
+      <stop offset="1" stop-color="#3d626a" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <path fill="#171d28" d="M0 0h1600v1000H0z"/>
+  <path fill="url(#blue)" d="M0 0h1600v1000H0z"/>
+  <path fill="url(#violet)" d="M0 0h1600v1000H0z"/>
+  <path fill="url(#teal)" d="M0 0h1600v1000H0z"/>
+</svg>
