@@ -31,31 +31,31 @@ PKP is an independent desktop client for a PikPak account you already have. It i
 
 - **AI organizing assistant, with review before apply.** Local filename rules can draft a plan with no model. You can also connect your own model (or local Ollama) and TMDB credentials. Renames, moves, and cleanup wait until you confirm the plan.
 - **Folder sync.** Pair a local folder with a cloud folder. Two-way sync, local-to-cloud backup, or cloud-to-local download. PKP scans both sides and shows the plan before it runs. Sync works while PKP is open.
-- **Native playback.** A bundled libmpv player: quality switching, subtitles, audio tracks, resume, and a separate window. Availability depends on the file, codec, and service.
+- **Native playback.** A native libmpv player: quality switching, subtitles, audio tracks, resume, and a separate window. Availability depends on the file, codec, and service.
 - **LAN sharing.** Share selected local or cloud folders read-only with a separate password. Devices on the same network can browse, download originals, and play supported media through a responsive browser page while PKP is running.
 - **Share Import.** Paste a PikPak share link or explicitly open `pkp://share`; desktop builds also detect validated clipboard shares at startup or when returning to PKP. Browse a read-only grid/list preview, then explicitly choose the receiving account and destination folder and confirm. Detection and preview never import automatically. See the [user guide](docs/USAGE.en.md#import-a-pikpak-share).
-- **AI subtitles.** Generate captions from the video's audio through PikPak, in the original language or Chinese, English, Japanese, or Korean. Available on macOS since v0.6.0 and on Windows x64/ARM64 since v0.6.1. Enable them in the player's subtitle menu; PikPak membership, quota, and availability apply. No chat-model API key is needed. See [usage and data handling](docs/USAGE.en.md#playback-and-reading).
+- **AI subtitles.** Generate captions from the video's audio through PikPak, in the original language or Chinese, English, Japanese, or Korean. Supported on macOS, Windows x64/ARM64, and Linux builds with bundled/system audio decoding. Enable them in the player's subtitle menu; PikPak membership, quota, and availability apply. No chat-model API key is needed. See [usage and data handling](docs/USAGE.en.md#playback-and-reading).
 - **Local index search.** Each account keeps an index on this computer, with type, size, and other filters. Search does not send file names to a model. The first index takes time.
-- **Multiple accounts.** Each account has its own session, transfer queue, and index. Switching accounts leaves the others' transfers running.
+- **Multiple accounts.** Each account keeps its own session, transfer queue, and local index; switching accounts leaves the others' transfers running. With multiple accounts, choose **All accounts** on the Files page to browse, filter, search, play, and download across accounts' local indexes while keeping cloud drives and transfer queues isolated per account.
 - **Privacy on this computer.** Remembered passwords and optional API keys use macOS Keychain, Windows Credential Manager or Linux Secret Service. See [Privacy](#privacy).
 
 The interface is available in English, Simplified Chinese, Traditional Chinese, Japanese, and Korean.
 
 ## Install
 
-**[PKP 0.7.1](https://github.com/tonyflux/pkp/releases/tag/v0.7.1)** improves crash diagnostics and optional feedback, and fixes native player-window lifetime risks on macOS. Download only from this repository's [latest Release](https://github.com/tonyflux/pkp/releases/latest), then check `SHA256SUMS` from the same release. Details and first-launch steps are in the [installation guide](docs/INSTALL.en.md). v0.2.0 was the first open-source release.
+Download only from this repository's [latest Release](https://github.com/tonyflux/pkp/releases/latest) (see [Changelog](CHANGELOG.en.md) and release notes on GitHub for what changed), then check `SHA256SUMS` from the same release. Details and first-launch steps are in the [installation guide](docs/INSTALL.en.md). v0.2.0 was the first open-source release.
 
 | Platform | Download |
 | --- | --- |
-| macOS 12 or later, Apple silicon and Intel | [PKP-0.7.1-macos-universal.dmg](https://github.com/tonyflux/pkp/releases/download/v0.7.1/PKP-0.7.1-macos-universal.dmg) |
-| Windows x64 / ARM64 preview | [PKP-0.7.1-windows-x64-arm64-setup.exe](https://github.com/tonyflux/pkp/releases/download/v0.7.1/PKP-0.7.1-windows-x64-arm64-setup.exe) |
-| Linux x86_64 / ARM64 | Current source builds deb/rpm/AppImage; see [Linux installation and limits](docs/INSTALL.en.md#linux). Existing v0.7.1 has no Linux attachment. |
+| macOS 12 or later, Apple silicon and Intel | Download `PKP-<version>-macos-universal.dmg` from the [latest Release](https://github.com/tonyflux/pkp/releases/latest) |
+| Windows x64 / ARM64 preview | Download `PKP-<version>-windows-x64-arm64-setup.exe` from the [latest Release](https://github.com/tonyflux/pkp/releases/latest) |
+| Linux x86_64 / ARM64 | Check the [latest Release](https://github.com/tonyflux/pkp/releases/latest) for `deb`/`rpm`/`AppImage` attachments, or build from source; see [Linux installation and limits](docs/INSTALL.en.md#linux). |
 
 The macOS build is ad hoc signed and is not notarized, so the system may ask you to approve the first launch. The Windows build has no Authenticode publisher signature, and playback, sync, notifications, and system authentication still need broader testing on real devices. Linux targets GTK4/WebKitGTK 6.0 on Ubuntu 24.04 or compatible userspace; AppImage retains the sandbox and needs user namespaces. Builds do not imply a published package or complete device acceptance.
 
 **Homebrew.** PKP has no cask. `brew install --cask pikpak` installs PikPak's own app, which is a different program.
 
-Since v0.2.0, releases use eight assets: the two installers, `update.json`, `update.json.sig`, `PKP-<version>-source.tar.gz`, `libmpv-sources.tar.gz`, `LICENSE`, and `SHA256SUMS`. v0.7.1 retains this set and the same update trust key. The historical [v0.1.0](https://github.com/tonyflux/pkp/releases/tag/v0.1.0) installers stay under the proprietary terms shipped with that release. Prefer the latest public release for a new install. Usage statistics defaulted to off in v0.2.0 and on in v0.1.0, and daily active installation statistics default to on since v0.3.0.
+Since v0.2.0, two-platform releases include eight assets: the two installers, `update.json`, `update.json.sig`, `PKP-<version>-source.tar.gz`, `libmpv-sources.tar.gz`, `LICENSE`, and `SHA256SUMS`; Linux-inclusive releases add amd64/arm64 `deb`, `rpm`, `AppImage`, and runtime source archives (16 assets total) while keeping the same update trust key. The historical [v0.1.0](https://github.com/tonyflux/pkp/releases/tag/v0.1.0) installers stay under the proprietary terms shipped with that release. Prefer the latest public release for a new install. Usage statistics defaulted to off in v0.2.0 and on in v0.1.0, and daily active installation statistics default to on since v0.3.0.
 
 ## In the app
 
@@ -72,8 +72,8 @@ Since v0.2.0, releases use eight assets: the two installers, `update.json`, `upd
   </tr>
   <tr>
     <td colspan="2" valign="top">
-      <img src="assets/screenshots/en/accounts.webp" alt="English account switcher with two demo accounts">
-      <br><b>Switch accounts</b> without merging drives.
+      <img src="assets/screenshots/en/accounts.webp" alt="English account switcher and All accounts scope with two demo accounts">
+      <br><b>Switch accounts or browse All accounts</b> across local indexes without merging cloud drives or transfer queues.
     </td>
   </tr>
 </table>
@@ -121,7 +121,7 @@ make app-go
 Read the privacy notice before you sign in: [English](PRIVACY.en.md) · [简体中文](PRIVACY.md).
 
 <p align="center">
-  <img src="assets/screenshots/en/app-lock.webp" alt="English App Lock settings, with system login or a separate PKP password" width="720">
+  <img src="assets/screenshots/en/app-lock.webp" alt="English Privacy settings showing App Lock (System or PKP password) and usage statistics in the development demo" width="720">
 </p>
 
 - Remembered passwords, AI keys, and TMDB credentials use macOS Keychain (service `com.pkp.desktop`), Windows Credential Manager or Linux Secret Service. Session tokens remain in a local credentials file. Remember-password and automatic-login options start checked; clear them to keep the sign-in password only in memory. Linux requires an unlocked session keyring. App Lock limits in-app access, not downloaded-file/config-directory encryption or guaranteed Linux capture protection.
@@ -138,7 +138,7 @@ Local data, deletion limits, and the statistics endpoint are spelled out in [PRI
 | --- | --- |
 | macOS | Universal app for macOS 12 or later. Ad hoc signature, not notarized. |
 | Windows | One x64 / ARM64 preview installer. No Authenticode publisher signature. Some macOS-only integrations are absent, and real-device coverage is still thin. |
-| Linux | No packages and no support commitment. |
+| Linux | Source builds `deb`, `rpm`, and `AppImage` packages for x86_64 / ARM64 targeting the Ubuntu 24.04 / GTK4 / WebKitGTK 6.0 baseline. Whether a release includes Linux attachments depends on the assets published on that Release. See [Linux installation and limits](docs/INSTALL.en.md#linux). |
 
 PKP works with files in your own PikPak account. Quotas, network access, and Premium-only features follow that account. Back up important files before sync, cleanup, or a bulk organize.
 

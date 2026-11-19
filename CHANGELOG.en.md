@@ -10,6 +10,8 @@
 
 - Refine refresh icons in the file toolbar and context menu while retaining refresh behavior and loading feedback.
 
+- Polish user-facing interface, status, error and Windows installer copy across supported languages.
+
 - Align primary, neutral and destructive button colors and hover states. Reversible actions retain restrained red cues; final confirmation of permanent file deletion and local-data clearing is more prominent, without changing confirmation flows.
 
 - Fix spurious scrollbars in the separate music window when cover art is present; expose long track and artist text on hover while retaining queue and error scrolling.
@@ -35,7 +37,7 @@
 - Isolate frontend dependencies during Linux Docker builds and verify both architectures' package source identities and matching runtime sources before signing, preventing accidental publication of stale packages.
 
 - Remove referral submissions after password and QR sign-in, and remove developer attribution parameters from the registration link. Relationships established by earlier versions are not automatically revoked.
-- Compact the file page and simplify the AI assistant home, use a neutral solid default backdrop, reduce blur and glow, and refine settings/seek icons and playback controls while retaining custom wallpaper, opacity and necessary consent disclosures.
+- Compact the file page and simplify the AI assistant home, reduce blur and glow, and refine settings/seek icons and playback controls while retaining custom wallpaper, opacity and necessary consent disclosures.
 
 - Refine the video player title bar, controls and queue, with file details in the header, previous/next video controls and playback settings below the queue heading. Retain subtitle membership, quota and audio-sharing disclosures across light/dark themes, separate windows and narrow windows.
 

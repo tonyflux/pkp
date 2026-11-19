@@ -4,9 +4,9 @@
 
 ## 下载状态
 
-**v0.7.1** 改进崩溃诊断及可选反馈，并修复 macOS 播放窗口生命周期风险。从 [最新 Release](https://github.com/tonyflux/pkp/releases/latest) 下载：[macOS Universal](https://github.com/tonyflux/pkp/releases/download/v0.7.1/PKP-0.7.1-macos-universal.dmg) / [Windows x64 与 ARM64](https://github.com/tonyflux/pkp/releases/download/v0.7.1/PKP-0.7.1-windows-x64-arm64-setup.exe)。对照同一 Release 的 `SHA256SUMS` 并验证签名。请从本仓库的 Releases 获取安装包。
+请从本仓库的[最新 Release](https://github.com/tonyflux/pkp/releases/latest) 下载对应安装包（macOS Universal：`PKP-<版本>-macos-universal.dmg`；Windows x64 与 ARM64：`PKP-<版本>-windows-x64-arm64-setup.exe`；若对应版本附带 Linux 包则按发行版架构选择；各版本更新内容见 [Releases](https://github.com/tonyflux/pkp/releases) 与[更新记录](../CHANGELOG.md)）。下载后请对照同一 Release 的 `SHA256SUMS` 并验证签名，仅从本仓库的 Releases 获取安装包。
 
-v0.2.0 是首个开源版本。v0.7.1 提供 `PKP-0.7.1-source.tar.gz`（与安装包对应的 PKP 自有源码）和 `libmpv-sources.tar.gz`（媒体组件对应源码，附带 PKP 的 Windows PCM 解码辅助源码与许可证）。分享转存支持粘贴 PikPak 分享链接、显式打开 `pkp://share` 和桌面端自动识别经过校验的剪贴板分享；只读网格／列表预览后，须选择接收账号、目标目录并确认，不会自动转存。操作与限制见[使用说明](USAGE.md)。
+v0.2.0 是首个开源版本。后续版本均随附 `PKP-<版本>-source.tar.gz`（与安装包对应的 PKP 自有源码）和 `libmpv-sources.tar.gz`（媒体组件对应源码，附带 PKP 的 Windows PCM 解码辅助源码与许可证）。分享转存支持粘贴 PikPak 分享链接、显式打开 `pkp://share` 和桌面端自动识别经过校验的剪贴板分享；只读网格／列表预览后，须选择接收账号、目标目录并确认，不会自动转存。操作与限制见[使用说明](USAGE.md)。
 
 **v0.1.0 仍可下载**，作为历史版本：[macOS Universal](https://github.com/tonyflux/pkp/releases/download/v0.1.0/PKP-0.1.0-macos-universal.dmg) / [Windows x64 与 ARM64](https://github.com/tonyflux/pkp/releases/download/v0.1.0/PKP-0.1.0-windows-x64-arm64-setup.exe)。该 Release 同时提供 `libmpv-sources.tar.gz` 和当时的使用条款。v0.1.0 安装包不是由本仓库当前源码构建，仍适用[当时的闭源条款](legal/v0.1.0-proprietary.txt)。新安装请优先使用最新版本。使用统计在 v0.2.0 默认关闭，在 v0.1.0 默认开启；v0.3.0 改为默认开启每日活跃安装统计。
 
@@ -51,7 +51,7 @@ Windows 提供 x64 / ARM64 共用安装包，按本机架构选择应用与播�
 
 ## Linux
 
-当前源码提供 x86_64（`amd64`）和 ARM64（`arm64`）的 `.deb`、`.rpm` 与 AppImage 构建。最低原生运行依赖为 glibc 2.39、GTK 4.14、WebKitGTK 6.0；构建基线为 Ubuntu 24.04。既有 v0.7.1 附件不因此增加 Linux 包；以实际 Release 附件为准，不要把源码支持当作已经发布。
+当前源码提供 x86_64（`amd64`）和 ARM64（`arm64`）的 `.deb`、`.rpm` 与 AppImage 构建。最低原生运行依赖为 glibc 2.39、GTK 4.14、WebKitGTK 6.0；构建基线为 Ubuntu 24.04。源码支持不代表每个 Release 都已附带 Linux 安装包；请以实际 Release 附件为准，不要把源码支持当作已经发布。
 
 - Ubuntu／兼容 Debian 系统：校验同一 Release 的附件后，使用 `sudo apt install ./PKP-<版本>-linux-<架构>.deb`，由包管理器安装 GTK、WebKitGTK、libmpv 和 FFmpeg 依赖。
 - 使用 RPM 的发行版：使用 `sudo dnf install ./PKP-<版本>-linux-<架构>.rpm`。RPM 自带与 AppImage 相同的私有运行时，避免强迫 Fedora 等系统安装 Ubuntu 的 FFmpeg ABI；宿主仍需 glibc 2.39、用户命名空间及图形驱动。系统策略／钥匙环／桌面门户依赖由包管理器和桌面会话提供。
@@ -61,7 +61,7 @@ Windows 提供 x64 / ARM64 共用安装包，按本机架构选择应用与播�
 - 支持 X11 与 Wayland 的 GTK 渲染路径；缩放、图形驱动、GNOME／KDE 与多屏仍需要按目标设备验收。桌面没有系统托盘宿主时，关闭主窗口不会把应用隐藏到无法找回的位置。
 - 记住密码需要已解锁的 Secret Service 钥匙环，例如 GNOME Keyring 或提供该接口的 KWallet。系统身份验证需要包安装的 polkit 策略及桌面认证代理；独立 AppImage 不会擅自安装系统策略，缺失时可使用 PKP 独立密码。Linux 不能保证阻止截图、录屏或桌面缓存的窗口预览。
 - RPM／AppImage 在私有挂载命名空间中使用随包 `/usr`；主目录和普通文件保持原路径，宿主 `/usr` 可从该运行时目录的 `host-usr` 访问。需要直接浏览宿主系统 `/usr` 的文件时优先使用 deb 原生包。
-- 外部文件定位需要 FileManager1 或桌面门户；RPM／AppImage 不在私有运行时里执行宿主 `.desktop` 命令。通知、锁屏及电源管理依赖桌面会话服务，服务不可用会明确提示。私有运行时的「打开通知设置」支持 GNOME D-Bus 激活；其他桌面请从其系统设置手动打开。
+- 外部文件定位需要 FileManager1 或桌面门户；RPM／AppImage 不在私有运行时里执行宿主 `.desktop` 命令。通知、锁屏及电源管理依赖桌面会话服务，服务不可用会明确提示。私有运行时的「系统通知设置」支持 GNOME D-Bus 激活；其他桌面请从其系统设置手动打开。
 - 本地同步和局域网目录授权支持普通 ext4、XFS、Btrfs 与 tmpfs。网络盘、FUSE、overlayfs，以及启用目录加密／大小写折叠而无法保留安全名称语义的目录会拒绝授权，不把目录暂时不可用当作文件被删除。Linux 本地删除使用 freedesktop 回收站，不退回永久删除。
 
 卸载程序不删除账号配置、钥匙环项目、下载文件或截图；移除私人数据请先在应用内退出并移除账号，再按隐私说明处理剩余文件。

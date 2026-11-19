@@ -17,7 +17,7 @@ Linux deb 依赖发行版的 libmpv／FFmpeg；RPM 和 AppImage 随包携带实�
 
 v0.2.0 起另附 `PKP-<版本>-source.tar.gz`：包含与签名更新清单记录的 Git 提交及 tree 对应的 PKP 完整自有源码、资源、锁文件和构建脚本，以及 `third_party/` 中固定 Go 模块源码、npm 发布包和可核实的上游首选源码。清单记录校验值，并提供隔离依赖缓存的恢复说明；不包含 `.git`、账号数据或私钥。系统 SDK、编译器与打包工具仍须按开发指南安装。不能把 npm 中的可选原生构建工具二进制称为其完整源码，也不承诺逐字节可复现构建。
 
-由当前源码构建的安装包中，第三方声明位于 macOS 应用包的 `Contents/Resources/licenses/`（Finder 中选择“显示包内容”），或 Windows 安装目录的 `licenses`。`GO_LICENSES.txt` 收录 Go 工具链及 `go list` 为两个发布架构选出的生产依赖中的许可证、版权、专利与声明文件，包括 modernc 的 SQLite 和 libc 等上游继承声明。`THIRD_PARTY_LICENSES.txt` 由已安装的前端生产依赖和 pdfjs-dist 资源许可证生成；其余许可证目录用于媒体组件。PKP 自身许可证位于 Resources 或安装目录的 `LICENSE.txt`。
+由当前源码构建的安装包中，第三方声明位于 macOS 应用包的 `Contents/Resources/licenses/`（Finder 中选择“显示包内容”）、Windows 安装目录的 `licenses`，或 Linux deb／rpm 与 AppImage 的 `/usr/share/licenses/pkp/`。`GO_LICENSES.txt` 收录 Go 工具链及 `go list` 为对应目标架构（macOS／Windows 为双发布架构，Linux 为打包架构）选出的生产依赖中的许可证、版权、专利与声明文件，包括 modernc 的 SQLite 和 libc 等上游继承声明。`THIRD_PARTY_LICENSES.txt` 由已安装的前端生产依赖和 pdfjs-dist 资源许可证生成；其余许可证目录用于媒体组件。PKP 自身许可证位于对应目录的 `LICENSE.txt` 或 `LICENSE`。
 
 当前 `isarray` 1.0.0 npm 包在 README 中包含 MIT 正文，生成器会收录；Wails 的 Go 模块另为 `@wailsio/runtime` 提供 MIT 正文。可选原生 `@napi-rs/canvas` 平台包未附许可证文件；安装该版本时生成器会收录 [v0.1.100 上游 MIT 正文](https://github.com/Brooooooklyn/canvas/blob/v0.1.100/LICENSE)。发布前应确认这些包的内容是否进入分发的前端。
 
@@ -27,7 +27,7 @@ v0.2.0 起另附 `PKP-<版本>-source.tar.gz`：包含与签名更新清单记�
 
 当前源码已移除内置 PPT/PPTX 预览及 `pptx-preview` 依赖，因此其许可冲突不再是当前源码的发布阻断。此前使用的 `pptx-preview` 1.0.7 元数据声明 ISC，但包内 README 及[上游仓库许可证](https://github.com/501351981/pptx-preview/blob/main/LICENSE)限制源码发布和开源；移除依赖不代表已确认其 GPL 兼容性，也不追溯解决历史副本或既有分发的许可义务。v0.1.0 的实际组成与权利仍须以该版本的材料单独审查。
 
-Go 依赖图及声明文件在构建时选取，不能代替对源码内声明、资源来源、许可证兼容性和实际发布二进制的审查。默认壁纸已找到 AI 概念图提示词与后续裁切、调色的记录；应用标志则基于用户提供的 PikPak 图案，并非独立原创的 AI 标志。维护者已确认当前标志可随开源项目和安装包公开及分发，不再将其列为待确认的发布阻断。具体证据、哈希及尚未证明的导出链见[美术素材来源](docs/legal/artwork-provenance.md)。维护者的确认不表示 PikPak 背书或独立法律审计，也不替代对其他资源及生成服务条款的核实。LGPL 覆盖的库可按适用许可证替换，但可能影响兼容性。
+Go 依赖图及声明文件在构建时选取，不能代替对源码内声明、资源来源、许可证兼容性和实际发布二进制的审查。当前默认背景 `frontend/src/assets/mist-dark.svg` 与 `mist-light.svg` 为界面原创绘制的径向渐变图案；早期雪山峡湾默认壁纸已找到 AI 概念图提示词与后续裁切、调色的记录；应用标志则基于用户提供的 PikPak 图案，并非独立原创的 AI 标志。维护者已确认当前标志可随开源项目和安装包公开及分发，不再将其列为待确认的发布阻断。具体证据、哈希及尚未证明的导出链见[美术素材来源](docs/legal/artwork-provenance.md)。维护者的确认不表示 PikPak 背书或独立法律审计，也不替代对其他资源及生成服务条款的核实。LGPL 覆盖的库可按适用许可证替换，但可能影响兼容性。
 
 **v0.1.0 安装包及对应源码包已在 [Release](https://github.com/tonyflux/pkp/releases/tag/v0.1.0) 提供。** 已核验归档中 28 项固定源码的哈希及构建脚本一致性，但这不是完整依赖或法律审计，不能仅以此文代替合规审查。
 

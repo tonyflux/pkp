@@ -43,18 +43,23 @@ Current `build/appicon.png` and `build/appicon.icon/Assets/appicon.png` are byte
 
 - DMG background: drawn by tracked `build/darwin/dmg-background.swift` using AppKit gradients, text and arrows; its editable generating source is included.
 - TMDB mark: `frontend/src/assets/tmdb.svg` is an external service mark, not claimed as PKP-owned artwork. TMDB attribution remains in THIRD_PARTY.
-- Public screenshots: `assets/screenshots/*.png` are isolated running-app captures with synthetic data, Simplified Chinese UI, as described in the Chinese README. The existing English website illustrations listed below were copied from https://pkpapp.cc/en on 2026-11-02 (the site labels them as redrawn from the UI with fictional demo data); they are distinct from captures of a running build. The new `workspace-0.4.0.webp` files in `assets/screenshots/` and `assets/screenshots/en/` capture the current UI in an isolated browser preview with synthetic account, folders, storage figures and bundled wallpaper previews; they do not show production cloud data. This record does not independently clear every embedded image or establish the rights of old binary releases.
+- Public screenshots: `assets/screenshots/workspace.png` and `player.png` remain earlier isolated captures with synthetic data; the active README screenshots (`assets/screenshots/{workspace-0.4.0.webp,search.png,assistant.png,sync.png,lan-desktop.webp,privacy.png}` and `assets/screenshots/en/{workspace-0.4.0.webp,accounts.webp,assistant.webp,sync.webp,lan-desktop.webp,app-lock.webp}`, plus `lan-mobile.webp` and `en/lan-mobile.webp`) are isolated browser captures of the current UI with synthetic accounts/folders/storage data (`Demo`/`Archive`, `/Simulation/Travel`, `192.0.2.10`) and the default `mist-light.svg` backdrop, rather than production cloud data. Of the earlier English website illustrations copied from https://pkpapp.cc/en on 2026-11-02 (labeled on the site as redrawn from the UI with fictional demo data), `en/workspace.webp` and `en/player.webp` remain untouched on disk in the table below, while `en/assistant.webp`, `en/sync.webp`, `en/accounts.webp`, and `en/app-lock.webp` have been replaced by current live isolated browser captures. This record does not independently clear every embedded image or establish the rights of old binary releases.
 
-  - `assets/screenshots/workspace-0.4.0.webp`: SHA-256 `07a5c2500d67af191cd283cdaa0474075ae3621b764199fc182791dcc6970e70`.
-  - `assets/screenshots/en/workspace-0.4.0.webp`: SHA-256 `e9f2896b6efc68c3cc69a1daeaf92b6b85cd80f79673849480f7be0e61519a94`.
+  - `assets/screenshots/workspace-0.4.0.webp`: SHA-256 `c9f4f3b54a694a35ce8225f13caac09d48f44f44464ea5f31189016090ac5e71`.
+  - `assets/screenshots/en/workspace-0.4.0.webp`: SHA-256 `30080b9fd53cfff23cc1b6b5b2d776ae41daf3eb8067eecd0c1bd8bcda3de881`.
+  - `assets/screenshots/en/accounts.webp`: SHA-256 `812054aba9b896b3ca5df578f29e5740e8bce4511799a08b4e8a197e2af81e39`.
+  - `assets/screenshots/en/assistant.webp`: SHA-256 `5ffdd5ccd99ded75e2d08bb7001e3c9ec0544ed1c8dd47a74fed02b78582db97`.
+  - `assets/screenshots/en/sync.webp`: SHA-256 `3063de7bce89a12fc7647a1fae9a2ce050d5d973862f82ccc8b585f5eb671647`.
+  - `assets/screenshots/en/lan-desktop.webp`: SHA-256 `82e94eb523cab030215f2f0c44c723aa5432e1ccfe5c4d3778c0b8f31c34a487`.
+  - `assets/screenshots/en/app-lock.webp`: SHA-256 `d7bc8758b2c8139d4efc2a47fc56be4b01214115c47427fdfe95a9f30f45890c`.
 
-| File | Source on pkpapp.cc | SHA-256 |
+| File | Historical source on pkpapp.cc (2026-11-02) | Historical SHA-256 (current files on disk marked above if replaced) |
 | --- | --- | --- |
-| `assets/screenshots/en/workspace.webp` | `/assets/workspace.BRuflHCi_2jHTsv.webp` | `9579f3aab7d6156f2cd1757435af68ac945dbe5e9dec2ec7db02f09b6329e285` |
-| `assets/screenshots/en/assistant.webp` | `/assets/assistant-plan.L1WVrPrf_Z1gkOUP.webp` | `ea8b315b4e7940baecb9edd32dbfd6491bbb93d44280e56ab1fdc14a7f603b0d` |
-| `assets/screenshots/en/sync.webp` | `/assets/sync.DuIuEOtF_1asHHf.webp` | `7add6be5a9c369b39d765404d8dc63d6f6b32bd901039bfaeca05cd34422cfc7` |
-| `assets/screenshots/en/player.webp` | `/assets/player.DjJ17PWn_ZvyifG.webp` | `8fd06ac99b43a7f3f3eeae371b10c04ddd9ffa5ac6c0eea72d8be9cbd4c5140d` |
-| `assets/screenshots/en/accounts.webp` | `/assets/accounts-switch.DBxcG0vA_Z18HVO5.webp` | `4f5c9e087b9933c22bcc35e1bcceada74d2aedf7109f4be8c67cb4782f0878b0` |
-| `assets/screenshots/en/app-lock.webp` | `/assets/app-lock.CQg9aKdJ_1xQwuB.webp` | `f6e6861d0558b7dccceb029847374ded32e1d3787c9ca1103af5838c0fbc7239` |
+| `assets/screenshots/en/workspace.webp` | `/assets/workspace.BRuflHCi_2jHTsv.webp` | `9579f3aab7d6156f2cd1757435af68ac945dbe5e9dec2ec7db02f09b6329e285` (untouched) |
+| `assets/screenshots/en/assistant.webp` | `/assets/assistant-plan.L1WVrPrf_Z1gkOUP.webp` | `ea8b315b4e7940baecb9edd32dbfd6491bbb93d44280e56ab1fdc14a7f603b0d` (replaced by live capture above) |
+| `assets/screenshots/en/sync.webp` | `/assets/sync.DuIuEOtF_1asHHf.webp` | `7add6be5a9c369b39d765404d8dc63d6f6b32bd901039bfaeca05cd34422cfc7` (replaced by live capture above) |
+| `assets/screenshots/en/player.webp` | `/assets/player.DjJ17PWn_ZvyifG.webp` | `8fd06ac99b43a7f3f3eeae371b10c04ddd9ffa5ac6c0eea72d8be9cbd4c5140d` (untouched) |
+| `assets/screenshots/en/accounts.webp` | `/assets/accounts-switch.DBxcG0vA_Z18HVO5.webp` | `4f5c9e087b9933c22bcc35e1bcceada74d2aedf7109f4be8c67cb4782f0878b0` (replaced by live capture above) |
+| `assets/screenshots/en/app-lock.webp` | `/assets/app-lock.CQg9aKdJ_1xQwuB.webp` | `f6e6861d0558b7dccceb029847374ded32e1d3787c9ca1103af5838c0fbc7239` (replaced by live capture above) |
 
 The maintainer's mark-permission confirmation and the incomplete export-chain evidence are distinct. AI use elsewhere does not establish rights or reproduce an export chain. 维护者对标志权限的确认与不完整的导出链证据是不同事项，其他素材使用 AI 不能替代权利确认或复现导出过程。

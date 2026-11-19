@@ -1,27 +1,15 @@
-# PKP 0.4.1
+# PKP 0.7.1
 
 [简体中文 / Bilingual release notes](release-notes.md)
 
-Refined About & Updates layout, stationary glass shell when signed out, and safe Markdown rendering for release notes.
+This patch improves crash diagnostics and fixes native player-window lifetime risks on macOS.
 
-## Highlights
+- Unhandled Go panics, runtime fatal errors and recorded startup/Wails fatal errors produce a local `PKP-Crash-*.log` on the desktop, or in the system cache if the desktop is unavailable. Normal exits do not produce reports; forced termination, some native-library failures and very early startup failures may not produce one either.
+- On the next launch, you can review and edit an available report before choosing whether to send it. Nothing is uploaded unless you select **Send report**. Don't send or closing keeps the local file and stops reminders for that report; sending failures can be retried manually. Feedback is independent of the anonymous usage-statistics setting.
+- Reports may contain filenames, paths, links, account details or tokens. Remove sensitive information before sending. The report is processed by Cloudflare and accessible to the developer; a daily cleanup is configured for reports older than 29 days, though failures can delay deletion. Sent reports cannot be automatically recalled.
+- Fix a macOS native-window lifetime race when reshaping the separate player during close or shutdown, and an error-message lifetime issue in the video surface. These are confirmed code risks; the cause of an individual reported crash still requires its diagnostics.
+- The crash-report and usage-statistics dashboards now adapt to mobile screens, including report review, pagination and touch inspection of statistics charts.
 
-- **About & Updates top card**: show check results, release version, download progress, and download/install actions together in the top version card. The default window exposes the main update action and the start of the release notes without scrolling; long notes scroll with the page, followed by automatic-check settings and community links. Signed-in, signed-out, notification, and menu entries return to the result area at the top while preserving signature verification, skipped versions, installation confirmation, all five UI languages, and light/dark themes.
-- **Signed-out update shell & Markdown release notes**: keep the glass rim on a stationary outer shell while scrolling long content inside the inner body so border decoration no longer crosses text. Render release notes with the existing safe Markdown reader (headings, lists, emphasis, and code); open external links only on explicit clicks without loading remote images or interpreting raw HTML.
-- **Includes v0.4.0 capabilities**: default-off read-only LAN sharing (with Windows first-time initialization and drive-alias resolution fixes), PikPak Share Import previews and desktop clipboard detection, external `magnet:` and `.torrent` opening, unified grid/list pickers across file/folder dialogs, and desktop file context menus and keyboard shortcuts.
+The release contains eight assets: macOS Universal and Windows x64/ARM64 installers, signed update manifest and signature, `PKP-0.7.1-source.tar.gz`, `libmpv-sources.tar.gz`, `LICENSE` and `SHA256SUMS`. macOS is ad hoc signed and not Apple-notarized; Windows lacks Authenticode signing and remains preview support. Native installation and upgrade, real-device matrix and production-cloud acceptance have not been completed. No Linux packages are provided.
 
-## Boundaries and privacy (unchanged policy)
-
-LAN pages use **HTTP on trusted networks only**; do not expose them through public port forwarding. QR codes exclude passwords. HTTP is unencrypted, and a separate password does not replace a trusted network.
-
-**Daily active installation statistics have defaulted to ON since v0.3.0; v0.4.1 does not change this** (v0.2.0 defaulted to OFF). Identifiable explicit opt-outs are preserved; settings without an explicit choice follow the on default, and old saves without refusal markers cannot be distinguished from no choice. With an endpoint, recording starts at startup and sending can begin about 30 seconds later, before notice acknowledgment; without one, nothing is recorded/sent and no notice appears. Got it or dismissal acknowledges the notice, not consent, and leaves statistics enabled.
-
-Reports contain a random installation ID, version, OS/architecture, language and active local dates—not feature actions, frequencies, logs, accounts, filenames, paths, searches or file contents. Turn them off in Settings → Privacy & Security, also available before sign-in. Opt-out deletes the local ID and pending reports, not server history. Counts reflect successfully reporting active installations, not verified people or exact installs; publishing the app does not deploy telemetry services.
-
-## Release assets, verification and limitations
-
-The release asset set has **eight items**: macOS Universal installer (macOS 12+, Apple silicon/Intel), combined Windows x64/ARM64 installer, update manifest and signature, `PKP-0.4.1-source.tar.gz`, `libmpv-sources.tar.gz`, `LICENSE` and `SHA256SUMS`. PKP-owned source is GPL-3.0-only; historical licensing is not changed retroactively. PKP is an unofficial client.
-
-Keep the existing Ed25519 update-signing trust and public key; no trust reset. Drafts are excluded from automatic updates, and publication does not enable automatic downloads or silent installation. macOS remains ad hoc signed and not Apple-notarized; Windows is unsigned by Authenticode and remains preview support. No Linux packages. **Full real-device, native installation/upgrade, device-matrix and production-cloud acceptance is not complete.** Never post passwords, tokens, API keys or the full configuration directory in feedback.
-
-[Installation](https://github.com/tonyflux/pkp/blob/v0.4.1/docs/INSTALL.en.md) · [Usage](https://github.com/tonyflux/pkp/blob/v0.4.1/docs/USAGE.en.md) · [Privacy](https://github.com/tonyflux/pkp/blob/v0.4.1/PRIVACY.en.md) · [Full changelog](https://github.com/tonyflux/pkp/compare/v0.4.0...v0.4.1)
+[Installation](https://github.com/tonyflux/pkp/blob/v0.7.1/docs/INSTALL.en.md) · [Usage guide](https://github.com/tonyflux/pkp/blob/v0.7.1/docs/USAGE.en.md#settings-and-quitting) · [Privacy](https://github.com/tonyflux/pkp/blob/v0.7.1/PRIVACY.en.md#signing-out-deletion-and-issue-reporting) · [Full changelog](https://github.com/tonyflux/pkp/compare/v0.7.0...v0.7.1)
