@@ -32,7 +32,7 @@ jobs:
         with:
           path: /tmp/pkp-x11-builder.tar
           key: ${{ steps.toolchain.outputs.cache-primary-key }}
-      - name: Trace video passes on X11
+      - name: Compare chroma scaler passes on both display backends
         run: |
           sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
           sudo sysctl -w kernel.apparmor_restrict_unprivileged_unconfined=0
@@ -40,11 +40,20 @@ jobs:
             -v "$PWD:/src:ro" pkp-linux-builder bash -ec '
               useradd -m tester
               runuser -u tester -- env PATH="$PATH" go test -c -tags pkp_surface_test -o /tmp/surface.test ./internal/mpv
-              for mode in control draw-trace dumb rgba8 finish no-swap no-shader-cache size-first; do
-                for trial in 1 2 3; do
+              install -d -m 700 -o tester /tmp/xdg-diag
+              runuser -u tester -- env XDG_RUNTIME_DIR=/tmp/xdg-diag weston --backend=headless-backend.so --socket=pkp-diag --idle-time=0 --use-pixman > /tmp/weston.log 2>&1 &
+              for n in {1..50}; do [ ! -S /tmp/xdg-diag/pkp-diag ] || break; sleep 0.1; done
+              [ -S /tmp/xdg-diag/pkp-diag ] || { cat /tmp/weston.log; exit 1; }
+              for mode in draw-trace glsl330 bilinear bicubic bilinear-wayland; do
+                for trial in 1 2 3 4; do
                   printf "\n=== %s trial %s ===\n" "$mode" "$trial"
-                  runuser -u tester -- env GDK_BACKEND=x11 PKP_TEST_CASE="$mode" PKP_TEST_VIDEO_SURFACE=1 LIBGL_ALWAYS_SOFTWARE=1 dbus-run-session -- xvfb-run -a /tmp/surface.test -test.run "^TestLinuxSurface$" -test.v -test.timeout 35s > /tmp/trial.log 2>&1 || true
-                  grep -E "pkp (draw|render|pixels|decoded):|real upright|^--- (PASS|FAIL): TestLinuxSurface|^panic:|^PASS$|^FAIL$" /tmp/trial.log || cat /tmp/trial.log
+                  shell=(xvfb-run -a); envs=(GDK_BACKEND=x11); test_case=$mode
+                  if [ "$mode" = glsl330 ]; then envs+=(MESA_GLSL_VERSION_OVERRIDE=330); fi
+                  if [ "$mode" = bilinear-wayland ]; then
+                    shell=(); envs=(GDK_BACKEND=wayland WAYLAND_DISPLAY=pkp-diag); test_case=bilinear
+                  fi
+                  runuser -u tester -- env "${envs[@]}" XDG_RUNTIME_DIR=/tmp/xdg-diag XDG_CACHE_HOME="/tmp/cache-$mode-$trial" PKP_TEST_CASE="$test_case" PKP_TEST_VIDEO_SURFACE=1 LIBGL_ALWAYS_SOFTWARE=1 dbus-run-session -- "${shell[@]}" /tmp/surface.test -test.run "^TestLinuxSurface$" -test.v -test.timeout 35s > /tmp/trial.log 2>&1 || true
+                  grep -E "pkp (lut|draw|pixels|decoded):|real upright|--- (PASS|FAIL): TestLinuxSurface|panic:|^PASS$|^FAIL$" /tmp/trial.log || cat /tmp/trial.log
                 done
               done
             '

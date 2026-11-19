@@ -55,12 +55,10 @@ func TestLinuxSurface(t *testing.T) {
 	extra := map[string]string{"ao": "null", "hwdec": "no", "loop-file": "inf", "pause": "yes"}
 	mode := os.Getenv("PKP_TEST_CASE")
 	switch mode {
-	case "dumb":
-		extra["gpu-dumb-mode"] = "yes"
-	case "rgba8":
-		extra["fbo-format"] = "rgba8"
-	case "no-shader-cache":
-		extra["gpu-shader-cache"] = "no"
+	case "bilinear":
+		extra["cscale"] = "bilinear"
+	case "bicubic":
+		extra["cscale"] = "bicubic_fast"
 	}
 	c := New(Options{Logger: slog.New(slog.NewTextHandler(os.Stderr, nil)), Extra: extra})
 	ctx := context.Background()

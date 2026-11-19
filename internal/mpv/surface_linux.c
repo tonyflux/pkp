@@ -184,6 +184,36 @@ static void GLAPIENTRY trace_upload(GLenum target, GLint level, GLint x, GLint y
     g_printerr("pkp upload: %dx%d tex=%d stride=%d pbo=%d source=%d,%d texture=%d,%d\n",
                w, h, tex, stride, pbo, top, bottom, tex_top, tex_bottom);
 }
+static void trace_lut(const char *stage, GLint tex, const float *weights) {
+    int invalid = 0, zero = 0;
+    for (int y = 0; y < 256; y++) {
+        const float *row = weights + y * 8;
+        float sum = 0;
+        for (int i = 0; i < 6; i++) sum += row[i];
+        invalid += !isfinite(sum);
+        zero += sum == 0;
+    }
+    const float *mid = weights + 128 * 8;
+    g_printerr("pkp lut: %s tex=%d invalid=%d zero=%d middle=%.5f,%.5f,%.5f,%.5f,%.5f,%.5f\n",
+               stage, tex, invalid, zero, mid[0], mid[1], mid[2], mid[3], mid[4], mid[5]);
+}
+static void GLAPIENTRY trace_tex_image(GLenum target, GLint level, GLint internal_format, GLsizei w,
+                                      GLsizei h, GLint border, GLenum format, GLenum type, const void *pixels) {
+    if (target == GL_TEXTURE_2D && w == 2 && h == 256 && format == GL_RGBA && type == GL_FLOAT && pixels) {
+        GLint tex, unpack[6];
+        glGetIntegerv(GL_TEXTURE_BINDING_2D, &tex);
+        glGetIntegerv(GL_UNPACK_ALIGNMENT, &unpack[0]);
+        glGetIntegerv(GL_UNPACK_ROW_LENGTH, &unpack[1]);
+        glGetIntegerv(GL_UNPACK_SKIP_ROWS, &unpack[2]);
+        glGetIntegerv(GL_UNPACK_SKIP_PIXELS, &unpack[3]);
+        glGetIntegerv(GL_UNPACK_SWAP_BYTES, &unpack[4]);
+        glGetIntegerv(GL_PIXEL_UNPACK_BUFFER_BINDING, &unpack[5]);
+        g_printerr("pkp lut: format=0x%x unpack=%d,%d,%d,%d,%d,%d\n", internal_format,
+                   unpack[0], unpack[1], unpack[2], unpack[3], unpack[4], unpack[5]);
+        if (!unpack[5]) trace_lut("cpu", tex, pixels);
+    }
+    glTexImage2D(target, level, internal_format, w, h, border, format, type, pixels);
+}
 static void GLAPIENTRY trace_draw_arrays(GLenum mode, GLint first, GLsizei count) {
     glDrawArrays(mode, first, count);
     GLint fbo, vp[4], sc[4], program, vao, buffer, tex[3];
@@ -198,6 +228,24 @@ static void GLAPIENTRY trace_draw_arrays(GLenum mode, GLint first, GLsizei count
         glGetIntegerv(GL_TEXTURE_BINDING_2D, &tex[i]);
     }
     glActiveTexture(GL_TEXTURE0);
+    GLint lut = glGetUniformLocation(program, "lut");
+    if (lut >= 0) {
+        GLint unit, w, h, texture, ubo;
+        glGetUniformiv(program, lut, &unit);
+        glActiveTexture(GL_TEXTURE0 + unit);
+        glGetIntegerv(GL_TEXTURE_BINDING_2D, &texture);
+        glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &w);
+        glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &h);
+        glGetIntegeri_v(GL_UNIFORM_BUFFER_BINDING, 0, &ubo);
+        if (w == 2 && h == 256) {
+            float weights[256 * 8];
+            glPixelStorei(GL_PACK_ALIGNMENT, 1);
+            glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_FLOAT, weights);
+            trace_lut("gpu", texture, weights);
+        }
+        g_printerr("pkp lut: sampler=%d texture=%d size=%dx%d ubo=%d\n", unit, texture, w, h, ubo);
+        glActiveTexture(GL_TEXTURE0);
+    }
     unsigned char pixel[4] = {0};
     if (fbo && vp[2] > 0 && vp[3] > 0) {
         glPixelStorei(GL_PACK_ALIGNMENT, 1);
@@ -214,6 +262,8 @@ static void *get_proc(void *unused, const char *name) {
     const char *test_case = g_getenv("PKP_TEST_CASE");
     if (g_strcmp0(test_case, "draw-trace") == 0 && strcmp(name, "glDrawArrays") == 0)
         return (void *)trace_draw_arrays;
+    if (g_strcmp0(test_case, "draw-trace") == 0 && strcmp(name, "glTexImage2D") == 0)
+        return (void *)trace_tex_image;
     if (g_strcmp0(test_case, "invalidate-off") == 0 && strcmp(name, "glInvalidateTexImage") == 0)
         return (void *)skip_invalidate;
     if (strcmp(name, "glTexSubImage2D") == 0 &&
