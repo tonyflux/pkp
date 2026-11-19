@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+- Fix the Linux AppImage runtime source download after the GitHub API returned 415, retaining the pinned source hash check.
+
 - Move starred markers beside file and folder names so they no longer cover thumbnails, while retaining list actions and playback indicators.
 
 - Fix the Linux build container's missing certificate bundle and ARM64 snapshot source while retaining the pinned snapshot and package signature verification.

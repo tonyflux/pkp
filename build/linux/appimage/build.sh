@@ -32,7 +32,7 @@ fetch() {
 fetch "https://api.github.com/repos/AppImage/appimagetool/releases/assets/$tool_id" "$tool_sha" "$tools/appimagetool"
 chmod +x "$tools/appimagetool"
 runtime_commit=fedfad51acc2860b2916a1eef32ba4a500ff31ef
-fetch "https://api.github.com/repos/AppImage/type2-runtime/tarball/$runtime_commit" a1601c596b81768626afca9abecf0137092d2d7b281bb6c4b9067d2c79e44a21 "$tools/type2-runtime.tar.gz"
+fetch "https://codeload.github.com/AppImage/type2-runtime/legacy.tar.gz/$runtime_commit" a1601c596b81768626afca9abecf0137092d2d7b281bb6c4b9067d2c79e44a21 "$tools/type2-runtime.tar.gz"
 tar -xf "$tools/type2-runtime.tar.gz" -C "$sources"
 runtime=$(find "$sources" -maxdepth 1 -type d -name 'AppImage-type2-runtime-*')
 patch -p1 -d "$runtime" < build/linux/appimage/runtime-private-extraction.patch
