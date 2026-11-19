@@ -45,7 +45,7 @@ import PrivacySettings from "./components/PrivacySettings.vue";
 import UpdateNotice from "./components/UpdateNotice.vue";
 import { watchUpdates } from "./updatestore";
 import { watchConnectivity } from "./connectivity";
-import { WORKSPACE_QUERY, useMedia } from "./dom";
+import { WORKSPACE_QUERY, onWindows, useMedia } from "./dom";
 import { t } from "./i18n";
 import { installShortcuts } from "./shortcuts";
 import { accounts, appLocked, bootstrap, drive, notify, nowPlaying, openSettings, player, settingsFocus, telemetry, ui, useTelemetryActivity, videoWorksShown, watchAppLock } from "./store";
@@ -157,7 +157,7 @@ onMounted(() => {
   </div>
   <LoginView v-else-if="!signedIn" />
 
-  <div v-else class="shell" :class="{ immersive, fullscreen: immersive && ui.fullscreen, unified: !immersive && ui.route !== 'viewer' }">
+  <div v-else class="shell" :class="{ immersive, fullscreen: immersive && ui.fullscreen, unified: !immersive && ui.route !== 'viewer', windows: onWindows }">
     <FloatingNav v-if="!immersive" />
 
     <main ref="stack" class="stack">
@@ -247,6 +247,10 @@ onMounted(() => {
   display: flex;
   gap: 16px;
   padding: 44px 20px 20px;
+}
+
+.shell.windows:not(.immersive) {
+  padding-top: 20px;
 }
 
 .shell.immersive {
@@ -383,6 +387,10 @@ onMounted(() => {
   .shell {
     gap: 12px;
     padding: 44px 12px 12px;
+  }
+
+  .shell.windows:not(.immersive) {
+    padding-top: 12px;
   }
 
   .stack,
