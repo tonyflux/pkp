@@ -10,7 +10,6 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           persist-credentials: false
-          ref: afd543746cfbb3c8f4ca0428791d30c282c9d412
       - name: Restore diagnostic toolchain
         id: toolchain
         uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
@@ -33,19 +32,19 @@ jobs:
         with:
           path: /tmp/pkp-x11-builder.tar
           key: ${{ steps.toolchain.outputs.cache-primary-key }}
-      - name: Compare headless X11 and Wayland rasterizers
+      - name: Trace video passes on X11
         run: |
           sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
           sudo sysctl -w kernel.apparmor_restrict_unprivileged_unconfined=0
           docker run --rm --tmpfs /tmp:rw,exec,mode=1777 --security-opt seccomp=unconfined --security-opt apparmor=unconfined --security-opt systempaths=unconfined \
             -v "$PWD:/src:ro" pkp-linux-builder bash -ec '
               useradd -m tester
-              for trial in {1..10}; do
-                printf "\n=== softpipe trial %s (X11, Wayland) ===\n" "$trial"
-                runuser -u tester -- env PATH="$PATH" GALLIUM_DRIVER=softpipe dbus-run-session -- bash build/linux/smoke.sh
-              done
-              for trial in {1..4}; do
-                printf "\n=== llvmpipe trial %s (X11, Wayland) ===\n" "$trial"
-                runuser -u tester -- env PATH="$PATH" LP_NUM_THREADS=1 dbus-run-session -- bash -x build/linux/smoke.sh || printf "llvmpipe trial %s failed\n" "$trial"
+              runuser -u tester -- env PATH="$PATH" go test -c -tags pkp_surface_test -o /tmp/surface.test ./internal/mpv
+              for mode in control draw-trace dumb rgba8 finish no-swap no-shader-cache size-first; do
+                for trial in 1 2 3; do
+                  printf "\n=== %s trial %s ===\n" "$mode" "$trial"
+                  runuser -u tester -- env GDK_BACKEND=x11 PKP_TEST_CASE="$mode" PKP_TEST_VIDEO_SURFACE=1 LIBGL_ALWAYS_SOFTWARE=1 dbus-run-session -- xvfb-run -a /tmp/surface.test -test.run "^TestLinuxSurface$" -test.v -test.timeout 35s > /tmp/trial.log 2>&1 || true
+                  grep -E "pkp (draw|render|pixels|decoded):|real upright|^--- (PASS|FAIL): TestLinuxSurface|^panic:|^PASS$|^FAIL$" /tmp/trial.log || cat /tmp/trial.log
+                done
               done
             '

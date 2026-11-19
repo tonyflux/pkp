@@ -53,8 +53,14 @@ func TestLinuxSurface(t *testing.T) {
 		return
 	}
 	extra := map[string]string{"ao": "null", "hwdec": "no", "loop-file": "inf", "pause": "yes"}
-	if os.Getenv("PKP_TEST_CASE") == "pbo" {
-		extra["opengl-pbo"] = "yes"
+	mode := os.Getenv("PKP_TEST_CASE")
+	switch mode {
+	case "dumb":
+		extra["gpu-dumb-mode"] = "yes"
+	case "rgba8":
+		extra["fbo-format"] = "rgba8"
+	case "no-shader-cache":
+		extra["gpu-shader-cache"] = "no"
 	}
 	c := New(Options{Logger: slog.New(slog.NewTextHandler(os.Stderr, nil)), Extra: extra})
 	ctx := context.Background()
@@ -73,6 +79,16 @@ func TestLinuxSurface(t *testing.T) {
 		t.Fatal(err)
 	}
 	rect := Rect{Width: 320, Height: 240, Visible: true}
+	if mode == "size-first" {
+		c.SetSurfaceRect(rect)
+		deadline := time.Now().Add(3 * time.Second)
+		for c.SurfaceStats().Frames == 0 && time.Now().Before(deadline) {
+			time.Sleep(10 * time.Millisecond)
+		}
+		if c.SurfaceStats().Frames == 0 {
+			t.Fatal("no blank surface before loading video")
+		}
+	}
 	if err := c.Command(ctx, "loadfile", clip); err != nil {
 		t.Fatal(err)
 	}

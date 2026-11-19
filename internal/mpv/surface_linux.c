@@ -184,11 +184,36 @@ static void GLAPIENTRY trace_upload(GLenum target, GLint level, GLint x, GLint y
     g_printerr("pkp upload: %dx%d tex=%d stride=%d pbo=%d source=%d,%d texture=%d,%d\n",
                w, h, tex, stride, pbo, top, bottom, tex_top, tex_bottom);
 }
+static void GLAPIENTRY trace_draw_arrays(GLenum mode, GLint first, GLsizei count) {
+    glDrawArrays(mode, first, count);
+    GLint fbo, vp[4], sc[4], program, vao, buffer, tex[3];
+    glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &fbo);
+    glGetIntegerv(GL_VIEWPORT, vp);
+    glGetIntegerv(GL_SCISSOR_BOX, sc);
+    glGetIntegerv(GL_CURRENT_PROGRAM, &program);
+    glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &vao);
+    glGetVertexAttribiv(0, GL_VERTEX_ATTRIB_ARRAY_BUFFER_BINDING, &buffer);
+    for (int i = 0; i < 3; i++) {
+        glActiveTexture(GL_TEXTURE0 + i);
+        glGetIntegerv(GL_TEXTURE_BINDING_2D, &tex[i]);
+    }
+    glActiveTexture(GL_TEXTURE0);
+    unsigned char pixel[4] = {0};
+    if (fbo && vp[2] > 0 && vp[3] > 0) {
+        glPixelStorei(GL_PACK_ALIGNMENT, 1);
+        glReadPixels(vp[0]+vp[2]/2, vp[1]+vp[3]*2/3, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, pixel);
+    }
+    g_printerr("pkp draw: fbo=%d vp=%d,%d,%d,%d sc=%d,%d,%d,%d gl=%d/%d/%d tex=%d,%d,%d count=%d pixel=%d,%d,%d,%d error=0x%x\n",
+               fbo, vp[0], vp[1], vp[2], vp[3], sc[0], sc[1], sc[2], sc[3], program, vao, buffer,
+               tex[0], tex[1], tex[2], count, pixel[0], pixel[1], pixel[2], pixel[3], glGetError());
+}
 #endif
 static void *get_proc(void *unused, const char *name) {
     (void)unused;
 #ifdef PKP_SURFACE_TEST
     const char *test_case = g_getenv("PKP_TEST_CASE");
+    if (g_strcmp0(test_case, "draw-trace") == 0 && strcmp(name, "glDrawArrays") == 0)
+        return (void *)trace_draw_arrays;
     if (g_strcmp0(test_case, "invalidate-off") == 0 && strcmp(name, "glInvalidateTexImage") == 0)
         return (void *)skip_invalidate;
     if (strcmp(name, "glTexSubImage2D") == 0 &&
@@ -316,6 +341,9 @@ static gboolean draw(GtkGLArea *widget, GdkGLContext *context, gpointer unused) 
     glPixelStorei(GL_PACK_ROW_LENGTH, 0);
     glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
 #ifdef PKP_SURFACE_TEST
+    if (g_strcmp0(g_getenv("PKP_TEST_CASE"), "finish") == 0) glFinish();
+#endif
+#ifdef PKP_SURFACE_TEST
     GLenum fbo_status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
     GLint pack_skip_pixels, pack_skip_rows;
     glGetIntegerv(GL_PACK_SKIP_PIXELS, &pack_skip_pixels);
@@ -370,7 +398,10 @@ static gboolean draw(GtkGLArea *widget, GdkGLContext *context, gpointer unused) 
     glBlitFramebuffer(0, 0, w, h, 0, 0, w, h, GL_COLOR_BUFFER_BIT, GL_NEAREST);
     glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
     g_mutex_unlock(&observations);
-    mpv_render_context_report_swap(render);
+#ifdef PKP_SURFACE_TEST
+    if (g_strcmp0(g_getenv("PKP_TEST_CASE"), "no-swap") != 0)
+#endif
+        mpv_render_context_report_swap(render);
     return TRUE;
 }
 
