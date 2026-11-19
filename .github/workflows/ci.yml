@@ -10,6 +10,7 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           persist-credentials: false
+          ref: afd543746cfbb3c8f4ca0428791d30c282c9d412
       - name: Restore diagnostic toolchain
         id: toolchain
         uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
@@ -32,30 +33,19 @@ jobs:
         with:
           path: /tmp/pkp-x11-builder.tar
           key: ${{ steps.toolchain.outputs.cache-primary-key }}
-      - name: Trace X11 video frame submission
+      - name: Compare headless X11 and Wayland rasterizers
         run: |
           sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
           sudo sysctl -w kernel.apparmor_restrict_unprivileged_unconfined=0
           docker run --rm --tmpfs /tmp:rw,exec,mode=1777 --security-opt seccomp=unconfined --security-opt apparmor=unconfined --security-opt systempaths=unconfined \
             -v "$PWD:/src:ro" pkp-linux-builder bash -ec '
               useradd -m tester
-              runuser -u tester -- env PATH="$PATH" go test -c -tags pkp_surface_test -o /tmp/surface.test ./internal/mpv
-              install -d -m 700 -o tester /tmp/xdg-diag
-              runuser -u tester -- env XDG_RUNTIME_DIR=/tmp/xdg-diag weston --backend=headless-backend.so --socket=pkp-diag --idle-time=0 --use-pixman > /tmp/weston.log 2>&1 &
-              for n in {1..50}; do [ ! -S /tmp/xdg-diag/pkp-diag ] || break; sleep 0.1; done
-              [ -S /tmp/xdg-diag/pkp-diag ] || { cat /tmp/weston.log; exit 1; }
-              for mode in control upload texture invalidate-off pbo lp-one lp-vector128 softpipe wayland; do
-                for trial in 1 2 3; do
-                  printf "\n=== case=%s trial=%s ===\n" "$mode" "$trial"
-                  shell=(xvfb-run -a); envs=(GDK_BACKEND=x11)
-                  case "$mode" in
-                    lp-one) envs+=(LP_NUM_THREADS=1);;
-                    lp-vector128) envs+=(LP_NATIVE_VECTOR_WIDTH=128);;
-                    softpipe) envs+=(GALLIUM_DRIVER=softpipe);;
-                    wayland) shell=(); envs=(GDK_BACKEND=wayland WAYLAND_DISPLAY=pkp-diag);;
-                  esac
-                  runuser -u tester -- env "${envs[@]}" XDG_RUNTIME_DIR=/tmp/xdg-diag PKP_TEST_CASE="$mode" PKP_TEST_VIDEO_SURFACE=1 LIBGL_ALWAYS_SOFTWARE=1 dbus-run-session -- "${shell[@]}" /tmp/surface.test -test.run "^TestLinuxSurface$" -test.v -test.timeout 35s > "/tmp/$mode-$trial.log" 2>&1 || true
-                  grep -E "pkp (fixture|decoded|upload|pixels):|real upright|--- (PASS|FAIL): TestLinuxSurface|panic:|^PASS$|^FAIL$" "/tmp/$mode-$trial.log" || cat "/tmp/$mode-$trial.log"
-                done
+              for trial in {1..10}; do
+                printf "\n=== softpipe trial %s (X11, Wayland) ===\n" "$trial"
+                runuser -u tester -- env PATH="$PATH" GALLIUM_DRIVER=softpipe dbus-run-session -- bash build/linux/smoke.sh
+              done
+              for trial in {1..4}; do
+                printf "\n=== llvmpipe trial %s (X11, Wayland) ===\n" "$trial"
+                runuser -u tester -- env PATH="$PATH" LP_NUM_THREADS=1 dbus-run-session -- bash -x build/linux/smoke.sh || printf "llvmpipe trial %s failed\n" "$trial"
               done
             '
