@@ -3,7 +3,8 @@ set -euo pipefail
 cd "$(dirname "$0")/../.."
 export LIBGL_ALWAYS_SOFTWARE=1
 # Explicit opt-in keeps display-dependent tests out of ordinary headless tests.
-PKP_TEST_VIDEO_SURFACE=1 GDK_BACKEND=x11 xvfb-run -a \
+# shortcut: Xvfb produces intermittent black frames with multiple llvmpipe workers; remove the pin once the runner renders reliably without it.
+LP_NUM_THREADS=1 PKP_TEST_VIDEO_SURFACE=1 GDK_BACKEND=x11 xvfb-run -a \
   go test -tags pkp_surface_test ./internal/mpv -run '^TestLinuxSurface$' -count=1 -timeout 90s
 runtime=$(mktemp -d)
 chmod 700 "$runtime"

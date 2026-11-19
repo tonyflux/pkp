@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+- Pin the Xvfb rendering check to one llvmpipe raster worker to avoid intermittent software-rendered black frames, retaining pixel assertions and leaving application playback and the Wayland check unchanged.
+
 - Run Linux rendering checks before packaging and batch and cache verified runtime source downloads, retaining package and source verification on both architectures.
 
 - Fix Linux runtime-source verification mistaking a signature-tool version for the package version while retaining source and digest checks.
