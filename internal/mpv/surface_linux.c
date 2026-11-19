@@ -22,9 +22,6 @@ static GdkGLContext *gl_context;
 static GLuint video_fbo, video_texture;
 static int target_width, target_height;
 static char *render_error;
-#ifdef PKP_SURFACE_TEST
-static int test_requested_width, test_requested_height;
-#endif
 static gint update_pending;
 static gint surface_present;
 static gint application_stopped;
@@ -225,13 +222,6 @@ static gboolean draw(GtkGLArea *widget, GdkGLContext *context, gpointer unused) 
     int w = gtk_widget_get_width(GTK_WIDGET(widget)) * scale;
     int h = gtk_widget_get_height(GTK_WIDGET(widget)) * scale;
     if (w <= 0 || h <= 0) return TRUE;
-#ifdef PKP_SURFACE_TEST
-    if (g_strcmp0(g_getenv("PKP_TEST_MATCH_ALLOCATION"), "1") == 0 &&
-        (w != test_requested_width * scale || h != test_requested_height * scale)) {
-        g_printerr("pkp pending allocation: %dx%d\n", w, h);
-        return TRUE;
-    }
-#endif
     GLint framebuffer;
     glGetIntegerv(GL_FRAMEBUFFER_BINDING, &framebuffer);
     // GtkGLArea owns the framebuffer; libmpv requires otherwise-default GL
@@ -266,19 +256,37 @@ static gboolean draw(GtkGLArea *widget, GdkGLContext *context, gpointer unused) 
         {MPV_RENDER_PARAM_INVALID, NULL}
     };
 #ifdef PKP_SURFACE_TEST
-    if (g_strcmp0(g_getenv("PKP_TEST_RESET_GL"), "1") == 0) {
+    const char *reset = g_getenv("PKP_TEST_RESET_GL");
+    gboolean bindings = g_strcmp0(reset, "bindings") == 0 || g_strcmp0(reset, "all") == 0;
+    gboolean raster = g_strcmp0(reset, "raster") == 0 || g_strcmp0(reset, "all") == 0;
+    GLint program, vao, texture_unit, texture, pack;
+    GLboolean mask[4];
+    glGetIntegerv(GL_CURRENT_PROGRAM, &program);
+    glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &vao);
+    glGetIntegerv(GL_ACTIVE_TEXTURE, &texture_unit);
+    glGetIntegerv(GL_TEXTURE_BINDING_2D, &texture);
+    glGetIntegerv(GL_PACK_ALIGNMENT, &pack);
+    glGetBooleanv(GL_COLOR_WRITEMASK, mask);
+    g_printerr("pkp GL state: fbo=%d prog=%d vao=%d unit=%d tex=%d pack=%d raster=%u%u%u%u%u%u mask=%u%u%u%u\n",
+               framebuffer, program, vao, texture_unit - GL_TEXTURE0, texture, pack,
+               glIsEnabled(GL_BLEND), glIsEnabled(GL_SCISSOR_TEST), glIsEnabled(GL_DEPTH_TEST),
+               glIsEnabled(GL_STENCIL_TEST), glIsEnabled(GL_CULL_FACE), glIsEnabled(GL_FRAMEBUFFER_SRGB),
+               mask[0], mask[1], mask[2], mask[3]);
+    if (bindings) {
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
         glUseProgram(0);
         glBindVertexArray(0);
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, 0);
+        glPixelStorei(GL_PACK_ALIGNMENT, 4);
+    }
+    if (raster) {
         glDisable(GL_BLEND);
         glDisable(GL_SCISSOR_TEST);
         glDisable(GL_DEPTH_TEST);
         glDisable(GL_STENCIL_TEST);
         glDisable(GL_CULL_FACE);
         glDisable(GL_FRAMEBUFFER_SRGB);
-        glPixelStorei(GL_PACK_ALIGNMENT, 4);
         glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
     }
 #endif

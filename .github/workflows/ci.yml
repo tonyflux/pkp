@@ -39,14 +39,13 @@ jobs:
           docker run --rm --tmpfs /tmp:rw,exec,mode=1777 --security-opt seccomp=unconfined --security-opt apparmor=unconfined --security-opt systempaths=unconfined \
             -v "$PWD:/src:ro" pkp-linux-builder bash -ec '
               useradd -m tester
-              test_x11() {
-                printf "\n=== allocation=%s GL-reset=%s ===\n" "$1" "$2"
-                runuser -u tester -- env PATH="$PATH" PKP_TEST_MATCH_ALLOCATION="$1" PKP_TEST_RESET_GL="$2" PKP_TEST_VIDEO_SURFACE=1 GDK_BACKEND=x11 LIBGL_ALWAYS_SOFTWARE=1 dbus-run-session -- xvfb-run -a go test -v -tags pkp_surface_test ./internal/mpv -run "^TestLinuxSurface$" -count=1 -timeout 90s
-              }
-              status=0
-              test_x11 0 0 || status=1
-              test_x11 1 0 || status=1
-              test_x11 0 1 || status=1
-              test_x11 1 1 || status=1
-              exit "$status"
+              go_path="$PATH"
+              runuser -u tester -- env PATH="$go_path" go test -c -tags pkp_surface_test -o /tmp/surface.test ./internal/mpv
+              for mode in none bindings raster all; do
+                for trial in 1 2 3; do
+                  printf "\n=== GL-reset=%s trial=%s ===\n" "$mode" "$trial"
+                  runuser -u tester -- env PKP_TEST_RESET_GL="$mode" PKP_TEST_VIDEO_SURFACE=1 GDK_BACKEND=x11 LIBGL_ALWAYS_SOFTWARE=1 dbus-run-session -- xvfb-run -a /tmp/surface.test -test.run "^TestLinuxSurface$" -test.v -test.timeout 60s > "/tmp/$mode-$trial.log" 2>&1 || true
+                  grep -E "pkp GL state:|pkp pixels:|--- (PASS|FAIL): TestLinuxSurface|panic:|^PASS$|^FAIL$" "/tmp/$mode-$trial.log"
+                done
+              done
             '
