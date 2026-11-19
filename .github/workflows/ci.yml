@@ -44,16 +44,14 @@ jobs:
               runuser -u tester -- env XDG_RUNTIME_DIR=/tmp/xdg-diag weston --backend=headless-backend.so --socket=pkp-diag --idle-time=0 --use-pixman > /tmp/weston.log 2>&1 &
               for n in {1..50}; do [ ! -S /tmp/xdg-diag/pkp-diag ] || break; sleep 0.1; done
               [ -S /tmp/xdg-diag/pkp-diag ] || { cat /tmp/weston.log; exit 1; }
-              for mode in draw-trace glsl330 bilinear bicubic bilinear-wayland; do
-                for trial in 1 2 3 4; do
-                  printf "\n=== %s trial %s ===\n" "$mode" "$trial"
-                  shell=(xvfb-run -a); envs=(GDK_BACKEND=x11); test_case=$mode
-                  if [ "$mode" = glsl330 ]; then envs+=(MESA_GLSL_VERSION_OVERRIDE=330); fi
-                  if [ "$mode" = bilinear-wayland ]; then
-                    shell=(); envs=(GDK_BACKEND=wayland WAYLAND_DISPLAY=pkp-diag); test_case=bilinear
-                  fi
-                  runuser -u tester -- env "${envs[@]}" XDG_RUNTIME_DIR=/tmp/xdg-diag XDG_CACHE_HOME="/tmp/cache-$mode-$trial" PKP_TEST_CASE="$test_case" PKP_TEST_VIDEO_SURFACE=1 LIBGL_ALWAYS_SOFTWARE=1 dbus-run-session -- "${shell[@]}" /tmp/surface.test -test.run "^TestLinuxSurface$" -test.v -test.timeout 35s > /tmp/trial.log 2>&1 || true
-                  grep -E "pkp (lut|draw|pixels|decoded):|real upright|--- (PASS|FAIL): TestLinuxSurface|panic:|^PASS$|^FAIL$" /tmp/trial.log || cat /tmp/trial.log
+              for mode in draw-trace padded compat compat-large; do
+                for backend in x11 wayland; do
+                  for trial in 1 2 3; do
+                    printf "\n=== %s %s trial %s ===\n" "$mode" "$backend" "$trial"
+                    shell=(); if [ "$backend" = x11 ]; then shell=(xvfb-run -a); fi
+                    runuser -u tester -- env GDK_BACKEND="$backend" WAYLAND_DISPLAY=pkp-diag XDG_RUNTIME_DIR=/tmp/xdg-diag XDG_CACHE_HOME="/tmp/cache-$mode-$backend-$trial" MALLOC_PERTURB_=128 PKP_TEST_CASE="$mode" PKP_TEST_VIDEO_SURFACE=1 LIBGL_ALWAYS_SOFTWARE=1 dbus-run-session -- "${shell[@]}" /tmp/surface.test -test.run "^TestLinuxSurface$" -test.v -test.timeout 35s > /tmp/trial.log 2>&1 || true
+                    grep -E "pkp (lut|pixels|decoded):|real upright|--- (PASS|FAIL): TestLinuxSurface|panic:|^PASS$|^FAIL$" /tmp/trial.log || cat /tmp/trial.log
+                  done
                 done
               done
             '

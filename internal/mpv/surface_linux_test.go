@@ -48,17 +48,23 @@ func TestLinuxSurface(t *testing.T) {
 			t.Error("GTK host did not stop")
 		}
 	}()
-	testLinuxSurfaceCloseWithQueuedCall(t, windows)
-	if t.Failed() {
-		return
+	mode := os.Getenv("PKP_TEST_CASE")
+	if mode != "no-prelude" {
+		testLinuxSurfaceCloseWithQueuedCall(t, windows)
+		if t.Failed() {
+			return
+		}
 	}
 	extra := map[string]string{"ao": "null", "hwdec": "no", "loop-file": "inf", "pause": "yes"}
-	mode := os.Getenv("PKP_TEST_CASE")
 	switch mode {
 	case "bilinear":
 		extra["cscale"] = "bilinear"
 	case "bicubic":
 		extra["cscale"] = "bicubic_fast"
+	case "compat", "compat-large":
+		extra["cscale"] = "bicubic_fast"
+		extra["scale"] = "bicubic_fast"
+		extra["dscale"] = "bilinear"
 	}
 	c := New(Options{Logger: slog.New(slog.NewTextHandler(os.Stderr, nil)), Extra: extra})
 	ctx := context.Background()
@@ -77,7 +83,11 @@ func TestLinuxSurface(t *testing.T) {
 		t.Fatal(err)
 	}
 	rect := Rect{Width: 320, Height: 240, Visible: true}
-	if mode == "size-first" {
+	if mode == "size-first" || mode == "large" || mode == "compat-large" {
+		if mode == "large" || mode == "compat-large" {
+			rect.Width = 640
+			rect.Height = 480
+		}
 		c.SetSurfaceRect(rect)
 		deadline := time.Now().Add(3 * time.Second)
 		for c.SurfaceStats().Frames == 0 && time.Now().Before(deadline) {

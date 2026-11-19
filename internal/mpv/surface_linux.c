@@ -185,17 +185,18 @@ static void GLAPIENTRY trace_upload(GLenum target, GLint level, GLint x, GLint y
                w, h, tex, stride, pbo, top, bottom, tex_top, tex_bottom);
 }
 static void trace_lut(const char *stage, GLint tex, const float *weights) {
-    int invalid = 0, zero = 0;
+    int invalid = 0, zero = 0, invalid_padding = 0;
     for (int y = 0; y < 256; y++) {
         const float *row = weights + y * 8;
         float sum = 0;
         for (int i = 0; i < 6; i++) sum += row[i];
         invalid += !isfinite(sum);
         zero += sum == 0;
+        invalid_padding += !isfinite(row[6]) + !isfinite(row[7]);
     }
     const float *mid = weights + 128 * 8;
-    g_printerr("pkp lut: %s tex=%d invalid=%d zero=%d middle=%.5f,%.5f,%.5f,%.5f,%.5f,%.5f\n",
-               stage, tex, invalid, zero, mid[0], mid[1], mid[2], mid[3], mid[4], mid[5]);
+    g_printerr("pkp lut: %s tex=%d invalid=%d zero=%d invalid-padding=%d middle=%.5f,%.5f,%.5f,%.5f,%.5f,%.5f\n",
+               stage, tex, invalid, zero, invalid_padding, mid[0], mid[1], mid[2], mid[3], mid[4], mid[5]);
 }
 static void GLAPIENTRY trace_tex_image(GLenum target, GLint level, GLint internal_format, GLsizei w,
                                       GLsizei h, GLint border, GLenum format, GLenum type, const void *pixels) {
@@ -211,6 +212,16 @@ static void GLAPIENTRY trace_tex_image(GLenum target, GLint level, GLint interna
         g_printerr("pkp lut: format=0x%x unpack=%d,%d,%d,%d,%d,%d\n", internal_format,
                    unpack[0], unpack[1], unpack[2], unpack[3], unpack[4], unpack[5]);
         if (!unpack[5]) trace_lut("cpu", tex, pixels);
+        if (!unpack[5] && g_strcmp0(g_getenv("PKP_TEST_CASE"), "padded") == 0) {
+            float weights[256 * 8];
+            memcpy(weights, pixels, sizeof(weights));
+            for (int y = 0; y < 256; y++) {
+                weights[y * 8 + 6] = weights[y * 8 + 2];
+                weights[y * 8 + 7] = weights[y * 8 + 3];
+            }
+            glTexImage2D(target, level, internal_format, w, h, border, format, type, weights);
+            return;
+        }
     }
     glTexImage2D(target, level, internal_format, w, h, border, format, type, pixels);
 }
@@ -237,6 +248,17 @@ static void GLAPIENTRY trace_draw_arrays(GLenum mode, GLint first, GLsizei count
         glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &w);
         glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &h);
         glGetIntegeri_v(GL_UNIFORM_BUFFER_BINDING, 0, &ubo);
+        if (ubo) {
+            GLint saved;
+            float size[2], pixel_size[2];
+            glGetIntegerv(GL_UNIFORM_BUFFER_BINDING, &saved);
+            glBindBuffer(GL_UNIFORM_BUFFER, ubo);
+            glGetBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(size), size);
+            glGetBufferSubData(GL_UNIFORM_BUFFER, 56, sizeof(pixel_size), pixel_size);
+            glBindBuffer(GL_UNIFORM_BUFFER, saved);
+            g_printerr("pkp lut: ubo=%d size=%.6g,%.6g pixel-size=%.6g,%.6g\n",
+                       ubo, size[0], size[1], pixel_size[0], pixel_size[1]);
+        }
         if (w == 2 && h == 256) {
             float weights[256 * 8];
             glPixelStorei(GL_PACK_ALIGNMENT, 1);
@@ -248,6 +270,19 @@ static void GLAPIENTRY trace_draw_arrays(GLenum mode, GLint first, GLsizei count
     }
     unsigned char pixel[4] = {0};
     if (fbo && vp[2] > 0 && vp[3] > 0) {
+        GLint enabled, stride;
+        float v[12];
+        glGetVertexAttribiv(0, GL_VERTEX_ATTRIB_ARRAY_ENABLED, &enabled);
+        glGetVertexAttribiv(0, GL_VERTEX_ATTRIB_ARRAY_STRIDE, &stride);
+        if (buffer && enabled && stride >= 16) {
+            GLint saved;
+            glGetIntegerv(GL_ARRAY_BUFFER_BINDING, &saved);
+            glBindBuffer(GL_ARRAY_BUFFER, buffer);
+            glGetBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(v), v);
+            glBindBuffer(GL_ARRAY_BUFFER, saved);
+            g_printerr("pkp vertex: fbo=%d stride=%d first=%.6g,%.6g tex=%.6g,%.6g next=%.6g,%.6g\n",
+                       fbo, stride, v[0], v[1], v[2], v[3], v[4], v[5]);
+        }
         glPixelStorei(GL_PACK_ALIGNMENT, 1);
         glReadPixels(vp[0]+vp[2]/2, vp[1]+vp[3]*2/3, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, pixel);
     }
@@ -260,10 +295,9 @@ static void *get_proc(void *unused, const char *name) {
     (void)unused;
 #ifdef PKP_SURFACE_TEST
     const char *test_case = g_getenv("PKP_TEST_CASE");
-    if (g_strcmp0(test_case, "draw-trace") == 0 && strcmp(name, "glDrawArrays") == 0)
-        return (void *)trace_draw_arrays;
-    if (g_strcmp0(test_case, "draw-trace") == 0 && strcmp(name, "glTexImage2D") == 0)
-        return (void *)trace_tex_image;
+    gboolean trace = g_strcmp0(test_case, "draw-trace") == 0 || g_strcmp0(test_case, "padded") == 0;
+    if (trace && strcmp(name, "glDrawArrays") == 0) return (void *)trace_draw_arrays;
+    if (trace && strcmp(name, "glTexImage2D") == 0) return (void *)trace_tex_image;
     if (g_strcmp0(test_case, "invalidate-off") == 0 && strcmp(name, "glInvalidateTexImage") == 0)
         return (void *)skip_invalidate;
     if (strcmp(name, "glTexSubImage2D") == 0 &&
