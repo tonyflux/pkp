@@ -1084,13 +1084,15 @@ watch(
                   </Thumb>
                 </span>
               </span>
-              <span v-if="folder.starred" class="star-mark" role="img" :aria-label="t('已加星标')" :title="t('已加星标')">
-                <Icon name="star" :size="12" filled />
-              </span>
               <span class="folder-meta">
                 <span class="folder-mark" aria-hidden="true"><Icon name="folder" :size="20" /></span>
                 <span class="folder-text">
-                  <strong>{{ folder.name }}</strong>
+                  <span class="folder-name">
+                    <span v-if="folder.starred" class="star-mark" role="img" :aria-label="t('已加星标')" :title="t('已加星标')">
+                      <Icon name="star" :size="12" filled />
+                    </span>
+                    <strong>{{ folder.name }}</strong>
+                  </span>
                   <small :title="folder.path">{{ folderLine(folder) }}</small>
                 </span>
               </span>
@@ -1163,9 +1165,6 @@ watch(
                 <Icon name="check" :size="13" />
               </span>
               <div class="thumb" :class="`type-${file.category}`">
-                <span v-if="file.starred" class="star-mark" role="img" :aria-label="t('已加星标')" :title="t('已加星标')">
-                  <Icon name="star" :size="12" filled />
-                </span>
                 <Thumb :src="file.thumbnail" :alt="file.name" lazy>
                   <span class="file-fallback" aria-hidden="true">
                     <Icon :name="file.category" :size="21" />
@@ -1178,6 +1177,9 @@ watch(
               </div>
               <div class="meta">
                 <div class="name-row">
+                  <span v-if="file.starred" class="star-mark" role="img" :aria-label="t('已加星标')" :title="t('已加星标')">
+                    <Icon name="star" :size="12" filled />
+                  </span>
                   <strong :title="file.name">{{ file.name }}</strong>
                 </div>
                 <!-- The whole drive: the line under the name says where it lives. -->
@@ -2125,11 +2127,6 @@ h2 + .folders + h2,
   left: 4px;
 }
 
-.folder > .star-mark,
-.card > .star-mark {
-  top: 4px;
-  right: 4px;
-}
 
 .folders {
   --cover-bg: color-mix(in srgb, var(--canvas-flat) 94%, var(--fg) 6%);
@@ -2235,24 +2232,12 @@ h2 + .folders + h2,
   padding: 10px 4px 3px;
 }
 
-/* The star mark identifies favorites without changing the card surface. */
-
 .star-mark {
-  position: absolute;
-  z-index: 1;
-  top: 10px;
-  right: 10px;
-  width: 24px;
-  height: 24px;
+  flex: none;
   display: grid;
   place-items: center;
-  border-radius: 7px;
-  color: #ffcf5a;
-  background: rgba(6, 16, 28, 0.7);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18);
-  pointer-events: none;
+  height: 20px;
+  color: var(--star);
 }
 
 /* In the list the row's own star button is the mark: gold when set. */
@@ -2269,6 +2254,18 @@ h2 + .folders + h2,
   display: flex;
   flex: 1;
   flex-direction: column;
+  min-width: 0;
+}
+
+.folder-name {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  min-width: 0;
+}
+
+.folder-name strong {
+  flex: 1;
   min-width: 0;
 }
 
@@ -2359,18 +2356,11 @@ h2 + .folders + h2,
   background: var(--accent-soft);
 }
 
-.media-grid .card > .check,
-.media-grid .card > .star-mark {
+.media-grid .card > .check {
   top: 8px;
+  left: 8px;
 }
 
-.media-grid .card > .check { left: 8px; }
-.media-grid .card > .star-mark { right: 8px; }
-
-.media-grid .thumb > .star-mark {
-  top: 8px;
-  right: 42px;
-}
 
 .media-grid .card:has(.play) .meta {
   padding-right: 48px;
