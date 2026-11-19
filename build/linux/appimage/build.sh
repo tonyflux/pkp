@@ -74,6 +74,10 @@ loader=$(readelf -l "$appdir/usr/lib/pkp/pkp" | awk '/interpreter:/ {gsub(/\]/, 
 printf '%s\n' "$loader" > "$appdir/.loader"
 mkdir -p "$appdir$(dirname "$loader")"
 cp -L "$loader" "$appdir$loader"
+if [ "$(cd "$appdir$(dirname "$loader")" && pwd -P)" = "$(cd "$appdir/usr/lib64" && pwd -P)" ]; then
+  mkdir -p "$appdir/usr/lib"
+  cp -L "$loader" "$appdir/usr/lib/$(basename "$loader")"
+fi
 # Portal opener talks to the host session bus; host executables are never run
 # against AppImage libraries. A desktop portal is a host service, not bundled.
 cc -Os -o "$appdir/usr/bin/xdg-open" build/linux/appimage/portal-open.c $(pkg-config --cflags --libs gio-unix-2.0)

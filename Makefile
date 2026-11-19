@@ -82,7 +82,7 @@ linux-docker:
 	@set -eu; if [ -f .git ]; then \
 		gitdir=$$(git rev-parse --absolute-git-dir); gitdir=$$(cd "$$gitdir" && pwd -P); \
 		common=$$(git rev-parse --git-common-dir); common=$$(cd "$$common" && pwd -P); \
-		docker run --rm --platform linux/$(LINUX_ARCH) -v "$(CURDIR):/src" --mount "type=bind,source=$$common,target=$$common" --mount type=tmpfs,destination=/src/frontend/node_modules -e "GIT_DIR=$$gitdir" -e GIT_WORK_TREE=/src -e GIT_CONFIG_COUNT=1 -e GIT_CONFIG_KEY_0=safe.directory -e GIT_CONFIG_VALUE_0=/src -e PKP_RELEASE_BUILD -e VERSION=$(VERSION) -e SOURCE_DATE_EPOCH=$(SOURCE_DATE_EPOCH) $(LINUX_IMAGE) sh -c 'cd frontend && npm ci && cd .. && make linux-package ARCH=$(LINUX_ARCH)'; \
+		docker run --rm --platform linux/$(LINUX_ARCH) -v "$(CURDIR):/src" --mount "type=bind,source=$$common,target=$$common" --mount type=tmpfs,destination=/src/frontend/node_modules -e "GIT_DIR=$$gitdir" -e GIT_WORK_TREE=/src -e GIT_CONFIG_COUNT=3 -e GIT_CONFIG_KEY_0=safe.directory -e GIT_CONFIG_VALUE_0=/src -e GIT_CONFIG_KEY_1=safe.directory -e "GIT_CONFIG_VALUE_1=$$gitdir" -e GIT_CONFIG_KEY_2=safe.directory -e "GIT_CONFIG_VALUE_2=$$common" -e PKP_RELEASE_BUILD -e VERSION=$(VERSION) -e SOURCE_DATE_EPOCH=$(SOURCE_DATE_EPOCH) $(LINUX_IMAGE) sh -c 'cd frontend && npm ci && cd .. && make linux-package ARCH=$(LINUX_ARCH)'; \
 	else \
 		docker run --rm --platform linux/$(LINUX_ARCH) -v "$(CURDIR):/src" --mount type=tmpfs,destination=/src/frontend/node_modules -e GIT_CONFIG_COUNT=1 -e GIT_CONFIG_KEY_0=safe.directory -e GIT_CONFIG_VALUE_0=/src -e PKP_RELEASE_BUILD -e VERSION=$(VERSION) -e SOURCE_DATE_EPOCH=$(SOURCE_DATE_EPOCH) $(LINUX_IMAGE) sh -c 'cd frontend && npm ci && cd .. && make linux-package ARCH=$(LINUX_ARCH)'; \
 	fi
@@ -91,7 +91,7 @@ linux-docker-provenance:
 	@set -eu; if [ -f .git ]; then \
 		gitdir=$$(git rev-parse --absolute-git-dir); gitdir=$$(cd "$$gitdir" && pwd -P); \
 		common=$$(git rev-parse --git-common-dir); common=$$(cd "$$common" && pwd -P); \
-		docker run --rm --platform linux/$(LINUX_ARCH) -v "$(CURDIR):/src" --mount "type=bind,source=$$common,target=$$common" -e "GIT_DIR=$$gitdir" -e GIT_WORK_TREE=/src -e GIT_CONFIG_COUNT=1 -e GIT_CONFIG_KEY_0=safe.directory -e GIT_CONFIG_VALUE_0=/src $(LINUX_IMAGE) go run ./cmd/pkp-release linux-provenance -dir bin -version "$(VERSION)" -arch "$(LINUX_ARCH)"; \
+		docker run --rm --platform linux/$(LINUX_ARCH) -v "$(CURDIR):/src" --mount "type=bind,source=$$common,target=$$common" -e "GIT_DIR=$$gitdir" -e GIT_WORK_TREE=/src -e GIT_CONFIG_COUNT=3 -e GIT_CONFIG_KEY_0=safe.directory -e GIT_CONFIG_VALUE_0=/src -e GIT_CONFIG_KEY_1=safe.directory -e "GIT_CONFIG_VALUE_1=$$gitdir" -e GIT_CONFIG_KEY_2=safe.directory -e "GIT_CONFIG_VALUE_2=$$common" $(LINUX_IMAGE) go run ./cmd/pkp-release linux-provenance -dir bin -version "$(VERSION)" -arch "$(LINUX_ARCH)"; \
 	else \
 		docker run --rm --platform linux/$(LINUX_ARCH) -v "$(CURDIR):/src" -e GIT_CONFIG_COUNT=1 -e GIT_CONFIG_KEY_0=safe.directory -e GIT_CONFIG_VALUE_0=/src $(LINUX_IMAGE) go run ./cmd/pkp-release linux-provenance -dir bin -version "$(VERSION)" -arch "$(LINUX_ARCH)"; \
 	fi

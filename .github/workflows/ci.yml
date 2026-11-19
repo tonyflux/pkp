@@ -201,7 +201,7 @@ jobs:
             -v "$PWD:/src" pkp-linux-builder sh -c '
               chmod -R a+rwX /src/bin /src/frontend/dist
               useradd -m tester
-              su tester -c "export PATH=/usr/local/go/bin:\$PATH; cd /src && go test ./internal/mpv ./internal/pcm ./internal/audiotags ./internal/lanmedia ./internal/syncfs ./internal/foldersync ./internal/applock ./internal/netproxy ./internal/webproxy && PKP_TEST_DESKTOP_DBUS=1 go test ./internal/services -run '\''Test(SecretService|Linux|GNOME|AppLock|Update|Installer|Quit|AISubtitles|AICues|ASSCaption)'\'' -timeout 180s && go test ./internal/lanshare -timeout 180s && dbus-run-session -- bash build/linux/smoke.sh"
+              su tester -c "export PATH=/usr/local/go/bin:\$PATH; cd /src && go test ./internal/mpv ./internal/pcm ./internal/audiotags ./internal/lanmedia ./internal/syncfs ./internal/foldersync ./internal/applock ./internal/netproxy ./internal/webproxy ./internal/update && PKP_TEST_DESKTOP_DBUS=1 go test ./internal/services -run '\''Test(SecretService|Linux|GNOME|AppLock|Update|Extracted|Installer|Quit|AISubtitles|AICues|ASSCaption)'\'' -timeout 180s && go test ./internal/lanshare -timeout 180s && dbus-run-session -- bash build/linux/smoke.sh"
             '
       - name: Verify package installation metadata and AppImage relocation
         run: |

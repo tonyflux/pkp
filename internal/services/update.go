@@ -441,7 +441,16 @@ func (u *UpdateService) Install() error {
 			err = errAppLocked
 		}
 		if err == nil {
-			err = revealPath(saved, true)
+			reveal := revealPath
+			done := make(chan error, 1)
+			go func() {
+				done <- reveal(saved, true)
+			}()
+			select {
+			case err = <-done:
+			case <-u.ctx.Done():
+				err = u.ctx.Err()
+			}
 		}
 		if created {
 			if err != nil {

@@ -6,6 +6,6 @@ fi
 if command -v gtk-update-icon-cache >/dev/null 2>&1; then
   gtk-update-icon-cache -q -t -f /usr/share/icons/hicolor
 fi
-if command -v apparmor_parser >/dev/null 2>&1 && [ -r /sys/kernel/security/apparmor/profiles ]; then
-  apparmor_parser -r /etc/apparmor.d/pkp
+if command -v apparmor_parser >/dev/null 2>&1 && [ -r /sys/kernel/security/apparmor/profiles ] && [ -e /etc/apparmor.d/abi/4.0 ]; then
+  apparmor_parser -r /etc/apparmor.d/pkp || echo 'Warning: could not load AppArmor profile /etc/apparmor.d/pkp.' >&2
 fi

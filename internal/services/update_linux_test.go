@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
 
@@ -169,5 +170,57 @@ func TestExtractedAppImageKeepsAppImageUpdateFormat(t *testing.T) {
 	}
 	if platform != "linux-amd64-appimage" && platform != "linux-arm64-appimage" {
 		t.Fatalf("AppImage chose system package: %s", platform)
+	}
+}
+
+func TestLinuxShutdownDoesNotWaitForBlockedReveal(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	u := isolatedUpdater(t)
+	body := []byte("verified package")
+	digest := sha256.Sum256(body)
+	path := filepath.Join(t.TempDir(), "package.deb")
+	if err := os.WriteFile(path, body, 0600); err != nil {
+		t.Fatal(err)
+	}
+	u.platform, u.path = "linux-amd64-deb", path
+	u.manifest = &update.Manifest{Version: "0.7.2", LinuxPackages: map[string]update.Package{u.platform: {Size: int64(len(body)), SHA256: hex.EncodeToString(digest[:])}}}
+	u.state.Phase = "ready"
+	oldReveal := revealPath
+	entered := make(chan struct{})
+	release := make(chan struct{})
+	revealDone := make(chan struct{})
+	defer func() { revealPath = oldReveal }()
+	defer func() { <-revealDone }()
+	defer close(release)
+	revealPath = func(string, bool) error {
+		close(entered)
+		<-release
+		close(revealDone)
+		return nil
+	}
+	installErr := make(chan error, 1)
+	go func() {
+		installErr <- u.Install()
+	}()
+	<-entered
+	shutdownDone := make(chan error, 1)
+	go func() {
+		shutdownDone <- u.ServiceShutdown()
+	}()
+	select {
+	case err := <-shutdownDone:
+		if err != nil {
+			t.Fatal(err)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("ServiceShutdown blocked on hung revealPath")
+	}
+	select {
+	case err := <-installErr:
+		if !errors.Is(err, context.Canceled) {
+			t.Fatalf("expected context.Canceled, got %v", err)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("Install did not return on shutdown")
 	}
 }

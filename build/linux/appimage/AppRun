@@ -14,10 +14,9 @@ if ! "$APPDIR$loader" --library-path "$APPDIR/usr/lib/$triplet:$APPDIR/usr/lib" 
 fi
 # WebKit release builds compile /usr helper/resource paths in. A private mount
 # namespace preserves those paths without patching WebKit or disabling its sandbox.
-exec "$APPDIR$loader" --library-path "$APPDIR/usr/lib/$triplet:$APPDIR/usr/lib" "$bwrap" --unshare-user --die-with-parent \
-  --bind / / --dev-bind /dev /dev --ro-bind /usr "$APPDIR/host-usr" --ro-bind "$APPDIR/usr" /usr \
-  --ro-bind-try "$APPDIR/host-usr/share/fonts" /usr/local/share/fonts/host-system \
-  --ro-bind-try "$APPDIR/host-usr/local/share/fonts" /usr/local/share/fonts/host-local \
+set -- \
+  --ro-bind-try /usr/share/fonts /usr/local/share/fonts/host-system \
+  --ro-bind-try /usr/local/share/fonts /usr/local/share/fonts/host-local \
   --setenv LD_LIBRARY_PATH "/usr/lib/$triplet:/usr/lib" \
   --setenv PATH /usr/bin:/bin \
   --setenv XDG_DATA_DIRS "/usr/share:$APPDIR/host-usr/local/share:$APPDIR/host-usr/share" \
@@ -28,3 +27,18 @@ exec "$APPDIR$loader" --library-path "$APPDIR/usr/lib/$triplet:$APPDIR/usr/lib" 
   --setenv PKP_APPIMAGE 1 \
   --setenv PKP_LINUX_FORMAT "${PKP_LINUX_FORMAT:-appimage}" \
   -- /usr/lib/pkp/pkp "$@"
+if [ -d /sbin ] && [ ! -L /sbin ] && [ -d "$APPDIR/usr/sbin" ]; then
+  set -- --ro-bind "$APPDIR/usr/sbin" /sbin "$@"
+fi
+if [ -d /bin ] && [ ! -L /bin ]; then
+  set -- --ro-bind "$APPDIR/usr/bin" /bin "$@"
+fi
+if [ -d /lib64 ] && [ ! -L /lib64 ]; then
+  set -- --ro-bind "$APPDIR/usr/lib64" /lib64 "$@"
+fi
+if [ -d /lib ] && [ ! -L /lib ]; then
+  set -- --ro-bind "$APPDIR/usr/lib" /lib "$@"
+fi
+exec "$APPDIR$loader" --library-path "$APPDIR/usr/lib/$triplet:$APPDIR/usr/lib" "$bwrap" --unshare-user --die-with-parent \
+  --bind / / --dev-bind /dev /dev --ro-bind /usr "$APPDIR/host-usr" --ro-bind "$APPDIR/usr" /usr \
+  "$@"

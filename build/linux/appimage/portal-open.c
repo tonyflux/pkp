@@ -12,6 +12,7 @@ typedef struct {
     const char *path;
     guint response;
     gboolean received;
+    gboolean timed_out;
 } Request;
 
 static void response_received(GDBusConnection *bus, const char *sender, const char *path,
@@ -28,7 +29,9 @@ static void response_received(GDBusConnection *bus, const char *sender, const ch
 }
 
 static gboolean request_timeout(gpointer data) {
-    g_main_loop_quit(((Request *)data)->loop);
+    Request *request = data;
+    request->timed_out = TRUE;
+    g_main_loop_quit(request->loop);
     return G_SOURCE_REMOVE;
 }
 
@@ -50,11 +53,16 @@ int main(int argc, char **argv) {
     g_variant_builder_init(&options, G_VARIANT_TYPE_VARDICT);
     GVariant *reply = NULL;
     char *path = g_filename_from_uri(argv[1], NULL, NULL);
-    if (!path && !g_uri_peek_scheme(argv[1])) path = g_canonicalize_filename(argv[1], NULL);
+    if (!path && (argv[1][0] == '/' || g_str_has_prefix(argv[1], "./") ||
+                  g_str_has_prefix(argv[1], "../") || !g_uri_peek_scheme(argv[1]) ||
+                  g_file_test(argv[1], G_FILE_TEST_EXISTS))) {
+        path = g_canonicalize_filename(argv[1], NULL);
+    }
     if (path) {
         int fd = open(path, O_RDONLY | O_CLOEXEC);
         g_free(path);
         if (fd < 0) {
+            g_variant_builder_clear(&options);
             g_printerr("Cannot open file: %s\n", argv[1]);
             g_dbus_connection_signal_unsubscribe(bus, subscription);
             g_main_loop_unref(request.loop);
@@ -64,11 +72,14 @@ int main(int argc, char **argv) {
         GUnixFDList *fds = g_unix_fd_list_new();
         int handle = g_unix_fd_list_append(fds, fd, &error);
         close(fd);
-        if (handle >= 0)
+        if (handle >= 0) {
             reply = g_dbus_connection_call_with_unix_fd_list_sync(bus, "org.freedesktop.portal.Desktop",
                 "/org/freedesktop/portal/desktop", "org.freedesktop.portal.OpenURI", "OpenFile",
                 g_variant_new("(sh@a{sv})", "", handle, g_variant_builder_end(&options)),
                 G_VARIANT_TYPE("(o)"), G_DBUS_CALL_FLAGS_NONE, 30000, fds, NULL, NULL, &error);
+        } else {
+            g_variant_builder_clear(&options);
+        }
         g_object_unref(fds);
     } else {
         reply = g_dbus_connection_call_sync(bus, "org.freedesktop.portal.Desktop",
@@ -80,8 +91,8 @@ int main(int argc, char **argv) {
         g_variant_get(reply, "(&o)", &request.path);
         guint timeout = g_timeout_add_seconds(PORTAL_TIMEOUT_SECONDS, request_timeout, &request);
         g_main_loop_run(request.loop);
-        if (request.received) g_source_remove(timeout);
-        else g_dbus_connection_call_sync(bus, "org.freedesktop.portal.Desktop", request.path,
+        if (!request.timed_out) g_source_remove(timeout);
+        if (!request.received) g_dbus_connection_call_sync(bus, "org.freedesktop.portal.Desktop", request.path,
             "org.freedesktop.portal.Request", "Close", NULL, NULL, G_DBUS_CALL_FLAGS_NONE,
             1000, NULL, NULL);
         g_variant_unref(reply);

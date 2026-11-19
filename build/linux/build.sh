@@ -2,7 +2,9 @@
 set -euo pipefail
 cd "$(dirname "$0")/../.."
 # Docker builds run as root against the caller's mounted checkout.
-export GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=safe.directory GIT_CONFIG_VALUE_0="$PWD"
+if [ -z "${GIT_CONFIG_COUNT:-}" ]; then
+  export GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=safe.directory GIT_CONFIG_VALUE_0="$PWD"
+fi
 [[ $(uname -s) == Linux ]] || { echo 'Linux builds require Ubuntu 24.04; use make linux-docker.' >&2; exit 1; }
 arch=$(go env GOARCH)
 [[ $arch == amd64 || $arch == arm64 ]] || { echo "Unsupported Linux architecture: $arch" >&2; exit 1; }
