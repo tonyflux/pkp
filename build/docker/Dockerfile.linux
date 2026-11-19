@@ -2,7 +2,7 @@
 FROM golang:1.26.0@sha256:fb612b7831d53a89cbc0aaa7855b69ad7b0caf603715860cf538df854d047b84 AS go
 FROM node:24-bookworm@sha256:9d266751ca3d7fdbe651c878ffd5ad0a42fed49a18c283509267c97f025b7496 AS node
 FROM ubuntu:24.04@sha256:73b999393d07f2bf65a40373778a44dc9a6d54ad7718d29247d8ff9413c4d6a8
-ARG UBUNTU_SNAPSHOT=20261101T000000Z
+ARG UBUNTU_SNAPSHOT=20261118T000000Z
 ENV DEBIAN_FRONTEND=noninteractive
 # The Go build image supplies trusted roots before apt accesses the snapshot.
 COPY --from=go /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
