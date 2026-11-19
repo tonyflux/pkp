@@ -258,7 +258,14 @@ static gboolean draw(GtkGLArea *widget, GdkGLContext *context, gpointer unused) 
 #ifdef PKP_SURFACE_TEST
     GLenum gl_before = glGetError();
 #endif
-    mpv_render_context_update(render);
+    uint64_t flags = mpv_render_context_update(render);
+#ifdef PKP_SURFACE_TEST
+    mpv_render_frame_info info = {0};
+    mpv_render_context_get_info(render, (mpv_render_param){MPV_RENDER_PARAM_NEXT_FRAME_INFO, &info});
+    g_printerr("pkp render: flags=%llu info=%llu size=%dx%d\n", (unsigned long long)flags, (unsigned long long)info.flags, w, h);
+#else
+    (void)flags;
+#endif
     if (mpv_render_context_render(render, params) < 0) {
         fail_capture(-1);
         return TRUE;
@@ -279,6 +286,9 @@ static gboolean draw(GtkGLArea *widget, GdkGLContext *context, gpointer unused) 
     unsigned char top[4], bottom[4];
     glReadPixels(w / 2, h * 2 / 3, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, top);
     glReadPixels(w / 2, h / 3, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, bottom);
+#ifdef PKP_SURFACE_TEST
+    g_printerr("pkp pixels: %u,%u,%u %u,%u,%u\n", top[0], top[1], top[2], bottom[0], bottom[1], bottom[2]);
+#endif
 #ifdef PKP_SURFACE_TEST
     GLenum gl_read = glGetError();
     const GLubyte *gl_renderer = glGetString(GL_RENDERER);

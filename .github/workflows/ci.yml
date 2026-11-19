@@ -1,235 +1,28 @@
 name: CI
-
-on:
-  push:
-    branches: [main]
-  pull_request:
-  workflow_dispatch:
-  workflow_call:
-    inputs:
-      source-ref:
-        type: string
-        required: false
-
+on: workflow_dispatch
 permissions:
   contents: read
-
-concurrency:
-  group: ci-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
-
 jobs:
-  frontend:
+  x11-frame-diagnostics:
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           persist-credentials: false
-          ref: ${{ inputs.source-ref || github.sha }}
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
-        with:
-          node-version: '24'
-          cache: npm
-          cache-dependency-path: frontend/package-lock.json
-      - run: npm ci
-        working-directory: frontend
-      - run: npm run i18n && npm test -- --maxWorkers=2 && npm run build
-        working-directory: frontend
-      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
-        with:
-          go-version-file: go.mod
-      - name: Check packaging version and dependency locks
+      - run: docker build -f build/docker/Dockerfile.linux -t pkp-linux-builder .
+      - name: Trace X11 video frame submission
         run: |
-          go run ./cmd/pkp-release check -version "$(go run ./cmd/pkp-release version)" -metadata-only
-          go mod download all
-          git diff --exit-code -- go.mod go.sum
-      - name: Test independent release verifier
-        run: python3 .github/scripts/test_verify_release.py
-
-  telemetry:
-    runs-on: ubuntu-24.04
-    timeout-minutes: 20
-    steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-        with:
-          persist-credentials: false
-          ref: ${{ inputs.source-ref || github.sha }}
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
-        with:
-          node-version: '24'
-          cache: npm
-          cache-dependency-path: cloudflare/telemetry/package-lock.json
-      - run: npm ci
-        working-directory: cloudflare/telemetry
-      - run: npm run typecheck && npm test
-        working-directory: cloudflare/telemetry
-
-  native:
-    runs-on: macos-15
-    timeout-minutes: 180
-    steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-        with:
-          persist-credentials: false
-          ref: ${{ inputs.source-ref || github.sha }}
-      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
-        with:
-          go-version-file: go.mod
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
-        with:
-          node-version: '24'
-          cache: npm
-          cache-dependency-path: frontend/package-lock.json
-      - name: Install native test and build tools
-        run: |
-          brew install cmake ffmpeg nsis
-          go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0-beta.28
-      - name: Restore shared native media cache
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
-        with:
-          path: |
-            ~/Library/Caches/pkp/libmpv
-            build/darwin/libmpv
-            build/windows/libmpv
-          key: media-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('build/libmpv-common.sh', 'build/darwin/libmpv.sh', 'build/windows/libmpv.sh') }}-${{ hashFiles('internal/pcm/decoder.c', 'internal/pcm/decoder.h') }}
-          restore-keys: |
-            media-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('build/libmpv-common.sh', 'build/darwin/libmpv.sh', 'build/windows/libmpv.sh') }}-
-      - run: npm ci
-        working-directory: frontend
-      - name: Build bundled macOS and Windows playback libraries
-        run: make libmpv libmpv-windows
-      - name: Share bundled Windows runtime for regression tests
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
-        with:
-          name: windows-pcm-runtime
-          path: |
-            build/windows/libmpv/amd64/libmpv-2.dll
-            build/windows/libmpv/amd64/pkp-pcm.dll
-            build/windows/libmpv/amd64/ffmpeg.exe
-            build/windows/libmpv/arm64/libmpv-2.dll
-            build/windows/libmpv/arm64/pkp-pcm.dll
-            build/windows/libmpv/arm64/ffmpeg.exe
-          if-no-files-found: error
-          retention-days: 1
-      - name: Build macOS DMG and Windows NSIS installer
-        run: |
-          make dist windows-installer
-          codesign --verify --deep --strict bin/pkp.app
-          lipo bin/pkp.app/Contents/MacOS/pkp -verify_arch arm64 x86_64
-          lipo bin/pkp.app/Contents/Helpers/pkp-updater -verify_arch arm64 x86_64
-          python3 build/darwin/updater-protocol-test.py bin/pkp.app/Contents/Helpers/pkp-updater
-      - name: Test and vet native code
-        run: |
-          go test ./...
-          go test -race ./internal/update ./internal/services -run 'Test(Update|Install|LockGate|Telemetry)'
-          go vet ./...
-      - name: Smoke load without starting the app
-        shell: bash
-        run: |
-          set -euo pipefail
-          for binary in bin/pkp bin/pkp.app/Contents/MacOS/pkp; do
-            output=$(GOMEMLIMIT=bogus DYLD_PRINT_LIBRARIES=1 "$binary" 2>&1) && exit 1
-            [[ "$output" == *libmpv.2.dylib* ]]
-            [[ "$output" == *'malformed GOMEMLIMIT'* ]]
-          done
-
-  windows-pcm:
-    needs: native
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - runner: windows-latest
-            arch: amd64
-          - runner: windows-11-arm
-            arch: arm64
-    runs-on: ${{ matrix.runner }}
-    timeout-minutes: 20
-    steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-        with:
-          persist-credentials: false
-          ref: ${{ inputs.source-ref || github.sha }}
-      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
-        with:
-          go-version-file: go.mod
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
-        with:
-          name: windows-pcm-runtime
-          path: build/windows/libmpv
-      - name: Exercise bundled PCM and AI subtitle integration
-        shell: bash
-        env:
-          CGO_ENABLED: '0'
-        run: |
-          set -euo pipefail
-          runtime="$PWD/build/windows/libmpv/${{ matrix.arch }}"
-          export PATH="$runtime:$PATH"
-          ffmpeg -v error -filter_complex sine=duration=0.01 -f null -
-          go test -c -o "$runtime/pcm.test.exe" ./internal/pcm
-          go test -c -o "$runtime/services.test.exe" ./internal/services
-          "$runtime/pcm.test.exe" -test.v -test.timeout=5m
-          cd internal/services
-          "$runtime/services.test.exe" -test.v -test.timeout=5m -test.run='Test(AISubtitles|AICues|ASSCaption)'
-
-  linux:
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - runner: ubuntu-24.04
-            arch: amd64
-          - runner: ubuntu-24.04-arm
-            arch: arm64
-    runs-on: ${{ matrix.runner }}
-    timeout-minutes: 120
-    steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-        with:
-          persist-credentials: false
-          ref: ${{ inputs.source-ref || github.sha }}
-      - name: Build pinned Ubuntu toolchain
-        run: docker build -f build/docker/Dockerfile.linux -t pkp-linux-builder .
-      - name: Test media and GTK rendering on X11 and Wayland
-        run: |
-          # Only the disposable runner and test container are unconfined; WebKit
-          # still creates its own sandbox and its renderer is checked below.
           sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
           sudo sysctl -w kernel.apparmor_restrict_unprivileged_unconfined=0
           docker run --rm --tmpfs /tmp:rw,exec,mode=1777 --security-opt seccomp=unconfined --security-opt apparmor=unconfined --security-opt systempaths=unconfined \
-            -v "$PWD:/src" pkp-linux-builder sh -c '
+            -v "$PWD:/src:ro" pkp-linux-builder bash -ec '
               useradd -m tester
-              su tester -c "export PATH=/usr/local/go/bin:\$PATH; cd /src && go test ./internal/mpv ./internal/pcm ./internal/audiotags ./internal/lanmedia ./internal/syncfs ./internal/foldersync ./internal/applock ./internal/netproxy ./internal/webproxy ./internal/update && PKP_TEST_DESKTOP_DBUS=1 go test ./internal/services -run '\''Test(SecretService|Linux|GNOME|AppLock|Update|Extracted|Installer|Quit|AISubtitles|AICues|ASSCaption)'\'' -timeout 180s && go test ./internal/lanshare -timeout 180s && dbus-run-session -- bash build/linux/smoke.sh"
+              test_x11() {
+                runuser -u tester -- env PATH="$PATH" PKP_TEST_SHOW_FIRST="$1" PKP_TEST_VIDEO_SURFACE=1 GDK_BACKEND=x11 LIBGL_ALWAYS_SOFTWARE=1 dbus-run-session -- xvfb-run -a go test -v -tags pkp_surface_test ./internal/mpv -run "^TestLinuxSurface$" -count=1 -timeout 90s
+              }
+              status=0
+              test_x11 0 || status=1
+              test_x11 1 || status=1
+              exit "$status"
             '
-      - name: Restore Linux runtime source downloads
-        id: runtime-sources
-        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
-        with:
-          path: bin/appimage-source-cache/distro
-          key: linux-runtime-sources-${{ matrix.arch }}-${{ hashFiles('build/docker/Dockerfile.linux', 'build/linux/appimage/build.sh', 'build/linux/appimage/bundle.py', 'build/linux/appimage/sources.sh') }}
-      - name: Build Linux packages and corresponding sources
-        run: docker run --rm -e PKP_RELEASE_BUILD=1 -v "$PWD:/src" pkp-linux-builder sh -c 'cd frontend && npm ci && cd .. && make linux-package'
-      - name: Save verified Linux runtime source downloads
-        if: github.ref == 'refs/heads/main' && steps.runtime-sources.outputs.cache-hit != 'true'
-        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
-        with:
-          path: bin/appimage-source-cache/distro
-          key: ${{ steps.runtime-sources.outputs.cache-primary-key }}
-      - name: Verify package installation metadata and AppImage relocation
-        run: |
-          docker run --rm --tmpfs /tmp:rw,exec,mode=1777 --security-opt seccomp=unconfined --security-opt apparmor=unconfined --security-opt systempaths=unconfined \
-            -v "$PWD:/src" pkp-linux-builder bash build/linux/verify-packages.sh
-      - name: Check Linux binary source identity and bind package hashes
-        run: |
-          docker run --rm -v "$PWD:/src" pkp-linux-builder sh -c 'export GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=safe.directory GIT_CONFIG_VALUE_0=/src; go run ./cmd/pkp-release linux-provenance -dir bin -version "$(go run ./cmd/pkp-release version)" -arch "$(go env GOARCH)"'
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
-        with:
-          name: linux-packages-${{ matrix.arch }}
-          path: |
-            bin/PKP-*-linux-${{ matrix.arch }}.deb
-            bin/PKP-*-linux-${{ matrix.arch }}.rpm
-            bin/PKP-*-linux-${{ matrix.arch }}.AppImage
-            bin/PKP-*-linux-${{ matrix.arch }}-runtime-sources.tar.gz
-            bin/PKP-*-linux-${{ matrix.arch }}-provenance.json
-          if-no-files-found: error

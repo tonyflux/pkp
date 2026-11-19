@@ -122,7 +122,7 @@ func (c *Client) Start(context.Context) error {
 		return fmt.Errorf("mpv: initialise: %s", errorString(status))
 	}
 
-	level := C.CString("warn")
+	level := C.CString("debug")
 	C.mpv_request_log_messages(handle, level)
 	C.free(unsafe.Pointer(level))
 

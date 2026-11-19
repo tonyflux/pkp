@@ -63,10 +63,13 @@ func TestLinuxSurface(t *testing.T) {
 	if err := c.WaitSurfaceReady(); err != nil {
 		t.Fatal(err)
 	}
+	rect := Rect{Width: 320, Height: 240, Visible: true}
+	if os.Getenv("PKP_TEST_SHOW_FIRST") == "1" {
+		c.SetSurfaceRect(rect)
+	}
 	if err := c.Command(ctx, "loadfile", clip); err != nil {
 		t.Fatal(err)
 	}
-	rect := Rect{Width: 320, Height: 240, Visible: true}
 	assertColors := func(top, bottom [4]uint8) bool {
 		return top[0] > 180 && top[2] < 70 && bottom[2] > 180 && bottom[0] < 70
 	}
