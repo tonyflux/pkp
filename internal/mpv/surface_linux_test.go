@@ -4,6 +4,7 @@ package mpv
 
 import (
 	"context"
+	"fmt"
 	"image"
 	"log/slog"
 	"os"
@@ -67,6 +68,7 @@ func TestLinuxSurface(t *testing.T) {
 		t.Fatal(err)
 	}
 	rect := Rect{Width: 320, Height: 240, Visible: true}
+	var backingWidth, backingHeight, backingScale int
 	assertColors := func(top, bottom [4]uint8) bool {
 		return top[0] > 180 && top[2] < 70 && bottom[2] > 180 && bottom[0] < 70
 	}
@@ -75,7 +77,13 @@ func TestLinuxSurface(t *testing.T) {
 		deadline := time.Now().Add(15 * time.Second)
 		for time.Now().Before(deadline) {
 			stats := c.SurfaceStats()
-			if stats.Attached && stats.Frames > previous && assertColors(stats.TopPixel, stats.BottomPixel) {
+			// SetSurfaceRect records the request before GTK allocates it. An
+			// idle draw at the previous size must not satisfy a resize check.
+			_, size, _ := strings.Cut(stats.Diagnostic, "backing=")
+			n, _ := fmt.Sscanf(size, "%dx%d scale=%d", &backingWidth, &backingHeight, &backingScale)
+			if stats.Attached && stats.Frames > previous && n == 3 && backingScale > 0 &&
+				backingWidth == int(rect.Width)*backingScale && backingHeight == int(rect.Height)*backingScale &&
+				assertColors(stats.TopPixel, stats.BottomPixel) {
 				return stats
 			}
 			time.Sleep(20 * time.Millisecond)
@@ -96,11 +104,12 @@ func TestLinuxSurface(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		// The 320x180 picture is letterboxed into 320x240. Capture must remove
-		// those bars and retain the backing scale, not invert or squash the image.
+		// The 16:9 picture is letterboxed into the 4:3 surface. Capture must
+		// remove those bars and retain the backing scale, not invert the image.
 		w, h := img.Bounds().Dx(), img.Bounds().Dy()
-		if w < 320 || h < 180 || w*180 != h*320 {
-			t.Fatalf("cropped capture = %dx%d, want 320:180 at backing resolution", w, h)
+		wantWidth := int(rect.Width) * backingScale
+		if w != wantWidth || w*180 != h*320 {
+			t.Fatalf("cropped capture = %dx%d, want %d pixels wide at 16:9", w, h, wantWidth)
 		}
 		pixel := func(point image.Point) [4]uint8 {
 			p := img.RGBAAt(point.X, point.Y)
@@ -113,6 +122,15 @@ func TestLinuxSurface(t *testing.T) {
 	c.SetSurfaceRect(rect)
 	stats := waitFrame(0)
 	checkCapture()
+	// Exercise the main up- and downscalers too, not just chroma scaling
+	// at native size. Resize the paused surface without reopening the file.
+	for _, width := range []float64{640, 160} {
+		rect.Width, rect.Height = width, width*3/4
+		c.SetSurfaceRect(rect)
+		stats = waitFrame(stats.Frames)
+		checkCapture()
+	}
+	rect.Width, rect.Height = 320, 240
 	// A paused frame must redraw after each GL context recreation, both ways.
 	for _, window := range []int{1, 0} {
 		if err := c.MoveSurface(windows[window]); err != nil {

@@ -25,6 +25,7 @@ import (
 	"image"
 	"log/slog"
 	"math"
+	"runtime"
 	"sync"
 	"time"
 	"unsafe"
@@ -108,7 +109,21 @@ func (c *Client) Start(context.Context) error {
 		return fmt.Errorf("mpv: could not create a core")
 	}
 
-	for name, value := range startOptions(c.opts, backendDefaults) {
+	options := startOptions(c.opts, backendDefaults)
+	if runtime.GOOS == "linux" && !c.opts.Headless {
+		// shortcut: Ubuntu libmpv can sample uninitialized scaler LUT padding
+		// (mpv #18540). Keep LUT-free scalers until the minimum libmpv includes 72d43dc9.
+		if _, ok := c.opts.Extra["scale"]; !ok {
+			options["scale"] = "bicubic_fast"
+		}
+		if _, ok := c.opts.Extra["dscale"]; !ok {
+			options["dscale"] = "bilinear"
+		}
+		if _, ok := c.opts.Extra["correct-downscaling"]; !ok {
+			options["correct-downscaling"] = "no"
+		}
+	}
+	for name, value := range options {
 		if err := setOptionString(handle, name, value); err != nil {
 			C.mpv_terminate_destroy(handle)
 			c.mu.Unlock()
