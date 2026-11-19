@@ -4,10 +4,10 @@ FROM node:24-bookworm@sha256:9d266751ca3d7fdbe651c878ffd5ad0a42fed49a18c28350926
 FROM ubuntu:24.04@sha256:73b999393d07f2bf65a40373778a44dc9a6d54ad7718d29247d8ff9413c4d6a8
 ARG UBUNTU_SNAPSHOT=20261101T000000Z
 ENV DEBIAN_FRONTEND=noninteractive
-# Signed archive snapshots pin binary AND corresponding source versions.
-RUN case "$(dpkg --print-architecture)" in amd64) archive=http://archive.ubuntu.com/ubuntu ;; arm64) archive=http://ports.ubuntu.com/ubuntu-ports ;; *) exit 1 ;; esac \
- && printf 'Types: deb deb-src\nURIs: %s\nSuites: noble noble-updates noble-security\nComponents: main universe restricted multiverse\nSigned-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg\nSnapshot: %s\n' "$archive" "$UBUNTU_SNAPSHOT" > /etc/apt/sources.list.d/ubuntu.sources \
- && printf 'APT::Snapshot "%s";\n' "$UBUNTU_SNAPSHOT" > /etc/apt/apt.conf.d/50snapshot \
+# The Go build image supplies trusted roots before apt accesses the snapshot.
+COPY --from=go /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
+# The Ubuntu snapshot archive contains both amd64 and arm64 package indexes.
+RUN printf 'Types: deb deb-src\nURIs: https://snapshot.ubuntu.com/ubuntu/%s\nSuites: noble noble-updates noble-security\nComponents: main universe restricted multiverse\nSigned-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg\n' "$UBUNTU_SNAPSHOT" > /etc/apt/sources.list.d/ubuntu.sources \
  && apt-get update \
  && apt-get install -y --no-install-recommends ca-certificates curl git build-essential clang pkg-config \
       libgtk-4-dev libwebkitgtk-6.0-dev libepoxy-dev libmpv-dev libavcodec-dev libavformat-dev libavutil-dev libswresample-dev \

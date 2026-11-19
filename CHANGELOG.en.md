@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+- Fix the Linux build container's missing certificate bundle and ARM64 snapshot source while retaining the pinned snapshot and package signature verification.
+
 - Refine the light workspace with a warm-white content surface, blue-gray sidebar and lighter folder placeholders while retaining thumbnails, selection states and transparency settings.
 
 - Add a soft mist backdrop for light and dark themes to give translucent panels more depth while retaining custom wallpaper, opacity and reduced-transparency settings.
