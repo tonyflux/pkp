@@ -33,6 +33,10 @@ type testSecretService struct {
 	exists       bool
 	locked       bool
 	cancelPrompt bool
+	hangPrompt   bool
+	prompted     chan struct{}
+	dismissed    int
+	closed       int
 }
 
 func (s *testSecretService) OpenSession(algorithm string, input dbus.Variant) (dbus.Variant, dbus.ObjectPath, *dbus.Error) {
@@ -119,6 +123,15 @@ func (s *testSecretService) Delete() (dbus.ObjectPath, *dbus.Error) {
 func (s *testSecretService) Prompt(string) *dbus.Error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	if s.prompted != nil {
+		select {
+		case s.prompted <- struct{}{}:
+		default:
+		}
+	}
+	if s.hangPrompt {
+		return nil
+	}
 	if !s.cancelPrompt {
 		s.locked = false
 	}
@@ -129,8 +142,19 @@ func (s *testSecretService) Prompt(string) *dbus.Error {
 	return nil
 }
 
-func (s *testSecretService) Dismiss() *dbus.Error { return nil }
-func (s *testSecretService) Close() *dbus.Error   { return nil }
+func (s *testSecretService) Dismiss() *dbus.Error {
+	s.mu.Lock()
+	s.dismissed++
+	s.mu.Unlock()
+	return nil
+}
+
+func (s *testSecretService) Close() *dbus.Error {
+	s.mu.Lock()
+	s.closed++
+	s.mu.Unlock()
+	return nil
+}
 
 func startTestSecretService(t *testing.T) *testSecretService {
 	t.Helper()
@@ -238,6 +262,64 @@ func TestSecretServiceExpiredOperation(t *testing.T) {
 	client := &secretService{conn: s.conn, ctx: ctx, session: testSecretSession}
 	if _, err := client.search("account"); !errors.Is(err, context.DeadlineExceeded) {
 		t.Fatalf("expired request = %v", err)
+	}
+}
+
+func TestSecretServicePromptTimeoutDismissesAndClosesSession(t *testing.T) {
+	s := startTestSecretService(t)
+	s.mu.Lock()
+	s.hangPrompt = true
+	s.mu.Unlock()
+	err := withSecretServiceTimeout(50*time.Millisecond, func(client *secretService) error {
+		_, err := client.prompt(testSecretPrompt)
+		return err
+	})
+	if !errors.Is(err, context.DeadlineExceeded) {
+		t.Fatalf("prompt timeout = %v, want DeadlineExceeded", err)
+	}
+	s.mu.Lock()
+	dismissed, closed := s.dismissed, s.closed
+	s.mu.Unlock()
+	if dismissed != 1 || closed != 1 {
+		t.Fatalf("cleanup on timeout: dismissed=%d closed=%d, want 1, 1", dismissed, closed)
+	}
+}
+
+func TestSecretServicePromptStopsOnClosedConnection(t *testing.T) {
+	s := startTestSecretService(t)
+	prompted := make(chan struct{}, 1)
+	s.mu.Lock()
+	s.hangPrompt = true
+	s.prompted = prompted
+	s.mu.Unlock()
+	clientConn, err := dbus.Connect(os.Getenv("DBUS_SESSION_BUS_ADDRESS"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer clientConn.Close()
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	client := &secretService{conn: clientConn, ctx: ctx, session: testSecretSession}
+	errCh := make(chan error, 1)
+	go func() {
+		_, err := client.prompt(testSecretPrompt)
+		errCh <- err
+	}()
+	select {
+	case <-prompted:
+	case <-time.After(2 * time.Second):
+		t.Fatal("Prompt was not called")
+	}
+	if err := clientConn.Close(); err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case err := <-errCh:
+		if err == nil || errors.Is(err, ErrNoSavedPassword) || errors.Is(err, context.DeadlineExceeded) {
+			t.Fatalf("prompt after connection close = %v", err)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("prompt spun or blocked after connection close")
 	}
 }
 

@@ -157,6 +157,20 @@ func privateTrashDir(path string) (*os.File, error) {
 	return f, nil
 }
 
+func mountID(path string) (uint64, error) {
+	var st unix.Statx_t
+	if err := unix.Statx(unix.AT_FDCWD, path, unix.AT_SYMLINK_NOFOLLOW, unix.STATX_MNT_ID, &st); err != nil {
+		if errors.Is(err, unix.ENOSYS) || errors.Is(err, unix.EOPNOTSUPP) {
+			return 0, ErrUnsupported
+		}
+		return 0, pathError(path, err)
+	}
+	if st.Mask&unix.STATX_MNT_ID == 0 {
+		return 0, ErrUnsupported
+	}
+	return st.Mnt_id, nil
+}
+
 func linuxTrashDir(path string, device uint64) (string, string, error) {
 	home, err := os.UserHomeDir()
 	if err != nil {
@@ -176,6 +190,17 @@ func linuxTrashDir(path string, device uint64) (string, string, error) {
 				return "", "", ErrUnsafePath
 			}
 			if info.Sys().(*syscall.Stat_t).Dev == device {
+				ancMount, e := mountID(ancestor)
+				if e != nil {
+					return "", "", e
+				}
+				srcMount, e := mountID(filepath.Dir(path))
+				if e != nil {
+					return "", "", e
+				}
+				if ancMount != srcMount {
+					break
+				}
 				if e = checkComponents(ancestor); e != nil {
 					return "", "", e
 				}
@@ -199,17 +224,17 @@ func linuxTrashDir(path string, device uint64) (string, string, error) {
 	}
 	// Find the source mount, not just its st_dev: bind mounts can share a device.
 	top := filepath.Dir(path)
-	var source unix.Statx_t
-	if err = unix.Statx(unix.AT_FDCWD, top, unix.AT_SYMLINK_NOFOLLOW, unix.STATX_MNT_ID, &source); err != nil || source.Mask & unix.STATX_MNT_ID == 0 {
-		return "", "", ErrUnsupported
+	sourceMount, err := mountID(top)
+	if err != nil {
+		return "", "", err
 	}
 	for top != "/" {
 		next := filepath.Dir(top)
-		var st unix.Statx_t
-		if err = unix.Statx(unix.AT_FDCWD, next, unix.AT_SYMLINK_NOFOLLOW, unix.STATX_MNT_ID, &st); err != nil {
-			return "", "", pathError(next, err)
+		nextMount, err := mountID(next)
+		if err != nil {
+			return "", "", err
 		}
-		if st.Mnt_id != source.Mnt_id {
+		if nextMount != sourceMount {
 			break
 		}
 		top = next

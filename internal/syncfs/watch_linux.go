@@ -5,10 +5,12 @@ package syncfs
 import (
 	"context"
 	"errors"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strconv"
 	"sync"
+	"syscall"
 	"unsafe"
 
 	"golang.org/x/sys/unix"
@@ -32,27 +34,40 @@ func Watch(ctx context.Context, root Identity, notify func()) (func(), error) {
 	// populated trees moved in. All additions use a pinned, nofollow descriptor.
 	refresh := func() error {
 		seen := make(map[int]bool)
-		var walk func(string) error
-		walk = func(path string) error {
+		openWatchDir := func(path string) ([]os.DirEntry, error) {
 			f, e := openNoFollow(path)
 			if e != nil {
-				return e
+				return nil, e
 			}
 			defer f.Close()
 			volume, e := linuxVolume(f)
 			if e != nil {
-				return e
+				return nil, e
 			}
 			if volume != root.Volume {
-				return ErrRootChanged
+				return nil, ErrRootChanged
 			}
 			wd, e := unix.InotifyAddWatch(fd, "/proc/self/fd/"+strconv.FormatUint(uint64(f.Fd()), 10), unix.IN_ONLYDIR|unix.IN_CREATE|unix.IN_DELETE|unix.IN_MOVED_FROM|unix.IN_MOVED_TO|unix.IN_MODIFY|unix.IN_ATTRIB|unix.IN_CLOSE_WRITE|unix.IN_DELETE_SELF|unix.IN_MOVE_SELF|unix.IN_UNMOUNT)
 			if e != nil {
-				return e
+				return nil, e
 			}
-			watches[wd], seen[wd] = path, true
 			children, e := f.ReadDir(-1)
 			if e != nil {
+				if _, existed := watches[wd]; !existed {
+					unix.InotifyRmWatch(fd, uint32(wd))
+				}
+				return nil, e
+			}
+			watches[wd], seen[wd] = path, true
+			return children, nil
+		}
+		var walk func(string) error
+		walk = func(path string) error {
+			children, e := openWatchDir(path)
+			if e != nil {
+				if path != root.Path && isVanishedWatchDir(e) {
+					return nil
+				}
 				return e
 			}
 			for _, child := range children {
@@ -143,4 +158,8 @@ func Watch(ctx context.Context, root Identity, notify func()) (func(), error) {
 		}
 	}()
 	return debounce(ctx, events, notify, closeNative), nil
+}
+
+func isVanishedWatchDir(err error) bool {
+	return errors.Is(err, fs.ErrNotExist) || errors.Is(err, syscall.ENOENT) || errors.Is(err, syscall.ENOTDIR)
 }

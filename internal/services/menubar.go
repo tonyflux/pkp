@@ -202,11 +202,13 @@ func (m *MenuBarService) Attach(app *application.App, main *application.WebviewW
 		e.Cancel()
 		m.closeMain()
 	})
-	main.OnWindowEvent(events.Mac.WindowDidExitFullScreen, func(*application.WindowEvent) {
+	hideAfterFullscreen := func(*application.WindowEvent) {
 		if m.exitFull.Swap(false) && m.hidden.Load() {
 			m.main.Hide()
 		}
-	})
+	}
+	main.OnWindowEvent(events.Mac.WindowDidExitFullScreen, hideAfterFullscreen)
+	main.OnWindowEvent(events.Common.WindowUnFullscreen, hideAfterFullscreen)
 	// The Dock icon, or opening PKP again (Finder, Launchpad): the window
 	// comes back as it was. A hook, cancelling the event: Wails' own
 	// listener would otherwise Show() every window that is not visible —

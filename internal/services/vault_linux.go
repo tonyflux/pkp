@@ -45,13 +45,17 @@ func newSystemVault() PasswordVault { return secretServiceVault{} }
 func keychainName() string          { return i18n.T("钥匙串") }
 
 func withSecretService(fn func(*secretService) error) error {
-	ctx, cancel := context.WithTimeout(context.Background(), secretTimeout)
+	return withSecretServiceTimeout(secretTimeout, fn)
+}
+
+func withSecretServiceTimeout(timeout time.Duration, fn func(*secretService) error) error {
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 	address := os.Getenv("DBUS_SESSION_BUS_ADDRESS")
 	if address == "" || address == "autolaunch:" {
 		address = fmt.Sprintf("unix:path=/run/user/%d/bus", os.Getuid())
 	}
-	conn, err := dbus.Connect(address, dbus.WithContext(ctx))
+	conn, err := dbus.Connect(address)
 	if err != nil {
 		return fmt.Errorf("Secret Service: session bus unavailable: %w", err)
 	}
@@ -105,7 +109,7 @@ func (s *secretService) prompt(path dbus.ObjectPath) (dbus.Variant, error) {
 		return dbus.Variant{}, err
 	}
 	options := []dbus.MatchOption{dbus.WithMatchSender(secretDestination), dbus.WithMatchObjectPath(path), dbus.WithMatchInterface(secretPromptInterface), dbus.WithMatchMember("Completed")}
-	signals := make(chan *dbus.Signal, 1)
+	signals := make(chan *dbus.Signal, 16)
 	s.conn.Signal(signals)
 	defer s.conn.RemoveSignal(signals)
 	if err := s.conn.AddMatchSignalContext(s.ctx, options...); err != nil {
@@ -121,7 +125,10 @@ func (s *secretService) prompt(path dbus.ObjectPath) (dbus.Variant, error) {
 	}
 	for {
 		select {
-		case signal := <-signals:
+		case signal, ok := <-signals:
+			if !ok {
+				return dbus.Variant{}, errors.New("keyring disconnected before completing prompt")
+			}
 			if signal == nil || signal.Sender != owner || signal.Path != path || signal.Name != secretPromptInterface+".Completed" {
 				continue
 			}

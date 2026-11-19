@@ -420,13 +420,16 @@ type stamp struct {
 	mode     fs.FileMode
 }
 
-func fileStamp(info fs.FileInfo, path string) (stamp, error) {
+func fileStamp(ctx context.Context, info fs.FileInfo, path string) (stamp, error) {
 	_, id, err := platformFile(info, path)
 	if err != nil {
 		return stamp{}, err
 	}
-	version := platformVersion(info, path)
+	version := platformVersion(ctx, info, path)
 	if version == "" {
+		if err := ctx.Err(); err != nil {
+			return stamp{}, err
+		}
 		return stamp{}, ErrUnstable
 	}
 	return stamp{info.Size(), info.ModTime(), version, id, info.Mode()}, nil
@@ -450,17 +453,20 @@ func hashFile(ctx context.Context, f *os.File) (string, error) {
 	digest := sha256.New()
 	buf := make([]byte, 256*1024)
 	for {
-		if err := ctx.Err(); err != nil {
-			return "", err
-		}
 		n, err := f.Read(buf)
 		if n > 0 {
 			_, _ = digest.Write(buf[:n])
 		}
 		if err == io.EOF {
+			if err := ctx.Err(); err != nil {
+				return "", err
+			}
 			break
 		}
 		if err != nil {
+			return "", err
+		}
+		if err := ctx.Err(); err != nil {
 			return "", err
 		}
 	}
@@ -480,7 +486,7 @@ func Hash(ctx context.Context, path string) (string, error) {
 	if !before.Mode().IsRegular() {
 		return "", ErrUnsafePath
 	}
-	a, err := fileStamp(before, path)
+	a, err := fileStamp(ctx, before, path)
 	if err != nil {
 		return "", err
 	}
@@ -497,7 +503,7 @@ func Hash(ctx context.Context, path string) (string, error) {
 	if err != nil {
 		return "", pathError(path, err)
 	}
-	b, err := fileStamp(after, path)
+	b, err := fileStamp(ctx, after, path)
 	if err != nil {
 		return "", err
 	}
@@ -514,7 +520,7 @@ func Hash(ctx context.Context, path string) (string, error) {
 		}
 		return sum, nil
 	}
-	c, err := fileStamp(fresh, path)
+	c, err := fileStamp(ctx, fresh, path)
 	if err != nil {
 		return "", err
 	}
@@ -568,7 +574,7 @@ func Inspect(ctx context.Context, root Identity, rel string) (*Entry, error) {
 	if info.Mode()&os.ModeSymlink != 0 || isReparse(info) || (!info.IsDir() && !info.Mode().IsRegular()) {
 		return nil, ErrUnsafePath
 	}
-	before, err := fileStamp(info, path)
+	before, err := fileStamp(ctx, info, path)
 	if err != nil {
 		return nil, err
 	}
@@ -587,7 +593,7 @@ func Inspect(ctx context.Context, root Identity, rel string) (*Entry, error) {
 	if err != nil {
 		return nil, ErrUnstable
 	}
-	after, err := fileStamp(latest, path)
+	after, err := fileStamp(ctx, latest, path)
 	if err != nil {
 		return nil, err
 	}
@@ -641,7 +647,7 @@ func Scan(ctx context.Context, root Identity, cache map[string]Entry) ([]Entry, 
 				return ErrUnsupported
 			}
 		}
-		st, err := fileStamp(info, absolute)
+		st, err := fileStamp(ctx, info, absolute)
 		if err != nil {
 			return err
 		}
@@ -708,7 +714,7 @@ func Scan(ctx context.Context, root Identity, cache map[string]Entry) ([]Entry, 
 			if volume != root.Volume {
 				return ErrRootChanged
 			}
-			st, err := fileStamp(childInfo, path)
+			st, err := fileStamp(ctx, childInfo, path)
 			if err != nil {
 				return err
 			}
@@ -748,7 +754,7 @@ func Scan(ctx context.Context, root Identity, cache map[string]Entry) ([]Entry, 
 		if err != nil {
 			return nil, nil, ErrUnstable
 		}
-		after, err := fileStamp(info, absolute)
+		after, err := fileStamp(ctx, info, absolute)
 		if err != nil {
 			return nil, nil, err
 		}

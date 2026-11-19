@@ -3,11 +3,11 @@
 package syncfs
 
 import (
+	"context"
 	"crypto/sha256"
-	"encoding/hex"
 	"encoding/binary"
+	"encoding/hex"
 	"fmt"
-	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -115,7 +115,7 @@ func platformFile(info fs.FileInfo, path string) (string, string, error) {
 	return linuxFile(f, info)
 }
 
-func platformVersion(info fs.FileInfo, path string) string {
+func platformVersion(ctx context.Context, info fs.FileInfo, path string) string {
 	f, err := openNoFollow(path)
 	if err != nil {
 		return ""
@@ -131,25 +131,27 @@ func platformVersion(info fs.FileInfo, path string) string {
 	}
 	// Linux 6.8 can reuse both ctime and mtime within a scheduler tick. Without
 	// a filesystem change counter, timestamps alone cannot authorize hash reuse.
-	digest := sha256.New()
 	if info.IsDir() {
 		names, err := f.Readdirnames(-1)
-		if err != nil {
+		if err != nil || ctx.Err() != nil {
 			return ""
 		}
 		sort.Strings(names)
+		digest := sha256.New()
 		for _, name := range names {
 			digest.Write([]byte(name))
 			digest.Write([]byte{0})
 		}
-	} else if info.Mode().IsRegular() {
-		if _, err := io.Copy(digest, f); err != nil {
+		return fmt.Sprintf("%d:%d:%s", st.Ctime.Sec, st.Ctime.Nsec, hex.EncodeToString(digest.Sum(nil)))
+	}
+	if info.Mode().IsRegular() {
+		sum, err := hashFile(ctx, f)
+		if err != nil {
 			return ""
 		}
-	} else {
-		return ""
+		return fmt.Sprintf("%d:%d:%s", st.Ctime.Sec, st.Ctime.Nsec, sum)
 	}
-	return fmt.Sprintf("%d:%d:%s", st.Ctime.Sec, st.Ctime.Nsec, hex.EncodeToString(digest.Sum(nil)))
+	return ""
 }
 
 func isReparse(info fs.FileInfo) bool { return info.Mode() & os.ModeSymlink != 0 }

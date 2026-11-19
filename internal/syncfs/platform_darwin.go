@@ -65,7 +65,7 @@ func platformFile(info fs.FileInfo, path string) (string, string, error) {
 	}
 	return volume, fmt.Sprintf("%d:%d", st.Dev, st.Ino), nil
 }
-func platformVersion(info fs.FileInfo, path string) string {
+func platformVersion(_ context.Context, info fs.FileInfo, path string) string {
 	st := info.Sys().(*syscall.Stat_t)
 	return fmt.Sprintf("%d:%d", st.Ctimespec.Sec, st.Ctimespec.Nsec)
 }

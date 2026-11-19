@@ -6,8 +6,10 @@ import (
 	"bufio"
 	"errors"
 	"os/exec"
+	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/godbus/dbus/v5"
 )
@@ -79,6 +81,9 @@ type testPolkitAuthority struct {
 	result      polkitResult
 	checks      int
 	interactive int
+	block       chan struct{}
+	started     chan struct{}
+	cancelled   []string
 }
 
 func (a *testPolkitAuthority) EnumerateActions(string) ([]polkitActionDescription, *dbus.Error) {
@@ -89,19 +94,40 @@ func (a *testPolkitAuthority) EnumerateActions(string) ([]polkitActionDescriptio
 
 func (a *testPolkitAuthority) CheckAuthorization(subject polkitSubject, action string, details map[string]string, flags uint32, cancellation string) (polkitResult, *dbus.Error) {
 	a.mu.Lock()
-	defer a.mu.Unlock()
 	if subject.Kind != "system-bus-name" || action != polkitAction || len(details) != 0 {
+		a.mu.Unlock()
 		return polkitResult{}, dbus.MakeFailedError(errors.New("invalid authorization request"))
 	}
 	a.checks++
 	if flags == 0 {
+		a.mu.Unlock()
 		return polkitResult{Challenge: true}, nil
 	}
 	if flags != 1 || cancellation == "" {
+		a.mu.Unlock()
 		return polkitResult{}, dbus.MakeFailedError(errors.New("invalid interactive request"))
 	}
 	a.interactive++
-	return a.result, nil
+	block, started := a.block, a.started
+	result := a.result
+	a.mu.Unlock()
+	if block != nil {
+		if started != nil {
+			select {
+			case started <- struct{}{}:
+			default:
+			}
+		}
+		<-block
+	}
+	return result, nil
+}
+
+func (a *testPolkitAuthority) CancelCheckAuthorization(cancellation string) *dbus.Error {
+	a.mu.Lock()
+	a.cancelled = append(a.cancelled, cancellation)
+	a.mu.Unlock()
+	return nil
 }
 
 type testLoginSession struct{}
@@ -114,7 +140,8 @@ func (testLoginSession) GetAll(string) (map[string]dbus.Variant, *dbus.Error) {
 	return map[string]dbus.Variant{"Active": dbus.MakeVariant(true), "Remote": dbus.MakeVariant(false)}, nil
 }
 
-func TestLinuxAuthenticationUsesFreshSystemOwnedChallenge(t *testing.T) {
+func startTestPolkitBus(t *testing.T, authority *testPolkitAuthority) {
+	t.Helper()
 	binary, err := exec.LookPath("dbus-daemon")
 	if err != nil {
 		t.Fatal("polkit protocol tests require dbus-daemon: ", err)
@@ -139,7 +166,6 @@ func TestLinuxAuthenticationUsesFreshSystemOwnedChallenge(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { conn.Close() })
-	authority := &testPolkitAuthority{action: polkitActionDescription{ID: polkitAction, Active: 1}, result: polkitResult{Authorized: true}}
 	for _, export := range []struct {
 		object any
 		path   dbus.ObjectPath
@@ -158,6 +184,11 @@ func TestLinuxAuthenticationUsesFreshSystemOwnedChallenge(t *testing.T) {
 			t.Fatalf("own %s: %v, %v", name, reply, err)
 		}
 	}
+}
+
+func TestLinuxAuthenticationUsesFreshSystemOwnedChallenge(t *testing.T) {
+	authority := &testPolkitAuthority{action: polkitActionDescription{ID: polkitAction, Active: 1}, result: polkitResult{Authorized: true}}
+	startTestPolkitBus(t, authority)
 	if available, reason := Available(); !available {
 		t.Fatal(reason)
 	}
@@ -181,5 +212,26 @@ func TestLinuxAuthenticationUsesFreshSystemOwnedChallenge(t *testing.T) {
 	authority.mu.Unlock()
 	if available, reason := Available(); available || reason == "" {
 		t.Fatalf("cached authorization policy accepted: %v %q", available, reason)
+	}
+}
+
+func TestLinuxAuthenticationTimeoutCancelsOnOpenBus(t *testing.T) {
+	block := make(chan struct{})
+	authority := &testPolkitAuthority{
+		action:  polkitActionDescription{ID: polkitAction, Active: 1},
+		block:   block,
+		started: make(chan struct{}, 1),
+	}
+	startTestPolkitBus(t, authority)
+	defer close(block)
+	outcome := authenticateWithTimeout(250 * time.Millisecond)
+	if outcome.Result != Cancelled {
+		t.Fatalf("timeout outcome = %+v, want Cancelled", outcome)
+	}
+	authority.mu.Lock()
+	cancelled := append([]string(nil), authority.cancelled...)
+	authority.mu.Unlock()
+	if len(cancelled) != 1 || !strings.HasPrefix(cancelled[0], "pkp-") {
+		t.Fatalf("CancelCheckAuthorization calls = %v, want 1 pkp-* id", cancelled)
 	}
 }

@@ -127,7 +127,7 @@ func platformFile(info fs.FileInfo, path string) (string, string, error) {
 	}
 	return volume, fmt.Sprintf("%08x:%08x%08x", st.VolumeSerialNumber, st.FileIndexHigh, st.FileIndexLow), nil
 }
-func platformVersion(info fs.FileInfo, path string) string {
+func platformVersion(_ context.Context, info fs.FileInfo, path string) string {
 	h, err := winOpen(path, windows.FILE_READ_ATTRIBUTES)
 	if err != nil {
 		return ""

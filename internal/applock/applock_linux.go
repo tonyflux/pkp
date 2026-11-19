@@ -157,9 +157,13 @@ func authenticationReady(ctx context.Context, conn *dbus.Conn) (polkitSubject, e
 // Authenticate delegates all credential collection to the desktop's polkit
 // authentication agent. PKP never reads the operating-system password.
 func Authenticate(_ unsafe.Pointer, _ string) Outcome {
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+	return authenticateWithTimeout(2 * time.Minute)
+}
+
+func authenticateWithTimeout(timeout time.Duration) Outcome {
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
-	conn, err := dbus.ConnectSystemBus(dbus.WithContext(ctx))
+	conn, err := dbus.ConnectSystemBus()
 	if err != nil {
 		return Outcome{Unavailable, fmt.Sprintf("Linux system bus unavailable: %v", err)}
 	}
