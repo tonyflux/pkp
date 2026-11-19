@@ -22,22 +22,10 @@ func TestLinuxSurface(t *testing.T) {
 	if os.Getenv("PKP_TEST_VIDEO_SURFACE") != "1" {
 		t.Skip("set PKP_TEST_VIDEO_SURFACE=1 inside an X11 or Wayland session")
 	}
-	testCase := os.Getenv("PKP_TEST_CASE")
-	codec := "ffv1"
-	args := []string{"-threads", "1"}
-	switch testCase {
-	case "h264", "h264-active":
-		codec = "libx264"
-		args = append(args, "-preset", "ultrafast", "-x264-params", "bframes=2")
-	case "hevc":
-		codec = "libx265"
-		args = append(args, "-preset", "ultrafast", "-x265-params", "pools=1:frame-threads=1:log-level=error")
-	}
 	clip := filepath.Join(t.TempDir(), "red-blue.mkv")
-	args = append([]string{"-v", "error", "-f", "lavfi", "-i",
+	command := exec.Command("ffmpeg", "-v", "error", "-f", "lavfi", "-i",
 		"color=c=red:s=320x180:r=10,drawbox=x=0:y=90:w=320:h=90:color=blue:t=fill",
-		"-t", "1", "-c:v", codec}, args...)
-	command := exec.Command("ffmpeg", append(args, "-y", clip)...)
+		"-t", "1", "-c:v", "ffv1", "-threads", "1", "-y", clip)
 	if output, err := command.CombinedOutput(); err != nil {
 		t.Fatalf("generate deterministic video (ffmpeg required): %v: %s", err, output)
 	}
@@ -65,8 +53,8 @@ func TestLinuxSurface(t *testing.T) {
 		return
 	}
 	extra := map[string]string{"ao": "null", "hwdec": "no", "loop-file": "inf", "pause": "yes"}
-	if testCase == "h264-active" {
-		extra["pause"] = "no"
+	if os.Getenv("PKP_TEST_CASE") == "pbo" {
+		extra["opengl-pbo"] = "yes"
 	}
 	c := New(Options{Logger: slog.New(slog.NewTextHandler(os.Stderr, nil)), Extra: extra})
 	ctx := context.Background()

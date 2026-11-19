@@ -135,12 +135,6 @@ static gboolean queue_draw(gpointer unused) {
     g_atomic_int_set(&update_pending, 0);
     if (area && render && visible && gtk_widget_get_mapped(area) &&
         gtk_gl_area_get_error(GTK_GL_AREA(area)) == NULL) {
-#ifdef PKP_SURFACE_TEST
-        if (g_strcmp0(g_getenv("PKP_TEST_CASE"), "gtk-snapshot") == 0) {
-            gtk_gl_area_queue_render(GTK_GL_AREA(area));
-            return G_SOURCE_REMOVE;
-        }
-#endif
         // The transparent WebKit overlay can occlude GtkGLArea's snapshot;
         // rendering must not depend on GTK choosing to snapshot the lower widget.
         gtk_gl_area_make_current(GTK_GL_AREA(area));
@@ -161,8 +155,46 @@ static void request_draw(void *unused) {
     g_source_attach(source, g_main_context_default());
     g_source_unref(source);
 }
+#ifdef PKP_SURFACE_TEST
+static void GLAPIENTRY skip_invalidate(GLuint texture, GLint level) {
+    (void)texture;
+    (void)level;
+}
+static void GLAPIENTRY trace_upload(GLenum target, GLint level, GLint x, GLint y, GLsizei w,
+                                   GLsizei h, GLenum format, GLenum type, const void *pixels) {
+    glTexSubImage2D(target, level, x, y, w, h, format, type, pixels);
+    if (target != GL_TEXTURE_2D || format != GL_RED || type != GL_UNSIGNED_BYTE ||
+        x || y || !((w == 320 && h == 180) || (w == 160 && h == 90))) return;
+    GLint stride, pbo, tex;
+    glGetIntegerv(GL_UNPACK_ROW_LENGTH, &stride);
+    glGetIntegerv(GL_PIXEL_UNPACK_BUFFER_BINDING, &pbo);
+    glGetIntegerv(GL_TEXTURE_BINDING_2D, &tex);
+    if (!stride) stride = w;
+    const unsigned char *data = pixels;
+    unsigned char top = 0, bottom = 0;
+    if (data && !pbo) {
+        top = data[stride * (h / 3) + w / 2];
+        bottom = data[stride * (h * 2 / 3) + w / 2];
+    }
+    unsigned char tex_top = 0, tex_bottom = 0;
+    if (g_strcmp0(g_getenv("PKP_TEST_CASE"), "texture") == 0) {
+        glGetTextureSubImage(tex, level, w / 2, h / 3, 0, 1, 1, 1, GL_RED, GL_UNSIGNED_BYTE, 1, &tex_top);
+        glGetTextureSubImage(tex, level, w / 2, h * 2 / 3, 0, 1, 1, 1, GL_RED, GL_UNSIGNED_BYTE, 1, &tex_bottom);
+    }
+    g_printerr("pkp upload: %dx%d tex=%d stride=%d pbo=%d source=%d,%d texture=%d,%d\n",
+               w, h, tex, stride, pbo, top, bottom, tex_top, tex_bottom);
+}
+#endif
 static void *get_proc(void *unused, const char *name) {
     (void)unused;
+#ifdef PKP_SURFACE_TEST
+    const char *test_case = g_getenv("PKP_TEST_CASE");
+    if (g_strcmp0(test_case, "invalidate-off") == 0 && strcmp(name, "glInvalidateTexImage") == 0)
+        return (void *)skip_invalidate;
+    if (strcmp(name, "glTexSubImage2D") == 0 &&
+        (g_strcmp0(test_case, "upload") == 0 || g_strcmp0(test_case, "texture") == 0))
+        return (void *)trace_upload;
+#endif
     // GTK chooses EGL or GLX; use its current context, not the display protocol.
     if (eglGetCurrentContext() != EGL_NO_CONTEXT) return (void *)eglGetProcAddress(name);
     return (void *)glXGetProcAddressARB((const GLubyte *)name);

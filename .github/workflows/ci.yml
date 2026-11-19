@@ -40,11 +40,22 @@ jobs:
             -v "$PWD:/src:ro" pkp-linux-builder bash -ec '
               useradd -m tester
               runuser -u tester -- env PATH="$PATH" go test -c -tags pkp_surface_test -o /tmp/surface.test ./internal/mpv
-              for mode in control h264 hevc h264-active gtk-snapshot; do
+              install -d -m 700 -o tester /tmp/xdg-diag
+              runuser -u tester -- env XDG_RUNTIME_DIR=/tmp/xdg-diag weston --backend=headless-backend.so --socket=pkp-diag --idle-time=0 --use-pixman > /tmp/weston.log 2>&1 &
+              for n in {1..50}; do [ ! -S /tmp/xdg-diag/pkp-diag ] || break; sleep 0.1; done
+              [ -S /tmp/xdg-diag/pkp-diag ] || { cat /tmp/weston.log; exit 1; }
+              for mode in control upload texture invalidate-off pbo lp-one lp-vector128 softpipe wayland; do
                 for trial in 1 2 3; do
                   printf "\n=== case=%s trial=%s ===\n" "$mode" "$trial"
-                  runuser -u tester -- env PKP_TEST_CASE="$mode" PKP_TEST_VIDEO_SURFACE=1 GDK_BACKEND=x11 LIBGL_ALWAYS_SOFTWARE=1 dbus-run-session -- xvfb-run -a /tmp/surface.test -test.run "^TestLinuxSurface$" -test.v -test.timeout 60s > "/tmp/$mode-$trial.log" 2>&1 || true
-                  grep -E "pkp (fixture|decoded|render|pixels):|--- (PASS|FAIL): TestLinuxSurface|panic:|^PASS$|^FAIL$" "/tmp/$mode-$trial.log"
+                  shell=(xvfb-run -a); envs=(GDK_BACKEND=x11)
+                  case "$mode" in
+                    lp-one) envs+=(LP_NUM_THREADS=1);;
+                    lp-vector128) envs+=(LP_NATIVE_VECTOR_WIDTH=128);;
+                    softpipe) envs+=(GALLIUM_DRIVER=softpipe);;
+                    wayland) shell=(); envs=(GDK_BACKEND=wayland WAYLAND_DISPLAY=pkp-diag);;
+                  esac
+                  runuser -u tester -- env "${envs[@]}" XDG_RUNTIME_DIR=/tmp/xdg-diag PKP_TEST_CASE="$mode" PKP_TEST_VIDEO_SURFACE=1 LIBGL_ALWAYS_SOFTWARE=1 dbus-run-session -- "${shell[@]}" /tmp/surface.test -test.run "^TestLinuxSurface$" -test.v -test.timeout 35s > "/tmp/$mode-$trial.log" 2>&1 || true
+                  grep -E "pkp (fixture|decoded|upload|pixels):|real upright|--- (PASS|FAIL): TestLinuxSurface|panic:|^PASS$|^FAIL$" "/tmp/$mode-$trial.log" || cat "/tmp/$mode-$trial.log"
                 done
               done
             '
