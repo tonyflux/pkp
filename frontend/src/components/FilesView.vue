@@ -207,7 +207,7 @@ const vCover = {
 onBeforeUnmount(() => coverWatch.disconnect());
 
 function isPlaying(entry: Entry): boolean {
-  return player.presentation !== "off" && nowPlaying.value?.id === entry.id;
+  return player.presentation !== "off" && (!player.owner || player.owner === currentId.value) && nowPlaying.value?.id === entry.id;
 }
 
 function activate(entry: Entry) {
@@ -2161,11 +2161,11 @@ h2 + .folders + h2,
   color: var(--accent);
 }
 
-.folder-cover:not(:has(:deep(.thumb-img.loaded, .thumb-img.skel))) .folder-placeholder {
+.folder-cover:not(:has(:deep(.thumb-img.loaded), :deep(.thumb-img.skel))) .folder-placeholder {
   z-index: 1;
 }
 
-.folder-cover:not(:has(:deep(.thumb-img.loaded, .thumb-img.skel))) .cover-tile {
+.folder-cover:not(:has(:deep(.thumb-img.loaded), :deep(.thumb-img.skel))) .cover-tile {
   visibility: hidden;
 }
 
@@ -2210,7 +2210,7 @@ h2 + .folders + h2,
   background: var(--accent-soft);
 }
 
-.folder-cover:not(:has(:deep(.thumb-img.loaded, .thumb-img.skel))) ~ .folder-meta .folder-mark {
+.folder-cover:not(:has(:deep(.thumb-img.loaded), :deep(.thumb-img.skel))) ~ .folder-meta .folder-mark {
   display: none;
 }
 

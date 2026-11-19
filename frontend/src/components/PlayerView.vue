@@ -15,7 +15,7 @@ import SubtitleSettings from "./SubtitleSettings.vue";
 import PlaylistQueue from "./PlaylistQueue.vue";
 import RangeSlider from "./RangeSlider.vue";
 import { bytes, clock } from "../format";
-import { onMac, revealFileLabel, useOutsideClick } from "../dom";
+import { onMac, onWindows, revealFileLabel, useOutsideClick } from "../dom";
 import { canChoose } from "../quality";
 import { useStage } from "../stage";
 import { trackDetail, trackLabel } from "../tracks";
@@ -510,8 +510,9 @@ function fitAdvanced() {
     if (!el.classList.contains("out")) room += widths[i];
   });
   if (!more.classList.contains("out")) room += moreWidth;
-  let shown = entries.length;
-  if (widths.reduce((sum, w) => sum + w, 0) > room) {
+  const wrapped = getComputedStyle(row).flexWrap === "wrap";
+  let shown = wrapped ? 0 : entries.length;
+  if (!wrapped && widths.reduce((sum, w) => sum + w, 0) > room) {
     // Not all of them: More takes its place first, then the entries in order.
     let used = moreWidth;
     shown = 0;
@@ -696,7 +697,7 @@ onBeforeUnmount(() => {
           <button v-if="nowPlaying" class="icon ghost" :title="t('下载到电脑')" :aria-label="t('下载到电脑')" @click="download">
             <Icon name="download" :size="17" />
           </button>
-          <template v-if="!onMac">
+          <template v-if="onWindows">
             <button class="icon ghost" :title="t('最小化')" :aria-label="t('最小化')" @click="minimiseWindow">
               <Icon name="minus" :size="17" />
             </button>
@@ -2027,32 +2028,33 @@ onBeforeUnmount(() => {
 }
 
 @container stage (max-width: 600px) {
-  :deep(.dock-menu .popover), .more-pop {
-    position: fixed;
-    left: 12px;
+  .dock :deep(.dock-menu), .more-wrap, .tune-wrap {
+    position: static;
+  }
+  .dock :deep(.dock-menu .popover), .dock .more-pop {
+    position: absolute;
+    left: 0;
     right: auto;
-    bottom: 170px;
-    width: min(300px, calc(100cqw - 24px));
+    bottom: calc(100% + 8px);
+    width: min(300px, 100%);
     max-height: calc(100cqh - 190px);
     overflow-y: auto;
   }
-  :deep(.dock-menu .popover::after) { display: none; }
+  .dock :deep(.dock-menu .popover::after) { display: none; }
 }
 
 @container stage (max-width: 360px) {
   .drawer { bottom: 210px; }
   .next:not(.low) { bottom: 210px; }
-  :deep(.dock-menu .popover), .more-pop {
-    bottom: 210px;
+  .dock :deep(.dock-menu .popover), .dock .more-pop {
     max-height: calc(100cqh - 230px);
   }
 }
 
 @container stage (max-width: 600px) and (max-height: 420px) {
   .drawer { bottom: 12px; }
-  :deep(.dock-menu .popover), .more-pop {
-    bottom: 110px;
-    max-height: calc(100cqh - 120px);
+  .dock :deep(.dock-menu .popover), .dock .more-pop {
+    max-height: calc(100cqh - 170px);
   }
 }
 

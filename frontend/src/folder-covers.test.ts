@@ -1,8 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createApp, nextTick, type App } from "vue";
+import { compileStyle, parse } from "vue/compiler-sfc";
 import type { DriveStatus, Entry, IndexProgress } from "../bindings/github.com/tonyflux/pkp/internal/services";
 import FilesView from "./components/FilesView.vue";
-import { drive, folderCovers, select, ui } from "./store";
+import filesViewSource from "./components/FilesView.vue?raw";
+import { drive, folderCovers, player, select, ui } from "./store";
 
 let app: App;
 let host: HTMLElement;
@@ -30,6 +32,10 @@ afterEach(() => {
   drive.status = null;
   drive.indexProgress = null;
   drive.entries = [];
+  player.presentation = "off";
+  player.owner = "";
+  player.playlist = [];
+  player.index = -1;
   vi.unstubAllGlobals();
 });
 
@@ -70,6 +76,41 @@ describe("folder cover thumbnails", () => {
     expect(cover.querySelectorAll("img")).toHaveLength(0);
     expect(cover.querySelectorAll(".cover-tile-placeholder")).toHaveLength(3);
     expect(cover.textContent).not.toContain("子目录");
+  });
+
+  it("keeps both loaded and skeleton thumbnail selectors intact after scoped compilation", () => {
+    const { descriptor } = parse(filesViewSource, { filename: "FilesView.vue" });
+    const compiled = descriptor.styles.map((style) =>
+      compileStyle({ source: style.content, id: "data-v-cover-test", scoped: style.scoped, filename: "FilesView.vue" }),
+    );
+    for (const result of compiled) expect(result.errors).toEqual([]);
+    const rules = compiled
+      .flatMap((result) => result.code.split("\n"))
+      .filter((line) => line.includes(".folder-cover") && line.includes(":not(:has("));
+    expect(rules.length).toBeGreaterThanOrEqual(3);
+    for (const rule of rules) {
+      expect(rule).toContain(".thumb-img.loaded");
+      expect(rule).toContain(".thumb-img.skel");
+      expect(rule).not.toContain(".thumb-img.loaded[data-v-cover-test]");
+      expect(rule).not.toContain(".thumb-img.skel[data-v-cover-test]");
+    }
+  });
+});
+
+describe("file playing indicator", () => {
+  it("does not highlight a colliding file id owned by another account", async () => {
+    const entry = { id: "shared-id", name: "片段.mp4", folder: false, category: "video", playable: true, size: 1, modifiedTime: "", path: "", thumbnail: "" } as Entry;
+    drive.entries = [entry];
+    player.presentation = "bar";
+    player.owner = "other-account";
+    player.playlist = [entry];
+    player.index = 0;
+    await nextTick();
+    expect(host.querySelector('[data-entry="shared-id"] .playing')).toBeNull();
+
+    player.owner = "cover-test";
+    await nextTick();
+    expect(host.querySelector('[data-entry="shared-id"] .playing')).not.toBeNull();
   });
 });
 

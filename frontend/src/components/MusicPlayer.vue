@@ -16,7 +16,7 @@ import SelectMenu from "./SelectMenu.vue";
 import { Window } from "@wailsio/runtime";
 import Thumb from "./Thumb.vue";
 import { bytes, clock } from "../format";
-import { onMac } from "../dom";
+import { onMac, onWindows } from "../dom";
 import { modes, usePlayerKeys, useTransport } from "../transport";
 import {
   accounts,
@@ -204,7 +204,7 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onKey));
           <Icon name="collapse" :size="17" />
           <span>{{ t("收起并继续播放") }}</span>
         </button>
-        <button v-else-if="!onMac" class="collapse" :title="t('关闭窗口并继续播放')" :aria-label="t('关闭窗口并继续播放')" @click="Window.Close()">
+        <button v-else-if="onWindows" class="collapse" :title="t('关闭窗口并继续播放')" :aria-label="t('关闭窗口并继续播放')" @click="Window.Close()">
           <Icon name="close" :size="17" />
         </button>
       </div>
