@@ -256,41 +256,6 @@ static gboolean draw(GtkGLArea *widget, GdkGLContext *context, gpointer unused) 
         {MPV_RENDER_PARAM_INVALID, NULL}
     };
 #ifdef PKP_SURFACE_TEST
-    const char *reset = g_getenv("PKP_TEST_RESET_GL");
-    gboolean bindings = g_strcmp0(reset, "bindings") == 0 || g_strcmp0(reset, "all") == 0;
-    gboolean raster = g_strcmp0(reset, "raster") == 0 || g_strcmp0(reset, "all") == 0;
-    GLint program, vao, texture_unit, texture, pack;
-    GLboolean mask[4];
-    glGetIntegerv(GL_CURRENT_PROGRAM, &program);
-    glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &vao);
-    glGetIntegerv(GL_ACTIVE_TEXTURE, &texture_unit);
-    glGetIntegerv(GL_TEXTURE_BINDING_2D, &texture);
-    glGetIntegerv(GL_PACK_ALIGNMENT, &pack);
-    glGetBooleanv(GL_COLOR_WRITEMASK, mask);
-    g_printerr("pkp GL state: fbo=%d prog=%d vao=%d unit=%d tex=%d pack=%d raster=%u%u%u%u%u%u mask=%u%u%u%u\n",
-               framebuffer, program, vao, texture_unit - GL_TEXTURE0, texture, pack,
-               glIsEnabled(GL_BLEND), glIsEnabled(GL_SCISSOR_TEST), glIsEnabled(GL_DEPTH_TEST),
-               glIsEnabled(GL_STENCIL_TEST), glIsEnabled(GL_CULL_FACE), glIsEnabled(GL_FRAMEBUFFER_SRGB),
-               mask[0], mask[1], mask[2], mask[3]);
-    if (bindings) {
-        glBindFramebuffer(GL_FRAMEBUFFER, 0);
-        glUseProgram(0);
-        glBindVertexArray(0);
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, 0);
-        glPixelStorei(GL_PACK_ALIGNMENT, 4);
-    }
-    if (raster) {
-        glDisable(GL_BLEND);
-        glDisable(GL_SCISSOR_TEST);
-        glDisable(GL_DEPTH_TEST);
-        glDisable(GL_STENCIL_TEST);
-        glDisable(GL_CULL_FACE);
-        glDisable(GL_FRAMEBUFFER_SRGB);
-        glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
-    }
-#endif
-#ifdef PKP_SURFACE_TEST
     GLenum gl_before = glGetError();
 #endif
     uint64_t flags = mpv_render_context_update(render);

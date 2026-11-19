@@ -5,6 +5,7 @@ package mpv
 import (
 	"context"
 	"image"
+	"image/png"
 	"log/slog"
 	"os"
 	"os/exec"
@@ -28,6 +29,12 @@ func TestLinuxSurface(t *testing.T) {
 	if output, err := command.CombinedOutput(); err != nil {
 		t.Fatalf("generate deterministic video (ffmpeg required): %v: %s", err, output)
 	}
+	rgb, err := exec.Command("ffmpeg", "-v", "error", "-i", clip, "-frames:v", "1", "-pix_fmt", "rgb24", "-f", "rawvideo", "-").Output()
+	if err != nil || len(rgb) != 320*180*3 {
+		t.Fatalf("decode fixture: bytes=%d: %v", len(rgb), err)
+	}
+	top, bottom := (60*320+160)*3, (120*320+160)*3
+	t.Logf("pkp fixture: %v %v", rgb[top:top+3], rgb[bottom:bottom+3])
 	windows, stop, ok := surfaceTestHost()
 	if !ok {
 		t.Fatal("GTK4 could not connect to the requested display")
@@ -45,9 +52,11 @@ func TestLinuxSurface(t *testing.T) {
 	if t.Failed() {
 		return
 	}
-	c := New(Options{Logger: slog.New(slog.NewTextHandler(os.Stderr, nil)), Extra: map[string]string{
-		"ao": "null", "hwdec": "no", "loop-file": "inf", "pause": "yes",
-	}})
+	extra := map[string]string{"ao": "null", "hwdec": "no", "loop-file": "inf", "pause": "yes"}
+	if os.Getenv("PKP_TEST_DECODER") == "single-thread" {
+		extra["vd-lavc-threads"] = "1"
+	}
+	c := New(Options{Logger: slog.New(slog.NewTextHandler(os.Stderr, nil)), Extra: extra})
 	ctx := context.Background()
 	if err := c.Start(ctx); err != nil {
 		t.Fatal(err)
@@ -84,6 +93,19 @@ func TestLinuxSurface(t *testing.T) {
 			var value any
 			err := c.GetProperty(ctx, name, &value)
 			t.Logf("%s = %#v (%v)", name, value, err)
+		}
+		name := filepath.Join(filepath.Dir(clip), "decoded.png")
+		if err := c.Command(ctx, "screenshot-to-file", name, "video"); err != nil {
+			t.Logf("pkp decoded: screenshot: %v", err)
+		} else if f, err := os.Open(name); err == nil {
+			img, err := png.Decode(f)
+			f.Close()
+			if err == nil {
+				w, h := img.Bounds().Dx(), img.Bounds().Dy()
+				t.Logf("pkp decoded: %dx%d %v %v", w, h, img.At(w/2, h/3), img.At(w/2, h*2/3))
+			} else {
+				t.Logf("pkp decoded: %v", err)
+			}
 		}
 		t.Fatalf("real upright red/blue frame never arrived: %+v", c.SurfaceStats())
 		return SurfaceStats{}
