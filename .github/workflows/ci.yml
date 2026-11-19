@@ -199,7 +199,7 @@ jobs:
           # still creates its own sandbox and its renderer is checked below.
           sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
           sudo sysctl -w kernel.apparmor_restrict_unprivileged_unconfined=0
-          docker run --rm --tmpfs /tmp:rw,exec,mode=1777 --security-opt seccomp=unconfined --security-opt apparmor=unconfined \
+          docker run --rm --tmpfs /tmp:rw,exec,mode=1777 --security-opt seccomp=unconfined --security-opt apparmor=unconfined --security-opt systempaths=unconfined \
             -v "$PWD:/src" pkp-linux-builder sh -c '
               chmod -R a+rwX /src/bin /src/frontend/dist
               useradd -m tester
@@ -207,7 +207,7 @@ jobs:
             '
       - name: Verify package installation metadata and AppImage relocation
         run: |
-          docker run --rm --tmpfs /tmp:rw,exec,mode=1777 --security-opt seccomp=unconfined --security-opt apparmor=unconfined \
+          docker run --rm --tmpfs /tmp:rw,exec,mode=1777 --security-opt seccomp=unconfined --security-opt apparmor=unconfined --security-opt systempaths=unconfined \
             -v "$PWD:/src" pkp-linux-builder bash build/linux/verify-packages.sh
       - name: Check Linux binary source identity and bind package hashes
         run: |

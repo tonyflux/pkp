@@ -17,8 +17,8 @@ fi
 rm -rf "$appdir" "$sources"
 mkdir -p "$appdir" "$sources"
 case "$arch" in
-  amd64) image_arch=x86_64; tool_id=184558942; tool_sha=46fdd785094c7f6e545b61afcfb0f3d98d8eab243f644b4b17698c01d06083d1 ;;
-  arm64) image_arch=aarch64; tool_id=184558934; tool_sha=04f45ea45b5aa07bb2b071aed9dbf7a5185d3953b11b47358c1311f11ea94a96 ;;
+  amd64) image_arch=x86_64; tool_sha=46fdd785094c7f6e545b61afcfb0f3d98d8eab243f644b4b17698c01d06083d1 ;;
+  arm64) image_arch=aarch64; tool_sha=04f45ea45b5aa07bb2b071aed9dbf7a5185d3953b11b47358c1311f11ea94a96 ;;
   *) exit 1 ;;
 esac
 fetch() {
@@ -28,8 +28,8 @@ fetch() {
     echo "$sha  $file" | sha256sum -c -
   fi
 }
-# appimagetool 1.9.0, immutable asset IDs and checked-in SHA-256, no continuous downloads.
-fetch "https://api.github.com/repos/AppImage/appimagetool/releases/assets/$tool_id" "$tool_sha" "$tools/appimagetool"
+# appimagetool 1.9.0 is verified against checked-in SHA-256; no continuous downloads.
+fetch "https://github.com/AppImage/appimagetool/releases/download/1.9.0/appimagetool-$image_arch.AppImage" "$tool_sha" "$tools/appimagetool"
 chmod +x "$tools/appimagetool"
 runtime_commit=fedfad51acc2860b2916a1eef32ba4a500ff31ef
 fetch "https://codeload.github.com/AppImage/type2-runtime/legacy.tar.gz/$runtime_commit" a1601c596b81768626afca9abecf0137092d2d7b281bb6c4b9067d2c79e44a21 "$tools/type2-runtime.tar.gz"
