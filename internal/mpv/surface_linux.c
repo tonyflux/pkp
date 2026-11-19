@@ -22,6 +22,9 @@ static GdkGLContext *gl_context;
 static GLuint video_fbo, video_texture;
 static int target_width, target_height;
 static char *render_error;
+#ifdef PKP_SURFACE_TEST
+static int test_requested_width, test_requested_height;
+#endif
 static gint update_pending;
 static gint surface_present;
 static gint application_stopped;
@@ -222,6 +225,13 @@ static gboolean draw(GtkGLArea *widget, GdkGLContext *context, gpointer unused) 
     int w = gtk_widget_get_width(GTK_WIDGET(widget)) * scale;
     int h = gtk_widget_get_height(GTK_WIDGET(widget)) * scale;
     if (w <= 0 || h <= 0) return TRUE;
+#ifdef PKP_SURFACE_TEST
+    if (g_strcmp0(g_getenv("PKP_TEST_MATCH_ALLOCATION"), "1") == 0 &&
+        (w != test_requested_width * scale || h != test_requested_height * scale)) {
+        g_printerr("pkp pending allocation: %dx%d\n", w, h);
+        return TRUE;
+    }
+#endif
     GLint framebuffer;
     glGetIntegerv(GL_FRAMEBUFFER_BINDING, &framebuffer);
     // GtkGLArea owns the framebuffer; libmpv requires otherwise-default GL
@@ -255,6 +265,23 @@ static gboolean draw(GtkGLArea *widget, GdkGLContext *context, gpointer unused) 
         {MPV_RENDER_PARAM_BLOCK_FOR_TARGET_TIME, &block},
         {MPV_RENDER_PARAM_INVALID, NULL}
     };
+#ifdef PKP_SURFACE_TEST
+    if (g_strcmp0(g_getenv("PKP_TEST_RESET_GL"), "1") == 0) {
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        glUseProgram(0);
+        glBindVertexArray(0);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, 0);
+        glDisable(GL_BLEND);
+        glDisable(GL_SCISSOR_TEST);
+        glDisable(GL_DEPTH_TEST);
+        glDisable(GL_STENCIL_TEST);
+        glDisable(GL_CULL_FACE);
+        glDisable(GL_FRAMEBUFFER_SRGB);
+        glPixelStorei(GL_PACK_ALIGNMENT, 4);
+        glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+    }
+#endif
 #ifdef PKP_SURFACE_TEST
     GLenum gl_before = glGetError();
 #endif
@@ -552,6 +579,10 @@ static void rect_active(void *data) {
     GtkWidget *parent = gtk_widget_get_parent(area);
     if (!parent) return;
     visible = rect->visible;
+#ifdef PKP_SURFACE_TEST
+    test_requested_width = (int)ceil(rect->w);
+    test_requested_height = (int)ceil(rect->h);
+#endif
     gtk_fixed_move(GTK_FIXED(parent), area, rect->x, rect->y);
     gtk_widget_set_size_request(area, (int)ceil(rect->w), (int)ceil(rect->h));
     gtk_widget_set_opacity(area, visible ? 1 : 0);

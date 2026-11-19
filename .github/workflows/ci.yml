@@ -40,11 +40,13 @@ jobs:
             -v "$PWD:/src:ro" pkp-linux-builder bash -ec '
               useradd -m tester
               test_x11() {
-                runuser -u tester -- env PATH="$PATH" PKP_TEST_SHADER_CACHE="$1" PKP_TEST_VIDEO_SURFACE=1 GDK_BACKEND=x11 LIBGL_ALWAYS_SOFTWARE=1 dbus-run-session -- xvfb-run -a go test -v -tags pkp_surface_test ./internal/mpv -run "^TestLinuxSurface$" -count="${2:-1}" -timeout 120s
+                printf "\n=== allocation=%s GL-reset=%s ===\n" "$1" "$2"
+                runuser -u tester -- env PATH="$PATH" PKP_TEST_MATCH_ALLOCATION="$1" PKP_TEST_RESET_GL="$2" PKP_TEST_VIDEO_SURFACE=1 GDK_BACKEND=x11 LIBGL_ALWAYS_SOFTWARE=1 dbus-run-session -- xvfb-run -a go test -v -tags pkp_surface_test ./internal/mpv -run "^TestLinuxSurface$" -count=1 -timeout 90s
               }
               status=0
-              test_x11 yes || status=1
-              test_x11 yes || status=1
-              test_x11 no 3 || status=1
+              test_x11 0 0 || status=1
+              test_x11 1 0 || status=1
+              test_x11 0 1 || status=1
+              test_x11 1 1 || status=1
               exit "$status"
             '
