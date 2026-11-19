@@ -6,6 +6,7 @@ PKP 1.0.0 brings a refined workspace and Linux desktop builds, alongside playbac
 
 - A softer theme-adaptive mist backdrop, refined light and dark workspaces, clearer file cards, navigation, refresh icon and playback controls. Custom wallpapers, panel opacity and reduced-transparency settings remain available.
 - Starred markers now appear beside file and folder names instead of covering thumbnails.
+- About & Updates now links to the public GitHub feature-request form with a privacy notice.
 - Browse locally indexed files across signed-in accounts, with account ownership and incomplete-index warnings; drives and playback progress remain separate.
 - Refined video and music playback, file previews, queues and collapsed playback controls, including previous/next video actions and retained subtitle membership and quota notices.
 - Linux x86_64 and ARM64 builds provide deb, rpm and AppImage packages, native playback, safe synchronization and LAN sharing. Linux updates are verified before manual installation or replacement.

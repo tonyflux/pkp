@@ -6,6 +6,7 @@ PKP 1.0.0 brings a refined workspace and Linux desktop builds, alongside playbac
 
 - A softer theme-adaptive mist backdrop, refined light and dark workspaces, clearer file cards, navigation, refresh icon and playback controls. Custom wallpapers, panel opacity and reduced-transparency settings remain available.
 - Starred markers now appear beside file and folder names instead of covering thumbnails.
+- About & Updates now links to the public GitHub feature-request form with a privacy notice.
 - Browse locally indexed files across signed-in accounts, with account ownership and incomplete-index warnings; drives and playback progress remain separate.
 - Refined video and music playback, file previews, queues and collapsed playback controls, including previous/next video actions and retained subtitle membership and quota notices.
 - Linux x86_64 and ARM64 builds provide deb, rpm and AppImage packages, native playback, safe synchronization and LAN sharing. Linux updates are verified before manual installation or replacement.
@@ -23,6 +24,7 @@ PKP 1.0.0 在 0.7.1 基础上更新桌面工作区，增加 Linux 桌面构建�
 
 - 新增随主题变化的柔和雾面背景，精修浅色和深色工作区、文件卡片、导航、刷新图标与播放控件；保留自定义壁纸、面板不透明度和降低透明度设置。
 - 文件和文件夹的星标移至名称旁，不再遮挡缩略图。
+- 「关于与更新」新增意见反馈入口，打开公开的 GitHub 功能建议表单前提示隐私风险。
 - 支持汇集已登录账号的本地文件索引进行浏览，标明文件所属账号并提示索引可能不完整；云盘和播放进度仍分别管理。
 - 优化视频、音乐播放、文件预览、播放队列及收起播放器，新增上一个／下一个视频控制，保留字幕会员及额度提示。
 - 新增 Linux x86_64／ARM64 的 deb、rpm、AppImage 构建，提供原生播放、安全同步和局域网共享；更新先验证签名与哈希，再由用户手动安装或替换。
