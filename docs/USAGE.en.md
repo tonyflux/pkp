@@ -211,6 +211,8 @@ Before signing in, open Privacy from the login page to turn off Send anonymous u
 
 “Settings” lets you adjust the language, appearance, transfers, the application’s own network proxy, privacy and security, and other options. Proxy settings do not modify the system VPN or system proxy. On macOS 12/13, WebView image loading does not support the same proxy configuration as the application and may still connect directly.
 
+To send feedback, choose “Settings → About & Updates → Community & Feedback → Send feedback” to open the GitHub feature-request form in your browser. About & Updates is also available from the sign-in page. Submitting requires a GitHub account, and feedback is public; do not include sensitive information. You can also share suggestions in the Telegram community linked in the same section.
+
 On macOS, closing the main window only hides it; menu bar residency and background transfers for each account may continue. Use “Quit PKP” or `⌘Q` to fully quit. App lock is disabled by default. Locking does not stop already authorized background transfers or sync, nor does it encrypt downloaded files or the entire local data directory.
 The standalone App Lock password also has no minimum length or complexity requirement: enter a nonempty password twice when setting or changing it. Short passwords are easier to guess. Both password types retain their existing input-size limits and failed-attempt throttling.
 

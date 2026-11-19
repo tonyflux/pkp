@@ -73,8 +73,9 @@ async function followReleaseLink(href: string) {
 }
 
 const communityLinks = [
+  { href: "https://github.com/tonyflux/pkp/issues/new?template=feature_request.yml", label: N_("意见反馈"), description: N_("在 GitHub 公开提交建议，需要 GitHub 账号"), icon: "text" },
   { href: "https://t.me/+JKfP8XaSayg5OTU1", label: N_("Telegram 交流群"), description: N_("交流使用问题、建议与更新动态"), icon: "shares" },
-  { href: "https://github.com/tonyflux/pkp", label: N_("GitHub 项目"), description: N_("查看源码、发布版本与提交反馈"), icon: "terminal" },
+  { href: "https://github.com/tonyflux/pkp", label: N_("GitHub 项目"), description: N_("查看源码与发布版本"), icon: "terminal" },
 ];
 const communityError = ref("");
 
@@ -144,6 +145,7 @@ async function openCommunity(href: string) {
           <Icon class="external" name="popout" :size="16" />
         </a>
       </div>
+      <p class="community-note">{{ t("反馈公开可见，请勿填写密码、令牌等敏感信息。") }}</p>
       <p v-if="communityError" class="error" role="alert">{{ communityError }}</p>
     </section>
   </section>
@@ -218,6 +220,7 @@ progress { display: block; width: 100%; height: 7px; accent-color: var(--accent)
 .community-copy strong { font-size: 12px; }
 .community-copy > span { color: var(--fg-dim); font-size: 11px; line-height: 1.6; }
 .community-link > .external { color: var(--fg-dim); }
+.community-note { margin: 4px 0 0; color: var(--fg-dim); font-size: 11px; line-height: 1.6; }
 .community-link:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; border-radius: 8px; }
 @media (hover: hover) { .community-link:hover .community-copy strong { color: var(--accent); } }
 @container update-settings (max-width: 460px) {

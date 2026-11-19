@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createApp, nextTick, reactive, type App } from "vue";
+import { Browser } from "@wailsio/runtime";
 import { updates } from "./updatestore";
 import UpdateSettings from "./components/UpdateSettings.vue";
 
@@ -36,5 +37,24 @@ describe("release notes", () => {
     expect(notes.textContent).toContain("<script>globalThis.releaseExecuted = true</script>");
     expect(notes.textContent).toContain("unsafe");
     expect(notes.textContent).toContain("remote");
+  });
+});
+
+describe("feedback entry", () => {
+  it("opens the public feature request template and reports browser errors", async () => {
+    const open = vi.spyOn(Browser, "OpenURL").mockRejectedValueOnce(new Error("browser unavailable"));
+    const host = document.createElement("div"); document.body.append(host);
+    app = createApp(UpdateSettings); app.mount(host); await nextTick();
+    const link = host.querySelector<HTMLAnchorElement>('a[href="https://github.com/tonyflux/pkp/issues/new?template=feature_request.yml"]')!;
+    expect(link.textContent).toContain("意见反馈");
+    expect(host.textContent).toContain("反馈公开可见");
+    link.click(); await Promise.resolve(); await nextTick();
+    expect(open).toHaveBeenCalledWith(link.href);
+    expect(host.querySelector('[role="alert"]')?.textContent).toContain("browser unavailable");
+    open.mockResolvedValueOnce();
+    link.click(); await Promise.resolve(); await nextTick();
+    expect(open).toHaveBeenCalledTimes(2);
+    expect(host.querySelector('[role="alert"]')).toBeNull();
+    open.mockRestore();
   });
 });
