@@ -47,6 +47,7 @@ func TestLinuxSurface(t *testing.T) {
 	}
 	c := New(Options{Logger: slog.New(slog.NewTextHandler(os.Stderr, nil)), Extra: map[string]string{
 		"ao": "null", "hwdec": "no", "loop-file": "inf", "pause": "yes",
+		"gpu-shader-cache": os.Getenv("PKP_TEST_SHADER_CACHE"),
 	}})
 	ctx := context.Background()
 	if err := c.Start(ctx); err != nil {
@@ -64,9 +65,6 @@ func TestLinuxSurface(t *testing.T) {
 		t.Fatal(err)
 	}
 	rect := Rect{Width: 320, Height: 240, Visible: true}
-	if os.Getenv("PKP_TEST_SHOW_FIRST") == "1" {
-		c.SetSurfaceRect(rect)
-	}
 	if err := c.Command(ctx, "loadfile", clip); err != nil {
 		t.Fatal(err)
 	}
