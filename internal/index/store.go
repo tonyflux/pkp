@@ -5,6 +5,7 @@
 package index
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"errors"
@@ -651,8 +652,14 @@ func (s *Store) Query(q Query) ([]Row, int, error) {
 	}
 	cond := " WHERE " + strings.Join(where, " AND ")
 
+	tx, err := s.db.BeginTx(context.Background(), &sql.TxOptions{ReadOnly: true})
+	if err != nil {
+		return nil, 0, fmt.Errorf("index: query: %w", err)
+	}
+	defer tx.Rollback()
+
 	var total int
-	if err := s.db.QueryRow("SELECT COUNT(*) FROM files"+cond, args...).Scan(&total); err != nil {
+	if err := tx.QueryRow("SELECT COUNT(*) FROM files"+cond, args...).Scan(&total); err != nil {
 		return nil, 0, fmt.Errorf("index: count: %w", err)
 	}
 
@@ -676,7 +683,7 @@ func (s *Store) Query(q Query) ([]Row, int, error) {
 		// No folders to put first; the bare key lets SQLite walk its index.
 		order = fmt.Sprintf(" ORDER BY %s %s, id LIMIT ? OFFSET ?", key, dir)
 	}
-	rows, err := s.db.Query("SELECT "+selectColumns+" FROM files"+cond+order, append(args, limit, q.Offset)...)
+	rows, err := tx.Query("SELECT "+selectColumns+" FROM files"+cond+order, append(args, limit, q.Offset)...)
 	if err != nil {
 		return nil, 0, fmt.Errorf("index: query: %w", err)
 	}
@@ -912,8 +919,14 @@ func (s *Store) Search(q Search) ([]Row, int, error) {
 	if err != nil {
 		return nil, 0, err
 	}
+	tx, err := s.db.BeginTx(context.Background(), &sql.TxOptions{ReadOnly: true})
+	if err != nil {
+		return nil, 0, fmt.Errorf("index: search: %w", err)
+	}
+	defer tx.Rollback()
+
 	var total int
-	if err := s.db.QueryRow(with+"SELECT COUNT(*) FROM files WHERE "+cond, args...).Scan(&total); err != nil {
+	if err := tx.QueryRow(with+"SELECT COUNT(*) FROM files WHERE "+cond, args...).Scan(&total); err != nil {
 		return nil, 0, fmt.Errorf("index: search count: %w", err)
 	}
 	dir := "DESC"
@@ -934,7 +947,7 @@ func (s *Store) Search(q Search) ([]Row, int, error) {
 		order = "CAST((SELECT key FROM json_each(?) WHERE value = files.id) AS INTEGER), id"
 		orderArgs = append(orderArgs, string(encoded))
 	}
-	rows, err := s.db.Query(with+"SELECT "+selectColumns+" FROM files WHERE "+cond+
+	rows, err := tx.Query(with+"SELECT "+selectColumns+" FROM files WHERE "+cond+
 		" ORDER BY "+order+" LIMIT ? OFFSET ?", append(orderArgs, limit, q.Offset)...)
 	if err != nil {
 		return nil, 0, fmt.Errorf("index: search: %w", err)
@@ -978,14 +991,19 @@ func (s *Store) Aggregate(q Search, by, measure string, limit int) ([]Group, int
 	}
 	cond += " AND kind != ?"
 	args = append(args, KindFolder)
+	tx, err := s.db.BeginTx(context.Background(), &sql.TxOptions{ReadOnly: true})
+	if err != nil {
+		return nil, 0, fmt.Errorf("index: aggregate: %w", err)
+	}
+	defer tx.Rollback()
 	var total int
-	if err := s.db.QueryRow(with+"SELECT COUNT(*) FROM files WHERE "+cond, args...).Scan(&total); err != nil {
+	if err := tx.QueryRow(with+"SELECT COUNT(*) FROM files WHERE "+cond, args...).Scan(&total); err != nil {
 		return nil, 0, fmt.Errorf("index: aggregate count: %w", err)
 	}
 	if limit <= 0 || limit > maxLimit {
 		limit = maxLimit
 	}
-	rows, err := s.db.Query(with+"SELECT "+key+", COALESCE(SUM(size), 0), COUNT(*) FROM files WHERE "+cond+
+	rows, err := tx.Query(with+"SELECT "+key+", COALESCE(SUM(size), 0), COUNT(*) FROM files WHERE "+cond+
 		" GROUP BY 1 ORDER BY "+order+", 1 LIMIT ?", append(args, limit)...)
 	if err != nil {
 		return nil, 0, fmt.Errorf("index: aggregate: %w", err)

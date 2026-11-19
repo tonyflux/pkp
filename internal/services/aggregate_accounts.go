@@ -155,7 +155,13 @@ func (d *DriveService) ListAllAccounts(req ListRequest, cursor string, query *AI
 					rows, total, plays, err = d.aggregateSearch(s, idx.store, *advanced, q.Offset)
 				}
 				if err != nil {
-					status.State, status.Error = "error", err.Error()
+					if sessionEnded(err) {
+						status.State, status.Error = "signin", err.Error()
+					} else if _, apiErr := s.api(); sessionEnded(apiErr) {
+						status.State, status.Error = "signin", apiErr.Error()
+					} else {
+						status.State, status.Error = "error", err.Error()
+					}
 				} else {
 					if q.Offset > total {
 						return AggregatePage{}, errors.New("stale aggregate cursor")
@@ -288,11 +294,13 @@ func (d *DriveService) aggregateSearch(s *accountSession, store *index.Store, q 
 	}
 	var plays map[string]RecentPlay
 	if q.Played != "" {
-		events, err := d.playEvents(s, drive.MaxListLimit, 1)
+		list, err := d.playsOf(s, drive.MaxListLimit, 1)
 		if err != nil {
 			return nil, 0, nil, err
 		}
-		list, _ := d.mergePlaysOf(s, events)
+		if _, apiErr := s.api(); sessionEnded(apiErr) {
+			return nil, 0, nil, apiErr
+		}
 		plays = make(map[string]RecentPlay, len(list))
 		search.IDs = []string{}
 		for _, p := range list {

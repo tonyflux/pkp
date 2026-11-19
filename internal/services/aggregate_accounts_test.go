@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/tonyflux/pkp/internal/drive"
 	"github.com/tonyflux/pkp/internal/index"
@@ -195,5 +197,104 @@ func TestAggregatePlayedSortAndAccountIsolation(t *testing.T) {
 			t.Fatalf("duplicate %s", key)
 		}
 		seen[key] = true
+	}
+}
+
+func TestAggregateSearchOfflineFallsBackToLocalPlays(t *testing.T) {
+	svc := newDriveService(t, func(w http.ResponseWriter, r *http.Request) {
+		if authAndTokenRoutes(w, r) {
+			return
+		}
+		if r.URL.Path == "/drive/v1/events" {
+			http.Error(w, "offline", http.StatusInternalServerError)
+			return
+		}
+		io.WriteString(w, `{"files":[]}`)
+	})
+	a := svc.current
+	b := seedSession(t, svc, "second@example.com")
+	for _, s := range []*accountSession{a, b} {
+		if err := s.index().store.SetMeta(index.MetaFullAt, "2026-01-01T00:00:00Z"); err != nil {
+			t.Fatal(err)
+		}
+		if err := s.index().store.Upsert([]index.Row{{ID: "vid", Name: "movie.mp4", Kind: drive.KindFile}}); err != nil {
+			t.Fatal(err)
+		}
+		if err := s.playLog().opened(playRecord{FileID: "vid", Position: 45, Duration: 100, PlayedAt: "2026-01-02T00:00:00Z"}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	page, err := svc.ListAllAccounts(ListRequest{}, "", &AIQuery{Played: "unfinished", Sort: "played"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if page.Total != 2 || len(page.Entries) != 2 {
+		t.Fatalf("offline played page = %+v, want 2 local hits", page)
+	}
+	for _, status := range page.Accounts {
+		if status.State != "ready" {
+			t.Fatalf("offline fallback account status = %+v, want ready", status)
+		}
+	}
+}
+
+func TestAggregateSearchSessionExpiredMapsToSignin(t *testing.T) {
+	var rejectToken atomic.Bool
+	svc := newDriveService(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/v1/auth/token" && rejectToken.Load() {
+			w.WriteHeader(http.StatusBadRequest)
+			io.WriteString(w, `{"error":"invalid_grant"}`)
+			return
+		}
+		if authAndTokenRoutes(w, r) {
+			return
+		}
+		io.WriteString(w, `{"events":[]}`)
+	})
+	a := svc.current
+	b := seedSession(t, svc, "second@example.com")
+	c := seedSession(t, svc, "third@example.com")
+	for _, s := range []*accountSession{a, b, c} {
+		if err := s.index().store.SetMeta(index.MetaFullAt, "2026-01-01T00:00:00Z"); err != nil {
+			t.Fatal(err)
+		}
+		if err := s.index().store.Upsert([]index.Row{{ID: "vid", Name: "movie.mp4", Kind: drive.KindFile}}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := a.playLog().opened(playRecord{FileID: "vid", Position: 45, Duration: 100, PlayedAt: "2026-01-02T00:00:00Z"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := b.playLog().opened(playRecord{FileID: "vid", Position: 45, Duration: 100, PlayedAt: "2026-01-02T00:00:00Z"}); err != nil {
+		t.Fatal(err)
+	}
+	// Test both an expired account with a local playLog (b) and one without (c).
+	c.mu.Lock()
+	c.plays = nil
+	c.mu.Unlock()
+	for _, s := range []*accountSession{b, c} {
+		tok, err := s.tokens.Current()
+		if err != nil {
+			t.Fatal(err)
+		}
+		tok.ExpiresAt = time.Now().Add(-time.Hour)
+		if err := s.tokens.Seed(tok); err != nil {
+			t.Fatal(err)
+		}
+	}
+	rejectToken.Store(true)
+	page, err := svc.ListAllAccounts(ListRequest{}, "", &AIQuery{Played: "any"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	states := map[string]string{}
+	for _, status := range page.Accounts {
+		states[status.Account] = status.State
+	}
+	if states[a.key] != "ready" || states[b.key] != "signin" || states[c.key] != "signin" {
+		t.Fatalf("account states after session expiry = %v, want ready/signin/signin", states)
+	}
+	if page.Total != 1 || len(page.Entries) != 1 || page.Entries[0].Account != a.key {
+		t.Fatalf("entries after session expiry = %+v, want only healthy account", page)
 	}
 }

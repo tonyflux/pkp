@@ -1308,14 +1308,24 @@ async function own<T>(fn: () => Promise<T>): Promise<T> {
  * A read that a switch overtook is dropped: it would put the account it
  * was answered for back on screen, and the switch reads again anyway.
  */
+let enteringAccount = 0;
+
 export async function loadAccounts() {
   const seen = epoch;
   const [list, status] = await Promise.all([DriveService.Accounts(), DriveService.Status()]).catch(() => [null, null]);
   if (!list || !status || seen !== epoch) return;
   const before = accounts.list;
   accounts.list = list;
+  let scopeReset = false;
+  if (list.length <= 1 && ui.scope === "accounts") {
+    ui.scope = "folder";
+    scopeReset = true;
+  }
   // An account removed and added again in this run is back.
   for (const a of list) removedAccounts.delete(a.id);
+  if (scopeReset && !enteringAccount && status.configured && status.accountId === currentId.value && ui.view === "all") {
+    void reload(true);
+  }
   if (!inPlayerWindow && !inMenuBarWindow) {
     for (const a of list) if (a.id !== status.accountId) void loadInbox(a.id);
   }
@@ -1421,6 +1431,7 @@ function restorePlace(id: string, fresh: boolean) {
   ui.query = place?.query ?? "";
   ui.category = place?.category ?? "all";
   ui.scope = place?.scope ?? "folder";
+  if (accounts.list.length <= 1 && ui.scope === "accounts") ui.scope = "folder";
   scopeAnchors.folder = scopeAnchors.drive = scopeAnchors.accounts = null;
   ui.route = "files";
   pendingAnchor = place?.anchor ?? null;
@@ -1449,12 +1460,17 @@ function leaveScreen() {
  * its root when `fresh` or new to this run, then its data.
  */
 async function enterAccount(status: DriveStatus, opts: { fresh?: boolean; message?: string; tone?: "info" | "success" | "error" }) {
-  drive.status = status;
-  accounts.switching = "";
-  restorePlace(status.accountId, !!opts.fresh);
-  await loadAccounts();
-  if (opts.message) notify(opts.message, opts.tone ?? "success");
-  if (status.configured) await loadAccountData();
+  enteringAccount += 1;
+  try {
+    drive.status = status;
+    accounts.switching = "";
+    restorePlace(status.accountId, !!opts.fresh);
+    await loadAccounts();
+    if (opts.message) notify(opts.message, opts.tone ?? "success");
+    if (status.configured) await loadAccountData();
+  } finally {
+    enteringAccount -= 1;
+  }
 }
 
 /** loadAccountData fills the screen of the account on screen. */
@@ -2003,6 +2019,7 @@ export async function removeAccount(id: string): Promise<boolean> {
     }
     places.delete(id);
     fileTrails.delete(id);
+    accountPhases.delete(id);
     delete transfers.cloud[id];
     delete memberships[id];
     drive.uploads = drive.uploads.filter((t) => t.account !== id);
@@ -2431,6 +2448,14 @@ function listRequest(offset: number, pageToken: string): ListRequest {
 /** Whether All Files lays out every file of the drive, rather than a folder or search results. */
 export const wholeDrive = computed(() => ui.view === "all" && ui.scope === "drive" && !(listQuery.value && indexReady.value));
 
+function clearDriveList() {
+  drive.entries = [];
+  drive.total = -1;
+  drive.offset = 0;
+  drive.nextPageToken = "";
+  drive.listLoading = false;
+}
+
 /** setScope switches All Files between the folder on screen and every file of the drive. */
 export async function setScope(scope: FilesScope) {
   if (ui.scope === scope) return;
@@ -2441,7 +2466,7 @@ export async function setScope(scope: FilesScope) {
   localSearch.force = false;
   localSearch.range = null;
   if (scope !== "accounts") await reload(true);
-  else { drive.entries = []; drive.total = -1; drive.offset = 0; drive.nextPageToken = ""; drive.listLoading = false; }
+  else clearDriveList();
   await nextTick();
   filesPlace.restore(scopeAnchors[scope]);
 }
@@ -2572,12 +2597,14 @@ export async function loadIndexProgress() {
   const progress = await DriveService.IndexProgress().catch(() => null);
   if (!progress || account !== accountKey()) return;
   drive.indexProgress = progress;
+  accountPhases.set(progress.account, progress.phase);
   wasReady = progress.ready;
   lastPhase = "";
 }
 
 let wasReady = false;
 let lastPhase = "";
+const accountPhases = new Map<string, string>();
 function applyIndexProgress(progress: IndexProgress) {
   // Every signed-in account keeps its index current; the page follows the
   // one on screen.
@@ -2585,7 +2612,10 @@ function applyIndexProgress(progress: IndexProgress) {
     arrivalIndexSyncs.set(progress.account, progress.syncedAt);
     void loadInbox(progress.account);
   }
-  if (ui.view === "all" && ui.scope === "accounts" && progress.phase === "idle") aggregateRefresh.value++;
+  const prevPhase = accountPhases.get(progress.account) ?? "";
+  accountPhases.set(progress.account, progress.phase);
+  const accountPassDone = progress.phase === "idle" && prevPhase !== "" && prevPhase !== "idle";
+  if (ui.view === "all" && ui.scope === "accounts" && accountPassDone) aggregateRefresh.value++;
   if (progress.account !== currentId.value || !drive.status?.configured) return;
   drive.indexProgress = progress;
   const becameReady = progress.ready && !wasReady;
@@ -2622,7 +2652,8 @@ export async function openView(view: LibraryView) {
   drive.trail = view === "all" ? (fileTrails.get(currentId.value) ?? []).map((c) => ({ ...c })) : [];
   void nextTick(() => (restoring = false));
   clearSelection();
-  await reload(true);
+  if (view === "all" && ui.scope === "accounts") clearDriveList();
+  else await reload(true);
 }
 
 export async function openFolder(entry: Entry) {
@@ -2797,7 +2828,8 @@ export function openLocalSearch(text: string, keepRange = false): void {
   if (!leaveSavedHistory(() => openLocalSearch(text, keepRange))) return;
   localSearch.force = false;
   if (!keepRange) localSearch.range = null;
-  const moved = ui.view !== "all" || drive.trail.length > 0;
+  const moved = ui.view !== "all" || ui.scope === "accounts" || drive.trail.length > 0;
+  if (ui.scope === "accounts") ui.scope = "folder";
   ui.view = "all";
   ui.route = "files";
   ui.query = text;
@@ -9278,7 +9310,12 @@ export async function play(entry: Entry, queue?: Entry[], startAt = 0): Promise<
   const audio = entry.category === "audio";
   const list = (queue ?? visibleFiles.value).filter((e) => e.playable && (e.category === "audio") === audio).map((e) => ({ ...e, account: entryAccount(e) }));
   const previous = { owner: player.owner, playlist: player.playlist, index: player.index, source: player.source };
-  const previousView = { presentation: player.presentation, route: ui.route, returnRoute: player.returnRoute };
+  const previousView = { presentation: player.presentation, returnRoute: player.returnRoute };
+  const previousRoute = ui.route;
+  const restore = () => {
+    Object.assign(player, previous, previousView);
+    if (ui.route === "player") ui.route = previousRoute;
+  };
   player.playlist = list.length ? list : [{ ...entry, account }];
   player.index = Math.max(0, player.playlist.findIndex((e) => entryKey(e) === entryKey(entry)));
   player.source = playSource(entry);
@@ -9287,7 +9324,7 @@ export async function play(entry: Entry, queue?: Entry[], startAt = 0): Promise<
   // has to exist before mpv initialises its video output.
   await nextTick();
   if (currentId.value !== screen || accounts.switching) {
-    Object.assign(player, previous);
+    restore();
     return "cancelled";
   }
   if (player.presentation === "window") {
@@ -9296,7 +9333,7 @@ export async function play(entry: Entry, queue?: Entry[], startAt = 0): Promise<
       return true;
     });
     if (!opened || currentId.value !== screen || accounts.switching) {
-      Object.assign(player, previous);
+      restore();
       return opened ? "cancelled" : "failed";
     }
   }
@@ -9307,12 +9344,21 @@ export async function play(entry: Entry, queue?: Entry[], startAt = 0): Promise<
     return true;
   });
   if (!opened) {
-    Object.assign(player, previous, { presentation: previousView.presentation, returnRoute: previousView.returnRoute });
-    ui.route = previousView.route;
+    restore();
     return "failed";
   }
+  if (currentId.value !== screen || accounts.switching) {
+    if (previousView.presentation === "off" || player.presentation === "off") {
+      Object.assign(player, { owner: "", playlist: [], index: -1, source: "", presentation: "off", returnRoute: previousView.returnRoute });
+      if (ui.route === "player") ui.route = previousRoute;
+      void PlayerService.StopPlayback().catch(() => undefined);
+    } else {
+      restore();
+      void stopPlayback();
+    }
+    return "cancelled";
+  }
   player.owner = account;
-  if (currentId.value !== screen || accounts.switching) return "cancelled";
   await applyRememberedVolume();
   return "opened";
 }

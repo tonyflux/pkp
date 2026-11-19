@@ -108,7 +108,15 @@ function collapse() {
         role="tabpanel"
         aria-labelledby="panel-tab-overview"
       />
-      <p v-else-if="ui.route === 'files' && ui.view === 'all' && ui.scope === 'accounts'" class="view">{{ t("汇集各账号的文件，云盘仍分别管理") }}</p>
+      <p
+        v-else-if="ui.route === 'files' && ui.view === 'all' && ui.scope === 'accounts'"
+        id="panel-details"
+        class="view"
+        role="tabpanel"
+        aria-labelledby="panel-tab-details"
+      >
+        {{ t("汇集各账号的文件，云盘仍分别管理") }}
+      </p>
       <PanelDetails v-else id="panel-details" key="details" class="view" role="tabpanel" aria-labelledby="panel-tab-details" />
     </div>
 

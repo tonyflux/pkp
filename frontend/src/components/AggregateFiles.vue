@@ -118,6 +118,11 @@ function activate(entry: OwnedEntry) {
   else if (entry.preview) void preview(entry);
   else void manage(entry);
 }
+function onRowEnter(event: KeyboardEvent, entry: OwnedEntry) {
+  if ((event.target as HTMLElement | null)?.closest("button, a, input, select, textarea")) return;
+  event.preventDefault();
+  activate(entry);
+}
 function download(entry: OwnedEntry) {
   if (entry.account) void downloadEntries([entry], entry.account);
   else notify(t("发生了意外错误"), "error");
@@ -160,7 +165,7 @@ onBeforeUnmount(() => { alive = false; serial++; clearTimeout(timer); });
     <div v-if="loading" class="empty" role="status"><Orbit :size="26" /> {{ t("正在加载…") }}</div>
     <div v-else-if="!rows.length && !error && !blocked" class="empty">{{ t("聚合范围内未找到文件") }}</div>
     <div v-else-if="ui.layout === 'grid'" class="grid">
-      <article v-for="entry in rows" :key="entryKey(entry)" class="card" :class="{ selected: selected === entryKey(entry) }" tabindex="0" @click="selected = entryKey(entry)" @dblclick="activate(entry)" @keydown.enter.prevent="activate(entry)">
+      <article v-for="entry in rows" :key="entryKey(entry)" class="card" :class="{ selected: selected === entryKey(entry) }" tabindex="0" @click="selected = entryKey(entry)" @dblclick="activate(entry)" @keydown.enter="onRowEnter($event, entry)">
         <div class="thumb">
           <Thumb :src="entry.thumbnail" :alt="entry.name" lazy><Icon :name="entry.folder ? 'folder' : entry.category" :size="28" /></Thumb>
           <span v-if="entry.duration" class="duration">{{ clock(entry.duration) }}</span>
@@ -180,7 +185,7 @@ onBeforeUnmount(() => { alive = false; serial++; clearTimeout(timer); });
     </div>
     <table v-else class="rows">
       <thead><tr><th>{{ t("名称") }}</th><th>{{ t("大小") }}</th><th>{{ t("column|位置") }}</th><th></th></tr></thead>
-      <tbody><tr v-for="entry in rows" :key="entryKey(entry)" :class="{ selected: selected === entryKey(entry) }" tabindex="0" @click="selected = entryKey(entry)" @dblclick="activate(entry)" @keydown.enter.prevent="activate(entry)">
+      <tbody><tr v-for="entry in rows" :key="entryKey(entry)" :class="{ selected: selected === entryKey(entry) }" tabindex="0" @click="selected = entryKey(entry)" @dblclick="activate(entry)" @keydown.enter="onRowEnter($event, entry)">
         <td><Icon :name="entry.folder ? 'folder' : entry.category" :size="18" /> <span :title="entry.name">{{ entry.name }}</span></td>
         <td>{{ bytes(entry.size) }}</td><td :title="source(entry)">{{ source(entry) }}</td>
         <td class="actions"><button v-if="entry.playable || entry.preview" class="quiet icon" :title="entry.playable ? t('播放') : t('预览')" @click.stop="activate(entry)"><Icon :name="entry.playable ? 'play' : 'eye'" :size="16" /></button><button class="quiet icon" :title="t('下载到电脑')" @click.stop="download(entry)"><Icon name="download" :size="16" /></button><button class="quiet icon" :title="t('进入所属账号管理')" @click.stop="manage(entry)"><Icon name="folder" :size="16" /></button></td>
