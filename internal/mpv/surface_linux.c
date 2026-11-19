@@ -135,6 +135,12 @@ static gboolean queue_draw(gpointer unused) {
     g_atomic_int_set(&update_pending, 0);
     if (area && render && visible && gtk_widget_get_mapped(area) &&
         gtk_gl_area_get_error(GTK_GL_AREA(area)) == NULL) {
+#ifdef PKP_SURFACE_TEST
+        if (g_strcmp0(g_getenv("PKP_TEST_CASE"), "gtk-snapshot") == 0) {
+            gtk_gl_area_queue_render(GTK_GL_AREA(area));
+            return G_SOURCE_REMOVE;
+        }
+#endif
         // The transparent WebKit overlay can occlude GtkGLArea's snapshot;
         // rendering must not depend on GTK choosing to snapshot the lower widget.
         gtk_gl_area_make_current(GTK_GL_AREA(area));

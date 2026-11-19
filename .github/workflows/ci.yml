@@ -40,10 +40,10 @@ jobs:
             -v "$PWD:/src:ro" pkp-linux-builder bash -ec '
               useradd -m tester
               runuser -u tester -- env PATH="$PATH" go test -c -tags pkp_surface_test -o /tmp/surface.test ./internal/mpv
-              for mode in original single-thread; do
+              for mode in control h264 hevc h264-active gtk-snapshot; do
                 for trial in 1 2 3; do
-                  printf "\n=== decoder=%s trial=%s ===\n" "$mode" "$trial"
-                  runuser -u tester -- env PKP_TEST_DECODER="$mode" PKP_TEST_VIDEO_SURFACE=1 GDK_BACKEND=x11 LIBGL_ALWAYS_SOFTWARE=1 dbus-run-session -- xvfb-run -a /tmp/surface.test -test.run "^TestLinuxSurface$" -test.v -test.timeout 60s > "/tmp/$mode-$trial.log" 2>&1 || true
+                  printf "\n=== case=%s trial=%s ===\n" "$mode" "$trial"
+                  runuser -u tester -- env PKP_TEST_CASE="$mode" PKP_TEST_VIDEO_SURFACE=1 GDK_BACKEND=x11 LIBGL_ALWAYS_SOFTWARE=1 dbus-run-session -- xvfb-run -a /tmp/surface.test -test.run "^TestLinuxSurface$" -test.v -test.timeout 60s > "/tmp/$mode-$trial.log" 2>&1 || true
                   grep -E "pkp (fixture|decoded|render|pixels):|--- (PASS|FAIL): TestLinuxSurface|panic:|^PASS$|^FAIL$" "/tmp/$mode-$trial.log"
                 done
               done
