@@ -587,10 +587,6 @@ static void rect_active(void *data) {
     GtkWidget *parent = gtk_widget_get_parent(area);
     if (!parent) return;
     visible = rect->visible;
-#ifdef PKP_SURFACE_TEST
-    test_requested_width = (int)ceil(rect->w);
-    test_requested_height = (int)ceil(rect->h);
-#endif
     gtk_fixed_move(GTK_FIXED(parent), area, rect->x, rect->y);
     gtk_widget_set_size_request(area, (int)ceil(rect->w), (int)ceil(rect->h));
     gtk_widget_set_opacity(area, visible ? 1 : 0);
