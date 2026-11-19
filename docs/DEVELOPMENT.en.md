@@ -62,6 +62,8 @@ make linux-package ARCH=arm64
 
 Outputs are `bin/PKP-<version>-linux-<arch>.deb`, `.rpm`, `.AppImage`, and `-runtime-sources.tar.gz`. Deb uses distribution dependencies. RPM and AppImage include WebKit child processes, resources and the dynamic-library closure; a user namespace preserves compiled `/usr` paths without disabling the sandbox. Enable Ubuntu `deb-src` and retain APT indexes: packaging downloads exact corresponding sources and notices for the packages actually bundled. The pinned macOS/Windows media-source archive is not a substitute.
 
+Linux CI runs the X11/Wayland rendering tests before packaging and downloads corresponding runtime sources in one batch. Its cache holds only Ubuntu source downloads for the pinned toolchain and architecture; packaging still resolves exact versions from the signed indexes, checks each file's hash, and verifies the new artifacts.
+
 For a release, build each architecture from the same clean committed snapshot and run `make linux-provenance ARCH=<arch>`; use `make linux-docker-provenance ARCH=<arch>` inside the container workflow. The provenance check compares the deb, rpm and AppImage executable revision and matches the bundled runtime to its source archive. Old or modified packages cannot be used for release. Ordinary development builds allow uncommitted changes but cannot be released. The provenance file prevents accidental mixing; it is not a signature against deliberate forgery.
 
 ```sh

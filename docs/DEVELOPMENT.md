@@ -62,6 +62,8 @@ make linux-package ARCH=arm64
 
 输出为 `bin/PKP-<版本>-linux-<架构>.deb`、`.rpm`、`.AppImage` 与 `-runtime-sources.tar.gz`。deb 使用系统依赖；RPM 与 AppImage 包含 WebKit 的子进程、资源和动态库闭包，使用用户命名空间保持 WebKit 编译时的 `/usr` 路径，不关闭沙箱。构建需启用 Ubuntu `deb-src`，保留 APT 索引，并下载与实际捆绑包版本一致的对应源码及许可证；不能用 macOS／Windows 的固定媒体源码包替代它。
 
+Linux CI 在打包前运行 X11／Wayland 图形测试，并批量下载运行库对应源码。CI 只缓存与固定构建环境和架构匹配的 Ubuntu 源码下载；每次打包仍从签名索引解析准确版本、校验每个文件的哈希，再验证新产物。
+
 发布前在干净、已提交的同一源码快照分别为两个架构执行打包与 `make linux-provenance ARCH=<架构>`；在容器中使用 `make linux-docker-provenance ARCH=<架构>`。来源校验会检查 deb、rpm、AppImage 内的源码提交，并核对随包运行时与对应源码归档；旧包或改动过的包不能用于发布。普通开发构建允许未提交更改，但不能作为发布包。来源文件只用于发布预检，不是防止人为伪造的签名证明。
 
 ```sh

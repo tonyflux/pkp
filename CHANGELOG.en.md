@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+- Run Linux rendering checks before packaging and batch and cache verified runtime source downloads, retaining package and source verification on both architectures.
+
 - Fix Linux runtime-source verification mistaking a signature-tool version for the package version while retaining source and digest checks.
 
 - Add a feedback entry in About & Updates that opens the GitHub feature-request form and warns that submissions are public.

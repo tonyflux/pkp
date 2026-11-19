@@ -8,22 +8,24 @@ mkdir -p "$sources/distro"
 # apt verifies each exact source against the signed Ubuntu source indexes.
 # Include development packages too: the AppImage runtime links their static libs.
 { cut -f3,4 "$appdir/runtime-packages.tsv"; dpkg-query -W -f='${source:Package}\t${source:Version}\n' libfuse3-dev libsquashfuse-dev zlib1g-dev libzstd-dev liblzma-dev liblz4-dev liblzo2-dev libc6-dev "$(dpkg-query -S "$(gcc -print-libgcc-file-name)" | cut -d: -f1)"; } | sort -u > "$sources/source-packages.tsv"
+packages=()
 while IFS=$'\t' read -r name version; do
-  # Query from an empty directory so apt prints every file, including cached ones.
-  uris=$(mktemp -d)
-  files=$(cd "$uris" && apt-get source --print-uris --download-only "$name=$version" | awk "/^'/ {print \$2, \$4}")
-  rmdir "$uris"
-  [ -n "$files" ] || { echo "Missing exact source: $name=$version" >&2; exit 1; }
-  (cd "$cache" && apt-get source --download-only "$name=$version")
-  while read -r file checksum; do
-    case $checksum in
-      SHA256:*) echo "${checksum#*:}  $cache/$file" | sha256sum -c --status ;;
-      SHA512:*) echo "${checksum#*:}  $cache/$file" | sha512sum -c --status ;;
-      *) echo "Unsupported source checksum: $checksum" >&2; exit 1 ;;
-    esac
-    cp "$cache/$file" "$sources/distro/"
-  done <<< "$files"
+  packages+=("$name=$version")
 done < "$sources/source-packages.tsv"
+# Resolve once from an empty directory so APT prints digests even for cached files.
+uris=$(mktemp -d)
+files=$(cd "$uris" && apt-get source --only-source --print-uris --download-only "${packages[@]}" | awk "/^'/ {print \$2, \$4}")
+rmdir "$uris"
+[ -n "$files" ] || { echo 'Missing exact runtime sources' >&2; exit 1; }
+(cd "$cache" && apt-get source --only-source --download-only "${packages[@]}")
+while read -r file checksum; do
+  case $checksum in
+    SHA256:*) echo "${checksum#*:}  $cache/$file" | sha256sum -c --status ;;
+    SHA512:*) echo "${checksum#*:}  $cache/$file" | sha512sum -c --status ;;
+    *) echo "Unsupported source checksum: $checksum" >&2; exit 1 ;;
+  esac
+  cp "$cache/$file" "$sources/distro/"
+done <<< "$files"
 cp "$appdir/runtime-packages.tsv" "$sources/"
 mkdir -p "$sources/licenses"
 cp -a "$appdir/usr/share/doc/." "$sources/licenses/"
