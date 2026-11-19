@@ -32,6 +32,9 @@ static GMutex test_mutex;
 static GCond test_cond;
 static int test_queued;
 static int test_armed;
+static char test_gl_renderer[256];
+static GLenum test_gl_before, test_gl_render, test_gl_read, test_fbo_status;
+static GLint test_pack_skip_pixels, test_pack_skip_rows;
 void pkp_surface_test_reset(void) {
     g_mutex_lock(&test_mutex);
     test_queued = 0;
@@ -252,19 +255,44 @@ static gboolean draw(GtkGLArea *widget, GdkGLContext *context, gpointer unused) 
         {MPV_RENDER_PARAM_BLOCK_FOR_TARGET_TIME, &block},
         {MPV_RENDER_PARAM_INVALID, NULL}
     };
+#ifdef PKP_SURFACE_TEST
+    GLenum gl_before = glGetError();
+#endif
     mpv_render_context_update(render);
     if (mpv_render_context_render(render, params) < 0) {
         fail_capture(-1);
         return TRUE;
     }
+#ifdef PKP_SURFACE_TEST
+    GLenum gl_render = glGetError();
+#endif
     glPixelStorei(GL_PACK_ALIGNMENT, 1);
     glBindFramebuffer(GL_FRAMEBUFFER, video_fbo);
     glPixelStorei(GL_PACK_ROW_LENGTH, 0);
     glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
+#ifdef PKP_SURFACE_TEST
+    GLenum fbo_status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+    GLint pack_skip_pixels, pack_skip_rows;
+    glGetIntegerv(GL_PACK_SKIP_PIXELS, &pack_skip_pixels);
+    glGetIntegerv(GL_PACK_SKIP_ROWS, &pack_skip_rows);
+#endif
     unsigned char top[4], bottom[4];
     glReadPixels(w / 2, h * 2 / 3, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, top);
     glReadPixels(w / 2, h / 3, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, bottom);
+#ifdef PKP_SURFACE_TEST
+    GLenum gl_read = glGetError();
+    const GLubyte *gl_renderer = glGetString(GL_RENDERER);
+#endif
     g_mutex_lock(&observations);
+#ifdef PKP_SURFACE_TEST
+    if (gl_renderer) g_strlcpy(test_gl_renderer, (const char *)gl_renderer, sizeof(test_gl_renderer));
+    if (gl_before) test_gl_before = gl_before;
+    if (gl_render) test_gl_render = gl_render;
+    if (gl_read) test_gl_read = gl_read;
+    test_fbo_status = fbo_status;
+    test_pack_skip_pixels = pack_skip_pixels;
+    test_pack_skip_rows = pack_skip_rows;
+#endif
     drawn_width = w;
     drawn_height = h;
     drawn_scale = scale;
@@ -376,6 +404,11 @@ static void attach_active(void *data) {
     memset(top_pixel, 0, sizeof(top_pixel));
     memset(bottom_pixel, 0, sizeof(bottom_pixel));
     drawn_width = drawn_height = drawn_scale = 0;
+#ifdef PKP_SURFACE_TEST
+    test_gl_renderer[0] = '\0';
+    test_gl_before = test_gl_render = test_gl_read = test_fbo_status = 0;
+    test_pack_skip_pixels = test_pack_skip_rows = 0;
+#endif
     g_mutex_unlock(&observations);
     surface_owner = args->lifetime;
     core = args->mpv;
@@ -592,7 +625,11 @@ int pkp_surface_capture(int timeout_ms, unsigned char **rgba, int *width, int *h
 }
 char *pkp_surface_describe(void) {
     g_mutex_lock(&observations);
+#ifdef PKP_SURFACE_TEST
+    char *description = g_strdup_printf("GTK4 GtkGLArea attached=%d frames=%llu backing=%dx%d scale=%d capture=%d GL renderer=%s fbo_status=0x%x errors(before/render/read)=0x%x/0x%x/0x%x pack_skip=%d,%d", attached, frames, drawn_width, drawn_height, drawn_scale, capture_pending, test_gl_renderer, test_fbo_status, test_gl_before, test_gl_render, test_gl_read, test_pack_skip_pixels, test_pack_skip_rows);
+#else
     char *description = g_strdup_printf("GTK4 GtkGLArea attached=%d frames=%llu backing=%dx%d scale=%d capture=%d", attached, frames, drawn_width, drawn_height, drawn_scale, capture_pending);
+#endif
     g_mutex_unlock(&observations);
     return description;
 }

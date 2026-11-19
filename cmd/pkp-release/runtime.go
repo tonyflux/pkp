@@ -107,6 +107,9 @@ func verifyRuntimeSourceArchive(file, commit string, bundle map[string][]byte) e
 				hash.Write(data)
 				var source, version string
 				for _, line := range strings.Split(string(data), "\n") {
+					if line == "-----BEGIN PGP SIGNATURE-----" {
+						break
+					}
 					if strings.HasPrefix(line, "Source: ") {
 						source = strings.TrimPrefix(line, "Source: ")
 					}

@@ -5,6 +5,7 @@ package mpv
 import (
 	"context"
 	"image"
+	"log/slog"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -44,7 +45,7 @@ func TestLinuxSurface(t *testing.T) {
 	if t.Failed() {
 		return
 	}
-	c := New(Options{Logger: quiet(), Extra: map[string]string{
+	c := New(Options{Logger: slog.New(slog.NewTextHandler(os.Stderr, nil)), Extra: map[string]string{
 		"ao": "null", "hwdec": "no", "loop-file": "inf", "pause": "yes",
 	}})
 	ctx := context.Background()
@@ -79,7 +80,7 @@ func TestLinuxSurface(t *testing.T) {
 			}
 			time.Sleep(20 * time.Millisecond)
 		}
-		for _, name := range []string{"path", "pause", "video-params", "video-out-params", "time-pos", "idle-active", "eof-reached"} {
+		for _, name := range []string{"path", "pause", "video-codec", "current-vo", "current-hwdec", "vo-configured", "video-params", "video-out-params", "time-pos", "frame-drop-count", "decoder-frame-drop-count", "idle-active", "eof-reached"} {
 			var value any
 			err := c.GetProperty(ctx, name, &value)
 			t.Logf("%s = %#v (%v)", name, value, err)

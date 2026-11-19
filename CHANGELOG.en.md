@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+- Fix Linux runtime-source verification mistaking a signature-tool version for the package version while retaining source and digest checks.
+
 - Add a feedback entry in About & Updates that opens the GitHub feature-request form and warns that submissions are public.
 
 - Fix the Linux AppImage runtime source download after the GitHub API returned 415, retaining the pinned source hash check.

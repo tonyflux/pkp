@@ -19,7 +19,7 @@ func TestRuntimeArchiveMatchesBundleAndSources(t *testing.T) {
 		"runtime-source-commit": []byte(commit + "\n"),
 		"runtime-build-id":      []byte(strings.Repeat("a", 64) + "\n"),
 	}
-	dsc := []byte("-----BEGIN PGP SIGNED MESSAGE-----\nHash: SHA256\n\nFormat: 3.0 (quilt)\nSource: src\nVersion: 1\n-----BEGIN PGP SIGNATURE-----\nsignature\n-----END PGP SIGNATURE-----\n")
+	dsc := []byte("-----BEGIN PGP SIGNED MESSAGE-----\nHash: SHA384\n\nFormat: 3.0 (quilt)\nSource: src\nVersion: 1\n-----BEGIN PGP SIGNATURE-----\nVersion: GnuPG v1.4.14 (MirBSD)\nsignature\n-----END PGP SIGNATURE-----\n")
 	digest := sha256.Sum256(dsc)
 	files := map[string][]byte{
 		"runtime-packages.tsv":  bundle["runtime-packages.tsv"],
@@ -58,6 +58,15 @@ func TestRuntimeArchiveMatchesBundleAndSources(t *testing.T) {
 	if err := verifyRuntimeSourceArchive(file, commit, bundle); err != nil {
 		t.Fatal(err)
 	}
+	files["source-packages.tsv"] = []byte("src\tGnuPG v1.4.14 (MirBSD)")
+	bundle["runtime-packages.tsv"] = []byte("lib\t1\tsrc\tGnuPG v1.4.14 (MirBSD)\n")
+	files["runtime-packages.tsv"] = bundle["runtime-packages.tsv"]
+	if err := verifyRuntimeSourceArchive(writeArchive(), commit, bundle); err == nil {
+		t.Fatal("accepted signature armor version as source version")
+	}
+	files["source-packages.tsv"] = []byte("src\t1")
+	bundle["runtime-packages.tsv"] = []byte("lib\t1\tsrc\t1\n")
+	files["runtime-packages.tsv"] = bundle["runtime-packages.tsv"]
 	if err := verifyRuntimeSourceArchive(file, strings.Repeat("b", 40), bundle); err == nil {
 		t.Fatal("accepted wrong commit")
 	}
