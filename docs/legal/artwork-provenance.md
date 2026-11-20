@@ -43,7 +43,22 @@ Current `build/appicon.png` and `build/appicon.icon/Assets/appicon.png` are byte
 
 - DMG background: drawn by tracked `build/darwin/dmg-background.swift` using AppKit gradients, text and arrows; its editable generating source is included.
 - TMDB mark: `frontend/src/assets/tmdb.svg` is an external service mark, not claimed as PKP-owned artwork. TMDB attribution remains in THIRD_PARTY.
-- Public screenshots: `assets/screenshots/workspace.png` and `player.png` remain earlier isolated captures with synthetic data; the active README screenshots (`assets/screenshots/{workspace-0.4.0.webp,search.png,assistant.png,sync.png,lan-desktop.webp,privacy.png}` and `assets/screenshots/en/{workspace-0.4.0.webp,accounts.webp,assistant.webp,sync.webp,lan-desktop.webp,app-lock.webp}`, plus `lan-mobile.webp` and `en/lan-mobile.webp`) are isolated browser captures of the current UI with synthetic accounts/folders/storage data (`Demo`/`Archive`, `/Simulation/Travel`, `192.0.2.10`) and the default `mist-light.svg` backdrop, rather than production cloud data. Of the earlier English website illustrations copied from https://pkpapp.cc/en on 2026-11-02 (labeled on the site as redrawn from the UI with fictional demo data), `en/workspace.webp` and `en/player.webp` remain untouched on disk in the table below, while `en/assistant.webp`, `en/sync.webp`, `en/accounts.webp`, and `en/app-lock.webp` have been replaced by current live isolated browser captures. This record does not independently clear every embedded image or establish the rights of old binary releases.
+- Public screenshots: the active desktop README images (`assets/screenshots/{workspace,search,assistant,sync,lan-desktop,privacy}-dark.webp` and `assets/screenshots/en/{workspace,accounts,assistant,sync,lan-desktop,app-lock}-dark.webp`) were captured from the isolated local website demo, which uses a desktop UI snapshot and synthetic accounts, folders and storage data (`Demo`/`Archive`, `/Simulation/Travel`, `192.0.2.10`). They use the default `mist-dark.svg` backdrop; the demo does not access production cloud data or start LAN sharing. The mobile images (`lan-mobile.webp` and `en/lan-mobile.webp`) are earlier captures from a separate real loopback visitor session with example files, not a real phone or production cloud content. Earlier screenshots remain on disk, including `workspace.png` and `player.png` with synthetic data. The earlier English website illustrations copied from https://pkpapp.cc/en on 2026-11-02 were labeled on the site as redrawn from the UI with fictional demo data: `en/workspace.webp` and `en/player.webp` remain untouched, while `en/assistant.webp`, `en/sync.webp`, `en/accounts.webp`, and `en/app-lock.webp` were replaced by isolated browser captures. This record does not independently clear every embedded image or establish the rights of old binary releases.
+
+  - `assets/screenshots/workspace-dark.webp`: SHA-256 `2c7eca40ca8e3d2cd89ceac6f64d01d2766c0bb885f392a6b43aba7ea09d3fb0`.
+  - `assets/screenshots/search-dark.webp`: SHA-256 `bd5c296e44173e59a0f02551c125a059b933e65d397ee3d2c7e919581350f967`.
+  - `assets/screenshots/assistant-dark.webp`: SHA-256 `0dce84d5bf55c2b66abf5ad4065031fcd9942d2da9ac7a79092e419d24d62269`.
+  - `assets/screenshots/sync-dark.webp`: SHA-256 `98b6a00e8dfcb1433fc157c7c9ce5e65b7a3691b6ea07e50acb7e5218833da1b`.
+  - `assets/screenshots/lan-desktop-dark.webp`: SHA-256 `dcea8ef33e1e9c1662b007856cf728f4029f8388348081a413bfdfd62e0d9ad3`.
+  - `assets/screenshots/privacy-dark.webp`: SHA-256 `ca9b09960cda834307fd3b28ea5ed90b7e34451f9bf2f5bfbac39e8ca1f85823`.
+  - `assets/screenshots/en/workspace-dark.webp`: SHA-256 `2036c1f5786fe76137129f4f66ae0e052c92e3b4d5719e563a0871e95b78a6a7`.
+  - `assets/screenshots/en/accounts-dark.webp`: SHA-256 `9b19fdc0a216375f7bb7296423861bc2375559e898bcc736247d15a124187f6a`.
+  - `assets/screenshots/en/assistant-dark.webp`: SHA-256 `71507a83c68dc4b75c1b0bd53f73d252519d48928c17e8e86a3df3c9991b699b`.
+  - `assets/screenshots/en/sync-dark.webp`: SHA-256 `5686cef1f6a4070bf6bcc003e22ab19710a2b6e1da858c20ae23bdefc23f2734`.
+  - `assets/screenshots/en/lan-desktop-dark.webp`: SHA-256 `91722b9b7b3e950d6e073b1eb68a32013f5b5d3722681fd3a33505fe49a47a00`.
+  - `assets/screenshots/en/app-lock-dark.webp`: SHA-256 `ae7429e50849c5c648e3d672253934dc6132b62ae716cc6f0d8b6a0d790c2f34`.
+
+  Earlier captures:
 
   - `assets/screenshots/workspace-0.4.0.webp`: SHA-256 `c9f4f3b54a694a35ce8225f13caac09d48f44f44464ea5f31189016090ac5e71`.
   - `assets/screenshots/en/workspace-0.4.0.webp`: SHA-256 `30080b9fd53cfff23cc1b6b5b2d776ae41daf3eb8067eecd0c1bd8bcda3de881`.

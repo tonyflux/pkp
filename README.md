@@ -22,10 +22,10 @@ Organize, sync, search, and play in one workspace. macOS 12+, Windows preview, a
 PKP is an independent desktop client for a PikPak account you already have. It is unaffiliated with PikPak. Use remains subject to PikPak's terms and applicable law. The source in this repository is [GPL-3.0-only](LICENSE).
 
 <p align="center">
-  <img src="assets/screenshots/en/workspace-0.4.0.webp" alt="PKP files workspace in English, including LAN sharing and fictional demo folders" width="880">
+  <img src="assets/screenshots/en/workspace-dark.webp" alt="PKP files workspace in English, including LAN sharing and fictional demo folders" width="880">
 </p>
 
-<p align="center"><i>Current development UI in an isolated browser demo, using fictional accounts, folders and storage figures. The latest released download may look different. No production cloud data is shown.</i></p>
+<p align="center"><i>Website demo of the development UI, using fictional accounts, folders and storage figures. The latest released download may look different. No production cloud data is shown.</i></p>
 
 ## What you can do
 
@@ -62,30 +62,30 @@ Since v0.2.0, two-platform releases include eight assets: the two installers, `u
 <table>
   <tr>
     <td width="50%" valign="top">
-      <img src="assets/screenshots/en/assistant.webp" alt="English AI assistant home in the isolated development demo">
+      <img src="assets/screenshots/en/assistant-dark.webp" alt="English AI assistant home in the isolated development demo">
       <br><b>Organize with review.</b> Plans require confirmation before changes.
     </td>
     <td width="50%" valign="top">
-      <img src="assets/screenshots/en/sync.webp" alt="English sync and backup view with a simulated folder pair">
+      <img src="assets/screenshots/en/sync-dark.webp" alt="English sync and backup view with a simulated folder pair">
       <br><b>Scan, then sync.</b> Confirm the preview first.
     </td>
   </tr>
   <tr>
     <td colspan="2" valign="top">
-      <img src="assets/screenshots/en/accounts.webp" alt="English account switcher and All accounts scope with two demo accounts">
+      <img src="assets/screenshots/en/accounts-dark.webp" alt="English account switcher and All accounts scope with two demo accounts">
       <br><b>Switch accounts or browse All accounts</b> across local indexes without merging cloud drives or transfer queues.
     </td>
   </tr>
 </table>
 
-The screenshots show the current development UI with fictional data. The assistant has not run a model, and the sync pair is simulated; they do not demonstrate real cloud operations. The player is described above rather than illustrated with a simulated video.
+The screenshots show a development UI in the isolated website demo with fictional data. The assistant has not run a model, and the sync pair is simulated; they do not demonstrate real cloud operations. The player is described above rather than illustrated with a simulated video.
 
 ## LAN sharing
 
 Choose a local folder or a fixed account and cloud folder, then set a separate password and start sharing. The visitor page is read-only. It can request file preparation if allowed; playback depends on the media and device. Sharing is off by default and stops when PKP exits.
 
 <p align="center">
-  <img src="assets/screenshots/en/lan-desktop.webp" alt="LAN sharing settings in the development demo with sharing stopped and a simulated cloud folder" width="880">
+  <img src="assets/screenshots/en/lan-desktop-dark.webp" alt="LAN sharing settings in the development demo with sharing stopped and a simulated cloud folder" width="880">
 </p>
 
 <p align="center"><b>Desktop:</b> choose the sharing scope and permissions.</p>
@@ -121,7 +121,7 @@ make app-go
 Read the privacy notice before you sign in: [English](PRIVACY.en.md) · [简体中文](PRIVACY.md).
 
 <p align="center">
-  <img src="assets/screenshots/en/app-lock.webp" alt="English Privacy settings showing App Lock (System or PKP password) and usage statistics in the development demo" width="720">
+  <img src="assets/screenshots/en/app-lock-dark.webp" alt="English Privacy settings showing App Lock in the development demo" width="720">
 </p>
 
 - Remembered passwords, AI keys, and TMDB credentials use macOS Keychain (service `com.pkp.desktop`), Windows Credential Manager or Linux Secret Service. Session tokens remain in a local credentials file. Remember-password and automatic-login options start checked; clear them to keep the sign-in password only in memory. Linux requires an unlocked session keyring. App Lock limits in-app access, not downloaded-file/config-directory encryption or guaranteed Linux capture protection.
