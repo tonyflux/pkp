@@ -4,7 +4,7 @@
 
 ## 下载状态
 
-请从本仓库的[最新 Release](https://github.com/tonyflux/pkp/releases/latest) 下载对应安装包（macOS Universal：`PKP-<版本>-macos-universal.dmg`；Windows x64 与 ARM64：`PKP-<版本>-windows-x64-arm64-setup.exe`；若对应版本附带 Linux 包则按发行版架构选择；各版本更新内容见 [Releases](https://github.com/tonyflux/pkp/releases) 与[更新记录](../CHANGELOG.md)）。下载后请对照同一 Release 的 `SHA256SUMS` 并验证签名，仅从本仓库的 Releases 获取安装包。
+请从本仓库的[最新 Release](https://github.com/tonyflux/pkp/releases/latest) 下载对应安装包（macOS Universal：`PKP-<版本>-macos-universal.dmg`；Windows 机器级：`PKP-<版本>-windows-x64-arm64-setup.exe`；Windows 用户级：`PKP-<版本>-windows-user-x64-arm64-setup.exe`，如该版本提供；若对应版本附带 Linux 包则按发行版架构选择；各版本更新内容见 [Releases](https://github.com/tonyflux/pkp/releases) 与[更新记录](../CHANGELOG.md)）。下载后请对照同一 Release 的 `SHA256SUMS` 并验证签名，仅从本仓库的 Releases 获取安装包。
 
 v0.2.0 是首个开源版本。后续版本均随附 `PKP-<版本>-source.tar.gz`（与安装包对应的 PKP 自有源码）和 `libmpv-sources.tar.gz`（媒体组件对应源码，附带 PKP 的 Windows PCM 解码辅助源码与许可证）。分享转存支持粘贴 PikPak 分享链接、显式打开 `pkp://share` 和桌面端自动识别经过校验的剪贴板分享；只读网格／列表预览后，须选择接收账号、目标目录并确认，不会自动转存。操作与限制见[使用说明](USAGE.md)。
 
@@ -18,7 +18,7 @@ v0.2.0 已发布，提供八件附件：上述七类再加上 `PKP-0.2.0-source.
 
 `SHA256SUMS` 用于检查下载完整性，不能单独证明发布者身份。应用内更新会用内置公钥验证 Ed25519 签名清单，再检查安装包大小与 SHA-256；签名或哈希错误时不要继续安装。
 
-需要手动完整核验时，将同一 Release 的全部附件放在独立目录（历史版本为七／八件；含 Linux 的发布另加六个安装包和两个运行库源码包），并下载公开的 [verify_release.py](../.github/scripts/verify_release.py)。安装 Python 3.11+ 和 OpenSSL 3+ 后运行（将标签换成你下载的版本）：
+需要手动完整核验时，将同一 Release 的全部附件放在独立目录（历史版本为七／八件；新版可另含用户级 Windows 安装包及 Linux 安装包和运行库源码包），并下载公开的 [verify_release.py](../.github/scripts/verify_release.py)。安装 Python 3.11+ 和 OpenSSL 3+ 后运行（将标签换成你下载的版本）：
 
 ```sh
 python3 verify_release.py /路径/发布附件 v0.2.0
@@ -73,7 +73,8 @@ Windows 提供 x64 / ARM64 共用安装包，按本机架构选择应用与播�
 新版信息、下载进度及下载／安装按钮集中在页面顶部的版本卡内；更新说明位于其后，长说明随页面滚动。默认窗口无需滚动即可看到主要更新操作，从更新通知或菜单进入时也会回到顶部结果区。
 
 - macOS（从 v0.2.0 起）：先点击「下载更新」，下载并校验完成后再点击「重启并更新」。准备期间 macOS 可能请求替换应用的权限；同一应用的其他 PKP 实例须先退出。确认退出后，更新助手等待当前 PKP 退出，替换原位置的应用并重新打开原配置；账号与本地设置保留。取消权限请求或退出确认不会强制关闭 PKP。请从「应用程序」中的已安装应用执行更新，不要从 DMG、只读位置或临时隔离路径运行。更新不移除隔离标记、不绕过 Gatekeeper；当前 ad hoc 签名与未公证限制仍适用，重新打开时可能需要系统确认。
-- Windows：点击「退出并运行安装程序」，按退出确认和系统管理员授权继续；取消退出或授权不会强制关闭 PKP。安装器要求退出其它 PKP 进程，沿用原安装目录，不需要先卸载；账号与本地设置保留。仍需 Windows 真机充分验收。
+- Windows：下载并校验后，支持自动更新的安装包显示「重启并更新」；确认退出并按需允许 Windows 授权后，更新会等待当前进程退出，在原安装目录安装并重新打开 PKP。请先退出其他 PKP 实例；失败时尝试回滚，账号与本地设置保留。默认官方安装为机器级，仓库也支持用户级安装；更新必须匹配原安装范围，机器级安装需要管理员授权。旧安装器不支持静默协议时显示「退出并运行安装程序」，请完成安装向导和所需授权；从旧客户端首次升级也可能需要向导。若旧清单没有匹配用户级安装的安装包，请从官方 Release 手动安装，不要用机器级包覆盖用户级安装。便携版或非标准安装需手动安装。Windows 真机上的授权、两种安装范围、回滚及旧版升级仍需充分验收。
+  为防安装包被替换，Windows 更新缓存路径含符号链接或目录联接（重解析点）时会拒绝自动交接；请从官方 Release 下载匹配安装范围的安装包手动安装。
 - Linux：下载并验证后点击「显示安装包」，安装包保存到主目录的 `PKP Updates` 文件夹，退出或重启后保留，安装完成可手动删除。退出 PKP 后使用包管理器安装 deb／rpm，或手动替换原 AppImage；不静默提权、不自动覆盖系统文件。Linux 包在签名清单的独立 `linuxPackages` 字段内，旧版 macOS／Windows 的双平台更新契约保持不变。
 - 已发布的 macOS v0.1.0 没有上述替换助手：升级到 v0.2.0 或之后版本时，仍须下载并打开新版本 DMG，退出 PKP，再手动拖拽覆盖原应用一次，才能获得「重启并更新」功能；不要直接运行镜像内应用。此步骤保留账号与本地设置。
 - 没有更新功能或信任旧开发公钥的本地测试版本，需要先手动下载并安装正式版本；同为 0.1.0 时不会提示升级。

@@ -38,10 +38,11 @@ var (
 )
 
 type Package struct {
-	URL    string `json:"url"`
-	Size   int64  `json:"size"`
-	SHA256 string `json:"sha256"`
-	MinOS  string `json:"minOS"`
+	URL             string `json:"url"`
+	Size            int64  `json:"size"`
+	SHA256          string `json:"sha256"`
+	MinOS           string `json:"minOS"`
+	InstallProtocol int    `json:"installProtocol,omitempty"`
 }
 
 type Manifest struct {
@@ -51,10 +52,17 @@ type Manifest struct {
 	Packages    map[string]Package `json:"packages"`
 	// LinuxPackages is outside packages so older macOS/Windows clients keep
 	// their exact two-platform contract while authenticating the same bytes.
-	LinuxPackages map[string]Package `json:"linuxPackages,omitempty"`
+	LinuxPackages      map[string]Package `json:"linuxPackages,omitempty"`
+	WindowsUserPackage *Package           `json:"windowsUserPackage,omitempty"`
 }
 
 func (m Manifest) Package(platform string) (Package, bool) {
+	if platform == "windows-user-x64-arm64" {
+		if m.WindowsUserPackage == nil {
+			return Package{}, false
+		}
+		return *m.WindowsUserPackage, true
+	}
 	if p, ok := m.Packages[platform]; ok {
 		return p, true
 	}
@@ -152,6 +160,8 @@ func PackageName(version, platform string) string {
 		return "PKP-" + version + "-macos-universal.dmg"
 	case "windows-x64-arm64":
 		return "PKP-" + version + "-windows-x64-arm64-setup.exe"
+	case "windows-user-x64-arm64":
+		return "PKP-" + version + "-windows-user-x64-arm64-setup.exe"
 	case "linux-amd64-deb", "linux-arm64-deb":
 		return "PKP-" + version + "-linux-" + strings.TrimSuffix(strings.TrimPrefix(platform, "linux-"), "-deb") + ".deb"
 	case "linux-amd64-rpm", "linux-arm64-rpm":
@@ -179,6 +189,13 @@ func (m Manifest) Validate() error {
 		p, ok := m.Packages[platform]
 		digest, err := hex.DecodeString(p.SHA256)
 		if !ok || p.Size <= 0 || p.Size > MaxPackage || err != nil || len(digest) != sha256.Size || !SupportsOS(p.MinOS, p.MinOS) || p.URL != AssetURL(m.Version, PackageName(m.Version, platform)) {
+			return ErrManifest
+		}
+	}
+	if m.WindowsUserPackage != nil {
+		p := *m.WindowsUserPackage
+		digest, err := hex.DecodeString(p.SHA256)
+		if p.Size <= 0 || p.Size > MaxPackage || err != nil || len(digest) != sha256.Size || !SupportsOS(p.MinOS, p.MinOS) || p.URL != AssetURL(m.Version, PackageName(m.Version, "windows-user-x64-arm64")) {
 			return ErrManifest
 		}
 	}
@@ -347,6 +364,9 @@ func (c *Client) Latest(ctx context.Context) (Manifest, error) {
 			return empty, ErrManifest
 		}
 	}
+	if m.WindowsUserPackage != nil && assets[PackageName(version, "windows-user-x64-arm64")] != m.WindowsUserPackage.URL {
+		return empty, ErrManifest
+	}
 	return m, nil
 }
 
@@ -435,6 +455,14 @@ func CheckFile(path string, p Package) error {
 		return err
 	}
 	defer f.Close()
+	return CheckOpenFile(f, p)
+}
+
+// CheckOpenFile validates the same open file that its caller keeps locked.
+func CheckOpenFile(f *os.File, p Package) error {
+	if _, err := f.Seek(0, io.SeekStart); err != nil {
+		return err
+	}
 	info, err := f.Stat()
 	if err != nil {
 		return err

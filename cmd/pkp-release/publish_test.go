@@ -18,6 +18,10 @@ import (
 )
 
 func releaseFixture(t *testing.T, version string, linux bool) (string, ed25519.PublicKey) {
+	return releaseFixtureWithUser(t, version, linux, false)
+}
+
+func releaseFixtureWithUser(t *testing.T, version string, linux, user bool) (string, ed25519.PublicKey) {
 	t.Helper()
 	pub, key, err := ed25519.GenerateKey(rand.Reader)
 	if err != nil {
@@ -30,6 +34,15 @@ func releaseFixture(t *testing.T, version string, linux bool) (string, ed25519.P
 	for _, platform := range []string{"darwin-universal", "windows-x64-arm64"} {
 		name := update.PackageName(m.Version, platform)
 		m.Packages[platform] = update.Package{URL: update.AssetURL(m.Version, name), Size: int64(len(body)), SHA256: hex.EncodeToString(digest[:]), MinOS: "12.0"}
+		if err := os.WriteFile(filepath.Join(dir, name), body, 0600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if user {
+		name := update.PackageName(version, "windows-user-x64-arm64")
+		p := m.Packages["windows-x64-arm64"]
+		p.URL, p.InstallProtocol = update.AssetURL(version, name), 1
+		m.WindowsUserPackage = &p
 		if err := os.WriteFile(filepath.Join(dir, name), body, 0600); err != nil {
 			t.Fatal(err)
 		}
@@ -127,6 +140,24 @@ func TestReleaseSourceContractByVersion(t *testing.T) {
 				t.Fatal("incorrect source identity presence accepted")
 			}
 		})
+	}
+}
+
+func TestVerifyReleaseWindowsUserAsset(t *testing.T) {
+	dir, pub := releaseFixtureWithUser(t, "0.2.0", false, true)
+	m, err := verifyRelease(dir, pub)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := len(releaseAssets(m)); got != 9 {
+		t.Fatalf("assets=%d", got)
+	}
+	name := update.PackageName(m.Version, "windows-user-x64-arm64")
+	if err := os.WriteFile(filepath.Join(dir, name), []byte("tampered"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := verifyRelease(dir, pub); err == nil {
+		t.Fatal("tampered user installer accepted")
 	}
 }
 

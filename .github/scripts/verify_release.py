@@ -83,6 +83,13 @@ def verify(directory, tag):
     manifest = json.loads(data)
     if manifest["version"] != version or set(manifest["packages"]) != set(packages) or not manifest["notes"].strip():
         raise ValueError("manifest does not match release")
+    user_package = manifest.get("windowsUserPackage")
+    user_name = f"PKP-{version}-windows-user-x64-arm64-setup.exe"
+    if user_package is not None and not isinstance(user_package, dict):
+        raise ValueError("invalid Windows user package")
+    for package in [*manifest["packages"].values(), *([user_package] if user_package is not None else [])]:
+        if not isinstance(package, dict) or type(package.get("installProtocol", 0)) is not int:
+            raise ValueError("invalid installer protocol")
     linux_packages = manifest.get("linuxPackages")
     linux_names = {}
     if linux_packages is not None:
@@ -92,6 +99,8 @@ def verify(directory, tag):
         if not isinstance(linux_packages, dict) or set(linux_packages) != set(linux_names):
             raise ValueError("Linux release must include both architectures, all packages and runtime sources")
     names = {*packages.values(), *linux_names.values(), "update.json", "update.json.sig", "libmpv-sources.tar.gz", "LICENSE", "SHA256SUMS"}
+    if user_package is not None:
+        names.add(user_name)
     if tuple(map(int, version.split("."))) >= (0, 2, 0):
         names.add(f"PKP-{version}-source.tar.gz")
     if {p.name for p in directory.iterdir()} != names:
@@ -119,6 +128,9 @@ def verify(directory, tag):
             raise ValueError("untrusted installer URL")
         if package["size"] != (directory / name).stat().st_size or package["sha256"] != digests[name]:
             raise ValueError("installer differs from signed manifest")
+    if user_package is not None:
+        if user_package.get("url") != f"https://github.com/tonyflux/pkp/releases/download/{tag}/{user_name}" or user_package.get("size") != (directory / user_name).stat().st_size or user_package.get("sha256") != digests[user_name]:
+            raise ValueError("Windows user installer differs from signed manifest")
     for platform, name in linux_names.items():
         package = linux_packages[platform]
         if package.get("minOS") != "2.39" or package.get("url") != f"https://github.com/tonyflux/pkp/releases/download/{tag}/{name}":

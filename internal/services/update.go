@@ -23,12 +23,13 @@ import (
 const EventUpdateState = "update:state"
 
 type UpdateInfo struct {
-	Version     string `json:"version"`
-	PublishedAt string `json:"publishedAt"`
-	Notes       string `json:"notes"`
-	Size        int64  `json:"size"`
-	MinOS       string `json:"minOS"`
-	Compatible  bool   `json:"compatible"`
+	Version       string `json:"version"`
+	PublishedAt   string `json:"publishedAt"`
+	Notes         string `json:"notes"`
+	Size          int64  `json:"size"`
+	MinOS         string `json:"minOS"`
+	Compatible    bool   `json:"compatible"`
+	ManualInstall bool   `json:"manualInstall,omitempty"`
 }
 
 type UpdateState struct {
@@ -228,11 +229,14 @@ func (u *UpdateService) check(manual bool) error {
 			p, ok := m.Package(u.platform)
 			if !ok {
 				u.state.Phase, u.state.Error = "error", "noRelease"
+				if u.platform == "windows-user-x64-arm64" {
+					u.state.Error = "userPackage"
+				}
 				u.publishLocked()
 				return
 			}
 			u.manifest = &m
-			u.state.Info = &UpdateInfo{Version: m.Version, PublishedAt: m.PublishedAt, Notes: m.Notes, Size: p.Size, MinOS: p.MinOS, Compatible: update.SupportsOS(u.osVersion, p.MinOS)}
+			u.state.Info = &UpdateInfo{Version: m.Version, PublishedAt: m.PublishedAt, Notes: m.Notes, Size: p.Size, MinOS: p.MinOS, Compatible: update.SupportsOS(u.osVersion, p.MinOS), ManualInstall: runtime.GOOS == "windows" && p.InstallProtocol != 1}
 			u.state.Phase = "available"
 			s := u.drive.LocalSettings()
 			remind, _ := time.Parse(time.RFC3339, s.UpdateRemindAfter)

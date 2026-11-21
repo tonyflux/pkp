@@ -50,6 +50,8 @@ On the macOS host above, `make windows` builds x64 and ARM64 executables; these 
 
 CI reuses the macOS-built artifacts to run the same PCM timeline, audio-track, seeking and cancellation-recovery tests plus subtitle session, membership and quota integration tests on Windows x64 and ARM64. Compatibility-layer execution does not replace real-device player UI or installation/upgrade acceptance.
 
+`pwsh -File build/windows/update-e2e.ps1` builds and exercises user-scope installation, in-place updates, instance contention, rollback, failed recovery, and package file locking in an isolated temporary directory and dedicated HKCU key. It requires NSIS on PATH. `go test . -run '^TestWindowsWatcherHandoff$'` exercises watcher success, contention, installation failure, failed rollback, and legacy protocol using isolated subprocesses. CI runs both tests on Windows x64 and ARM64; neither simulates machine-scope UAC consent or a complete upgrade of the real PKP app.
+
 ## Linux builds
 
 Use native x86_64/ARM64 Ubuntu 24.04 or a matching-architecture container from `build/docker/Dockerfile.linux`; setting `GOOS` alone cannot replace CGO/system headers. Install Go 1.26, Node.js 24, the pinned Wails CLI and nFPM v2.43.0. The Dockerfile lists system build dependencies, including GTK4, WebKitGTK 6.0, libmpv, FFmpeg and libepoxy. Then run:
@@ -97,7 +99,7 @@ make release-local RELEASE_NOTES=build/release-notes.md
 make release-verify
 ```
 
-Historical eight-asset releases remain verifiable. A Linux-inclusive release adds six packages and two per-architecture runtime-source archives, for sixteen assets. The signed manifest keeps the two legacy `packages` entries and authenticates additions in `linuxPackages`, preserving older clients. On the macOS signing host, supply `LINUX_RELEASE_DIR=/path/to/Linux/assets/from/the/same/source` to assemble both architectures. Commit a clean source snapshot before release. Building/signing does not upload or complete device acceptance/Apple notarization. Never commit signing keys or print them in logs.
+Historical eight-asset releases remain verifiable. New releases add a per-user Windows installer; Linux-inclusive releases additionally include six packages and two per-architecture runtime-source archives. The signed manifest keeps the two legacy `packages` entries and authenticates additions in `windowsUserPackage` and `linuxPackages`, preserving older clients. On the macOS signing host, supply `LINUX_RELEASE_DIR=/path/to/Linux/assets/from/the/same/source` to assemble both architectures. Commit a clean source snapshot before release. Building/signing does not upload or complete device acceptance/Apple notarization. Never commit signing keys or print them in logs.
 
 ## Content Excluded from This Repository
 

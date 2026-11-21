@@ -34,13 +34,19 @@ class ReleaseVerifierTests(unittest.TestCase):
         verifier.PUBLIC_KEY = cls.original_key
         cls.temporary.cleanup()
 
-    def fixture(self, directory, version, source_change=None, linux=False):
+    def fixture(self, directory, version, source_change=None, linux=False, user=False):
         manifest = {"version": version, "publishedAt": "2026-11-01T00:00:00Z", "notes": "Release notes", "packages": {}}
         for platform, suffix in (("darwin-universal", "macos-universal.dmg"), ("windows-x64-arm64", "windows-x64-arm64-setup.exe")):
             name = f"PKP-{version}-{suffix}"
             body = b"installer bytes"
             (directory / name).write_bytes(body)
             manifest["packages"][platform] = {"url": f"https://github.com/tonyflux/pkp/releases/download/v{version}/{name}", "size": len(body), "sha256": hashlib.sha256(body).hexdigest(), "minOS": "12.0"}
+        if user:
+            name = f"PKP-{version}-windows-user-x64-arm64-setup.exe"
+            body = b"user installer bytes"
+            (directory / name).write_bytes(body)
+            manifest["packages"]["windows-x64-arm64"]["installProtocol"] = 1
+            manifest["windowsUserPackage"] = {"url": f"https://github.com/tonyflux/pkp/releases/download/v{version}/{name}", "size": len(body), "sha256": hashlib.sha256(body).hexdigest(), "minOS": "10.0", "installProtocol": 1}
         (directory / "LICENSE").write_text("License")
         (directory / "libmpv-sources.tar.gz").write_bytes(b"library sources")
         if tuple(map(int, version.split("."))) >= (0, 2, 0):
@@ -83,6 +89,16 @@ class ReleaseVerifierTests(unittest.TestCase):
                 self.assertEqual(len(list(directory.iterdir())), assets)
                 self.assertEqual("source" in json.loads((directory / "update.json").read_text()), assets == 8)
                 self.verify(directory, version)
+
+    def test_user_installer_is_authenticated(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            directory = pathlib.Path(temporary)
+            self.fixture(directory, "0.2.0", user=True)
+            self.verify(directory, "0.2.0")
+            (directory / "PKP-0.2.0-windows-user-x64-arm64-setup.exe").write_bytes(b"tampered")
+            self.checksums(directory)
+            with self.assertRaises(ValueError):
+                self.verify(directory, "0.2.0")
 
     def test_source_is_authenticated_not_only_checksummed(self):
         with tempfile.TemporaryDirectory() as temporary:

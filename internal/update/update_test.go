@@ -91,6 +91,17 @@ func TestSignedReleaseDownloadAndInstallRecheck(t *testing.T) {
 	if err := CheckFile(path, p); err != nil {
 		t.Fatal(err)
 	}
+	opened, err := os.Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := opened.Seek(3, io.SeekStart); err != nil {
+		t.Fatal(err)
+	}
+	if err := CheckOpenFile(opened, p); err != nil {
+		t.Fatal(err)
+	}
+	opened.Close()
 	corrupted := append([]byte(nil), body...)
 	corrupted[0] ^= 1
 	if err := os.WriteFile(path, corrupted, 0600); err != nil {
@@ -126,6 +137,87 @@ func TestManifestRejectsUntrustedPackageAndUnsupportedFormat(t *testing.T) {
 	m.PublishedAt = "not a date"
 	if !errors.Is(m.Validate(), ErrManifest) {
 		t.Fatal("invalid release date accepted")
+	}
+}
+
+func TestWindowsUserPackageCompatibility(t *testing.T) {
+	m, data, sig, pub := releaseFixture(t, []byte("payload"))
+	legacy, err := Verify(data, sig, pub)
+	if err != nil || legacy.Packages["windows-x64-arm64"].InstallProtocol != 0 {
+		t.Fatalf("legacy manifest: %v", err)
+	}
+	if _, ok := legacy.Package("windows-user-x64-arm64"); ok {
+		t.Fatal("missing user package fell back to machine package")
+	}
+	p := m.Packages["windows-x64-arm64"]
+	p.URL = AssetURL(m.Version, PackageName(m.Version, "windows-user-x64-arm64"))
+	p.InstallProtocol = 2
+	m.WindowsUserPackage = &p
+	if err := m.Validate(); err != nil {
+		t.Fatal(err)
+	}
+	got, ok := m.Package("windows-user-x64-arm64")
+	if !ok || got.InstallProtocol != 2 {
+		t.Fatal("unknown protocol was not preserved")
+	}
+	data, err = json.Marshal(m)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var old struct {
+		Packages map[string]json.RawMessage `json:"packages"`
+	}
+	if err := json.Unmarshal(data, &old); err != nil || len(old.Packages) != 2 {
+		t.Fatal("legacy packages changed")
+	}
+	p.URL = "https://evil.example/installer.exe"
+	m.WindowsUserPackage = &p
+	if !errors.Is(m.Validate(), ErrManifest) {
+		t.Fatal("untrusted user package accepted")
+	}
+}
+
+func TestLatestRequiresSignedWindowsUserAsset(t *testing.T) {
+	m, _, _, _ := releaseFixture(t, []byte("payload"))
+	p := m.Packages["windows-x64-arm64"]
+	p.URL = AssetURL(m.Version, PackageName(m.Version, "windows-user-x64-arm64"))
+	m.WindowsUserPackage = &p
+	pub, key, err := ed25519.GenerateKey(rand.Reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	data, err := json.Marshal(m)
+	if err != nil {
+		t.Fatal(err)
+	}
+	sig := base64.StdEncoding.EncodeToString(ed25519.Sign(key, data))
+	includeUser := false
+	client := &Client{PublicKey: pub, HTTP: &http.Client{Transport: roundTripFunc(func(r *http.Request) (*http.Response, error) {
+		var body []byte
+		switch {
+		case r.URL.String() == LatestURL:
+			assets := []map[string]string{}
+			for _, name := range []string{"update.json", "update.json.sig", PackageName(m.Version, "darwin-universal"), PackageName(m.Version, "windows-x64-arm64")} {
+				assets = append(assets, map[string]string{"name": name, "browser_download_url": AssetURL(m.Version, name)})
+			}
+			if includeUser {
+				name := PackageName(m.Version, "windows-user-x64-arm64")
+				assets = append(assets, map[string]string{"name": name, "browser_download_url": p.URL})
+			}
+			body, _ = json.Marshal(map[string]any{"tag_name": "v" + m.Version, "assets": assets})
+		case strings.HasSuffix(r.URL.Path, "/update.json"):
+			body = data
+		default:
+			body = []byte(sig)
+		}
+		return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(strings.NewReader(string(body))), Header: make(http.Header), Request: r}, nil
+	})}}
+	if _, err := client.Latest(context.Background()); !errors.Is(err, ErrManifest) {
+		t.Fatalf("missing user asset: %v", err)
+	}
+	includeUser = true
+	if _, err := client.Latest(context.Background()); err != nil {
+		t.Fatal(err)
 	}
 }
 

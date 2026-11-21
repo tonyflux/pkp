@@ -3248,6 +3248,7 @@ export interface UpdateInfo {
     "size": number;
     "minOS": string;
     "compatible": boolean;
+    "manualInstall"?: boolean;
 }
 
 export interface UpdateState {

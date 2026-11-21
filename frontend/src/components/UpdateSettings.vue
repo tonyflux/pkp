@@ -16,6 +16,7 @@ onMounted(() => { void watchUpdates(); });
 const state = computed(() => updates.state);
 const busy = computed(() => updates.pending || ["checking", "downloading", "preparing", "confirming", "installing"].includes(state.value?.phase ?? ""));
 const installReady = computed(() => ["ready", "preparing", "confirming", "installing"].includes(state.value?.phase ?? ""));
+const manualInstall = computed(() => onWindows && state.value?.info?.manualInstall === true);
 const progress = computed(() => state.value?.info?.size ? Math.min(100, Math.round(state.value.received / state.value.info.size * 100)) : 0);
 const releaseNotes = computed(() => parseMarkdown(state.value?.info?.notes ?? "").blocks);
 const notesRoot = ref<HTMLElement>();
@@ -33,10 +34,11 @@ const errors: Record<string, string> = {
   noRelease: N_("暂无可用的正式版本，请稍后重试。"),
   rateLimit: N_("GitHub 暂时限制了请求，请稍后再试。"),
   storage: N_("无法保存更新文件或设置，请检查磁盘空间与目录权限。"),
-  installLocation: N_("请将 PKP 安装到「应用程序」后再更新，不要从磁盘镜像、只读位置或临时隔离路径运行。"),
+  installLocation: onWindows ? N_("请从已安装的 PKP 运行更新；便携版或非标准安装请从官方 Release 手动安装。") : N_("请将 PKP 安装到「应用程序」后再更新，不要从磁盘镜像、只读位置或临时隔离路径运行。"),
+  userPackage: N_("此版本没有用户级 Windows 更新包，请从官方 Release 手动安装适用版本。"),
   installPermission: N_("未获得替换应用的权限，请重试并在 macOS 弹窗中允许授权。"),
   installBusy: N_("检测到另一个 PKP 窗口或进程正在运行，请先关闭后重试。"),
-  install: onLinux ? N_("未能显示安装包，当前应用继续运行。请重试或从官方 Release 下载。") : onWindows ? N_("未能打开安装程序，当前应用继续运行。") : N_("更新安装失败，请检查磁盘空间与权限后重试，或前往官方 Release 重新下载安装。"),
+  install: onLinux ? N_("未能显示安装包，当前应用继续运行。请重试或从官方 Release 下载。") : N_("更新安装失败，请检查磁盘空间与权限后重试，或前往官方 Release 重新下载安装。"),
   installRollback: N_("更新失败且原应用未能恢复，请前往官方 Release 重新安装 PKP（账号与本地设置均会保留）。"),
 };
 const error = computed(() => updates.error || (state.value?.error ? t(errors[state.value.error] ?? errors.network) : ""));
@@ -115,7 +117,7 @@ async function openCommunity(href: string) {
           <div class="download-row"><span class="muted">{{ bytes(state.received) }} / {{ bytes(state.info.size) }} · {{ progress }}%</span><button class="pill" :disabled="updates.pending" @click="cancelUpdate">{{ t("取消下载") }}</button></div>
         </div>
         <div v-else class="actions">
-          <button v-if="installReady" class="pill primary" :class="{ working: busy }" :disabled="!state.supported || busy" @click="installUpdate"><Icon name="restore" :size="17" />{{ onLinux ? t("显示安装包") : onWindows ? t("退出并运行安装程序") : t("重启并更新") }}</button>
+          <button v-if="installReady" class="pill primary" :class="{ working: busy }" :disabled="!state.supported || busy" @click="installUpdate"><Icon name="restore" :size="17" />{{ onLinux ? t("显示安装包") : manualInstall ? t("退出并运行安装程序") : t("重启并更新") }}</button>
           <button v-else class="pill primary" :disabled="!state.supported || busy || !state.info.compatible" @click="downloadUpdate"><Icon name="download" :size="17" />{{ t("下载更新") }}</button>
           <button class="pill" :disabled="busy" @click="remindUpdateLater">{{ t("稍后提醒") }}</button>
           <button class="quiet" :disabled="busy" @click="ignoreUpdate">{{ t("忽略此版本") }}</button>
@@ -128,7 +130,7 @@ async function openCommunity(href: string) {
       <h3 id="release-notes-title">{{ t("更新说明") }}</h3>
       <div ref="notesRoot" class="notes"><MarkdownDoc :blocks="releaseNotes" @link="followReleaseLink" /></div>
       <p v-if="releaseError" class="error" role="alert">{{ releaseError }}</p>
-      <p class="muted install-note">{{ onLinux ? t("校验后将安装包保存到主目录的 PKP Updates 文件夹并显示，退出或重启后仍保留，可在安装后手动删除。请退出 PKP 后使用系统软件安装器或包管理器安装 deb/rpm；AppImage 请手动替换原文件并重新启动。不会自动写入系统目录或替换正在运行的应用，账号与本地设置保留。") : onWindows ? t("安装前会提示确认退出；取消不会关闭应用，账号与本地设置均会保留。") : t("退出后将替换为新版本并自动重启，账号与设置均会保留。替换时 macOS 可能会请求权限，新版本启动时也将按系统安全策略进行验证。") }}</p>
+      <p class="muted install-note"><template v-if="onLinux">{{ t("校验后将安装包保存到主目录的 PKP Updates 文件夹并显示，退出或重启后仍保留，可在安装后手动删除。请退出 PKP 后使用系统软件安装器或包管理器安装 deb/rpm；AppImage 请手动替换原文件并重新启动。不会自动写入系统目录或替换正在运行的应用，账号与本地设置保留。") }}</template><template v-else-if="onWindows">{{ manualInstall ? t("此版本的安装程序需要手动完成安装向导。请先退出其他 PKP 实例，确认退出后运行安装程序，并按提示完成安装及授权。账号与本地设置均会保留。") : t("确认退出并按需允许 Windows 授权后，将自动更新并重新打开 PKP；请先退出其他 PKP 实例。取消退出或授权不会关闭应用，账号与本地设置均会保留。") }}</template><template v-else>{{ t("退出后将替换为新版本并自动重启，账号与设置均会保留。替换时 macOS 可能会请求权限，新版本启动时也将按系统安全策略进行验证。") }}</template></p>
     </section>
 
     <div class="update-card glass-well automatic">

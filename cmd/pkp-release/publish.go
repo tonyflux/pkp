@@ -20,6 +20,9 @@ import (
 func releaseAssets(m update.Manifest) []string {
 	version := m.Version
 	names := []string{update.PackageName(version, "darwin-universal"), update.PackageName(version, "windows-x64-arm64"), "update.json", "update.json.sig", "libmpv-sources.tar.gz", "LICENSE"}
+	if m.WindowsUserPackage != nil {
+		names = append(names, update.PackageName(version, "windows-user-x64-arm64"))
+	}
 	if m.LinuxPackages != nil {
 		for _, arch := range [...]string{"amd64", "arm64"} {
 			for _, format := range [...]string{"deb", "rpm", "appimage", "sources"} {
@@ -80,6 +83,11 @@ func verifyRelease(dir string, public ed25519.PublicKey) (update.Manifest, error
 	}
 	for platform, p := range m.Packages {
 		if err := update.CheckFile(filepath.Join(dir, update.PackageName(m.Version, platform)), p); err != nil {
+			return empty, err
+		}
+	}
+	if m.WindowsUserPackage != nil {
+		if err := update.CheckFile(filepath.Join(dir, update.PackageName(m.Version, "windows-user-x64-arm64")), *m.WindowsUserPackage); err != nil {
 			return empty, err
 		}
 	}

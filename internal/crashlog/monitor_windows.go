@@ -9,6 +9,9 @@ import (
 	"strings"
 )
 
+// UpdateWatcherExecutable uses the same replaceable cached helper as crash monitoring.
+func UpdateWatcherExecutable(exe string) (string, error) { return monitorExecutable(exe) }
+
 // Windows cannot replace a running executable, so the monitor runs a cached copy.
 func monitorExecutable(exe string) (string, error) {
 	cache, err := os.UserCacheDir()

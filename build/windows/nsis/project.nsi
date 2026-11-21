@@ -43,6 +43,21 @@ Var previous
 Var updatePID
 Var installerMutex
 Var installingNew
+Var inAppUpdate
+
+!macro pkp.message FLAGS TEXT
+    ${If} $inAppUpdate == 1
+        ${If} ${Silent}
+            SetSilent normal
+            MessageBox ${FLAGS} "${TEXT}"
+            SetSilent silent
+        ${Else}
+            MessageBox ${FLAGS} "${TEXT}"
+        ${EndIf}
+    ${Else}
+        MessageBox ${FLAGS} "${TEXT}" /SD IDOK
+    ${EndIf}
+!macroend
 
 !macro pkp.backup ENTRY
     IfFileExists "$INSTDIR\${ENTRY}" 0 +4
@@ -150,13 +165,19 @@ LangString PKPFailed ${LANG_SIMPCHINESE} "安装未完成，已取消升级并�
 LangString PKPFailed ${LANG_ENGLISH} "Installation failed. The previous version was restored if available. Check disk space and folder permissions, then try again."
 LangString PKPRecovery ${LANG_SIMPCHINESE} "未能自动恢复旧版本，备份文件保留在安装目录的 .pkp-previous 中；请退出 PKP 后重新安装。"
 LangString PKPRecovery ${LANG_ENGLISH} "Couldn't restore the previous version automatically. Backups remain in .pkp-previous in the install folder; quit PKP and run the installer again."
+LangString PKPLocation ${LANG_SIMPCHINESE} "安装位置已更改或无法确定。请手动运行安装程序。"
+LangString PKPLocation ${LANG_ENGLISH} "The installation location changed or could not be determined. Run the installer manually."
 
 ## The following two statements can be used to sign the installer and the uninstaller. The path to the binaries are provided in %1
 #!uninstfinalize 'signtool --file "%1"'
 #!finalize 'signtool --file "%1"'
 
 Name "${INFO_PRODUCTNAME}"
-OutFile "..\..\..\bin\${INFO_PROJECTNAME}-${ARCH}-installer.exe" # Name of the installer's file.
+!if "${WAILS_INSTALL_SCOPE}" == "user"
+    OutFile "..\..\..\bin\${INFO_PROJECTNAME}-${ARCH}-user-installer.exe"
+!else
+    OutFile "..\..\..\bin\${INFO_PROJECTNAME}-${ARCH}-installer.exe"
+!endif
 !if "${WAILS_INSTALL_SCOPE}" == "user"
     InstallDir "$LOCALAPPDATA\Programs\${INFO_PRODUCTNAME}"
 !else
@@ -165,14 +186,23 @@ OutFile "..\..\..\bin\${INFO_PROJECTNAME}-${ARCH}-installer.exe" # Name of the i
 ShowInstDetails show # This will always show the installation details.
 
 Function .onInit
+    ${GetParameters} $0
+    ClearErrors
+    ${GetOptions} $0 "/PKPUPDATE=" $1
+    ${If} $1 == "1"
+        StrCpy $inAppUpdate 1
+    ${EndIf}
     !insertmacro wails.checkArchitecture
     System::Call 'kernel32::CreateMutexW(p 0, i 0, w "Global\PKP.InstallerRunning") p .r0 ?e'
     Pop $1
     StrCpy $installerMutex $0
     ${If} $0 == 0
-    ${OrIf} $1 == 183
-        MessageBox MB_OK|MB_ICONEXCLAMATION "$(PKPBusy)" /SD IDOK
+        !insertmacro pkp.message MB_OK|MB_ICONEXCLAMATION "$(PKPBusy)"
         SetErrorLevel 2
+        Abort
+    ${ElseIf} $1 == 183
+        !insertmacro pkp.message MB_OK|MB_ICONEXCLAMATION "$(PKPBusy)"
+        SetErrorLevel 71
         Abort
     ${EndIf}
     SetRegView 64
@@ -183,15 +213,51 @@ Function .onInit
         ReadRegStr $0 HKLM "${UNINST_KEY}" "InstallLocation"
         ReadRegStr $1 HKLM "${UNINST_KEY}" "UninstallString"
     !endif
-    ${If} $0 != ""
-        StrCpy $INSTDIR $0
-    ${ElseIf} $1 != ""
-        # Earlier installers only recorded a quoted UninstallString.
+    ${If} $0 == ""
+    ${AndIf} $1 != ""
+        # Earlier installers recorded only a quoted UninstallString.
         StrCpy $2 $1 1
         ${If} $2 == '$\"'
-            StrCpy $1 $1 -1 1
-            ${GetParent} "$1" $INSTDIR
+            StrCpy $2 1
+            loopUninstallQuote:
+                StrCpy $3 $1 1 $2
+                ${If} $3 == '$\"'
+                    IntOp $2 $2 - 1
+                    StrCpy $1 $1 $2 1
+                    ${GetParent} "$1" $0
+                ${ElseIf} $3 != ""
+                    IntOp $2 $2 + 1
+                    Goto loopUninstallQuote
+                ${EndIf}
         ${EndIf}
+    ${EndIf}
+    ${If} $inAppUpdate == 1
+        ${GetParameters} $2
+        ClearErrors
+        ${GetOptions} $2 "/EXPECTDIR=" $3
+        ${If} ${Errors}
+        ${OrIf} $3 == ""
+        ${OrIf} $0 == ""
+            Goto locationChanged
+        ${EndIf}
+        GetFullPathName $2 "$0"
+        GetFullPathName $3 "$3"
+        # Ignore a trailing separator on either spelling of the same directory.
+        StrCpy $4 $2 1 -1
+        ${If} $4 == "\"
+            StrCpy $2 $2 -1
+        ${EndIf}
+        StrCpy $4 $3 1 -1
+        ${If} $4 == "\"
+            StrCpy $3 $3 -1
+        ${EndIf}
+        ${If} $2 == ""
+        ${OrIf} $2 != $3
+            Goto locationChanged
+        ${EndIf}
+    ${EndIf}
+    ${If} $0 != ""
+        StrCpy $INSTDIR $0
     ${EndIf}
     ${GetParameters} $0
     ClearErrors
@@ -202,13 +268,18 @@ Function .onInit
             System::Call 'kernel32::WaitForSingleObject(p r0, i 30000) i .r1'
             System::Call 'kernel32::CloseHandle(p r0)'
             ${If} $1 != 0
-                MessageBox MB_OK|MB_ICONEXCLAMATION "$(PKPWait)" /SD IDOK
-                SetErrorLevel 3
+                !insertmacro pkp.message MB_OK|MB_ICONEXCLAMATION "$(PKPWait)"
+                SetErrorLevel 71
                 Abort
             ${EndIf}
         ${EndIf}
     ${EndIf}
     Call pkp.checkRunning
+    Return
+locationChanged:
+    !insertmacro pkp.message MB_OK|MB_ICONSTOP "$(PKPLocation)"
+    SetErrorLevel 73
+    Abort
 FunctionEnd
 
 Function pkp.checkRunning
@@ -219,8 +290,8 @@ Function pkp.checkRunning
     ${EndIf}
     ${If} $0 != 0
     ${OrIf} $1 != 2
-        MessageBox MB_OK|MB_ICONEXCLAMATION "$(PKPBusy)" /SD IDOK
-        SetErrorLevel 2
+        !insertmacro pkp.message MB_OK|MB_ICONEXCLAMATION "$(PKPBusy)"
+        SetErrorLevel 71
         Abort
     ${EndIf}
     # Pre-updater PKP versions do not own the named object. Include those too.
@@ -239,8 +310,8 @@ scanProcess:
         ${If} $3 == "${PRODUCT_EXECUTABLE}"
             System::Free $1
             System::Call 'kernel32::CloseHandle(p r0)'
-            MessageBox MB_OK|MB_ICONEXCLAMATION "$(PKPBusy)" /SD IDOK
-            SetErrorLevel 2
+            !insertmacro pkp.message MB_OK|MB_ICONEXCLAMATION "$(PKPBusy)"
+            SetErrorLevel 71
             Abort
         ${EndIf}
         System::Call 'kernel32::Process32NextW(p r0, p r1) i .r2'
@@ -252,7 +323,9 @@ FunctionEnd
 
 Section
     !insertmacro wails.setShellContext
-    !insertmacro wails.webview2runtime
+    !ifndef PKP_TEST_NO_INTEGRATION
+        !insertmacro wails.webview2runtime
+    !endif
     Call pkp.checkRunning
     StrCpy $stage "$INSTDIR\.pkp-update"
     StrCpy $previous "$INSTDIR\.pkp-previous"
@@ -304,10 +377,12 @@ Section
     !insertmacro pkp.activate "uninstall.exe"
     SetOutPath $INSTDIR
     ClearErrors
-    CreateShortcut "$SMPROGRAMS\${INFO_PRODUCTNAME}.lnk" "$INSTDIR\${PRODUCT_EXECUTABLE}"
-    CreateShortCut "$DESKTOP\${INFO_PRODUCTNAME}.lnk" "$INSTDIR\${PRODUCT_EXECUTABLE}"
-    !insertmacro wails.associateFiles
-    !insertmacro wails.associateCustomProtocols
+    !ifndef PKP_TEST_NO_INTEGRATION
+        CreateShortcut "$SMPROGRAMS\${INFO_PRODUCTNAME}.lnk" "$INSTDIR\${PRODUCT_EXECUTABLE}"
+        CreateShortCut "$DESKTOP\${INFO_PRODUCTNAME}.lnk" "$INSTDIR\${PRODUCT_EXECUTABLE}"
+        !insertmacro wails.associateFiles
+        !insertmacro wails.associateCustomProtocols
+    !endif
     !insertmacro wails.writeUninstaller
     !if "${WAILS_INSTALL_SCOPE}" == "user"
         WriteRegStr HKCU "${UNINST_KEY}" "InstallLocation" "$INSTDIR"
@@ -342,13 +417,13 @@ rollback:
     !insertmacro pkp.restore "uninstall.exe"
     RMDir /r "$previous"
     RMDir /r "$stage"
-    MessageBox MB_OK|MB_ICONSTOP "$(PKPFailed)" /SD IDOK
-    SetErrorLevel 4
+    !insertmacro pkp.message MB_OK|MB_ICONSTOP "$(PKPFailed)"
+    SetErrorLevel 2
     Abort
 
 recoveryFailed:
-    MessageBox MB_OK|MB_ICONSTOP "$(PKPRecovery)" /SD IDOK
-    SetErrorLevel 5
+    !insertmacro pkp.message MB_OK|MB_ICONSTOP "$(PKPRecovery)"
+    SetErrorLevel 72
     Abort
 complete:
 SectionEnd
@@ -356,16 +431,19 @@ SectionEnd
 Section "uninstall" 
     !insertmacro wails.setShellContext
 
-    RMDir /r "$AppData\${PRODUCT_EXECUTABLE}" # Remove the WebView2 DataPath
+    !ifndef PKP_TEST_NO_INTEGRATION
+        RMDir /r "$AppData\${PRODUCT_EXECUTABLE}" # Remove the WebView2 DataPath
+    !endif
     Delete "$INSTDIR\pkp-pcm.dll"
 
     RMDir /r $INSTDIR
 
-    Delete "$SMPROGRAMS\${INFO_PRODUCTNAME}.lnk"
-    Delete "$DESKTOP\${INFO_PRODUCTNAME}.lnk"
-
-    !insertmacro wails.unassociateFiles
-    !insertmacro wails.unassociateCustomProtocols
+    !ifndef PKP_TEST_NO_INTEGRATION
+        Delete "$SMPROGRAMS\${INFO_PRODUCTNAME}.lnk"
+        Delete "$DESKTOP\${INFO_PRODUCTNAME}.lnk"
+        !insertmacro wails.unassociateFiles
+        !insertmacro wails.unassociateCustomProtocols
+    !endif
 
     !insertmacro wails.deleteUninstaller
 SectionEnd

@@ -55,7 +55,7 @@ The macOS build is ad hoc signed and is not notarized, so the system may ask you
 
 **Homebrew.** PKP has no cask. `brew install --cask pikpak` installs PikPak's own app, which is a different program.
 
-Since v0.2.0, two-platform releases include eight assets: the two installers, `update.json`, `update.json.sig`, `PKP-<version>-source.tar.gz`, `libmpv-sources.tar.gz`, `LICENSE`, and `SHA256SUMS`; Linux-inclusive releases add amd64/arm64 `deb`, `rpm`, `AppImage`, and runtime source archives (16 assets total) while keeping the same update trust key. The historical [v0.1.0](https://github.com/tonyflux/pkp/releases/tag/v0.1.0) installers stay under the proprietary terms shipped with that release. Prefer the latest public release for a new install. Usage statistics defaulted to off in v0.2.0 and on in v0.1.0, and daily active installation statistics default to on since v0.3.0.
+Historical two-platform releases from v0.2.0 include eight assets: the two installers, `update.json`, `update.json.sig`, `PKP-<version>-source.tar.gz`, `libmpv-sources.tar.gz`, `LICENSE`, and `SHA256SUMS`. New releases add a per-user Windows installer; Linux-inclusive releases additionally include amd64/arm64 `deb`, `rpm`, `AppImage`, and runtime source archives while keeping the same update trust key. The historical [v0.1.0](https://github.com/tonyflux/pkp/releases/tag/v0.1.0) installers stay under the proprietary terms shipped with that release. Prefer the latest public release for a new install. Usage statistics defaulted to off in v0.2.0 and on in v0.1.0, and daily active installation statistics default to on since v0.3.0.
 
 ## In the app
 

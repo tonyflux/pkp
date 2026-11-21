@@ -125,6 +125,9 @@ func main() {
 	if crashlog.RunMonitor() {
 		return
 	}
+	if runUpdateWatcher() {
+		return
+	}
 	crashes, crashErr := crashlog.Start(cmp.Or(version, "unknown"))
 	if crashErr != nil {
 		log.Printf("crash reporting unavailable: %v", crashErr)

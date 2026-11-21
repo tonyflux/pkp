@@ -203,11 +203,12 @@ windows: frontend
 $(WEBVIEW2_BOOTSTRAPPER):
 	wails3 generate webview2bootstrapper -dir build/windows/nsis
 
-# One Windows installer carries amd64 and arm64 binaries and installs only the
-# current architecture. Bundled-library licenses go in the installer's licenses directory.
+# Each installer carries both architectures and installs only the current one.
 windows-installer: windows $(WEBVIEW2_BOOTSTRAPPER) libmpv-windows
 	python3 build/go-licenses.py windows bin/GO_LICENSES-windows.txt
-	cd build/windows/nsis && makensis -V2 \
+	@set -e; for scope in machine user; do \
+		if [ "$$scope" = user ]; then scope_flags="-DWAILS_INSTALL_SCOPE=user -DREQUEST_EXECUTION_LEVEL=user"; else scope_flags=""; fi; \
+		(cd build/windows/nsis && makensis -V2 $$scope_flags \
 		-DARG_WAILS_AMD64_BINARY="$(CURDIR)/bin/pkp-amd64.exe" \
 		-DARG_WAILS_ARM64_BINARY="$(CURDIR)/bin/pkp-arm64.exe" \
 		-DARG_LIBMPV_AMD64="$(CURDIR)/$(LIBMPV_WIN_DIR)/amd64/libmpv-2.dll" \
@@ -221,8 +222,9 @@ windows-installer: windows $(WEBVIEW2_BOOTSTRAPPER) libmpv-windows
 		-DARG_LIBMPV_LICENSES="$(CURDIR)/$(LIBMPV_WIN_DIR)/licenses" \
 		-DARG_GO_LICENSES="$(CURDIR)/bin/GO_LICENSES-windows.txt" \
 		-DARG_FRONTEND_LICENSES="$(CURDIR)/frontend/dist/THIRD_PARTY_LICENSES.txt" \
-		project.nsi
-	@echo "Windows installer packaged: bin/pkp-amd64_arm64-installer.exe"
+		project.nsi); \
+	done
+	@echo "Windows installers packaged: bin/pkp-amd64_arm64{,-user}-installer.exe"
 
 # Assemble only allowlisted artifacts from a clean committed source snapshot.
 release-check:
@@ -239,13 +241,15 @@ release-local: release-check
 		go run ./cmd/pkp-release source -version "$(VERSION)" -dir "$(RELEASE_DIR)" -source-commit "$$source_commit"
 	cp "$(DMG)" "$(RELEASE_DIR)/PKP-$(VERSION)-macos-universal.dmg"
 	cp bin/pkp-amd64_arm64-installer.exe "$(RELEASE_DIR)/PKP-$(VERSION)-windows-x64-arm64-setup.exe"
+	cp bin/pkp-amd64_arm64-user-installer.exe "$(RELEASE_DIR)/PKP-$(VERSION)-windows-user-x64-arm64-setup.exe"
 	cp bin/libmpv-sources.tar.gz LICENSE "$(RELEASE_DIR)/"
 	@if [ -n "$(LINUX_RELEASE_DIR)" ]; then for asset in $(LINUX_RELEASE_ASSETS) $(LINUX_PROVENANCE); do cp "$(LINUX_RELEASE_DIR)/$$asset" "$(RELEASE_DIR)/"; done; fi
-	go run ./cmd/pkp-release prepare -version "$(VERSION)" -dir "$(RELEASE_DIR)" -key "$(RELEASE_KEY)" -notes "$(RELEASE_NOTES)" $(if $(LINUX_RELEASE_DIR),-linux)
+	go run ./cmd/pkp-release prepare -version "$(VERSION)" -dir "$(RELEASE_DIR)" -key "$(RELEASE_KEY)" -notes "$(RELEASE_NOTES)" -windows-install-protocol 1 $(if $(LINUX_RELEASE_DIR),-linux)
 	@if [ -n "$(LINUX_RELEASE_DIR)" ]; then for asset in $(LINUX_PROVENANCE); do rm "$(RELEASE_DIR)/$$asset"; done; fi
 	cd "$(RELEASE_DIR)" && shasum -a 256 \
 		"PKP-$(VERSION)-macos-universal.dmg" \
 		"PKP-$(VERSION)-windows-x64-arm64-setup.exe" \
+		"PKP-$(VERSION)-windows-user-x64-arm64-setup.exe" \
 		update.json update.json.sig libmpv-sources.tar.gz LICENSE "PKP-$(VERSION)-source.tar.gz" $(if $(LINUX_RELEASE_DIR),$(LINUX_RELEASE_ASSETS)) > SHA256SUMS
 	@echo "Local release artifacts: $(RELEASE_DIR) (not uploaded; see RELEASE.md for release checks)"
 

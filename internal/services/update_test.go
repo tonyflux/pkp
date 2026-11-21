@@ -149,6 +149,18 @@ func TestUpdatePreferencesManualCheckAndTamperedInstaller(t *testing.T) {
 	}
 }
 
+func TestUpdateReportsMissingUserInstaller(t *testing.T) {
+	u := isolatedUpdater(t)
+	u.platform = "windows-user-x64-arm64"
+	if err := u.Check(); err != nil {
+		t.Fatal(err)
+	}
+	u.wg.Wait()
+	if state := u.State(); state.Phase != "error" || state.Error != "userPackage" {
+		t.Fatalf("missing user installer: %+v", state)
+	}
+}
+
 func TestUpdateCancellationAndShutdownStopInFlightRequests(t *testing.T) {
 	u := isolatedUpdater(t)
 	entered := make(chan struct{})

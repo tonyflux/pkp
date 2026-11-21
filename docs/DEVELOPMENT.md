@@ -50,6 +50,8 @@ python3 build/darwin/updater-smoke-test.py bin/pkp-updater
 
 CI 复用 macOS 构建产物，在 Windows x64 和 ARM64 上运行同一套 PCM 时间轴、音轨、快进及取消恢复测试，以及字幕会话、会员与配额集成测试。兼容层测试不替代真机播放器界面和安装升级验收。
 
+`pwsh -File build/windows/update-e2e.ps1` 在隔离的临时目录和专用 HKCU 项中编译并验证用户级安装、原目录更新、实例占用、失败回滚、恢复失败和安装包文件锁；需要 NSIS 在 PATH 中。`go test . -run '^TestWindowsWatcherHandoff$'` 使用隔离子进程验证观察器的成功、占用、安装失败、回滚失败及旧协议分支。CI 在 Windows x64 与 ARM64 运行这些测试；它们不模拟机器级 UAC 授权或真实 PKP 的完整升级。
+
 ## Linux 构建
 
 使用 Ubuntu 24.04 的 x86_64／ARM64 原生环境，或 `build/docker/Dockerfile.linux` 的匹配架构容器；不能只设置 `GOOS` 跳过 CGO／系统头文件。安装 Go 1.26、Node.js 24、固定 Wails CLI 和 nFPM v2.43.0；系统开发依赖由该 Dockerfile 列明，包含 GTK4、WebKitGTK 6.0、libmpv、FFmpeg 和 libepoxy。随后运行：
@@ -97,7 +99,7 @@ make release-local RELEASE_NOTES=build/release-notes.md
 make release-verify
 ```
 
-默认八件历史附件保持可验证。含 Linux 的发布再加入六个安装包和两个逐架构运行库源码包，共十六件，签名清单保留 `packages` 中的 macOS／Windows 两项，并通过 `linuxPackages` 认证新增附件，旧客户端继续兼容。在 macOS 汇总两种架构 Linux 的构建输出时，传入 `LINUX_RELEASE_DIR=/路径/同一源码构建的Linux附件`；发布前应提交为干净源码快照。构建／签名不等于上传，也不表示平台真机验收或 Apple 公证完成。私钥不得提交或写入日志。
+历史八件附件保持可验证。新发布加入用户级 Windows 安装包；含 Linux 的发布再加入六个安装包和两个逐架构运行库源码包。签名清单保留 `packages` 中的旧 macOS／Windows 两项，通过 `windowsUserPackage` 和 `linuxPackages` 认证新增附件，旧客户端继续兼容。在 macOS 汇总两种架构 Linux 的构建输出时，传入 `LINUX_RELEASE_DIR=/路径/同一源码构建的Linux附件`；发布前应提交为干净源码快照。构建／签名不等于上传，也不表示平台真机验收或 Apple 公证完成。私钥不得提交或写入日志。
 
 ## 不纳入本仓库的内容
 

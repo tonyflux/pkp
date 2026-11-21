@@ -85,21 +85,13 @@ RequestExecutionLevel "${REQUEST_EXECUTION_LEVEL}"
             ${EndIf}
         !endif
 
-        IfSilent silentArch notSilentArch
-        silentArch:
-            SetErrorLevel 65
-            Abort
-        notSilentArch:
-            MessageBox MB_OK "${WAILS_ARCHITECTURE_NOT_SUPPORTED}"
-            Quit
+        !insertmacro pkp.message MB_OK "${WAILS_ARCHITECTURE_NOT_SUPPORTED}"
+        SetErrorLevel 65
+        Abort
     ${else}
-        IfSilent silentWin notSilentWin
-        silentWin:
-            SetErrorLevel 64
-            Abort
-        notSilentWin:
-            MessageBox MB_OK "${WAILS_WIN10_REQUIRED}"
-            Quit
+        !insertmacro pkp.message MB_OK "${WAILS_WIN10_REQUIRED}"
+        SetErrorLevel 64
+        Abort
     ${EndIf}
 
     ok:
@@ -160,11 +152,11 @@ RequestExecutionLevel "${REQUEST_EXECUTION_LEVEL}"
 !macroend
 
 !macro wails.setShellContext
-    ${If} ${REQUEST_EXECUTION_LEVEL} == "admin"
+    !if "${WAILS_INSTALL_SCOPE}" == "machine"
         SetShellVarContext all
-    ${else}
+    !else
         SetShellVarContext current
-    ${EndIf}
+    !endif
 !macroend
 
 # Install webview2 by launching the bootstrapper

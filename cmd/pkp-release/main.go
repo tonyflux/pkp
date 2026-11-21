@@ -50,6 +50,7 @@ func run(args []string) error {
 	metadataOnly := fs.Bool("metadata-only", false, "check version metadata without a signing key")
 	publish := fs.Bool("publish", false, "publish a verified draft as Latest (publish command only)")
 	linux := fs.Bool("linux", false, "include both architectures of Linux native packages, AppImage and corresponding runtime source")
+	windowsProtocol := fs.Int("windows-install-protocol", 0, "protocol supported by freshly built Windows installers (0 or 1)")
 	arch := fs.String("arch", "", "Linux package architecture")
 	if err := fs.Parse(args[1:]); err != nil {
 		return err
@@ -150,7 +151,10 @@ func run(args []string) error {
 		if *dir == "" {
 			return errors.New("provide -dir")
 		}
-		return prepare(*dir, *version, notes, key, *linux)
+		if *windowsProtocol != 0 && *windowsProtocol != 1 {
+			return errors.New("unsupported Windows install protocol")
+		}
+		return prepare(*dir, *version, notes, key, *linux, *windowsProtocol)
 	case "verify":
 		if *dir == "" {
 			return errors.New("provide -dir")
@@ -269,7 +273,7 @@ func macMinimum() (string, error) {
 	}
 }
 
-func prepare(dir, version, notes string, key ed25519.PrivateKey, linux bool) error {
+func prepare(dir, version, notes string, key ed25519.PrivateKey, linux bool, windowsProtocol int) error {
 	if dir == "" {
 		return errors.New("provide a release asset directory")
 	}
@@ -290,7 +294,7 @@ func prepare(dir, version, notes string, key ed25519.PrivateKey, linux bool) err
 		}
 	}
 	m := releaseManifest{Manifest: update.Manifest{Version: version, PublishedAt: time.Now().UTC().Format(time.RFC3339), Notes: notes, Packages: map[string]update.Package{}}, Source: source}
-	for _, platform := range []string{"darwin-universal", "windows-x64-arm64"} {
+	for _, platform := range []string{"darwin-universal", "windows-x64-arm64", "windows-user-x64-arm64"} {
 		name := update.PackageName(version, platform)
 		f, err := os.Open(filepath.Join(dir, name))
 		if err != nil {
@@ -302,11 +306,16 @@ func prepare(dir, version, notes string, key ed25519.PrivateKey, linux bool) err
 		if err != nil {
 			return err
 		}
-		minOS := minimum
-		if platform == "windows-x64-arm64" {
-			minOS = "10.0"
+		p := update.Package{URL: update.AssetURL(version, name), Size: size, SHA256: hex.EncodeToString(h.Sum(nil)), MinOS: minimum}
+		if platform != "darwin-universal" {
+			p.MinOS = "10.0"
+			p.InstallProtocol = windowsProtocol
 		}
-		m.Packages[platform] = update.Package{URL: update.AssetURL(version, name), Size: size, SHA256: hex.EncodeToString(h.Sum(nil)), MinOS: minOS}
+		if platform == "windows-user-x64-arm64" {
+			m.WindowsUserPackage = &p
+		} else {
+			m.Packages[platform] = p
+		}
 	}
 	if linux {
 		m.LinuxPackages = make(map[string]update.Package, 8)
