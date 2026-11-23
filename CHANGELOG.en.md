@@ -4,7 +4,7 @@
 
 ## Unreleased
 
-- Fix intermittent invalid NSIS downloads in Windows update CI by using an official mirror while retaining the pinned SHA-256 check.
+- Fix NSIS download verification in Windows update CI: fetch and verify the pinned SHA-256 in the macOS build job, then reverify it before running installer tests on Windows.
 
 ## 1.0.2 · 2026-11-23
 

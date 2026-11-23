@@ -85,6 +85,16 @@ jobs:
         run: |
           brew install cmake ffmpeg nsis
           go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0-beta.28
+      - name: Download verified NSIS for Windows installer tests
+        run: |
+          curl --fail --location --proto '=https' --proto-redir '=https' --output "$RUNNER_TEMP/nsis-3.10.zip" 'https://downloads.sourceforge.net/project/nsis/NSIS%203/3.10/nsis-3.10.zip'
+          echo 'fcdce3229717a2a148e7cda0ab5bdb667f39d8fb33ede1da8dabc336bd5ad110  '"$RUNNER_TEMP/nsis-3.10.zip" | shasum -a 256 -c -
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: windows-nsis-3.10
+          path: ${{ runner.temp }}/nsis-3.10.zip
+          if-no-files-found: error
+          retention-days: 1
       - name: Restore shared native media cache
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
@@ -135,6 +145,7 @@ jobs:
           done
 
   windows-update:
+    needs: native
     strategy:
       fail-fast: false
       matrix:
@@ -157,11 +168,15 @@ jobs:
           mkdir -p frontend/dist
           printf '%s\n' '<!doctype html><title>isolated watcher test</title>' > frontend/dist/index.html
           go test . -run '^TestWindowsWatcherHandoff$' -count=1 -timeout=2m
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: windows-nsis-3.10
+          path: ${{ runner.temp }}
       - name: Prepare portable NSIS without elevation
         shell: pwsh
         run: |
           $archive = Join-Path $env:RUNNER_TEMP 'nsis-3.10.zip'
-          Invoke-WebRequest 'https://pilotfiber.dl.sourceforge.net/project/nsis/NSIS%203/3.10/nsis-3.10.zip' -OutFile $archive
+          # Downloaded and verified in the macOS native job to avoid corrupt Windows runner downloads.
           if ((Get-FileHash $archive -Algorithm SHA256).Hash -ne 'FCDCE3229717A2A148E7CDA0AB5BDB667F39D8FB33EDE1DA8DABC336BD5AD110') { throw 'NSIS archive hash mismatch' }
           Expand-Archive $archive -DestinationPath $env:RUNNER_TEMP
           "$env:RUNNER_TEMP\nsis-3.10" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
