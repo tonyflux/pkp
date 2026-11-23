@@ -44,6 +44,8 @@ python3 build/darwin/updater-smoke-test.py bin/pkp-updater
 
 The first command launches no applications. The second needs a logged-in macOS desktop and uses isolated, signed, windowless fixtures to mount DMGs, replace apps, relaunch, and roll back. It never launches the real PKP or reads real account configuration. System replacement authorization approval/cancellation, the real app's quit confirmation, and Gatekeeper still require manual acceptance. Helper logs and receipts live in the current profile's user cache under `pkp/updates/<profile digest>/`; uncertain rollback retains the old-app backup and records its location in `install.log`.
 
+The fixtures also launch crash-monitor subprocesses using the same executable, verifying that they do not block updates. Real app instances with only the monitor argument but no environment marker, or with extra arguments, must still prevent replacement.
+
 ## Windows cross-compilation
 
 On the macOS host above, `make windows` builds x64 and ARM64 executables; these do not include the runtime `libmpv-2.dll` or `pkp-pcm.dll`. `make windows-installer` packages the matching DLLs in an installer and additionally requires NSIS (`makensis` on PATH). The DLL build downloads a pinned macOS llvm-mingw toolchain and sources, and needs the CMake, Python, and network access listed above. This is not a guide to native Windows builds. To run a Windows binary or decoder tests manually, place `build/windows/libmpv/<arch>/pkp-pcm.dll` of the same architecture beside the executable; decoder tests also need `ffmpeg` on PATH to generate fixtures (the sibling `ffmpeg.exe` works directly).

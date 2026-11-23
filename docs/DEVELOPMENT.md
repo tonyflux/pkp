@@ -44,6 +44,8 @@ python3 build/darwin/updater-smoke-test.py bin/pkp-updater
 
 第一项不启动应用；第二项需要已登录的 macOS 桌面，使用隔离、签名、无窗口的测试应用实际挂载 DMG、替换、重开和回滚，不启动真实 PKP 或读取真实账号配置。系统替换授权的允许/取消、真实应用退出确认及 Gatekeeper 仍需人工验收。助手日志与安装结果位于当前配置对应的用户缓存 `pkp/updates/<配置摘要>/`，回滚不确定时保留旧版备份并在 `install.log` 中记录位置。
 
+测试应用同时启动复用主程序可执行文件的崩溃监控子进程，验证它不会阻止更新；只有监控参数、缺少环境标记，或带有额外参数的真实应用实例仍须阻止替换。
+
 ## Windows 交叉编译
 
 上述 macOS 宿主可运行 `make windows` 生成 x64 和 ARM64 可执行文件；它们不含运行时 `libmpv-2.dll` 与 `pkp-pcm.dll`。运行 `make windows-installer` 生成包含对应架构 DLL 的安装包，另需安装 NSIS（`makensis` 在 `PATH` 中）。DLL 构建会下载固定版本的 macOS llvm-mingw 工具链及源码，并需要上述 CMake、Python 和网络；这不是 Windows 原生构建指南。手工运行 Windows 二进制或解码测试时，须把同架构的 `build/windows/libmpv/<架构>/pkp-pcm.dll` 放在可执行文件旁；解码测试另需 `ffmpeg` 在 PATH 中生成样本（可直接使用同目录下的 `ffmpeg.exe`）。

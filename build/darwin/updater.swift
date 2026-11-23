@@ -38,6 +38,34 @@ private func processBirth(_ pid: pid_t) -> ProcessBirth? {
     return ProcessBirth(seconds: info.pbi_start_tvsec, microseconds: info.pbi_start_tvusec)
 }
 
+private func isCrashMonitor(_ pid: pid_t) -> Bool {
+    var name = [CTL_KERN, KERN_PROCARGS2, pid]
+    var size = 0
+    guard sysctl(&name, UInt32(name.count), nil, &size, nil, 0) == 0,
+          size > MemoryLayout<Int32>.size else { return false }
+    var bytes = [UInt8](repeating: 0, count: size)
+    guard sysctl(&name, UInt32(name.count), &bytes, &size, nil, 0) == 0,
+          size > MemoryLayout<Int32>.size,
+          bytes.withUnsafeBytes({ $0.load(as: Int32.self) }) == 2 else { return false }
+    // KERN_PROCARGS2 contains argc, executable path, NUL padding, argv, then environment.
+    var offset = MemoryLayout<Int32>.size
+    func nextString() -> ArraySlice<UInt8> {
+        let start = offset
+        while offset < size && bytes[offset] != 0 { offset += 1 }
+        let end = offset
+        if offset < size { offset += 1 }
+        return bytes[start..<end]
+    }
+    _ = nextString()
+    while offset < size && bytes[offset] == 0 { offset += 1 }
+    _ = nextString()
+    guard nextString().elementsEqual("--pkp-crash-monitor".utf8) else { return false }
+    while offset < size {
+        if nextString().elementsEqual("PKP_INTERNAL_CRASH_MONITOR=1".utf8) { return true }
+    }
+    return false
+}
+
 private func emit(_ object: [String: Any]) {
     guard var data = try? JSONSerialization.data(withJSONObject: object, options: [.sortedKeys]) else { return }
     data.append(10)
@@ -164,7 +192,11 @@ private final class Installer {
             let length = path.withUnsafeMutableBytes { proc_pidpath(pid, $0.baseAddress, UInt32($0.count)) }
             if length > 0 {
                 let executable = URL(fileURLWithPath: String(cString: path))
-                if contained(canonical(executable), in: args.target), processBirth(pid) != nil { result.insert(pid) }
+                if contained(canonical(executable), in: args.target), processBirth(pid) != nil {
+                    // The crash recorder reuses the app executable without opening an application.
+                    if isCrashMonitor(pid) { result.remove(pid) }
+                    else { result.insert(pid) }
+                }
             }
         }
         result.remove(getpid())

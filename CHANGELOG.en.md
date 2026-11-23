@@ -4,6 +4,8 @@
 
 ## 1.0.1
 
+- Fix macOS in-app updates mistaking the crash-log subprocess for another PKP instance; exclude monitors only when both launch arguments and the environment marker match, retaining protection against real competing instances.
+
 - Windows in-app updates select a package matching the existing machine-wide or per-user installation, then update and reopen PKP after quit confirmation and any required authorization; other-instance checks and rollback remain. Older installers without the silent protocol use the wizard; if an older manifest lacks a per-user package, install manually from the official Release. Real Windows acceptance for both scopes, authorization, rollback, and upgrades from older versions remains outstanding.
 
 - Reduce the top margin of the Windows workspace while retaining the native title bar; macOS and player layouts are unchanged.

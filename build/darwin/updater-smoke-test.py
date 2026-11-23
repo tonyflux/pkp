@@ -24,9 +24,18 @@ import AppKit
 import Darwin
 import Foundation
 
+if CommandLine.arguments.count == 2, CommandLine.arguments[1] == "--pkp-crash-monitor",
+   ProcessInfo.processInfo.environment["PKP_INTERNAL_CRASH_MONITOR"] == "1" {
+    FileHandle.standardOutput.write(Data([1]))
+    _ = FileHandle.standardInput.readDataToEndOfFile()
+    exit(0)
+}
+
 final class Delegate: NSObject, NSApplicationDelegate {
     var timer: Timer?
     var lock: Int32 = -1
+    let monitor = Process()
+    let monitorInput = Pipe()
     func applicationDidFinishLaunching(_ notification: Notification) {
         guard let directory = ProcessInfo.processInfo.environment["PKP_CONFIG_DIR"],
               directory.contains("pkp-updater-smoke-") else { exit(80) }
@@ -35,6 +44,16 @@ final class Delegate: NSObject, NSApplicationDelegate {
         lock = Darwin.open(path, O_RDWR | O_CREAT | O_CLOEXEC, 0o600)
         guard lock >= 0, flock(lock, LOCK_SH | LOCK_NB) == 0 else { exit(81) }
         let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as! String
+        let monitorReady = Pipe()
+        monitor.executableURL = Bundle.main.executableURL!
+        monitor.arguments = ["--pkp-crash-monitor"]
+        monitor.environment = ["PKP_INTERNAL_CRASH_MONITOR": "1",
+                               "PKP_INTERNAL_CRASH_PID": "\(getpid())",
+                               "PKP_INTERNAL_CRASH_VERSION": version]
+        monitor.standardInput = monitorInput
+        monitor.standardOutput = monitorReady
+        try! monitor.run()
+        guard monitorReady.fileHandleForReading.readData(ofLength: 1) == Data([1]) else { exit(82) }
         let data = try! JSONSerialization.data(withJSONObject: ["pid": getpid(), "version": version, "profile": directory])
         try! data.write(to: profile.appendingPathComponent("started-\(getpid()).json"), options: .atomic)
         timer = Timer.scheduledTimer(withTimeInterval: 0.05, repeats: true) { _ in
@@ -42,6 +61,10 @@ final class Delegate: NSObject, NSApplicationDelegate {
                 NSApp.terminate(nil)
             }
         }
+    }
+    func applicationWillTerminate(_ notification: Notification) {
+        monitorInput.fileHandleForWriting.closeFile()
+        monitor.waitUntilExit()
     }
 }
 let app = NSApplication.shared
@@ -115,8 +138,8 @@ class Scenario:
         self.receipt = self.profile / "install-result.json"
         self.lock = self.root / "install.lock"
 
-    def start(self):
-        parent = subprocess.Popen([str(self.target / "Contents/MacOS/pkp")], env=self.env,
+    def start(self, arguments=()):
+        parent = subprocess.Popen([str(self.target / "Contents/MacOS/pkp"), *arguments], env=self.env,
                                   stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         self.parents.append(parent)
         until(lambda: (self.profile / f"started-{parent.pid}.json").exists(), "background fixture startup")
@@ -234,15 +257,22 @@ def main():
                 assert old.poll() is None and version(rejected.target) == "0.2.0"
                 print(f"PASS {name}: rejected before quitting", flush=True)
 
-            busy = Scenario(root, "other-profile", executable, helper)
-            scenarios.append(busy)
-            busy.start()
-            busy.start()
-            proc, message = busy.prepare(good)
-            assert message == {"error": "installBusy"}, message
-            busy.finish(proc, 1)
-            assert all(parent.poll() is None for parent in busy.parents)
-            print("PASS competing instance: no application forced to quit", flush=True)
+            for name, arguments, environment in [
+                ("other-profile", (), {}),
+                ("monitor-argument-without-marker", ("--pkp-crash-monitor",), {}),
+                ("monitor-marker-with-extra-argument", ("--pkp-crash-monitor", "extra"),
+                 {"PKP_INTERNAL_CRASH_MONITOR": "1"}),
+            ]:
+                busy = Scenario(root, name, executable, helper)
+                scenarios.append(busy)
+                busy.start()
+                busy.env.update(environment)
+                busy.start(arguments)
+                proc, message = busy.prepare(good)
+                assert message == {"error": "installBusy"}, message
+                busy.finish(proc, 1)
+                assert all(parent.poll() is None for parent in busy.parents)
+                print(f"PASS {name}: no application forced to quit", flush=True)
 
             occupied = Scenario(root, "late-install-lock", executable, helper)
             scenarios.append(occupied)
