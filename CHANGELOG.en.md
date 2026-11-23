@@ -2,6 +2,10 @@
 
 [简体中文](CHANGELOG.md) · English
 
+## Unreleased
+
+- Fix intermittent invalid NSIS downloads in Windows update CI by using an official mirror while retaining the pinned SHA-256 check.
+
 ## 1.0.2 · 2026-11-23
 
 - Fix macOS in-app updates mistaking the crash-log subprocess for another PKP instance; exclude monitors only when both launch arguments and the environment marker match, retaining protection against real competing instances.
