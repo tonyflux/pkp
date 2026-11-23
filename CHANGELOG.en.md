@@ -4,7 +4,7 @@
 
 ## Unreleased
 
-- Fix NSIS download verification in Windows update CI: fetch and verify the pinned SHA-256 in the macOS build job, then reverify it before running installer tests on Windows.
+- Fix NSIS download verification and file-replacement setup in Windows update CI. A macOS job verifies the pinned SHA-256 before Windows rechecks it and exercises installer upgrades and rollback.
 
 ## 1.0.2 · 2026-11-23
 

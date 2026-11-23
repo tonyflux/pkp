@@ -65,6 +65,21 @@ jobs:
       - run: npm run typecheck && npm test
         working-directory: cloudflare/telemetry
 
+  windows-nsis:
+    runs-on: macos-15
+    timeout-minutes: 10
+    steps:
+      - name: Download verified NSIS for Windows installer tests
+        run: |
+          curl --fail --location --proto '=https' --proto-redir '=https' --output "$RUNNER_TEMP/nsis-3.10.zip" 'https://downloads.sourceforge.net/project/nsis/NSIS%203/3.10/nsis-3.10.zip'
+          echo 'fcdce3229717a2a148e7cda0ab5bdb667f39d8fb33ede1da8dabc336bd5ad110  '"$RUNNER_TEMP/nsis-3.10.zip" | shasum -a 256 -c -
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: windows-nsis-3.10
+          path: ${{ runner.temp }}/nsis-3.10.zip
+          if-no-files-found: error
+          retention-days: 1
+
   native:
     runs-on: macos-15
     timeout-minutes: 180
@@ -85,16 +100,6 @@ jobs:
         run: |
           brew install cmake ffmpeg nsis
           go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0-beta.28
-      - name: Download verified NSIS for Windows installer tests
-        run: |
-          curl --fail --location --proto '=https' --proto-redir '=https' --output "$RUNNER_TEMP/nsis-3.10.zip" 'https://downloads.sourceforge.net/project/nsis/NSIS%203/3.10/nsis-3.10.zip'
-          echo 'fcdce3229717a2a148e7cda0ab5bdb667f39d8fb33ede1da8dabc336bd5ad110  '"$RUNNER_TEMP/nsis-3.10.zip" | shasum -a 256 -c -
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
-        with:
-          name: windows-nsis-3.10
-          path: ${{ runner.temp }}/nsis-3.10.zip
-          if-no-files-found: error
-          retention-days: 1
       - name: Restore shared native media cache
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
@@ -145,7 +150,7 @@ jobs:
           done
 
   windows-update:
-    needs: native
+    needs: windows-nsis
     strategy:
       fail-fast: false
       matrix:

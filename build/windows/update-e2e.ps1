@@ -106,6 +106,7 @@ try {
     # Match the updater's GENERIC_READ / FILE_SHARE_READ package handle.
     $lockedPackage = "$root\locked-package.exe"
     $replacement = "$root\replacement.exe"
+    $backupPackage = "$root\locked-package-backup.exe"
     Copy-Item $v1 $lockedPackage
     Copy-Item $v2 $replacement
     $lock = [IO.File]::Open($lockedPackage, 'Open', 'Read', 'Read')
@@ -116,12 +117,12 @@ try {
     } catch [IO.IOException] { $writeBlocked = $true }
     Assert-True $writeBlocked 'FILE_SHARE_READ did not block package writes'
     $replaceBlocked = $false
-    try { [IO.File]::Replace($replacement, $lockedPackage, $null) } catch [IO.IOException] { $replaceBlocked = $true }
+    try { [IO.File]::Replace($replacement, $lockedPackage, $backupPackage) } catch [IO.IOException] { $replaceBlocked = $true }
     Assert-True $replaceBlocked 'FILE_SHARE_READ did not block package replacement'
     $lock.Dispose(); $lock = $null
     $writer = [IO.File]::Open($lockedPackage, 'Open', 'Write', 'ReadWrite')
     $writer.Dispose()
-    [IO.File]::Replace($replacement, $lockedPackage, $null)
+    [IO.File]::Replace($replacement, $lockedPackage, $backupPackage)
 
 
     $install = "$root\Custom install with spaces"
